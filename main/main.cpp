@@ -2,7 +2,7 @@
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
 //                                                                             //
-// https://github.com/type-one/PublishSubscribe                                //
+// https://github.com/type-one/PublishSubscribeESP32                           //
 //                                                                             //
 // MIT License                                                                 //
 //                                                                             //
@@ -461,7 +461,7 @@ void test_queued_bytepack_data()
 {
     std::printf("-- queued bytepack data --\n");
     tools::sync_ring_buffer<std::vector<std::uint8_t>, 128U> data_queue;
-    //tools::sync_queue<std::vector<std::uint8_t>> data_queue;
+    // tools::sync_queue<std::vector<std::uint8_t>> data_queue;
 
     free_text message1 = { "jojo rabbit" };
     manufacturing_info message2 = { "NVidia", "HTX-4589-22-1", "24/05/02" };
@@ -561,5 +561,5 @@ int main()
 
 #if !defined(FREERTOS_PLATFORM)
     return 0;
-#endif    
+#endif
 }
