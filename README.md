@@ -41,13 +41,18 @@ adapted for other platforms (micro-computers, micro-controllers)
 On FreeRTOS/ESP32 and Expressif-IDF SDK (https://docs.espressif.com and https://github.com/espressif/esp-idf)
 
 example: for the ESP32S3, assuming the device is connected to an USB port on your PC
+
 source ~/esp-idf/export.sh
+
 idf.py set-target esp32s3
+
 idf.py build
+
 idf.py flash monitor
 
 If you develop under Windows/WSL2, this tool is useful to bind the serial port:
 https://github.com/dorssel/usbipd-win
+
 Be sure to chmod 666 your /dev/ttyUSB0 or /dev/ttyACM0 if you got a flashing error 
 
 ## Build on Linux and Windows
@@ -55,7 +60,9 @@ Be sure to chmod 666 your /dev/ttyUSB0 or /dev/ttyACM0 if you got a flashing err
 You need to go in the main sub-folder to find the proper cmake file for your system
 
 cd main
+
 rename CMakeLists.txt to CMakeLists.copy 
+
 rename CMakeLists_PC.txt to CMakeLists.txt
 
 Then 
