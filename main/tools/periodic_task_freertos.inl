@@ -79,7 +79,7 @@ namespace tools
             }
         }
 
-        void* native_handle() const { return reinterpret_cst<void*>(m_task); }
+        void* native_handle() const { return reinterpret_cast<void*>(m_task); }
 
     private:
         static void periodic_call(void* object_instance)
