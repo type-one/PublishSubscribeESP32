@@ -40,7 +40,9 @@ adapted for other platforms (micro-computers, micro-controllers)
 
 On FreeRTOS/ESP32 and Expressif-IDF SDK (https://docs.espressif.com and https://github.com/espressif/esp-idf)
 
-example: for the ESP32S3, assuming the device is connected to an USB port on your PC
+Assuming the ESP32 device is connected to an USB port on your PC
+
+If you have an ESP32-S3, you can then use the following settings
 
 source ~/esp-idf/export.sh
 
@@ -49,6 +51,8 @@ idf.py set-target esp32s3
 idf.py build
 
 idf.py flash monitor
+
+For an ESP32 classic, just type idf.py set-target esp32 above instead 
 
 If you develop under Windows/WSL2, this tool is useful to bind the serial port:
 https://github.com/dorssel/usbipd-win
