@@ -72,6 +72,4 @@ namespace tools
         m_signaled = m_stop;
     }
 
-#endif // end standard implementation
-
 } // end namespace tools
