@@ -24,98 +24,62 @@
 //-----------------------------------------------------------------------------//
 
 #include <cstdio>
+#include <freertos/FreeRTOS.h>
+#include <freertos/event_groups.h>
 
-#include "non_copyable.hpp"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
+#include "tools/sync_object.hpp"
 
 namespace tools
 {
-    class critical_section : public non_copyable
+    sync_object::sync_object(bool initial_state)
+        : m_event_group(xEventGroupCreate())
     {
-    public:
-        critical_section()
-            : m_mutex(xSemaphoreCreateMutex())
+        if (nullptr == m_event_group)
         {
-            if (nullptr == m_mutex)
-            {
-                fprintf(stderr, "FATAL error: xSemaphoreCreateMutex() failed (%s line %d function %s)\n", __FILE__, __LINE__, __FUNCTION__);
-            }
+            fprintf(stderr, "FATAL error: xEventGroupCreate() failed (%s line %d function %s)\n", __FILE__, __LINE__, __FUNCTION__);
         }
+    }
 
-        ~critical_section()
+    sync_object::~sync_object()
+    {
+        if (nullptr != m_event_group)
         {
-            if (nullptr != m_mutex)
-            {
-                vSemaphoreDelete(m_mutex);
-            }
+            vEventGroupDelete(m_event_group);
         }
+    }
 
-        void lock()
+    void sync_object::signal()
+    {
+        if (nullptr != m_event_group)
         {
-            if (nullptr != m_mutex)
-            {
-                while (xSemaphoreTake(m_mutex, static_cast<TickType_t>(100)) != pdTRUE)
-                {
-                }
-            }
+            xEventGroupSetBits(m_event_group, BIT0);
         }
+    }
 
-        void isr_lock()
-        {
-            if (nullptr != m_mutex)
-            {
-                BaseType_t px_higher_priority_task_woken = 0;
-                while (xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken) != pdTRUE)
-                {
-                }
-            }
-        }
-
-        bool try_lock() { return (pdTRUE == xSemaphoreTake(m_mutex, static_cast<TickType_t>(0))); }
-
-        bool try_isr_lock()
+    void sync_object::isr_signal()
+    {
+        if (nullptr != m_event_group)
         {
             BaseType_t px_higher_priority_task_woken = 0;
-            return (pdTRUE == xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken));
+            xEventGroupSetBitsFromISR(m_event_group, BIT0, &px_higher_priority_task_woken);
         }
+    }
 
-        void unlock()
-        {
-            if (nullptr != m_mutex)
-            {
-                xSemaphoreGive(m_mutex);
-            }
-        }
-
-        void isr_unlock()
-        {
-            if (nullptr != m_mutex)
-            {
-                BaseType_t px_higher_priority_task_woken = 0;
-                xSemaphoreGiveFromISR(m_mutex, &px_higher_priority_task_woken);
-            }
-        }
-
-    private:
-        SemaphoreHandle_t m_mutex;
-    };
-
-    template <typename T>
-    class isr_lock_guard : public non_copyable
+    void sync_object::wait_for_signal()
     {
-    public:
-        isr_lock_guard() = delete;
-        isr_lock_guard(T& lockable_object)
-            : m_lockable_object_ref(lockable_object)
+        if (nullptr != m_event_group)
         {
-            m_lockable_object_ref.isr_lock();
+            xEventGroupWaitBits(m_event_group, BIT0, pdTRUE /* clear on exit */, pdFALSE /* wait for all bits */, portMAX_DELAY);
         }
+    }
 
-        ~isr_lock_guard() { m_lockable_object_ref.isr_unlock(); }
+    void sync_object::wait_for_signal(const std::chrono::duration<int, std::micro>& timeout)
+    {
+        if (nullptr != m_event_group)
+        {
+            const TickType_t ticks_to_wait = (timeout.count() * portTICK_PERIOD_MS) / 1000;
+            xEventGroupWaitBits(m_event_group, BIT0, pdTRUE, pdFALSE, ticks_to_wait);
+        }
+    }
 
-    private:
-        T& m_lockable_object_ref;
-    };
-}
+} // end namespace tools

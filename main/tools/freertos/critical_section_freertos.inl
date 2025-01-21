@@ -23,108 +23,99 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#pragma once
+#include <cstdio>
 
-#if !defined(__SYNC_RING_BUFFER_HPP__)
-#define __SYNC_RING_BUFFER_HPP__
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
-#include <cstddef>
-#include <mutex>
-
-#include "tools/critical_section.hpp"
 #include "tools/non_copyable.hpp"
-#include "tools/ring_buffer.hpp"
 
 namespace tools
 {
-    template <typename T, std::size_t Capacity>
-    class sync_ring_buffer : public non_copyable
+    class critical_section : public non_copyable
     {
     public:
-        sync_ring_buffer() = default;
-        ~sync_ring_buffer() = default;
-
-        void push(const T& elem)
+        critical_section()
+            : m_mutex(xSemaphoreCreateMutex())
         {
-            std::lock_guard guard(m_mutex);
-            m_ring_buffer.push(elem);
+            if (nullptr == m_mutex)
+            {
+                fprintf(stderr, "FATAL error: xSemaphoreCreateMutex() failed (%s line %d function %s)\n", __FILE__, __LINE__, __FUNCTION__);
+            }
         }
 
-        void emplace(T&& elem)
+        ~critical_section()
         {
-            std::lock_guard guard(m_mutex);
-            m_ring_buffer.emplace(std::move(elem));
+            if (nullptr != m_mutex)
+            {
+                vSemaphoreDelete(m_mutex);
+            }
         }
 
-        void pop()
+        void lock()
         {
-            std::lock_guard guard(m_mutex);
-            m_ring_buffer.pop();
+            if (nullptr != m_mutex)
+            {
+                while (xSemaphoreTake(m_mutex, static_cast<TickType_t>(100)) != pdTRUE)
+                {
+                }
+            }
         }
 
-        T front()
+        void isr_lock()
         {
-            std::lock_guard guard(m_mutex);
-            return m_ring_buffer.front();
+            if (nullptr != m_mutex)
+            {
+                BaseType_t px_higher_priority_task_woken = 0;
+                while (xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken) != pdTRUE)
+                {
+                }
+            }
         }
 
-        T back()
+        bool try_lock() { return (pdTRUE == xSemaphoreTake(m_mutex, static_cast<TickType_t>(0))); }
+
+        bool try_isr_lock()
         {
-            std::lock_guard guard(m_mutex);
-            return m_ring_buffer.back();
+            BaseType_t px_higher_priority_task_woken = 0;
+            return (pdTRUE == xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken));
         }
 
-        bool empty()
+        void unlock()
         {
-            std::lock_guard guard(m_mutex);
-            return m_ring_buffer.empty();
+            if (nullptr != m_mutex)
+            {
+                xSemaphoreGive(m_mutex);
+            }
         }
 
-        bool full()
+        void isr_unlock()
         {
-            std::lock_guard guard(m_mutex);
-            return m_ring_buffer.full();
+            if (nullptr != m_mutex)
+            {
+                BaseType_t px_higher_priority_task_woken = 0;
+                xSemaphoreGiveFromISR(m_mutex, &px_higher_priority_task_woken);
+            }
         }
-
-        std::size_t size()
-        {
-            std::lock_guard guard(m_mutex);
-            return m_ring_buffer.size();
-        }
-        
-        constexpr std::size_t capacity() const { return m_ring_buffer.capacity(); }
-
-#if defined(FREERTOS_PLATFORM)
-
-        void isr_push(const T& elem)
-        {
-            tools::isr_lock_guard guard(m_mutex);
-            m_ring_buffer.push(elem);
-        }
-
-        void isr_emplace(T&& elem)
-        {
-            tools::isr_lock_guard guard(m_mutex);
-            m_ring_buffer.emplace(elem);
-        }
-
-        bool isr_full()
-        {
-            tools::isr_lock_guard guard(m_mutex);
-            return m_ring_buffer.full();
-        }
-
-        std::size_t isr_size()
-        {
-            tools::isr_lock_guard guard(m_mutex);
-            return m_ring_buffer.size();
-        }
-#endif
 
     private:
-        ring_buffer<T, Capacity> m_ring_buffer;
-        critical_section m_mutex;
+        SemaphoreHandle_t m_mutex;
+    };
+
+    template <typename T>
+    class isr_lock_guard : public non_copyable
+    {
+    public:
+        isr_lock_guard() = delete;
+        isr_lock_guard(T& lockable_object)
+            : m_lockable_object_ref(lockable_object)
+        {
+            m_lockable_object_ref.isr_lock();
+        }
+
+        ~isr_lock_guard() { m_lockable_object_ref.isr_unlock(); }
+
+    private:
+        T& m_lockable_object_ref;
     };
 }
-
-#endif //  __SYNC_RING_BUFFER_HPP__

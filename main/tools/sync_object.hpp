@@ -28,47 +28,12 @@
 #if !defined(__SYNC_OBJECT_HPP__)
 #define __SYNC_OBJECT_HPP__
 
-#include "non_copyable.hpp"
-
-#include <atomic>
-#include <chrono>
-
-#include "platform_detection.hpp"
+#include "tools/platform_detection.hpp"
 
 #if defined(FREERTOS_PLATFORM)
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
+#include "tools/freertos/sync_object_freertos.inl"
 #else
-#include <condition_variable>
-#include <mutex>
+#include "tools/standard/sync_object_std.inl"
 #endif
-
-namespace tools
-{
-    class sync_object : public non_copyable
-    {
-    public:
-        sync_object(bool initial_state = false);
-        ~sync_object();
-
-        void signal();
-        void wait_for_signal();
-        void wait_for_signal(const std::chrono::duration<int, std::micro>& timeout);
-
-#if defined(FREERTOS_PLATFORM)
-        void isr_signal();
-#endif
-
-    private:
-#if defined(FREERTOS_PLATFORM)
-        EventGroupHandle_t m_event_group;
-#else
-        bool m_signaled;
-        bool m_stop;
-        std::mutex m_mutex;
-        std::condition_variable m_cond;
-#endif
-    };
-}
 
 #endif //  __SYNC_OBJECT_HPP__

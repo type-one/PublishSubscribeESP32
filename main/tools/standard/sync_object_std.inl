@@ -23,17 +23,29 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#pragma once
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 
-#if !defined(__PLATFORM_HELPERS_HPP__)
-#define __PLATFORM_HELPERS_HPP__
+#include "tools/non_copyable.hpp"
 
-#include "tools/platform_detection.hpp"
+namespace tools
+{
+    class sync_object : public non_copyable
+    {
+    public:
+        sync_object(bool initial_state = false);
+        ~sync_object();
 
-#if defined(FREERTOS_PLATFORM)
-#include "tools/freertos/platform_helpers_freertos.inl"
-#else
-#include "tools/standard/platform_helpers_std.inl"
-#endif
+        void signal();
+        void wait_for_signal();
+        void wait_for_signal(const std::chrono::duration<int, std::micro>& timeout);
 
-#endif //  __PLATFORM_HELPERS_HPP__
+    private:
+        bool m_signaled;
+        bool m_stop;
+        std::mutex m_mutex;
+        std::condition_variable m_cond;
+    };
+}

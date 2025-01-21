@@ -29,10 +29,10 @@
 #include <functional>
 #include <memory>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
-#include "non_copyable.hpp"
+#include "tools/non_copyable.hpp"
 
 namespace tools
 {

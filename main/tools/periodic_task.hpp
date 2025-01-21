@@ -28,12 +28,12 @@
 #if !defined(__PERIODIC_TASK_HPP__)
 #define __PERIODIC_TASK_HPP__
 
-#include "platform_detection.hpp"
+#include "tools/platform_detection.hpp"
 
 #if defined(FREERTOS_PLATFORM)
-#include "periodic_task_freertos.inl"
+#include "tools/freertos/periodic_task_freertos.inl"
 #else
-#include "periodic_task_std.inl"
+#include "tools/standard/periodic_task_std.inl"
 #endif
 
 #endif //  __PERIODIC_TASK_HPP__

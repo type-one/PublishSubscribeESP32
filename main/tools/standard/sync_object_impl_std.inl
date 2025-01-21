@@ -23,17 +23,55 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#pragma once
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
-#if !defined(__PLATFORM_HELPERS_HPP__)
-#define __PLATFORM_HELPERS_HPP__
+#include "tools/sync_object.hpp"
 
-#include "tools/platform_detection.hpp"
+namespace tools
+{
+    // standard implementation
 
-#if defined(FREERTOS_PLATFORM)
-#include "tools/freertos/platform_helpers_freertos.inl"
-#else
-#include "tools/standard/platform_helpers_std.inl"
-#endif
+    sync_object::sync_object(bool initial_state)
+        : m_signaled(initial_state)
+        , m_stop(false)
+    {
+    }
 
-#endif //  __PLATFORM_HELPERS_HPP__
+    sync_object::~sync_object()
+    {
+        {
+            std::lock_guard<std::mutex> guard(m_mutex);
+            m_signaled = true;
+            m_stop = true;
+        }
+        m_cond.notify_all();
+    }
+
+    void sync_object::signal()
+    {
+        {
+            std::lock_guard<std::mutex> guard(m_mutex);
+            m_signaled = true;
+        }
+        m_cond.notify_one();
+    }
+
+    void sync_object::wait_for_signal()
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_cond.wait(lock, [&]() { return m_signaled; });
+        m_signaled = m_stop;
+    }
+
+    void sync_object::wait_for_signal(const std::chrono::duration<int, std::micro>& timeout)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_cond.wait_for(lock, timeout, [&]() { return m_signaled; });
+        m_signaled = m_stop;
+    }
+
+#endif // end standard implementation
+
+} // end namespace tools

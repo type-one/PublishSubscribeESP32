@@ -34,8 +34,8 @@
 #include <optional>
 #include <unordered_map>
 
-#include "critical_section.hpp"
-#include "non_copyable.hpp"
+#include "tools/critical_section.hpp"
+#include "tools/non_copyable.hpp"
 
 namespace tools
 {

@@ -23,17 +23,16 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#pragma once
 
-#if !defined(__PLATFORM_HELPERS_HPP__)
-#define __PLATFORM_HELPERS_HPP__
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
-#include "tools/platform_detection.hpp"
 
-#if defined(FREERTOS_PLATFORM)
-#include "tools/freertos/platform_helpers_freertos.inl"
-#else
-#include "tools/standard/platform_helpers_std.inl"
-#endif
-
-#endif //  __PLATFORM_HELPERS_HPP__
+namespace tools
+{
+    inline void sleep_for(int ms)
+    {
+        const TickType_t delay = pdMS_TO_TICKS(ms);
+        vTaskDelay(delay);
+    }
+}

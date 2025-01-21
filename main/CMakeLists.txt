@@ -16,7 +16,9 @@ set(TARGET_SRC
         "${TARGET_TOOLS_SRC}"
 )
 
-idf_component_register(SRCS "${TARGET_SRC}" "${TARGET_H}" INCLUDE_DIRS "${PROJECT_SOURCE_DIR}")
+set(TARGET_INCLUDE_DIR .)
+
+idf_component_register(SRCS "${TARGET_SRC}" "${TARGET_H}" INCLUDE_DIRS "${TARGET_INCLUDE_DIR}")
 
 
 

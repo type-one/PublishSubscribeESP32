@@ -23,17 +23,11 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#pragma once
+#include <chrono>
+#include <thread>
 
-#if !defined(__PLATFORM_HELPERS_HPP__)
-#define __PLATFORM_HELPERS_HPP__
+namespace tools
+{
+    inline void sleep_for(int ms) { std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(ms)); }
+}
 
-#include "tools/platform_detection.hpp"
-
-#if defined(FREERTOS_PLATFORM)
-#include "tools/freertos/platform_helpers_freertos.inl"
-#else
-#include "tools/standard/platform_helpers_std.inl"
-#endif
-
-#endif //  __PLATFORM_HELPERS_HPP__

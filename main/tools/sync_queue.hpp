@@ -31,8 +31,8 @@
 #include <mutex>
 #include <queue>
 
-#include "critical_section.hpp"
-#include "non_copyable.hpp"
+#include "tools/critical_section.hpp"
+#include "tools/non_copyable.hpp"
 
 namespace tools
 {
@@ -54,20 +54,6 @@ namespace tools
             std::lock_guard guard(m_mutex);
             m_queue.emplace(elem);
         }
-
-#if defined(FREERTOS_PLATFORM)
-        void isr_push(const T& elem)
-        {
-            tools::isr_lock_guard guard(m_mutex);
-            m_queue.push(elem);
-        }
-
-        void isr_emplace(T&& elem)
-        {
-            tools::isr_lock_guard guard(m_mutex);
-            m_queue.emplace(elem);
-        }
-#endif
 
         void pop()
         {
@@ -100,6 +86,19 @@ namespace tools
         }
 
 #if defined(FREERTOS_PLATFORM)
+
+        void isr_push(const T& elem)
+        {
+            tools::isr_lock_guard guard(m_mutex);
+            m_queue.push(elem);
+        }
+
+        void isr_emplace(T&& elem)
+        {
+            tools::isr_lock_guard guard(m_mutex);
+            m_queue.emplace(elem);
+        }
+
         std::size_t isr_size()
         {
             tools::isr_lock_guard guard(m_mutex);

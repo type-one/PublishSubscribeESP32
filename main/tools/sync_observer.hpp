@@ -36,8 +36,8 @@
 #include <string>
 #include <utility>
 
-#include "critical_section.hpp"
-#include "non_copyable.hpp"
+#include "tools/critical_section.hpp"
+#include "tools/non_copyable.hpp"
 
 namespace tools
 {

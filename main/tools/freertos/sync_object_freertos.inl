@@ -23,17 +23,28 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#pragma once
+#include <atomic>
+#include <chrono>
 
-#if !defined(__PLATFORM_HELPERS_HPP__)
-#define __PLATFORM_HELPERS_HPP__
+#include <freertos/FreeRTOS.h>
+#include <freertos/event_groups.h>
 
-#include "tools/platform_detection.hpp"
+#include "tools/non_copyable.hpp"
 
-#if defined(FREERTOS_PLATFORM)
-#include "tools/freertos/platform_helpers_freertos.inl"
-#else
-#include "tools/standard/platform_helpers_std.inl"
-#endif
+namespace tools
+{
+    class sync_object : public non_copyable
+    {
+    public:
+        sync_object(bool initial_state = false);
+        ~sync_object();
 
-#endif //  __PLATFORM_HELPERS_HPP__
+        void signal();
+        void wait_for_signal();
+        void wait_for_signal(const std::chrono::duration<int, std::micro>& timeout);
+        void isr_signal();
+
+    private:
+        EventGroupHandle_t m_event_group;
+    };
+}

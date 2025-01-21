@@ -28,12 +28,12 @@
 #if !defined(__CRITICAL_SECTION_HPP__)
 #define __CRITICAL_SECTION_HPP__
 
-#include "platform_detection.hpp"
+#include "tools/platform_detection.hpp"
 
 #if defined(FREERTOS_PLATFORM)
-#include "critical_section_freertos.inl"
+#include "tools/freertos/critical_section_freertos.inl"
 #else
-#include "critical_section_std.inl"
+#include "tools/standard/critical_section_std.inl"
 #endif
 
 #endif //  __CRITICAL_SECTION_HPP__
