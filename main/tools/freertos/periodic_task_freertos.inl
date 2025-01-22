@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <functional>
 #include <memory>
+#include <string>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -43,8 +44,9 @@ namespace tools
     public:
         periodic_task() = delete;
 
-        periodic_task(std::function<void(std::shared_ptr<Context>)>&& startup_routine,
-            std::function<void(std::shared_ptr<Context>)>&& periodic_routine, std::shared_ptr<Context> context,
+        using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
+
+        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
             const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size = 2048U)
             : m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
@@ -79,7 +81,8 @@ namespace tools
             }
         }
 
-        void* native_handle() const { return reinterpret_cast<void*>(m_task); }
+        // note: native handle allows specific OS calls like setting scheduling policy or setting priority
+        void* native_handle() const { return reinterpret_cast<void*>(&m_task); }
 
     private:
         static void periodic_call(void* object_instance)
@@ -91,19 +94,19 @@ namespace tools
             const TickType_t x_period = (pdMS_TO_TICKS(us.count()) / 1000);
 
             // execute given startup function
-            instance->m_startup_routine(instance->m_context);
+            instance->m_startup_routine(instance->m_context, instance->m_task_name);
 
             while (!instance->m_stop_task.load())
             {
                 vTaskDelayUntil(&x_last_wake_time, x_period);
 
                 // execute given periodic function
-                instance->m_periodic_routine(instance->m_context);
+                instance->m_periodic_routine(instance->m_context, instance->m_task_name);
             }
         }
 
-        std::function<void(std::shared_ptr<Context>)> m_startup_routine;
-        std::function<void(std::shared_ptr<Context>)> m_periodic_routine;
+        call_back m_startup_routine;
+        call_back m_periodic_routine;
         std::shared_ptr<Context> m_context;
         std::string m_task_name;
         std::chrono::duration<int, std::micro> m_period;

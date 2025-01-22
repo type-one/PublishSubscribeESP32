@@ -28,6 +28,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <string>
 #include <thread>
 
 #if defined(__linux__)
@@ -47,8 +48,10 @@ namespace tools
     public:
         worker_task() = delete;
 
-        worker_task(std::function<void(std::shared_ptr<Context>)>&& startup_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, std::size_t stack_size = 2048U)
+        using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
+
+        worker_task(
+            call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size = 2048U)
             : m_startup_routine(std::move(startup_routine))
             , m_context(context)
             , m_task_name(task_name)
@@ -71,9 +74,10 @@ namespace tools
             m_task->join();
         }
 
+        // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() const { return reinterpret_cast<void*>(m_task->native_handle()); }
 
-        void delegate(std::function<void(std::shared_ptr<Context>)>&& work)
+        void delegate(call_back&& work)
         {
             m_work_queue.emplace(std::move(work));
             m_work_sync.signal();
@@ -83,7 +87,7 @@ namespace tools
         void run_loop()
         {
             // execute given startup function
-            m_startup_routine(m_context);
+            m_startup_routine(m_context, m_task_name);
 
             while (!m_stop_task.load())
             {
@@ -94,14 +98,14 @@ namespace tools
                     auto work = m_work_queue.front();
                     m_work_queue.pop();
 
-                    work(m_context);
+                    work(m_context, m_task_name);
                 }
             } // run loop
         }
 
-        std::function<void(std::shared_ptr<Context>)> m_startup_routine;
+        call_back m_startup_routine;
         tools::sync_object m_work_sync;
-        tools::sync_queue<std::function<void(std::shared_ptr<Context>)>> m_work_queue;
+        tools::sync_queue<call_back> m_work_queue;
         std::shared_ptr<Context> m_context;
         std::string m_task_name;
         const std::size_t m_stack_size;

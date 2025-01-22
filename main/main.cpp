@@ -23,6 +23,7 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cinttypes>
@@ -30,9 +31,12 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <memory>
+#include <random>
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 
@@ -269,13 +273,18 @@ using my_periodic_task = tools::periodic_task<my_periodic_task_context>;
 void test_periodic_task()
 {
     std::printf("-- periodic task --\n");
-    auto lambda = [](std::shared_ptr<my_periodic_task_context> context) -> void
+    auto lambda = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
     {
+        (void)task_name;
         context->loop_counter += 1;
         context->time_points.emplace(std::chrono::high_resolution_clock::now());
     };
 
-    auto startup = [](std::shared_ptr<my_periodic_task_context> context) -> void { context->loop_counter = 0; };
+    auto startup = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
+    {
+        (void)task_name;
+        context->loop_counter = 0;
+    };
 
     auto context = std::make_shared<my_periodic_task_context>();
     // 20 ms period
@@ -340,8 +349,9 @@ void test_periodic_publish_subscribe()
     auto data_source = std::make_shared<my_subject>("data_source");
     auto histogram_feeder = std::make_shared<my_collector>();
 
-    auto sampler = [&data_source](std::shared_ptr<my_periodic_task_context> context) -> void
+    auto sampler = [&data_source](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
     {
+        (void)task_name;
         context->loop_counter += 1;
 
         // mocked signal
@@ -351,7 +361,11 @@ void test_periodic_publish_subscribe()
         data_source->publish(my_topic::external, std::to_string(signal));
     };
 
-    auto startup = [](std::shared_ptr<my_periodic_task_context> context) -> void { context->loop_counter = 0; };
+    auto startup = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
+    {
+        (void)task_name;
+        context->loop_counter = 0;
+    };
 
     data_source->subscribe(my_topic::external, monitoring);
     data_source->subscribe(my_topic::external, histogram_feeder);
@@ -420,41 +434,46 @@ void test_worker_tasks()
 {
     std::printf("-- worker tasks --\n");
 
-    auto startup1 = [](std::shared_ptr<my_worker_task_context> context) -> void { (void)context; };
-    auto startup2 = [](std::shared_ptr<my_worker_task_context> context) -> void
+    auto startup1 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name) -> void
     {
         (void)context;
-        tools::sleep_for(1000);
+        std::printf("welcome 1\n");
+        std::printf("task %s started\n", task_name.c_str());
+    };
+
+    auto startup2 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name) -> void
+    {
+        (void)context;
+        std::printf("welcome 2\n");
+        std::printf("task %s started\n", task_name.c_str());
     };
 
     auto context = std::make_shared<my_worker_task_context>();
 
-    my_worker_task task1(startup1, context, "worker_1", 4096U);
-    my_worker_task task2(startup2, context, "worker_2", 4096U);
+    auto task1 = std::make_unique<my_worker_task>(std::move(startup1), context, "worker_1", 4096U);
+    auto task2 = std::make_unique<my_worker_task>(std::move(startup2), context, "worker_2", 4096U);
 
-    // sleep 100 ms
-    tools::sleep_for(100);
+    std::default_random_engine generator;
+    std::uniform_int_distribution<int> distribution(0, 1);
+    std::array<std::unique_ptr<my_worker_task>, 2> tasks = {std::move(task1), std::move(task2)};
+
+    tools::sleep_for(100); // 100 ms
 
     const auto start_timepoint = std::chrono::high_resolution_clock::now();
 
-    for (int i = 0; i < 20; i += 2)
+    for (int i = 0; i < 20; ++i)
     {
-        task1.delegate(
-            [](auto context) -> void
+        auto idx = distribution(generator);
+
+        tasks[idx]->delegate(
+            [](auto context, const auto& task_name) -> void
             {
-                std::printf("job %d on worker 1\n", context->loop_counter.load());
+                std::printf("job %d on worker task %s\n", context->loop_counter.load(), task_name.c_str());
                 context->loop_counter++;
                 context->time_points.emplace(std::chrono::high_resolution_clock::now());
             });
 
-        // 2nd worker is delayed
-        task2.delegate(
-            [](auto context) -> void
-            {
-                std::printf("job %d on worker 2\n", context->loop_counter.load());
-                context->loop_counter++;
-                context->time_points.emplace(std::chrono::high_resolution_clock::now());
-            });
+        std::this_thread::yield();    
     }
 
     // sleep 2 sec

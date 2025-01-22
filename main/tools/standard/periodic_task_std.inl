@@ -28,6 +28,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <string>
 #include <thread>
 
 #if defined(__linux__)
@@ -46,8 +47,9 @@ namespace tools
     public:
         periodic_task() = delete;
 
-        periodic_task(std::function<void(std::shared_ptr<Context>)>&& startup_routine,
-            std::function<void(std::shared_ptr<Context>)>&& periodic_routine, std::shared_ptr<Context> context,
+        using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
+
+        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
             const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size = 2048U)
             : m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
@@ -72,6 +74,7 @@ namespace tools
             m_task->join();
         }
 
+        // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() const { return reinterpret_cast<void*>(m_task->native_handle()); }
 
     private:
@@ -83,7 +86,7 @@ namespace tools
             bool earliest_deadline_enabled = set_earliest_deadline_scheduling(start_time, m_period);
 
             // execute given startup function
-            m_startup_routine(m_context);
+            m_startup_routine(m_context, m_task_name);
 
             while (!m_stop_task.load())
             {
@@ -95,7 +98,7 @@ namespace tools
                 } while (deadline > current_time);
 
                 // execute given periodic function
-                m_periodic_routine(m_context);
+                m_periodic_routine(m_context, m_task_name);
 
                 // compute next deadline
                 deadline += m_period;
@@ -117,8 +120,8 @@ namespace tools
             }     // periodic task loop
         }
 
-        std::function<void(std::shared_ptr<Context>)> m_startup_routine;
-        std::function<void(std::shared_ptr<Context>)> m_periodic_routine;
+        call_back m_startup_routine;
+        call_back m_periodic_routine;
         std::shared_ptr<Context> m_context;
         std::string m_task_name;
         std::chrono::duration<int, std::micro> m_period;
