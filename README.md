@@ -12,6 +12,7 @@ Goodies:
 - simple waitable object on top of FreeRTOS event_group or C++ std::mutex and std::condition_variable
 - simple non_copyable abstract class
 - simple periodic task helper on top of FreeRTOS task or C++ thread
+- simple worker task helper on top of FreeRTOS task or C++ thread
 - simple thread-safe ring buffer on top of std::array
 - queuable commands
 - bytepack serialization in C++20 using header-only 3rd party (Faruk Eryilmaz - MIT license)

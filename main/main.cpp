@@ -48,6 +48,7 @@
 #include "tools/sync_observer.hpp"
 #include "tools/sync_queue.hpp"
 #include "tools/sync_ring_buffer.hpp"
+#include "tools/worker_task.hpp"
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
@@ -407,6 +408,73 @@ void test_ring_buffer_commands()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+struct my_worker_task_context
+{
+    std::atomic<int> loop_counter = 0;
+    tools::sync_queue<std::chrono::high_resolution_clock::time_point> time_points;
+};
+
+using my_worker_task = tools::worker_task<my_worker_task_context>;
+
+void test_worker_tasks()
+{
+    std::printf("-- worker tasks --\n");
+
+    auto startup1 = [](std::shared_ptr<my_worker_task_context> context) -> void { (void)context; };
+    auto startup2 = [](std::shared_ptr<my_worker_task_context> context) -> void
+    {
+        (void)context;
+        tools::sleep_for(1000);
+    };
+
+    auto context = std::make_shared<my_worker_task_context>();
+
+    my_worker_task task1(startup1, context, "worker_1", 4096U);
+    my_worker_task task2(startup2, context, "worker_2", 4096U);
+
+    // sleep 100 ms
+    tools::sleep_for(100);
+
+    const auto start_timepoint = std::chrono::high_resolution_clock::now();
+
+    for (int i = 0; i < 20; i += 2)
+    {
+        task1.delegate(
+            [](auto context) -> void
+            {
+                std::printf("job %d on worker 1\n", context->loop_counter.load());
+                context->loop_counter++;
+                context->time_points.emplace(std::chrono::high_resolution_clock::now());
+            });
+
+        // 2nd worker is delayed
+        task2.delegate(
+            [](auto context) -> void
+            {
+                std::printf("job %d on worker 2\n", context->loop_counter.load());
+                context->loop_counter++;
+                context->time_points.emplace(std::chrono::high_resolution_clock::now());
+            });
+    }
+
+    // sleep 2 sec
+    tools::sleep_for(2000);
+
+    std::printf("nb of loops = %d\n", context->loop_counter.load());
+
+    auto previous_timepoint = start_timepoint;
+    while (!context->time_points.empty())
+    {
+        const auto measured_timepoint = context->time_points.front();
+        context->time_points.pop();
+        const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(measured_timepoint - previous_timepoint);
+        std::printf("timepoint: %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
+        previous_timepoint = measured_timepoint;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 enum class message_type : std::uint8_t
 {
     temperature = 1,
@@ -557,6 +625,7 @@ int main()
 
     test_queued_commands();
     test_ring_buffer_commands();
+    test_worker_tasks();
     test_queued_bytepack_data();
 
 #if !defined(FREERTOS_PLATFORM)
