@@ -36,12 +36,12 @@
 #endif
 
 #include "tools/linux/linux_sched_deadline.hpp"
-#include "tools/non_copyable.hpp"
+#include "tools/base_task.hpp"
 
 namespace tools
 {
     template <typename Context>
-    class periodic_task : public non_copyable
+    class periodic_task : public base_task
     {
 
     public:
@@ -50,19 +50,18 @@ namespace tools
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size = 2048U)
-            : m_startup_routine(std::move(startup_routine))
+            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size)
+            : base_task(task_name, stack_size)
+            , m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
             , m_context(context)
-            , m_task_name(task_name)
             , m_period(period)
-            , m_stack_size(stack_size)
         {
             m_task = std::make_unique<std::thread>(
                 [this]()
                 {
 #if defined(__linux__)
-                    pthread_setname_np(pthread_self(), m_task_name.c_str());
+                    pthread_setname_np(pthread_self(), this->task_name().c_str());
 #endif
                     periodic_call();
                 });
@@ -75,7 +74,7 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
-        void* native_handle() const { return reinterpret_cast<void*>(m_task->native_handle()); }
+        virtual void* native_handle() override { return reinterpret_cast<void*>(m_task->native_handle()); }
 
     private:
         void periodic_call()
@@ -86,7 +85,7 @@ namespace tools
             bool earliest_deadline_enabled = set_earliest_deadline_scheduling(start_time, m_period);
 
             // execute given startup function
-            m_startup_routine(m_context, m_task_name);
+            m_startup_routine(m_context, this->task_name());
 
             while (!m_stop_task.load())
             {
@@ -98,7 +97,7 @@ namespace tools
                 } while (deadline > current_time);
 
                 // execute given periodic function
-                m_periodic_routine(m_context, m_task_name);
+                m_periodic_routine(m_context, this->task_name());
 
                 // compute next deadline
                 deadline += m_period;
@@ -123,9 +122,7 @@ namespace tools
         call_back m_startup_routine;
         call_back m_periodic_routine;
         std::shared_ptr<Context> m_context;
-        std::string m_task_name;
         std::chrono::duration<int, std::micro> m_period;
-        const std::size_t m_stack_size;
         std::atomic_bool m_stop_task = false;
         std::unique_ptr<std::thread> m_task;
     };

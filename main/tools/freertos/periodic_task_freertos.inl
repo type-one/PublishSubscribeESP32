@@ -33,12 +33,12 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "tools/non_copyable.hpp"
+#include "tools/base_task.hpp"
 
 namespace tools
 {
     template <typename Context>
-    class periodic_task : public non_copyable
+    class periodic_task : public base_task
     {
 
     public:
@@ -47,15 +47,14 @@ namespace tools
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size = 2048U)
-            : m_startup_routine(std::move(startup_routine))
+            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size)
+            : base_task(task_name, stack_size)
+            , m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
             , m_context(context)
-            , m_task_name(task_name)
             , m_period(period)
-            , m_stack_size(stack_size)
         {
-            auto ret = xTaskCreate(periodic_call, m_task_name.c_str(), m_stack_size,
+            auto ret = xTaskCreate(periodic_call, this->task_name().c_str(), this->stack_size(),
                 reinterpret_cast<void*>(this), /* Parameter passed into the task. */
                 tskIDLE_PRIORITY, &m_task);
 
@@ -65,8 +64,8 @@ namespace tools
             }
             else
             {
-                fprintf(stderr, "FATAL error: xTaskCreate() failed for task %s (%s line %d function %s)\n", m_task_name.c_str(), __FILE__,
-                    __LINE__, __FUNCTION__);
+                fprintf(stderr, "FATAL error: xTaskCreate() failed for task %s (%s line %d function %s)\n", this->task_name().c_str(),
+                    __FILE__, __LINE__, __FUNCTION__);
             }
         }
 
@@ -82,7 +81,7 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
-        void* native_handle() const { return reinterpret_cast<void*>(&m_task); }
+        virtual void* native_handle() override { return reinterpret_cast<void*>(&m_task); }
 
     private:
         static void periodic_call(void* object_instance)
@@ -94,23 +93,21 @@ namespace tools
             const TickType_t x_period = (pdMS_TO_TICKS(us.count()) / 1000);
 
             // execute given startup function
-            instance->m_startup_routine(instance->m_context, instance->m_task_name);
+            instance->m_startup_routine(instance->m_context, instance->task_name());
 
             while (!instance->m_stop_task.load())
             {
                 vTaskDelayUntil(&x_last_wake_time, x_period);
 
                 // execute given periodic function
-                instance->m_periodic_routine(instance->m_context, instance->m_task_name);
+                instance->m_periodic_routine(instance->m_context, instance->task_name());
             }
         }
 
         call_back m_startup_routine;
         call_back m_periodic_routine;
         std::shared_ptr<Context> m_context;
-        std::string m_task_name;
         std::chrono::duration<int, std::micro> m_period;
-        const std::size_t m_stack_size;
         std::atomic_bool m_stop_task = false;
 
         TaskHandle_t m_task;

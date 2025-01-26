@@ -33,13 +33,13 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "tools/non_copyable.hpp"
+#include "tools/base_task.hpp"
 #include "tools/sync_queue.hpp"
 
 namespace tools
 {
     template <typename Context>
-    class worker_task : public non_copyable
+    class worker_task : public base_task
     {
 
     public:
@@ -47,14 +47,12 @@ namespace tools
 
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
-        worker_task(
-            call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size = 2048U)
-            : m_startup_routine(std::move(startup_routine))
+        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size)
+            : base_task(task_name, stack_size)
+            , m_startup_routine(std::move(startup_routine))
             , m_context(context)
-            , m_task_name(task_name)
-            , m_stack_size(stack_size)
         {
-            auto ret = xTaskCreate(run_loop, m_task_name.c_str(), m_stack_size,
+            auto ret = xTaskCreate(run_loop, this->task_name().c_str(), this->stack_size(),
                 reinterpret_cast<void*>(this), /* Parameter passed into the task. */
                 tskIDLE_PRIORITY, &m_task);
 
@@ -64,8 +62,8 @@ namespace tools
             }
             else
             {
-                fprintf(stderr, "FATAL error: xTaskCreate() failed for task %s (%s line %d function %s)\n", m_task_name.c_str(), __FILE__,
-                    __LINE__, __FUNCTION__);
+                fprintf(stderr, "FATAL error: xTaskCreate() failed for task %s (%s line %d function %s)\n", this->task_name().c_str(),
+                    __FILE__, __LINE__, __FUNCTION__);
             }
         }
 
@@ -82,7 +80,7 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
-        void* native_handle() const { return reinterpret_cast<void*>(&m_task); }
+        virtual void* native_handle() override { return reinterpret_cast<void*>(&m_task); }
 
         void delegate(call_back&& work)
         {
@@ -109,7 +107,7 @@ namespace tools
             worker_task* instance = reinterpret_cast<worker_task*>(object_instance);
 
             // execute given startup function
-            instance->m_startup_routine(instance->m_context, instance->m_task_name);
+            instance->m_startup_routine(instance->m_context, instance->task_name());
 
             while (!instance->m_stop_task.load())
             {
@@ -135,7 +133,7 @@ namespace tools
                     auto work = instance->m_work_queue.front();
                     instance->m_work_queue.pop();
 
-                    work(instance->m_context, instance->m_task_name);
+                    work(instance->m_context, instance->task_name());
                 }
             } // run loop
         }
@@ -143,8 +141,7 @@ namespace tools
         call_back m_startup_routine;
         tools::sync_queue<call_back> m_work_queue;
         std::shared_ptr<Context> m_context;
-        std::string m_task_name;
-        const std::size_t m_stack_size;
+
         std::atomic_bool m_stop_task = false;
 
         TaskHandle_t m_task;

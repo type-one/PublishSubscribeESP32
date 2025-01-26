@@ -35,14 +35,14 @@
 #include <pthread.h>
 #endif
 
-#include "tools/non_copyable.hpp"
+#include "tools/base_task.hpp"
 #include "tools/sync_object.hpp"
 #include "tools/sync_queue.hpp"
 
 namespace tools
 {
     template <typename Context>
-    class worker_task : public non_copyable
+    class worker_task : public base_task
     {
 
     public:
@@ -51,17 +51,16 @@ namespace tools
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
         worker_task(
-            call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size = 2048U)
-            : m_startup_routine(std::move(startup_routine))
+            call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size)
+            : base_task(task_name, stack_size)
+            , m_startup_routine(std::move(startup_routine))
             , m_context(context)
-            , m_task_name(task_name)
-            , m_stack_size(stack_size)
         {
             m_task = std::make_unique<std::thread>(
                 [this]()
                 {
 #if defined(__linux__)
-                    pthread_setname_np(pthread_self(), m_task_name.c_str());
+                    pthread_setname_np(pthread_self(), this->task_name().c_str());
 #endif
                     run_loop();
                 });
@@ -75,7 +74,7 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
-        void* native_handle() const { return reinterpret_cast<void*>(m_task->native_handle()); }
+        virtual void* native_handle() override { return reinterpret_cast<void*>(m_task->native_handle()); }
 
         void delegate(call_back&& work)
         {
@@ -87,7 +86,7 @@ namespace tools
         void run_loop()
         {
             // execute given startup function
-            m_startup_routine(m_context, m_task_name);
+            m_startup_routine(m_context, this->task_name());
 
             while (!m_stop_task.load())
             {
@@ -98,7 +97,7 @@ namespace tools
                     auto work = m_work_queue.front();
                     m_work_queue.pop();
 
-                    work(m_context, m_task_name);
+                    work(m_context, this->task_name());
                 }
             } // run loop
         }
@@ -107,8 +106,6 @@ namespace tools
         tools::sync_object m_work_sync;
         tools::sync_queue<call_back> m_work_queue;
         std::shared_ptr<Context> m_context;
-        std::string m_task_name;
-        const std::size_t m_stack_size;
         std::atomic_bool m_stop_task = false;
         std::unique_ptr<std::thread> m_task;
     };
