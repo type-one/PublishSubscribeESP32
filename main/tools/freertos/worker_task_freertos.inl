@@ -105,9 +105,10 @@ namespace tools
         static void run_loop(void* object_instance)
         {
             worker_task* instance = reinterpret_cast<worker_task*>(object_instance);
+            const std::string task_name = instance->task_name();
 
             // execute given startup function
-            instance->m_startup_routine(instance->m_context, instance->task_name());
+            instance->m_startup_routine(instance->m_context, task_name);
 
             while (!instance->m_stop_task.load())
             {
@@ -120,20 +121,20 @@ namespace tools
                 // This condition is however met in the majority of real world use cases, such as an interrupt unblocking a
                 // task that will process the data received by the interrupt.
 
-                constexpr const TickType_t x_max_block_time = portMAX_DELAY; /* Block indefinitely. */
+                constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
 
                 std::uint32_t ul_notified_value = 0U;
                 (void)xTaskNotifyWait(pdFALSE, /* Don't clear bits on entry. */
                     ULONG_MAX,                 /* Clear all bits on exit. */
                     &ul_notified_value,        /* Stores the notified value. */
-                    x_max_block_time);
+                    x_block_time);
 
                 while (!instance->m_work_queue.empty())
                 {
                     auto work = instance->m_work_queue.front();
                     instance->m_work_queue.pop();
 
-                    work(instance->m_context, instance->task_name());
+                    work(instance->m_context, task_name);
                 }
             } // run loop
         }

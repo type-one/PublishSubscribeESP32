@@ -35,8 +35,8 @@
 #include <pthread.h>
 #endif
 
-#include "tools/linux/linux_sched_deadline.hpp"
 #include "tools/base_task.hpp"
+#include "tools/linux/linux_sched_deadline.hpp"
 
 namespace tools
 {

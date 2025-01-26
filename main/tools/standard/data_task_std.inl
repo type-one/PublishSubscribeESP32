@@ -23,96 +23,94 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
+
 #include <atomic>
 #include <chrono>
-#include <cstdio>
 #include <functional>
 #include <memory>
 #include <string>
+#include <thread>
+#include <type_traits>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#if defined(__linux__)
+#include <pthread.h>
+#endif
 
 #include "tools/base_task.hpp"
+#include "tools/sync_object.hpp"
+#include "tools/sync_ring_buffer.hpp"
 
 namespace tools
 {
-    template <typename Context>
-    class periodic_task : public base_task
+    template <typename Context, typename DataType, std::size_t Capacity>
+    requires std::is_standard_layout_v<DataType>&& std::is_trivial_v<DataType> class data_task : public base_task
     {
 
     public:
-        periodic_task() = delete;
+        data_task() = delete;
 
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
+        using data_call_back = std::function<void(std::shared_ptr<Context>, const DataType& data, const std::string& task_name)>;
 
-        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size)
+        data_task(call_back&& startup_routine, data_call_back&& process_routine, std::shared_ptr<Context> context,
+            const std::string& task_name, std::size_t stack_size)
             : base_task(task_name, stack_size)
             , m_startup_routine(std::move(startup_routine))
-            , m_periodic_routine(std::move(periodic_routine))
+            , m_process_routine(std::move(process_routine))
             , m_context(context)
-            , m_period(period)
         {
-            auto ret = xTaskCreate(periodic_call, this->task_name().c_str(), this->stack_size(),
-                reinterpret_cast<void*>(this), /* Parameter passed into the task. */
-                tskIDLE_PRIORITY, &m_task);
-
-            if (pdPASS == ret)
-            {
-                m_task_created = true;
-            }
-            else
-            {
-                fprintf(stderr, "FATAL error: xTaskCreate() failed for task %s (%s line %d function %s)\n", this->task_name().c_str(),
-                    __FILE__, __LINE__, __FUNCTION__);
-            }
+            m_task = std::make_unique<std::thread>(
+                [this]()
+                {
+#if defined(__linux__)
+                    pthread_setname_np(pthread_self(), this->task_name().c_str());
+#endif
+                    run_loop();
+                });
         }
 
-        ~periodic_task()
+        ~data_task()
         {
             m_stop_task.store(true);
-
-            if (m_task_created)
-            {
-                vTaskSuspend(m_task);
-                vTaskDelete(m_task);
-            }
+            m_data_sync.signal();
+            m_task->join();
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
-        virtual void* native_handle() override { return reinterpret_cast<void*>(&m_task); }
+        virtual void* native_handle() override { return reinterpret_cast<void*>(m_task->native_handle()); }
+
+        void submit(const DataType& data)
+        {
+            m_data_queue.push(data);
+            m_data_sync.signal();
+        }
 
     private:
-        static void periodic_call(void* object_instance)
+        void run_loop()
         {
-            periodic_task* instance = reinterpret_cast<periodic_task*>(object_instance);
-
-            auto x_last_wake_time = xTaskGetTickCount();
-            const auto us = std::chrono::duration_cast<std::chrono::microseconds>(instance->m_period);
-            const TickType_t x_period = (pdMS_TO_TICKS(us.count()) / 1000);
-
-            const std::string& task_name = instance->task_name();
-
             // execute given startup function
-            instance->m_startup_routine(instance->m_context, task_name);
+            m_startup_routine(m_context, this->task_name());
 
-            while (!instance->m_stop_task.load())
+            while (!m_stop_task.load())
             {
-                vTaskDelayUntil(&x_last_wake_time, x_period);
+                m_data_sync.wait_for_signal();
 
-                // execute given periodic function
-                instance->m_periodic_routine(instance->m_context, task_name);
-            }
+                while (!m_data_queue.empty())
+                {
+                    auto data = m_data_queue.front();
+                    m_data_queue.pop();
+
+                    m_process_routine(m_context, data, this->task_name());
+                }
+            } // run loop
         }
 
         call_back m_startup_routine;
-        call_back m_periodic_routine;
+        data_call_back m_process_routine;
+        tools::sync_object m_data_sync;
+        tools::sync_ring_buffer<DataType, Capacity> m_data_queue;
         std::shared_ptr<Context> m_context;
-        std::chrono::duration<int, std::micro> m_period;
         std::atomic_bool m_stop_task = false;
-
-        TaskHandle_t m_task;
-        bool m_task_created = false;
+        std::unique_ptr<std::thread> m_task;
     };
 }

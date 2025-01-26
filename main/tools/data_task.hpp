@@ -23,10 +23,17 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#include <chrono>
-#include <thread>
+#pragma once
 
-namespace tools
-{
-    inline void sleep_for(int ms) { std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(ms)); }
-}
+#if !defined(__DATA_TASK_HPP__)
+#define __DATA_TASK_HPP__
+
+#include "tools/platform_detection.hpp"
+
+#if defined(FREERTOS_PLATFORM)
+#include "tools/freertos/data_task_freertos.inl"
+#else
+#include "tools/standard/data_task_std.inl"
+#endif
+
+#endif //  __DATA_TASK_HPP__

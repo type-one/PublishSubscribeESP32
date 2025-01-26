@@ -50,8 +50,7 @@ namespace tools
 
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
-        worker_task(
-            call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size)
+        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size)
             : base_task(task_name, stack_size)
             , m_startup_routine(std::move(startup_routine))
             , m_context(context)

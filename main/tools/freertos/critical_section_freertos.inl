@@ -71,7 +71,7 @@ namespace tools
                 {
                     portYIELD_FROM_ISR(px_higher_priority_task_woken);
                     px_higher_priority_task_woken = pdFALSE;
-                }                
+                }
             }
         }
 

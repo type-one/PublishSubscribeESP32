@@ -43,6 +43,7 @@
 #include "bytepack/bytepack.hpp"
 
 #include "tools/async_observer.hpp"
+#include "tools/data_task.hpp"
 #include "tools/histogram.hpp"
 #include "tools/periodic_task.hpp"
 #include "tools/platform_detection.hpp"
@@ -639,48 +640,41 @@ void test_queued_bytepack_data()
 
 struct isr_context
 {
-    QueueHandle_t evt_queue = xQueueCreate(10, sizeof(std::uint32_t));
-    std::atomic_bool stop = false;
     std::queue<std::pair<std::uint32_t, std::uint32_t>> storage;
+    std::shared_ptr<tools::data_task<isr_context, std::uint32_t, 10>> data_task;
 };
+
+using isr_data_task = tools::data_task<isr_context, std::uint32_t, 10>;
 
 static bool timer_isr_handler(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_ctx)
 {
     (void)edata;
     static std::uint32_t counter = 0U;
 
-    BaseType_t high_task_awoken = pdFALSE;
     isr_context* context = reinterpret_cast<isr_context*>(user_ctx);
 
     std::uint32_t value = counter++;
 
-    xQueueSendFromISR(context->evt_queue, &value, &high_task_awoken);
+    context->data_task->isr_submit(value);
 
-    // return whether we need to yield at the end of ISR
-    return high_task_awoken == pdTRUE;
+    return false; /* YIELD_FROM_ISR already handled in submit data call */
 }
 
-static void isr_slave_task(std::shared_ptr<isr_context> context, const std::string& task_name)
+static void task_isr_startup(std::shared_ptr<isr_context> context, const std::string& task_name)
 {
+    (void)context;
     std::printf("starting %s\n", task_name.c_str());
-
-    auto start_timepoint = std::chrono::high_resolution_clock::now();
-
-    while (!context->stop)
-    {
-        std::uint32_t value = 0U;
-
-        while (xQueueReceive(context->evt_queue, &value, portMAX_DELAY))
-        {
-            auto curr_timepoint = std::chrono::high_resolution_clock::now();
-            const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(curr_timepoint - start_timepoint);
-            start_timepoint = curr_timepoint; 
-
-            context->storage.emplace(std::make_pair(value, static_cast<std::uint32_t>(elapsed.count())));
-        }
-    }
 }
 
+static void task_isr_processing(std::shared_ptr<isr_context> context, const std::uint32_t& data, const std::string& task_name)
+{
+    static auto prev_timepoint = std::chrono::high_resolution_clock::now();
+    auto current_timepoint = std::chrono::high_resolution_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(current_timepoint - prev_timepoint);
+    prev_timepoint = current_timepoint;
+
+    context->storage.emplace(std::make_pair(data, static_cast<std::uint32_t>(elapsed.count())));
+}
 
 void test_hardware_timer_interrupt()
 {
@@ -688,46 +682,47 @@ void test_hardware_timer_interrupt()
     // https://www.electronicwings.com/esp32/esp32-timer-interrupts
     // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/gptimer.html
 
-    
     auto my_isr_context = std::make_shared<isr_context>();
-    auto my_isr_task = std::make_shared<tools::worker_task<isr_context>>(isr_slave_task, my_isr_context, "isr_task", 4096);
 
-    std::printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
+    {
+        auto my_isr_task = std::make_shared<isr_data_task>(task_isr_startup, task_isr_processing, my_isr_context, "isr_task", 4096);
+        my_isr_context->data_task = my_isr_task;
 
-    gptimer_handle_t gptimer = nullptr;
-    gptimer_config_t timer_config = {};
+        std::printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
-    timer_config.clk_src = GPTIMER_CLK_SRC_DEFAULT;
-    timer_config.direction = GPTIMER_COUNT_UP;
-    timer_config.resolution_hz = 1 * 1000 * 1000; // 1MHz, 1 tick = 1us
-    
-    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
+        gptimer_handle_t gptimer = nullptr;
+        gptimer_config_t timer_config = {};
 
-    gptimer_alarm_config_t alarm_config = {};
+        timer_config.clk_src = GPTIMER_CLK_SRC_DEFAULT;
+        timer_config.direction = GPTIMER_COUNT_UP;
+        timer_config.resolution_hz = 1 * 1000 * 1000; // 1MHz, 1 tick = 1us
 
-    alarm_config.reload_count = 0;                  // counter will reload with 0 on alarm event
-    alarm_config.alarm_count = 1000;                // period = 0.001s @resolution 1MHz
-    alarm_config.flags.auto_reload_on_alarm = true; // enable auto-reload
-    
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
+        ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
-    gptimer_event_callbacks_t cbs = {};
-    cbs.on_alarm = timer_isr_handler; // register user callback
-    
-    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, my_isr_context.get()));
-    ESP_ERROR_CHECK(gptimer_enable(gptimer));
-    ESP_ERROR_CHECK(gptimer_start(gptimer));
+        gptimer_alarm_config_t alarm_config = {};
 
-    tools::sleep_for(1000);
+        alarm_config.reload_count = 0;                  // counter will reload with 0 on alarm event
+        alarm_config.alarm_count = 1000;                // period = 0.001s @resolution 1MHz
+        alarm_config.flags.auto_reload_on_alarm = true; // enable auto-reload
 
-    my_isr_context->stop = true;
-    std::uint32_t value = 0;
-    xQueueSend(my_isr_context->evt_queue, &value, portMAX_DELAY);
+        ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
 
-    ESP_ERROR_CHECK(gptimer_stop(gptimer));
-    ESP_ERROR_CHECK(gptimer_disable(gptimer));
+        gptimer_event_callbacks_t cbs = {};
+        cbs.on_alarm = timer_isr_handler; // register user callback
 
-    while(!my_isr_context->storage.empty())
+        ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, my_isr_context.get()));
+        ESP_ERROR_CHECK(gptimer_enable(gptimer));
+        ESP_ERROR_CHECK(gptimer_start(gptimer));
+
+        tools::sleep_for(1000);
+
+        ESP_ERROR_CHECK(gptimer_stop(gptimer));
+        ESP_ERROR_CHECK(gptimer_disable(gptimer));
+
+        my_isr_context->data_task.reset();
+    }
+
+    while (!my_isr_context->storage.empty())
     {
         auto [counter, elapsed] = my_isr_context->storage.front();
         my_isr_context->storage.pop();

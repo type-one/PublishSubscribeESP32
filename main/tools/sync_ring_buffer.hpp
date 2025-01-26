@@ -91,7 +91,7 @@ namespace tools
             std::lock_guard guard(m_mutex);
             return m_ring_buffer.size();
         }
-        
+
         constexpr std::size_t capacity() const { return m_ring_buffer.capacity(); }
 
 #if defined(FREERTOS_PLATFORM)

@@ -34,27 +34,37 @@
 #include <freertos/task.h>
 
 #include "tools/base_task.hpp"
+#include "tools/sync_queue.hpp"
 
 namespace tools
 {
-    template <typename Context>
-    class periodic_task : public base_task
+    template <typename Context, typename DataType, std::size_t Capacity>
+    requires std::is_standard_layout_v<DataType>&& std::is_trivial_v<DataType> class data_task : public base_task
     {
 
     public:
-        periodic_task() = delete;
+        data_task() = delete;
 
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
+        using data_call_back = std::function<void(std::shared_ptr<Context>, const DataType& data, const std::string& task_name)>;
 
-        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size)
+        data_task(call_back&& startup_routine, data_call_back&& process_routine, std::shared_ptr<Context> context,
+            const std::string& task_name, std::size_t stack_size)
             : base_task(task_name, stack_size)
             , m_startup_routine(std::move(startup_routine))
-            , m_periodic_routine(std::move(periodic_routine))
+            , m_process_routine(std::move(process_routine))
             , m_context(context)
-            , m_period(period)
         {
-            auto ret = xTaskCreate(periodic_call, this->task_name().c_str(), this->stack_size(),
+
+            m_data_queue = xQueueCreate(Capacity, sizeof(DataType));
+
+            if (nullptr == m_data_queue)
+            {
+                fprintf(stderr, "FATAL error: xQueueCreate() failed for task %s (%s line %d function %s)\n", this->task_name().c_str(),
+                    __FILE__, __LINE__, __FUNCTION__);
+            }
+
+            auto ret = xTaskCreate(run_loop, this->task_name().c_str(), this->stack_size(),
                 reinterpret_cast<void*>(this), /* Parameter passed into the task. */
                 tskIDLE_PRIORITY, &m_task);
 
@@ -69,9 +79,15 @@ namespace tools
             }
         }
 
-        ~periodic_task()
+        ~data_task()
         {
             m_stop_task.store(true);
+            if (nullptr != m_data_queue)
+            {
+                constexpr const TickType_t x_block_time = 20 * portTICK_PERIOD_MS;
+                DataType value = {};
+                xQueueSend(m_data_queue, &value, x_block_time);
+            }
 
             if (m_task_created)
             {
@@ -83,33 +99,54 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         virtual void* native_handle() override { return reinterpret_cast<void*>(&m_task); }
 
-    private:
-        static void periodic_call(void* object_instance)
+        void submit(const DataType& data)
         {
-            periodic_task* instance = reinterpret_cast<periodic_task*>(object_instance);
+            if (nullptr != m_data_queue)
+            {
+                constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
+                xQueueSend(m_data_queue, &data, x_block_time);
+            }
+        }
 
-            auto x_last_wake_time = xTaskGetTickCount();
-            const auto us = std::chrono::duration_cast<std::chrono::microseconds>(instance->m_period);
-            const TickType_t x_period = (pdMS_TO_TICKS(us.count()) / 1000);
+        void isr_submit(const DataType& data)
+        {
+            if (nullptr != m_data_queue)
+            {
+                BaseType_t px_higher_priority_task_woken = pdFALSE;
+                xQueueSendFromISR(m_data_queue, &data, &px_higher_priority_task_woken);
+                portYIELD_FROM_ISR(px_higher_priority_task_woken);
+            }
+        }
 
-            const std::string& task_name = instance->task_name();
+    private:
+        static void run_loop(void* object_instance)
+        {
+            data_task* instance = reinterpret_cast<data_task*>(object_instance);
+
+            const std::string task_name = instance->task_name();
+            constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
 
             // execute given startup function
             instance->m_startup_routine(instance->m_context, task_name);
 
             while (!instance->m_stop_task.load())
             {
-                vTaskDelayUntil(&x_last_wake_time, x_period);
-
-                // execute given periodic function
-                instance->m_periodic_routine(instance->m_context, task_name);
-            }
+                if (nullptr != instance->m_data_queue)
+                {
+                    DataType data = {};
+                    while (xQueueReceive(instance->m_data_queue, &data, x_block_time))
+                    {
+                        instance->m_process_routine(instance->m_context, data, task_name);
+                    }
+                }
+            } // run loop
         }
 
         call_back m_startup_routine;
-        call_back m_periodic_routine;
+        data_call_back m_process_routine;
+        QueueHandle_t m_data_queue;
         std::shared_ptr<Context> m_context;
-        std::chrono::duration<int, std::micro> m_period;
+
         std::atomic_bool m_stop_task = false;
 
         TaskHandle_t m_task;
