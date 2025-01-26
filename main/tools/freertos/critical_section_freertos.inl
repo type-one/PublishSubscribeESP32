@@ -66,19 +66,39 @@ namespace tools
         {
             if (nullptr != m_mutex)
             {
-                BaseType_t px_higher_priority_task_woken = 0;
+                BaseType_t px_higher_priority_task_woken = pdFALSE;
                 while (xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken) != pdTRUE)
                 {
-                }
+                    portYIELD_FROM_ISR(px_higher_priority_task_woken);
+                    px_higher_priority_task_woken = pdFALSE;
+                }                
             }
         }
 
-        bool try_lock() { return (pdTRUE == xSemaphoreTake(m_mutex, static_cast<TickType_t>(0))); }
+        bool try_lock()
+        {
+            bool result = false;
+
+            if (nullptr != m_mutex)
+            {
+                result = (pdTRUE == xSemaphoreTake(m_mutex, static_cast<TickType_t>(0)));
+            }
+
+            return result;
+        }
 
         bool try_isr_lock()
         {
-            BaseType_t px_higher_priority_task_woken = 0;
-            return (pdTRUE == xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken));
+            bool result = false;
+
+            if (nullptr != m_mutex)
+            {
+                BaseType_t px_higher_priority_task_woken = pdFALSE;
+                result = (pdTRUE == xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken));
+                portYIELD_FROM_ISR(px_higher_priority_task_woken);
+            }
+
+            return result;
         }
 
         void unlock()
@@ -93,8 +113,9 @@ namespace tools
         {
             if (nullptr != m_mutex)
             {
-                BaseType_t px_higher_priority_task_woken = 0;
+                BaseType_t px_higher_priority_task_woken = pdFALSE;
                 xSemaphoreGiveFromISR(m_mutex, &px_higher_priority_task_woken);
+                portYIELD_FROM_ISR(px_higher_priority_task_woken);
             }
         }
 

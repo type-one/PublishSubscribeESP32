@@ -54,6 +54,15 @@
 #include "tools/sync_ring_buffer.hpp"
 #include "tools/worker_task.hpp"
 
+#if defined(ESP_PLATFORM)
+#include <driver/gpio.h>
+#include <driver/gptimer.h>
+#include <esp_system.h>
+#include <freertos/queue.h>
+#include <hal/gpio_types.h>
+#include <sdkconfig.h>
+#endif
+
 //--------------------------------------------------------------------------------------------------------------------------------
 
 void test_ring_buffer()
@@ -455,7 +464,7 @@ void test_worker_tasks()
 
     std::default_random_engine generator;
     std::uniform_int_distribution<int> distribution(0, 1);
-    std::array<std::unique_ptr<my_worker_task>, 2> tasks = {std::move(task1), std::move(task2)};
+    std::array<std::unique_ptr<my_worker_task>, 2> tasks = { std::move(task1), std::move(task2) };
 
     tools::sleep_for(100); // 100 ms
 
@@ -473,7 +482,7 @@ void test_worker_tasks()
                 context->time_points.emplace(std::chrono::high_resolution_clock::now());
             });
 
-        std::this_thread::yield();    
+        std::this_thread::yield();
     }
 
     // sleep 2 sec
@@ -626,6 +635,113 @@ void test_queued_bytepack_data()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+#if defined(ESP_PLATFORM)
+
+struct isr_context
+{
+    QueueHandle_t evt_queue = xQueueCreate(10, sizeof(std::uint32_t));
+    std::atomic_bool stop = false;
+    std::queue<std::pair<std::uint32_t, std::uint32_t>> storage;
+};
+
+static bool timer_isr_handler(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_ctx)
+{
+    (void)edata;
+    static std::uint32_t counter = 0U;
+
+    BaseType_t high_task_awoken = pdFALSE;
+    isr_context* context = reinterpret_cast<isr_context*>(user_ctx);
+
+    std::uint32_t value = counter++;
+
+    xQueueSendFromISR(context->evt_queue, &value, &high_task_awoken);
+
+    // return whether we need to yield at the end of ISR
+    return high_task_awoken == pdTRUE;
+}
+
+static void isr_slave_task(std::shared_ptr<isr_context> context, const std::string& task_name)
+{
+    std::printf("starting %s\n", task_name.c_str());
+
+    auto start_timepoint = std::chrono::high_resolution_clock::now();
+
+    while (!context->stop)
+    {
+        std::uint32_t value = 0U;
+
+        while (xQueueReceive(context->evt_queue, &value, portMAX_DELAY))
+        {
+            auto curr_timepoint = std::chrono::high_resolution_clock::now();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(curr_timepoint - start_timepoint);
+            start_timepoint = curr_timepoint; 
+
+            context->storage.emplace(std::make_pair(value, static_cast<std::uint32_t>(elapsed.count())));
+        }
+    }
+}
+
+
+void test_hardware_timer_interrupt()
+{
+    // https://phatiphatt.wordpress.com/esp32-sampling_mode/
+    // https://www.electronicwings.com/esp32/esp32-timer-interrupts
+    // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/gptimer.html
+
+    
+    auto my_isr_context = std::make_shared<isr_context>();
+    auto my_isr_task = std::make_shared<tools::worker_task<isr_context>>(isr_slave_task, my_isr_context, "isr_task", 4096);
+
+    std::printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
+
+    gptimer_handle_t gptimer = nullptr;
+    gptimer_config_t timer_config = {};
+
+    timer_config.clk_src = GPTIMER_CLK_SRC_DEFAULT;
+    timer_config.direction = GPTIMER_COUNT_UP;
+    timer_config.resolution_hz = 1 * 1000 * 1000; // 1MHz, 1 tick = 1us
+    
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
+
+    gptimer_alarm_config_t alarm_config = {};
+
+    alarm_config.reload_count = 0;                  // counter will reload with 0 on alarm event
+    alarm_config.alarm_count = 1000;                // period = 0.001s @resolution 1MHz
+    alarm_config.flags.auto_reload_on_alarm = true; // enable auto-reload
+    
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
+
+    gptimer_event_callbacks_t cbs = {};
+    cbs.on_alarm = timer_isr_handler; // register user callback
+    
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, my_isr_context.get()));
+    ESP_ERROR_CHECK(gptimer_enable(gptimer));
+    ESP_ERROR_CHECK(gptimer_start(gptimer));
+
+    tools::sleep_for(1000);
+
+    my_isr_context->stop = true;
+    std::uint32_t value = 0;
+    xQueueSend(my_isr_context->evt_queue, &value, portMAX_DELAY);
+
+    ESP_ERROR_CHECK(gptimer_stop(gptimer));
+    ESP_ERROR_CHECK(gptimer_disable(gptimer));
+
+    while(!my_isr_context->storage.empty())
+    {
+        auto [counter, elapsed] = my_isr_context->storage.front();
+        my_isr_context->storage.pop();
+
+        std::printf("ISR counter %" PRIu32 " - elapsed %" PRIu32 " us\n", counter, elapsed);
+    }
+
+    tools::sleep_for(1000);
+}
+
+#endif
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 
 #if defined(FREERTOS_PLATFORM)
 extern "C" void app_main()
@@ -646,6 +762,10 @@ int main()
     test_ring_buffer_commands();
     test_worker_tasks();
     test_queued_bytepack_data();
+
+#if defined(ESP_PLATFORM)
+    test_hardware_timer_interrupt();
+#endif
 
 #if !defined(FREERTOS_PLATFORM)
     return 0;

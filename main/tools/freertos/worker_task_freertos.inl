@@ -100,6 +100,7 @@ namespace tools
 
             BaseType_t x_higher_priority_task_woken = pdFALSE;
             xTaskNotifyFromISR(m_task, 0x01 /* BIT */, eSetBits, &x_higher_priority_task_woken);
+            portYIELD_FROM_ISR(x_higher_priority_task_woken);
         }
 
     private:

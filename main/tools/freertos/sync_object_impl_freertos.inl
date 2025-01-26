@@ -60,8 +60,9 @@ namespace tools
     {
         if (nullptr != m_event_group)
         {
-            BaseType_t px_higher_priority_task_woken = 0;
+            BaseType_t px_higher_priority_task_woken = pdFALSE;
             xEventGroupSetBitsFromISR(m_event_group, BIT0, &px_higher_priority_task_woken);
+            portYIELD_FROM_ISR(px_higher_priority_task_woken);
         }
     }
 
