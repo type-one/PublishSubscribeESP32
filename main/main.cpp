@@ -638,13 +638,15 @@ void test_queued_bytepack_data()
 
 #if defined(ESP_PLATFORM)
 
+constexpr std::size_t isr_queue_depth = 20;
+
 struct isr_context
 {
     std::queue<std::pair<std::uint32_t, std::uint32_t>> storage;
-    std::shared_ptr<tools::data_task<isr_context, std::uint32_t, 10>> data_task;
+    std::shared_ptr<tools::data_task<isr_context, std::uint32_t, isr_queue_depth>> data_task;
 };
 
-using isr_data_task = tools::data_task<isr_context, std::uint32_t, 10>;
+using isr_data_task = tools::data_task<isr_context, std::uint32_t, isr_queue_depth>;
 
 static bool timer_isr_handler(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_ctx)
 {
