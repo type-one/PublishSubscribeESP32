@@ -20,6 +20,8 @@ Goodies:
 
 https://github.com/type-one/PublishSubscribeESP32
 
+Third Parties used in the examples:
+https://github.com/farukeryilmaz/bytepack
 
 # What
 

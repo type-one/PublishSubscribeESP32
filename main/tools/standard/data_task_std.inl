@@ -43,7 +43,8 @@
 namespace tools
 {
     template <typename Context, typename DataType, std::size_t Capacity>
-    requires std::is_standard_layout_v<DataType>&& std::is_trivial_v<DataType> class data_task : public base_task
+        requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
+    class data_task : public base_task
     {
 
     public:
