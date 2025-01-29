@@ -23,6 +23,7 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -31,7 +32,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <memory>
+#include <numeric>
 #include <random>
 #include <string>
 #include <thread>
@@ -83,95 +86,145 @@ void test_ring_buffer()
 void test_ring_buffer_iteration()
 {
     std::printf("-- ring buffer iteration --\n");
-    auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
 
-    str_queue->emplace("toto1");
-    str_queue->emplace("toto2");
-    str_queue->emplace("toto3");
-    str_queue->emplace("toto4");
-
-    std::printf("front %s\n", str_queue->front().c_str()); 
-    std::printf("back %s\n", str_queue->back().c_str()); 
-
-    std::printf("content\n");
-
-    std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item)
     {
-        std::printf("%s\n", item.c_str());
-    });
+        auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();    
 
-    std::printf("pop front\n");
-    str_queue->pop();
+        str_queue->emplace("toto1");
+        str_queue->emplace("toto2");
+        str_queue->emplace("toto3");
+        str_queue->emplace("toto4");
 
-    std::printf("front %s\n", str_queue->front().c_str()); 
-    std::printf("back %s\n", str_queue->back().c_str()); 
+        std::printf("front %s\n", str_queue->front().c_str()); 
+        std::printf("back %s\n", str_queue->back().c_str()); 
 
-    std::printf("content\n");
-    std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item)
-    {
-        std::printf("%s\n", item.c_str());
-    });
+        std::printf("content\n");
 
-    std::printf("pop front\n");
-    str_queue->pop();
+        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item)
+        {
+            std::printf("%s\n", item.c_str());
+        });
 
-    std::printf("front %s\n", str_queue->front().c_str()); 
-    std::printf("back %s\n", str_queue->back().c_str()); 
+        std::printf("pop front\n");
+        str_queue->pop();
 
-    std::printf("content\n");
-    for(const auto& item: *str_queue)
-    {
-        std::printf("%s\n", item.c_str());
-    } 
+        std::printf("front %s\n", str_queue->front().c_str()); 
+        std::printf("back %s\n", str_queue->back().c_str()); 
 
-    str_queue->push("toto5");
-    str_queue->push("toto6");
+        std::printf("content\n");
+        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item)
+        {
+            std::printf("%s\n", item.c_str());
+        });
 
-    std::printf("front %s\n", str_queue->front().c_str()); 
-    std::printf("back %s\n", str_queue->back().c_str()); 
+        std::printf("pop front\n");
+        str_queue->pop();
 
-    std::printf("content\n");
+        std::printf("front %s\n", str_queue->front().c_str()); 
+        std::printf("back %s\n", str_queue->back().c_str()); 
 
-    for(const auto& item: *str_queue)
-    {
-        std::printf("%s\n", item.c_str());
-    } 
+        std::printf("content\n");
+        for(const auto& item: *str_queue)
+        {
+            std::printf("%s\n", item.c_str());
+        } 
 
-    int cnt = 0;
-    while(!str_queue->full())
-    {
-        str_queue->emplace("tintin" + std::to_string(cnt));
-        ++cnt;
+        str_queue->push("toto5");
+        str_queue->push("toto6");
+
+        std::printf("front %s\n", str_queue->front().c_str()); 
+        std::printf("back %s\n", str_queue->back().c_str()); 
+
+        std::printf("content\n");
+
+        for(const auto& item: *str_queue)
+        {
+            std::printf("%s\n", item.c_str());
+        } 
+
+        int cnt = 0;
+        while(!str_queue->full())
+        {
+            str_queue->emplace("tintin" + std::to_string(cnt));
+            ++cnt;
+        }
+
+        std::printf("front %s\n", str_queue->front().c_str()); 
+        std::printf("back %s\n", str_queue->back().c_str()); 
+
+        std::printf("content\n");
+
+        for(const auto& item: *str_queue)
+        {
+            std::printf("%s\n", item.c_str());
+        } 
+
+        const std::size_t remove_count = str_queue->size() - 5U;
+        for(std::size_t i = 0U; i < remove_count; ++i)
+        {
+            str_queue->pop();
+        }        
+
+        str_queue->push("toutou1");
+        str_queue->push("toutou2");
+
+        std::printf("front %s\n", str_queue->front().c_str()); 
+        std::printf("back %s\n", str_queue->back().c_str()); 
+        
+        std::printf("content\n");
+
+        for(const auto& item: *str_queue)
+        {
+            std::printf("%s\n", item.c_str());
+        }   
     }
 
-    std::printf("front %s\n", str_queue->front().c_str()); 
-    std::printf("back %s\n", str_queue->back().c_str()); 
-
-    std::printf("content\n");
-
-    for(const auto& item: *str_queue)
     {
-        std::printf("%s\n", item.c_str());
-    } 
+        auto val_queue = std::make_unique<tools::ring_buffer<double, 64U>>(); 
 
-    const std::size_t remove_count = str_queue->size() - 5U;
-    for(std::size_t i = 0U; i < remove_count; ++i)
-    {
-        str_queue->pop();
-    }        
+        val_queue->emplace(5.6);
+        val_queue->emplace(7.2);
+        val_queue->emplace(1.2);
+        val_queue->emplace(9.1);
+        val_queue->emplace(10.1);
+        val_queue->emplace(7.5);  
 
-    str_queue->push("toutou1");
-    str_queue->push("toutou2");
+        std::size_t cnt = val_queue->size() - 1U;
 
-    std::printf("front %s\n", str_queue->front().c_str()); 
-    std::printf("back %s\n", str_queue->back().c_str()); 
-    
-    std::printf("content\n");
+        for(std::size_t i = 0U; i < cnt; ++i)
+        {
+            std::printf("content\n");
 
-    for(const auto& item: *str_queue)
-    {
-        std::printf("%s\n", item.c_str());
-    }    
+            for(const auto& item: *val_queue)
+            {
+                std::printf("%f\n", item);
+            } 
+
+            const auto avg_val = std::accumulate(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>()) / val_queue->size();
+            std::printf("avg: %f\n", avg_val);
+
+            const auto sqsum_val = std::transform_reduce(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>(), [&avg_val](const auto& val)
+            {
+                const auto d = (val - avg_val);
+                return d * d;
+            });
+
+            const auto variance_val = std::sqrt(sqsum_val / val_queue->size());
+            std::printf("variance: %f\n", variance_val);
+
+            auto content = std::make_unique<std::vector<double>>(val_queue->size());
+            std::copy(val_queue->begin(), val_queue->end(), content->begin());
+
+            const auto [min_val_it, max_val_it] = std::minmax_element(content->cbegin(), content->cend());
+
+            std::printf("min: %f\n", *min_val_it);
+            std::printf("max: %f\n", *max_val_it);
+        
+            std::printf("pop front\n");
+            val_queue->pop();
+        }
+      
+    }
 
 }
 
