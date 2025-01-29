@@ -69,15 +69,110 @@
 void test_ring_buffer()
 {
     std::printf("-- ring buffer --\n");
-    tools::ring_buffer<std::string, 64U> str_queue;
+    auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
 
-    str_queue.emplace("toto");
+    str_queue->emplace("toto");
 
-    auto item = str_queue.front();
+    auto item = str_queue->front();
 
     std::printf("%s\n", item.c_str());
 
-    str_queue.pop();
+    str_queue->pop();
+}
+
+void test_ring_buffer_iteration()
+{
+    std::printf("-- ring buffer iteration --\n");
+    auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
+
+    str_queue->emplace("toto1");
+    str_queue->emplace("toto2");
+    str_queue->emplace("toto3");
+    str_queue->emplace("toto4");
+
+    std::printf("front %s\n", str_queue->front().c_str()); 
+    std::printf("back %s\n", str_queue->back().c_str()); 
+
+    std::printf("content\n");
+
+    std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item)
+    {
+        std::printf("%s\n", item.c_str());
+    });
+
+    std::printf("pop front\n");
+    str_queue->pop();
+
+    std::printf("front %s\n", str_queue->front().c_str()); 
+    std::printf("back %s\n", str_queue->back().c_str()); 
+
+    std::printf("content\n");
+    std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item)
+    {
+        std::printf("%s\n", item.c_str());
+    });
+
+    std::printf("pop front\n");
+    str_queue->pop();
+
+    std::printf("front %s\n", str_queue->front().c_str()); 
+    std::printf("back %s\n", str_queue->back().c_str()); 
+
+    std::printf("content\n");
+    for(const auto& item: *str_queue)
+    {
+        std::printf("%s\n", item.c_str());
+    } 
+
+    str_queue->push("toto5");
+    str_queue->push("toto6");
+
+    std::printf("front %s\n", str_queue->front().c_str()); 
+    std::printf("back %s\n", str_queue->back().c_str()); 
+
+    std::printf("content\n");
+
+    for(const auto& item: *str_queue)
+    {
+        std::printf("%s\n", item.c_str());
+    } 
+
+    int cnt = 0;
+    while(!str_queue->full())
+    {
+        str_queue->emplace("tintin" + std::to_string(cnt));
+        ++cnt;
+    }
+
+    std::printf("front %s\n", str_queue->front().c_str()); 
+    std::printf("back %s\n", str_queue->back().c_str()); 
+
+    std::printf("content\n");
+
+    for(const auto& item: *str_queue)
+    {
+        std::printf("%s\n", item.c_str());
+    } 
+
+    const std::size_t remove_count = str_queue->size() - 5U;
+    for(std::size_t i = 0U; i < remove_count; ++i)
+    {
+        str_queue->pop();
+    }        
+
+    str_queue->push("toutou1");
+    str_queue->push("toutou2");
+
+    std::printf("front %s\n", str_queue->front().c_str()); 
+    std::printf("back %s\n", str_queue->back().c_str()); 
+    
+    std::printf("content\n");
+
+    for(const auto& item: *str_queue)
+    {
+        std::printf("%s\n", item.c_str());
+    }    
+
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -747,6 +842,8 @@ int main()
 #endif
 {
     test_ring_buffer();
+    test_ring_buffer_iteration();
+
     test_sync_ring_buffer();
     test_sync_queue();
     test_sync_dictionary();

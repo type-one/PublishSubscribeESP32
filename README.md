@@ -14,7 +14,7 @@ Goodies:
 - simple periodic task helper on top of FreeRTOS task or C++ thread
 - simple worker task helper on top of FreeRTOS task or C++ thread
 - simple data processing task helper on top of FreeRTOS task or C++ thread
-- simple thread-safe ring buffer on top of std::array
+- simple thread-safe ring buffer and iterable ring buffer on top of std::array
 - queuable commands
 - bytepack serialization in C++20 using header-only 3rd party (Faruk Eryilmaz - MIT license)
 
