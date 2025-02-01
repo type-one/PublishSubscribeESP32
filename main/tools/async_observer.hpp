@@ -45,7 +45,9 @@ namespace tools
     {
     public:
         async_observer() = default;
-        virtual ~async_observer() { }
+        virtual ~async_observer()
+        {
+        }
 
         virtual void inform(const Topic& topic, const Evt& event, const std::string& origin) override
         {
@@ -98,13 +100,25 @@ namespace tools
             return entry;
         }
 
-        bool has_events() { return !m_evt_queue.empty(); }
+        bool has_events()
+        {
+            return !m_evt_queue.empty();
+        }
 
-        std::size_t number_of_events() { return m_evt_queue.size(); }
+        std::size_t number_of_events()
+        {
+            return m_evt_queue.size();
+        }
 
-        void wait_for_events() { m_wakeable.wait_for_signal(); }
+        void wait_for_events()
+        {
+            m_wakeable.wait_for_signal();
+        }
 
-        void wait_for_events(const std::chrono::duration<int, std::micro>& timeout) { m_wakeable.wait_for_signal(timeout); }
+        void wait_for_events(const std::chrono::duration<int, std::micro>& timeout)
+        {
+            m_wakeable.wait_for_signal(timeout);
+        }
 
     private:
         sync_object m_wakeable;

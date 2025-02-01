@@ -46,14 +46,22 @@ namespace tools
         {
         }
 
-        virtual ~base_task() { }
+        virtual ~base_task()
+        {
+        }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         virtual void* native_handle() = 0;
 
-        const std::string& task_name() const { return m_task_name; }
+        const std::string& task_name() const
+        {
+            return m_task_name;
+        }
 
-        std::size_t stack_size() const { return m_stack_size; }
+        std::size_t stack_size() const
+        {
+            return m_stack_size;
+        }
 
     private:
         const std::string m_task_name;

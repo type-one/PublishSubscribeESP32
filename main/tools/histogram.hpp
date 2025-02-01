@@ -78,11 +78,20 @@ namespace tools
             ++m_total_count;
         }
 
-        constexpr T top() const { return m_top_value; }
+        constexpr T top() const
+        {
+            return m_top_value;
+        }
 
-        constexpr int total_count() const { return m_total_count; }
+        constexpr int total_count() const
+        {
+            return m_total_count;
+        }
 
-        constexpr int top_occurence() const { return m_top_occurence; }
+        constexpr int top_occurence() const
+        {
+            return m_top_occurence;
+        }
 
         T average() const
         {

@@ -98,7 +98,10 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
-        virtual void* native_handle() override { return reinterpret_cast<void*>(&m_task); }
+        virtual void* native_handle() override
+        {
+            return reinterpret_cast<void*>(&m_task);
+        }
 
         void submit(const DataType& data)
         {

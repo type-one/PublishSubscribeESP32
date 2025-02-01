@@ -42,8 +42,9 @@
 #include <utility>
 #include <vector>
 
-
 #include "bytepack/bytepack.hpp"
+#define CJSONPP_NO_EXCEPTION
+#include "cjsonpp/cjsonpp.hpp"
 
 #include "tools/async_observer.hpp"
 #include "tools/data_task.hpp"
@@ -83,131 +84,128 @@ void test_ring_buffer()
     str_queue->pop();
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------
+
 void test_ring_buffer_iteration()
 {
     std::printf("-- ring buffer iteration --\n");
 
     {
-        auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();    
+        auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
 
         str_queue->emplace("toto1");
         str_queue->emplace("toto2");
         str_queue->emplace("toto3");
         str_queue->emplace("toto4");
 
-        std::printf("front %s\n", str_queue->front().c_str()); 
-        std::printf("back %s\n", str_queue->back().c_str()); 
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
 
         std::printf("content\n");
 
-        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item)
-        {
-            std::printf("%s\n", item.c_str());
-        });
+        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
 
         std::printf("pop front\n");
         str_queue->pop();
 
-        std::printf("front %s\n", str_queue->front().c_str()); 
-        std::printf("back %s\n", str_queue->back().c_str()); 
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
 
         std::printf("content\n");
-        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item)
-        {
-            std::printf("%s\n", item.c_str());
-        });
+        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
 
         std::printf("pop front\n");
         str_queue->pop();
 
-        std::printf("front %s\n", str_queue->front().c_str()); 
-        std::printf("back %s\n", str_queue->back().c_str()); 
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
 
         std::printf("content\n");
-        for(const auto& item: *str_queue)
+        for (const auto& item : *str_queue)
         {
             std::printf("%s\n", item.c_str());
-        } 
+        }
 
         str_queue->push("toto5");
         str_queue->push("toto6");
 
-        std::printf("front %s\n", str_queue->front().c_str()); 
-        std::printf("back %s\n", str_queue->back().c_str()); 
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
 
         std::printf("content\n");
 
-        for(const auto& item: *str_queue)
+        for (const auto& item : *str_queue)
         {
             std::printf("%s\n", item.c_str());
-        } 
+        }
 
         int cnt = 0;
-        while(!str_queue->full())
+        while (!str_queue->full())
         {
             str_queue->emplace("tintin" + std::to_string(cnt));
             ++cnt;
         }
 
-        std::printf("front %s\n", str_queue->front().c_str()); 
-        std::printf("back %s\n", str_queue->back().c_str()); 
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
 
         std::printf("content\n");
 
-        for(const auto& item: *str_queue)
+        for (const auto& item : *str_queue)
         {
             std::printf("%s\n", item.c_str());
-        } 
+        }
 
         const std::size_t remove_count = str_queue->size() - 5U;
-        for(std::size_t i = 0U; i < remove_count; ++i)
+        for (std::size_t i = 0U; i < remove_count; ++i)
         {
             str_queue->pop();
-        }        
+        }
 
         str_queue->push("toutou1");
         str_queue->push("toutou2");
 
-        std::printf("front %s\n", str_queue->front().c_str()); 
-        std::printf("back %s\n", str_queue->back().c_str()); 
-        
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
+
         std::printf("content\n");
 
-        for(const auto& item: *str_queue)
+        for (const auto& item : *str_queue)
         {
             std::printf("%s\n", item.c_str());
-        }   
+        }
     }
 
     {
-        auto val_queue = std::make_unique<tools::ring_buffer<double, 64U>>(); 
+        auto val_queue = std::make_unique<tools::ring_buffer<double, 64U>>();
 
         val_queue->emplace(5.6);
         val_queue->emplace(7.2);
         val_queue->emplace(1.2);
         val_queue->emplace(9.1);
         val_queue->emplace(10.1);
-        val_queue->emplace(7.5);  
+        val_queue->emplace(7.5);
 
         std::size_t cnt = val_queue->size() - 1U;
 
-        for(std::size_t i = 0U; i < cnt; ++i)
+        for (std::size_t i = 0U; i < cnt; ++i)
         {
             std::printf("content\n");
 
-            for(const auto& item: *val_queue)
+            for (const auto& item : *val_queue)
             {
                 std::printf("%f\n", item);
-            } 
+            }
 
             const auto avg_val = std::accumulate(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>()) / val_queue->size();
             std::printf("avg: %f\n", avg_val);
 
-            const auto sqsum_val = std::transform_reduce(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>(), [&avg_val](const auto& val)
-            {
-                const auto d = (val - avg_val);
-                return d * d;
-            });
+            const auto sqsum_val = std::transform_reduce(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>(),
+                [&avg_val](const auto& val)
+                {
+                    const auto d = (val - avg_val);
+                    return d * d;
+                });
 
             const auto variance_val = std::sqrt(sqsum_val / val_queue->size());
             std::printf("variance: %f\n", variance_val);
@@ -219,13 +217,11 @@ void test_ring_buffer_iteration()
 
             std::printf("min: %f\n", *min_val_it);
             std::printf("max: %f\n", *max_val_it);
-        
+
             std::printf("pop front\n");
             val_queue->pop();
         }
-      
     }
-
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -292,7 +288,9 @@ class my_observer : public base_observer
 {
 public:
     my_observer() = default;
-    virtual ~my_observer() { }
+    virtual ~my_observer()
+    {
+    }
 
     virtual void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
@@ -363,7 +361,9 @@ public:
     {
     }
 
-    virtual ~my_subject() { }
+    virtual ~my_subject()
+    {
+    }
 
     virtual void publish(const my_topic& topic, const std::string& event) override
     {
@@ -472,7 +472,9 @@ class my_collector : public base_observer
 {
 public:
     my_collector() = default;
-    virtual ~my_collector() { }
+    virtual ~my_collector()
+    {
+    }
 
     virtual void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
@@ -665,7 +667,10 @@ struct temperature_sensor
     double gpu_temperature;
     double room_temperature;
 
-    void serialize(bytepack::binary_stream<>& stream) const { stream.write(cpu_temperature, gpu_temperature, room_temperature); }
+    void serialize(bytepack::binary_stream<>& stream) const
+    {
+        stream.write(cpu_temperature, gpu_temperature, room_temperature);
+    }
 
     bool deserialize(bytepack::binary_stream<>& stream)
     {
@@ -680,7 +685,10 @@ struct manufacturing_info
     char serial_number[16];
     char manufacturing_date[10];
 
-    void serialize(bytepack::binary_stream<>& stream) const { stream.write(vendor_name, serial_number, manufacturing_date); }
+    void serialize(bytepack::binary_stream<>& stream) const
+    {
+        stream.write(vendor_name, serial_number, manufacturing_date);
+    }
 
     bool deserialize(bytepack::binary_stream<>& stream)
     {
@@ -693,7 +701,10 @@ struct free_text
 {
     std::string text;
 
-    void serialize(bytepack::binary_stream<>& stream) const { stream.write(text); }
+    void serialize(bytepack::binary_stream<>& stream) const
+    {
+        stream.write(text);
+    }
 
     bool deserialize(bytepack::binary_stream<>& stream)
     {
@@ -748,7 +759,7 @@ void test_queued_bytepack_data()
 
         bytepack::binary_stream stream(bytepack::buffer_view(data_packed.data(), data_packed.size()));
 
-        message_type discriminant;
+        message_type discriminant = {};
         stream.read(discriminant);
 
         switch (discriminant)
@@ -780,6 +791,119 @@ void test_queued_bytepack_data()
 
         data_queue.pop();
     }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_json()
+{
+    {
+        // create an empty structure (null)
+        cjsonpp::JSONObject obj = {};
+        cjsonpp::JSONObject obj2 = {};
+        cjsonpp::JSONObject obj3 = {};
+        cjsonpp::JSONObject obj4 = {};
+
+        obj.set("pi", 3.141592);                   // add a number that is stored as double
+        obj.set("happy", true);                    // add a Boolean that is stored as bool
+        obj.set("name", "Niels");                  // add a string that is stored as std::string
+        obj.set("nothing", cjsonpp::nullObject()); // add another null object by passing nullptr
+
+        // add an array that is stored as std::vector (using an initializer list)
+        std::vector<int> v = { 0, 1, 2 };
+        obj.set("list", v);
+
+        // add an object inside the object
+        obj2.set("everything", 42);
+        obj.set("answer", obj2);
+
+        // add another object (using an initializer list of pairs)
+        obj3.set("currency", "USD");
+        obj4.set("value", 42.99);
+
+        cjsonpp::JSONObject arr = cjsonpp::arrayObject();
+        arr.add(obj3);
+        arr.add(obj4);        
+
+        obj.set("object", arr);
+
+        std::string s = obj.print();
+        std::printf("%s\n", s.c_str());
+    }
+
+    {
+        // create object from string literal
+        std::string jsonstr = "{ \"happy\": true, \"pi\": 3.141 }";
+        cjsonpp::JSONObject obj = cjsonpp::parse(jsonstr);
+
+        std::string s = obj.print();
+        std::printf("%s\n", s.c_str());
+    }  
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_queued_json_data()
+{
+    std::printf("-- queued json data --\n");
+    auto data_queue = std::make_unique<tools::sync_ring_buffer<std::string, 128U>>();
+
+    {
+        cjsonpp::JSONObject json = {};
+        json.set("msg_type", "sensor");
+        json.set("sensor_name", "indoor_temperature");
+        json.set("temp", 19.47);
+        json.set("activity", true);
+
+        cjsonpp::JSONObject json_answer = {};
+        json_answer.set("everything", 42);
+        json.set("answer", json_answer);
+
+        data_queue->emplace(json.print());
+    }
+
+    {
+        cjsonpp::JSONObject json = {};
+        json.set("msg_type", "time");
+        json.set("yyyy_mm_dd", "2025/01/13");
+        json.set("hh_mm_ss", "23:05:12");
+        json.set("time_zone", "GMT+2");
+
+        data_queue->emplace(json.print());
+    }
+
+    while (!data_queue->empty())
+    {
+        auto data = data_queue->front();
+        cjsonpp::JSONObject json = cjsonpp::parse(data);
+
+        std::string discriminant = json.get<std::string>("msg_type");
+
+        if (discriminant == "sensor")
+        {
+            std::printf("sensor / %s\n", json.print().c_str());
+            //std::string name = (*json)["sensor_name"];
+            //double temp = (*json)["temp"];
+            //bool activity = (*json)["activity"];
+            //int answer = (*json)["answer"]["everything"];
+            //std::printf("sensor: %s - temp %f - %s - answer (%d)\n",
+            //            name.c_str(),
+            //            temp,
+            //            activity ? "on":"off",
+            //            answer);
+        }
+        else if (discriminant == "time")
+        {
+            std::printf("time / %s\n", json.print().c_str());
+            //std::string time_date = (*json)["yyyy_mm_dd"];
+            //std::string time_clock = (*json)["hh_mm_ss"];
+            //std::string time_zone = (*json)["time_zone"];
+            //std::printf("time: %s - %s - %s\n", time_date.c_str(), time_clock.c_str(), time_zone.c_str());
+        }
+
+        data_queue->pop();
+    }
+    
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -909,6 +1033,9 @@ int main()
     test_ring_buffer_commands();
     test_worker_tasks();
     test_queued_bytepack_data();
+
+    test_json();
+    test_queued_json_data();
 
 #if defined(ESP_PLATFORM)
     test_hardware_timer_interrupt();

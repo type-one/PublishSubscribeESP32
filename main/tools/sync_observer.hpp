@@ -49,7 +49,9 @@ namespace tools
     {
     public:
         sync_observer() = default;
-        virtual ~sync_observer() { }
+        virtual ~sync_observer()
+        {
+        }
 
         virtual void inform(const Topic& topic, const Evt& event, const std::string& origin) = 0;
     };
@@ -73,9 +75,14 @@ namespace tools
         {
         }
 
-        virtual ~sync_subject() { }
+        virtual ~sync_subject()
+        {
+        }
 
-        std::string name() const { return m_name; }
+        std::string name() const
+        {
+            return m_name;
+        }
 
         void subscribe(const Topic& topic, sync_observer_shared_ptr observer)
         {

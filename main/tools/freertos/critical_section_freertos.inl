@@ -134,7 +134,10 @@ namespace tools
             m_lockable_object_ref.isr_lock();
         }
 
-        ~isr_lock_guard() { m_lockable_object_ref.isr_unlock(); }
+        ~isr_lock_guard()
+        {
+            m_lockable_object_ref.isr_unlock();
+        }
 
     private:
         T& m_lockable_object_ref;

@@ -18,10 +18,5 @@ SpaceBeforeAssignmentOperators: true
 SpacesBeforeTrailingComments: 1
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: false
 # SortIncludes: false
-
-
-
-
-

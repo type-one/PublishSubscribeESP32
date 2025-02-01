@@ -43,7 +43,10 @@
 
 namespace tools
 {
-    static inline bool is_running_as_root() { return (getuid() == 0) || (geteuid() == 0); }
+    static inline bool is_running_as_root()
+    {
+        return (getuid() == 0) || (geteuid() == 0);
+    }
 
     // https://docs.kernel.org/scheduler/sched-deadline.html
     // https://www.kernel.org/doc/Documentation/scheduler/sched-deadline.txt

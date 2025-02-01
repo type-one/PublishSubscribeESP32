@@ -28,5 +28,8 @@
 
 namespace tools
 {
-    inline void sleep_for(int ms) { std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(ms)); }
+    inline void sleep_for(int ms)
+    {
+        std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(ms));
+    }
 }

@@ -17,11 +17,15 @@ Goodies:
 - simple thread-safe ring buffer and iterable ring buffer on top of std::array
 - queuable commands
 - bytepack serialization in C++20 using header-only 3rd party (Faruk Eryilmaz - MIT license)
+- json serialization and deserialization using 3rd party (Dave Gamble & Dmitry Pankratov - MIT license)
 
 https://github.com/type-one/PublishSubscribeESP32
 
 Third Parties used in the examples:
 https://github.com/farukeryilmaz/bytepack
+https://github.com/ancwrd1/cjsonpp
+https://github.com/DaveGamble/cJSON
+https://github.com/ThrowTheSwitch/CException
 
 # What
 
