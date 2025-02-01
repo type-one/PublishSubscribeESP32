@@ -71,22 +71,22 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(LINUX) 
-    set(CMAKE_CXX_FLAGS "-fpermissive -march=native")
+    set(CMAKE_CXX_FLAGS "-march=native")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall -Wextra -D DEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math -funsafe-math-optimizations -D NDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -D NDEBUG")
 
     set(CMAKE_C_FLAGS "-march=native")
     set(CMAKE_C_FLAGS_DEBUG "-g -Wall -Wextra -D DEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -ffast-math -funsafe-math-optimizations -D NDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE "-O2 -D NDEBUG")
 
 elseif(WIN32)
     set(CMAKE_CXX_FLAGS "")
     set(CMAKE_CXX_FLAGS_DEBUG "/D DEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "/Ox /D NDEBUG /fp:fast")
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /D NDEBUG")
 
     set(CMAKE_C_FLAGS "")
     set(CMAKE_C_FLAGS_DEBUG "/D DEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "/Ox /D NDEBUG /fp:fast")
+    set(CMAKE_C_FLAGS_RELEASE "/O2 /D NDEBUG")
 endif()
 
 # uname -m
