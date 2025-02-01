@@ -797,6 +797,8 @@ void test_queued_bytepack_data()
 
 void test_json()
 {
+    std::printf("-- json serialization/deserialization --\n");
+
     {
         // create an empty structure (null)
         cjsonpp::JSONObject obj = {};
@@ -827,7 +829,7 @@ void test_json()
 
         obj.set("object", arr);
 
-        std::string s = obj.print();
+        const auto s = obj.print();
         std::printf("%s\n", s.c_str());
     }
 
@@ -836,7 +838,7 @@ void test_json()
         std::string jsonstr = "{ \"happy\": true, \"pi\": 3.141 }";
         cjsonpp::JSONObject obj = cjsonpp::parse(jsonstr);
 
-        std::string s = obj.print();
+        const auto s = obj.print();
         std::printf("%s\n", s.c_str());
     }  
 }
@@ -859,7 +861,9 @@ void test_queued_json_data()
         json_answer.set("everything", 42);
         json.set("answer", json_answer);
 
-        data_queue->emplace(json.print());
+        auto json_str = json.print();
+        std::printf("%s\n", json_str.c_str());
+        data_queue->emplace(std::move(json_str));
     }
 
     {
@@ -869,7 +873,9 @@ void test_queued_json_data()
         json.set("hh_mm_ss", "23:05:12");
         json.set("time_zone", "GMT+2");
 
-        data_queue->emplace(json.print());
+        auto json_str = json.print();
+        std::printf("%s\n", json_str.c_str());
+        data_queue->emplace(std::move(json_str));
     }
 
     while (!data_queue->empty())
@@ -877,28 +883,27 @@ void test_queued_json_data()
         auto data = data_queue->front();
         cjsonpp::JSONObject json = cjsonpp::parse(data);
 
-        std::string discriminant = json.get<std::string>("msg_type");
+        const auto discriminant = json.get<std::string>("msg_type");
 
         if (discriminant == "sensor")
         {
-            std::printf("sensor / %s\n", json.print().c_str());
-            //std::string name = (*json)["sensor_name"];
-            //double temp = (*json)["temp"];
-            //bool activity = (*json)["activity"];
-            //int answer = (*json)["answer"]["everything"];
-            //std::printf("sensor: %s - temp %f - %s - answer (%d)\n",
-            //            name.c_str(),
-            //            temp,
-            //            activity ? "on":"off",
-            //            answer);
+            const auto name = json.get<std::string>("sensor_name");
+            const auto temp = json.get<double>("temp");
+            const auto activity = json.get<bool>("activity");
+            const auto& obj = json.get("answer");
+            const auto answer = obj.get<int>("everything");
+            std::printf("sensor: %s - temp %f - %s - answer (%d)\n",
+                        name.c_str(),
+                        temp,
+                        activity ? "on":"off",
+                        answer);
         }
         else if (discriminant == "time")
         {
-            std::printf("time / %s\n", json.print().c_str());
-            //std::string time_date = (*json)["yyyy_mm_dd"];
-            //std::string time_clock = (*json)["hh_mm_ss"];
-            //std::string time_zone = (*json)["time_zone"];
-            //std::printf("time: %s - %s - %s\n", time_date.c_str(), time_clock.c_str(), time_zone.c_str());
+            const auto time_date = json.get<std::string>("yyyy_mm_dd");
+            const auto time_clock = json.get<std::string>("hh_mm_ss");
+            const auto time_zone = json.get<std::string>("time_zone");
+            std::printf("time: %s - %s - %s\n", time_date.c_str(), time_clock.c_str(), time_zone.c_str());
         }
 
         data_queue->pop();
@@ -952,6 +957,8 @@ static void task_isr_processing(std::shared_ptr<isr_context> context, const std:
 
 void test_hardware_timer_interrupt()
 {
+    std::printf("-- hardware timer interrupt & data task --\n");
+
     // https://phatiphatt.wordpress.com/esp32-sampling_mode/
     // https://www.electronicwings.com/esp32/esp32-timer-interrupts
     // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/gptimer.html
