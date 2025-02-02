@@ -18,6 +18,7 @@ Goodies:
 - queuable commands
 - bytepack serialization in C++20 using header-only 3rd party (Faruk Eryilmaz - MIT license)
 - json serialization and deserialization using 3rd party (Dave Gamble & Dmitry Pankratov - MIT license)
+- gzip compression / decompression C++ wrapper using 3rd party (Paul Sokolovsky, Joergen Ibsen & Simon Tatham - Zlib license)
 
 https://github.com/type-one/PublishSubscribeESP32
 
@@ -26,6 +27,8 @@ https://github.com/farukeryilmaz/bytepack
 https://github.com/ancwrd1/cjsonpp
 https://github.com/DaveGamble/cJSON
 https://github.com/ThrowTheSwitch/CException
+https://github.com/pfalcon/uzlib
+https://github.com/jibsen/tinf
 
 # What
 

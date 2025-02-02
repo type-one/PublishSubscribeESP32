@@ -46,10 +46,10 @@
 #include "bytepack/bytepack.hpp"
 #define CJSONPP_NO_EXCEPTION
 #include "cjsonpp/cjsonpp.hpp"
-#include "uzlib/uzlib.h"
 
 #include "tools/async_observer.hpp"
 #include "tools/data_task.hpp"
+#include "tools/gzip_wrapper.hpp"
 #include "tools/histogram.hpp"
 #include "tools/periodic_task.hpp"
 #include "tools/platform_detection.hpp"
@@ -963,217 +963,44 @@ void test_packing_unpacking_json_data()
         }
     })";
 
-    volatile CEXCEPTION_T ex = 0U;
+    tools::gzip_wrapper gzip;
 
-    Try
-    {
-        constexpr const unsigned int dict_size = 32768U;
-        constexpr const unsigned int hash_bits = 12U;
-        constexpr const std::size_t hash_size = sizeof(uzlib_hash_entry_t) * (1U << hash_bits);
+    std::vector<std::uint8_t> unpacked_buffer;
+    std::vector<std::uint8_t> packed_buffer;
 
-        uzlib_hash_entry_t* hash_table = static_cast<uzlib_hash_entry_t*>(std::malloc(hash_size));
-        if (nullptr == hash_table)
-        {
-            std::fprintf(stderr, "could not allocate hash_table\n");
-            Throw(0);
-        }
+    // json 1
 
-        std::uint8_t* json_buf1 = reinterpret_cast<std::uint8_t*>(const_cast<char*>(json_str1));
-        const unsigned int json_buf1_sz = static_cast<unsigned int>(sizeof(json_str1));
-        std::uint8_t* json_buf2 = reinterpret_cast<std::uint8_t*>(const_cast<char*>(json_str2));
-        const unsigned int json_buf2_sz = static_cast<unsigned int>(sizeof(json_str2));
+    unpacked_buffer.resize(sizeof(json_str1));
+    std::memcpy(unpacked_buffer.data(), json_str1, sizeof(json_str1));
 
-        {
-            std::printf("sizeof of json file 1 - %u\n", sizeof(json_str1));
+    std::printf("json file 1 of %zu bytes\n", unpacked_buffer.size());
+    std::printf("packing json file 1\n");
 
-            {
-                // pack
-                struct uzlib_comp comp = {};
-                comp.dict_size = dict_size;
-                comp.hash_bits = hash_bits;
-                comp.hash_table = hash_table;
-                std::memset(comp.hash_table, 0, hash_size);
+    packed_buffer = gzip.pack(unpacked_buffer);
 
-                zlib_start_block(&comp.out);
-                uzlib_compress(&comp, json_buf1, json_buf1_sz);
-                zlib_finish_block(&comp.out);
+    std::printf("compressed to %zu bytes\n", packed_buffer.size());
+    std::printf("unpacking gzip file 1\n");
 
-                std::printf("compressed to %u raw bytes\n", comp.out.outlen);
+    unpacked_buffer = gzip.unpack(packed_buffer);
 
-                std::uint32_t crc32 = ~uzlib_crc32(json_buf1, json_buf1_sz, ~0);
-                std::printf("original crc32 is %x\n", static_cast<unsigned int>(crc32));
+    std::printf("unpacked to %zu bytes\n", unpacked_buffer.size());
 
-                // create other buffer with gzip header + footer
-                const std::size_t packed_size = comp.out.outlen;
-                const std::size_t gzip_buffer_sz = packed_size + 10U + 8U;
-                constexpr const std::size_t gzip_header_sz = 10U;
-                std::uint8_t* gzip_buffer = reinterpret_cast<std::uint8_t*>(std::malloc(gzip_buffer_sz));
-                if (nullptr == gzip_buffer)
-                {
-                    std::fprintf(stderr, "coult not allocate gzip buffer\n");
-                    std::free(hash_table);
-                    Throw(0);
-                }
+    // json 2
 
-                gzip_buffer[0] = 0x1f; // magic tag
-                gzip_buffer[1] = 0x8b;
-                gzip_buffer[2] = 0x08;
-                gzip_buffer[3] = 0x00;
-                gzip_buffer[4] = 0x00; // time
-                gzip_buffer[5] = 0x00; // time
-                gzip_buffer[6] = 0x00; // time
-                gzip_buffer[7] = 0x00; // time
-                gzip_buffer[8] = 0x04; // XFL
-                gzip_buffer[9] = 0x03; // OS
+    unpacked_buffer.resize(sizeof(json_str2));
+    std::memcpy(unpacked_buffer.data(), json_str2, sizeof(json_str2));
 
-                std::memcpy(&gzip_buffer[gzip_header_sz], comp.out.outbuf, packed_size);
+    std::printf("json file 2 of %zu bytes\n", unpacked_buffer.size());
+    std::printf("packing json file 2\n");
 
-                // little endian CRC32
-                gzip_buffer[gzip_header_sz + packed_size + 0U] = crc32 & 0xff;
-                gzip_buffer[gzip_header_sz + packed_size + 1U] = (crc32 >> 8) & 0xff;
-                gzip_buffer[gzip_header_sz + packed_size + 2U] = (crc32 >> 16) & 0xff;
-                gzip_buffer[gzip_header_sz + packed_size + 3U] = (crc32 >> 24) & 0xff;
+    packed_buffer = gzip.pack(unpacked_buffer);
 
-                // little endian source length
-                gzip_buffer[gzip_header_sz + packed_size + 4U] = json_buf1_sz & 0xff;
-                gzip_buffer[gzip_header_sz + packed_size + 5U] = (json_buf1_sz >> 8) & 0xff;
-                gzip_buffer[gzip_header_sz + packed_size + 6U] = (json_buf1_sz >> 16) & 0xff;
-                gzip_buffer[gzip_header_sz + packed_size + 7U] = (json_buf1_sz >> 24) & 0xff;
+    std::printf("compressed to %zu bytes\n", packed_buffer.size());
+    std::printf("unpacking gzip file 2\n");
 
-                // free packed buffer
-                std::free(comp.out.outbuf);
+    unpacked_buffer = gzip.unpack(packed_buffer);
 
-                // unpack
-                const unsigned int len = static_cast<unsigned int>(gzip_buffer_sz);
-                unsigned int dlen = gzip_buffer[len - 1U];
-                dlen = (dlen << 8) | gzip_buffer[len - 2U];
-                dlen = (dlen << 8) | gzip_buffer[len - 3U];
-                dlen = (dlen << 8) | gzip_buffer[len - 4U];
-                const std::size_t outlen = static_cast<std::size_t>(dlen);
-                ++dlen; // reserve one extra byte
-
-                std::printf("gzip file size %u\n", len);
-                std::printf("gzip file outlen %zu\n", outlen);
-
-                std::uint32_t source_crc32 = gzip_buffer[len - 5U];
-                source_crc32 = (source_crc32 << 8) | gzip_buffer[len - 6U];
-                source_crc32 = (source_crc32 << 8) | gzip_buffer[len - 7U];
-                source_crc32 = (source_crc32 << 8) | gzip_buffer[len - 8U];
-
-                std::printf("gzip file crc32 %x\n", static_cast<unsigned int>(source_crc32));
-
-                std::printf("alloc %u bytes for unpacking\n", dlen);
-
-                std::uint8_t* dest = reinterpret_cast<std::uint8_t*>(std::malloc(dlen));
-
-                if (nullptr == dest)
-                {
-                    std::fprintf(stderr, "could not allocate unpack buffer\n");
-                    std::free(gzip_buffer);
-                    std::free(hash_table);
-                    Throw(0);
-                }
-
-                struct uzlib_uncomp depack_ctxt = {};
-                uzlib_uncompress_init(&depack_ctxt, nullptr, 0);
-
-                depack_ctxt.source = reinterpret_cast<unsigned char*>(&gzip_buffer[0]);
-                depack_ctxt.source_limit = reinterpret_cast<unsigned char*>(&gzip_buffer[len - 4U]);
-                depack_ctxt.source_read_cb = nullptr;
-
-                int res = uzlib_gzip_parse_header(&depack_ctxt);
-                if (TINF_OK != res)
-                {
-                    std::fprintf(stderr, "error parsing header: %d\n", res);
-                    std::free(gzip_buffer);
-                    std::free(dest);
-                    std::free(hash_table);
-                    Throw(0);
-                }
-
-                depack_ctxt.dest = dest;
-                depack_ctxt.dest_start = dest;
-
-                // produce decompressed output in chunks of this size
-                // default is to decompress byte by byte; can be any other length
-                constexpr const unsigned int out_chunk_size = 1U;
-
-                while (dlen > 0U)
-                {
-                    unsigned int chunk_len = (dlen < out_chunk_size) ? dlen : out_chunk_size;
-                    depack_ctxt.dest_limit = depack_ctxt.dest + chunk_len;
-                    res = uzlib_uncompress_chksum(&depack_ctxt);
-                    dlen -= chunk_len;
-                    if (res != TINF_OK)
-                    {
-                        break;
-                    }
-                }
-
-                if (TINF_DONE != res)
-                {
-                    std::fprintf(stderr, "error during decompression: %d\n", res);
-                    std::free(gzip_buffer);
-                    std::free(dest);
-                    std::free(hash_table);
-                    Throw(0);
-                }
-                else
-                {
-                    std::printf("unpack succeeded\n");
-                }
-
-                const std::size_t depacked_sz = depack_ctxt.dest - reinterpret_cast<unsigned char*>(dest);
-                std::printf("decompressed %zu bytes\n", depacked_sz);
-
-                if (depacked_sz != outlen)
-                {
-                    std::fprintf(stderr, "Invalid decompressed length: %zu vs %zu\n", depacked_sz, outlen);
-                }
-
-                std::uint32_t check_crc32 = ~uzlib_crc32(dest, static_cast<unsigned int>(depacked_sz), ~0);
-
-                if (check_crc32 != source_crc32)
-                {
-                    std::fprintf(stderr, "invalid decompressed crc32\n");
-                }
-                else
-                {
-                    std::printf("crc32 verification succeeded\n");
-                }
-
-                std::free(gzip_buffer);
-                std::free(dest);
-            }
-        }
-
-        {
-            std::printf("sizeof of json file 2 - %u\n", sizeof(json_str2));
-
-            struct uzlib_comp comp = {};
-            comp.dict_size = dict_size;
-            comp.hash_bits = hash_bits;
-            comp.hash_table = hash_table;
-            std::memset(comp.hash_table, 0, hash_size);
-
-            zlib_start_block(&comp.out);
-            uzlib_compress(&comp, json_buf2, json_buf2_sz);
-            zlib_finish_block(&comp.out);
-
-            std::printf("compressed to %u raw bytes\n", comp.out.outlen);
-
-            std::uint32_t crc32 = ~uzlib_crc32(json_buf2, json_buf2_sz, ~0U);
-            std::printf("original crc32 is %x\n", static_cast<unsigned int>(crc32));
-
-            std::free(comp.out.outbuf);
-        }
-
-        std::free(hash_table);
-    }
-    Catch(ex)
-    {
-        std::fprintf(stderr, "error %u\n", ex);
-    }
+    std::printf("unpacked to %zu bytes\n", unpacked_buffer.size());
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------

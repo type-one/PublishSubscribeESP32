@@ -27,6 +27,7 @@ set(TARGET_UZLIB_SRC
 )
 
 set(TARGET_TOOLS_SRC
+        tools/gzip_wrapper.cpp
         tools/sync_object.cpp
 )
 
