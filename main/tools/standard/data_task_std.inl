@@ -43,7 +43,9 @@
 namespace tools
 {
     template <typename Context, typename DataType, std::size_t Capacity>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))   
         requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
+#endif        
     class data_task : public base_task
     {
 
