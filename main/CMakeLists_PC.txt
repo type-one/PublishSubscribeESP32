@@ -110,6 +110,7 @@ set(TARGET_CEXCEPTION_SRC
 
 set(TARGET_CJSON_SRC
         cJSON/cJSON.c
+        cjsonpp/cjsonpp.cpp
 )
 
 set(TARGET_UZLIB_SRC

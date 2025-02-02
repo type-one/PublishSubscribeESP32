@@ -16,9 +16,10 @@
 // clang-format off
 #if defined(CJSONPP_NO_EXCEPTION)
 #include "CException/CException.h"
-#define CJSONPP_THROW(msg, value) do { std::fprintf(stderr, "%s (%d)\n", msg, static_cast<int>(value)); \ 
+#define CJSONPP_THROW(msg, value) do { std::fprintf(stderr, "%s (%d)\n", msg, static_cast<int>(value)); \
                                        std::fflush(stderr); Throw(0); } while (false)
 #else
+#include <exception>
 #define CJSONPP_THROW(msg, value) throw std::runtime_error(msg + " (" + std::to_string(value) + ")")
 #endif
 // clang-format on
@@ -45,30 +46,16 @@ namespace cjsonpp
         {
             cJSON* o;
             bool own_;
-            Holder(cJSON* obj, bool own)
-                : o(obj)
-                , own_(own)
-            {
-            }
-            ~Holder()
-            {
-                if (own_)
-                {
-                    cJSON_Delete(o);
-                }
-            }
+            Holder(cJSON* obj, bool own);
+            ~Holder();
 
-            inline cJSON* operator->()
-            {
-                return o;
-            }
+            cJSON* operator->();
 
-        private:
             // no copy constructor
-            explicit Holder(const Holder&);
+            explicit Holder(const Holder&) = delete;
 
             // no assignment operator
-            Holder& operator=(const Holder&);
+            Holder& operator=(const Holder&) = delete;
         };
 
         typedef std::shared_ptr<Holder> HolderPtr;
@@ -92,86 +79,41 @@ namespace cjsonpp
         ObjectSetPtr refs_;
 
     public:
-        inline cJSON* obj() const
-        {
-            return obj_->o;
-        }
+        cJSON* obj() const;
 
-        std::string print(bool formatted = true) const
-        {
-            char* json = formatted ? cJSON_Print(obj_->o) : cJSON_PrintUnformatted(obj_->o);
-            std::string retval(json);
-            std::free(json);
-            return retval;
-        }
+        std::string print(bool formatted = true) const;
 
         // necessary for holding references in the set
-        bool operator<(const JSONObject& other) const
-        {
-            return obj_->o < other.obj_->o;
-        }
+        bool operator<(const JSONObject& other) const;
 
         // create empty object
-        JSONObject()
-            : obj_(new Holder(cJSON_CreateObject(), true))
-            , refs_(new ObjectSet)
-        {
-        }
+        JSONObject();
 
         // non-virtual destructor (no subclassing intended)
-        ~JSONObject()
-        {
-        }
+        ~JSONObject();
 
         // wrap existing cJSON object
-        JSONObject(cJSON* obj, bool own)
-            : obj_(new Holder(obj, own))
-            , refs_(new ObjectSet)
-        {
-        }
+        JSONObject(cJSON* obj, bool own);
 
         // wrap existing cJSON object with parent
-        JSONObject(JSONObject parent, cJSON* obj, bool own)
-            : obj_(new Holder(obj, own))
-            , refs_(new ObjectSet)
-        {
-            refs_->insert(parent);
-        }
+        JSONObject(JSONObject parent, cJSON* obj, bool own);
 
         // create boolean object
-        explicit JSONObject(bool value)
-            : obj_(new Holder(value ? cJSON_CreateTrue() : cJSON_CreateFalse(), true))
-        {
-        }
+        explicit JSONObject(bool value);
 
         // create double object
-        explicit JSONObject(double value)
-            : obj_(new Holder(cJSON_CreateNumber(value), true))
-        {
-        }
+        explicit JSONObject(double value);
 
         // create integer object
-        explicit JSONObject(int value)
-            : obj_(new Holder(cJSON_CreateNumber(static_cast<double>(value)), true))
-        {
-        }
+        explicit JSONObject(int value);
 
         // create integer object
-        explicit JSONObject(int64_t value)
-            : obj_(new Holder(cJSON_CreateNumber(static_cast<double>(value)), true))
-        {
-        }
+        explicit JSONObject(int64_t value);
 
         // create string object
-        explicit JSONObject(const char* value)
-            : obj_(new Holder(cJSON_CreateString(value), true))
-        {
-        }
+        explicit JSONObject(const char* value);
 
-        explicit JSONObject(const std::string& value)
-            : obj_(new Holder(cJSON_CreateString(value.c_str()), true))
-        {
-        }
+        explicit JSONObject(const std::string& value);
 
         // create array object
         template <typename T, template <typename X, typename A> class ContT = std::vector>
@@ -210,29 +152,13 @@ namespace cjsonpp
         }
 
         // copy constructor
-        JSONObject(const JSONObject& other)
-            : obj_(other.obj_)
-            , refs_(other.refs_)
-        {
-        }
+        JSONObject(const JSONObject& other);
 
         // copy operator
-        inline JSONObject& operator=(const JSONObject& other)
-        {
-            if (&other != this)
-            {
-                obj_ = other.obj_;
-                refs_ = other.refs_;
-            }
-            return *this;
-        }
+        JSONObject& operator=(const JSONObject& other);
 
         // get object type
-        inline JSONType type() const
-        {
-            static JSONType vmap[] = { Bool, Bool, Null, Number, String, Array, Object };
-            return vmap[(*obj_)->type & 0xff];
-        }
+        JSONType type() const;
 
         // get value from this object
         template <typename T>
@@ -301,15 +227,9 @@ namespace cjsonpp
             return get<T>(value.c_str());
         }
 
-        inline bool has(const char* name) const
-        {
-            return cJSON_GetObjectItem(obj_->o, name) != nullptr;
-        }
+        bool has(const char* name) const;
 
-        inline bool has(const std::string& name) const
-        {
-            return has(name.c_str());
-        }
+        bool has(const std::string& name) const;
 
         // get value from array
         template <typename T = JSONObject>
@@ -363,91 +283,28 @@ namespace cjsonpp
         }
 
         // set value in object (std::string)
-        inline void set(const std::string& name, const JSONObject& value)
-        {
-            return set(name.c_str(), value);
-        }
+        void set(const std::string& name, const JSONObject& value);
 
         // remove item from object
-        inline void remove(const char* name)
-        {
-            if (((*obj_)->type & 0xff) != cJSON_Object)
-            {
-                CJSONPP_THROW("Not an object type", (*obj_)->type & 0xff);
-            }
-            cJSON* detached = cJSON_DetachItemFromObject(obj_->o, name);
-            if (!detached)
-            {
-                CJSONPP_THROW("No such item", 0);
-            }
-            for (ObjectSet::iterator it = refs_->begin(); it != refs_->end(); it++)
-            {
-                if (it->obj_->o == detached)
-                {
-                    refs_->erase(it);
-                    break;
-                }
-            }
-            cJSON_Delete(detached);
-        }
+        void remove(const char* name);
 
-        inline void remove(const std::string& name)
-        {
-            return remove(name.c_str());
-        }
+        void remove(const std::string& name);
 
         // remove item from array
-        inline void remove(int index)
-        {
-            if (((*obj_)->type & 0xff) != cJSON_Array)
-            {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & 0xff);
-            }
-            cJSON* detached = cJSON_DetachItemFromArray(obj_->o, index);
-            if (!detached)
-            {
-                CJSONPP_THROW("No such item", 0);
-            }
-            for (ObjectSet::iterator it = refs_->begin(); it != refs_->end(); it++)
-            {
-                if (it->obj_->o == detached)
-                {
-                    refs_->erase(it);
-                    break;
-                }
-            }
-            cJSON_Delete(detached);
-        }
+        void remove(int index);
     };
 
     // parse from C string
-    inline JSONObject parse(const char* str)
-    {
-        cJSON* cjson = cJSON_Parse(str);
-        if (nullptr == cjson)
-        {
-            CJSONPP_THROW("Parse error", 0);
-        }
-        return JSONObject(cjson, true);
-    }
+    JSONObject parse(const char* str);
 
     // parse from std::string
-    inline JSONObject parse(const std::string& str)
-    {
-        return parse(str.c_str());
-    }
+    JSONObject parse(const std::string& str);
 
     // create null object
-    inline JSONObject nullObject()
-    {
-        return JSONObject(cJSON_CreateNull(), true);
-    }
+    JSONObject nullObject();
 
     // create empty array object
-    inline JSONObject arrayObject()
-    {
-        return JSONObject(cJSON_CreateArray(), true);
-    }
+    JSONObject arrayObject();
 
     // Specialized getters
     template <>
