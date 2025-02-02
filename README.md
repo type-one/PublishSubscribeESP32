@@ -1,7 +1,7 @@
 # PublishSubscribe
 
 Agnostic, Lightweight and Portable Publish-Subscribe Helper adapted for FreeRTOS/ESP32
-- written in C++17 using templated classes
+- written in C++17/C++20 using templated classes
 - synchronous/asynchronous observer
 - topic subscription
 - buildable on FreeRTOS/ESP32 and Linux/Windows

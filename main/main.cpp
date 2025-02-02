@@ -42,9 +42,11 @@
 #include <utility>
 #include <vector>
 
+#include "CException/CException.h"
 #include "bytepack/bytepack.hpp"
 #define CJSONPP_NO_EXCEPTION
 #include "cjsonpp/cjsonpp.hpp"
+#include "uzlib/uzlib.h"
 
 #include "tools/async_observer.hpp"
 #include "tools/data_task.hpp"
@@ -825,7 +827,7 @@ void test_json()
 
         cjsonpp::JSONObject arr = cjsonpp::arrayObject();
         arr.add(obj3);
-        arr.add(obj4);        
+        arr.add(obj4);
 
         obj.set("object", arr);
 
@@ -840,7 +842,7 @@ void test_json()
 
         const auto s = obj.print();
         std::printf("%s\n", s.c_str());
-    }  
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -861,9 +863,8 @@ void test_queued_json_data()
         json_answer.set("everything", 42);
         json.set("answer", json_answer);
 
-        auto json_str = json.print();
-        std::printf("%s\n", json_str.c_str());
-        data_queue->emplace(std::move(json_str));
+        std::printf("%s\n", json.print(true).c_str());
+        data_queue->emplace(json.print(false));
     }
 
     {
@@ -873,9 +874,8 @@ void test_queued_json_data()
         json.set("hh_mm_ss", "23:05:12");
         json.set("time_zone", "GMT+2");
 
-        auto json_str = json.print();
-        std::printf("%s\n", json_str.c_str());
-        data_queue->emplace(std::move(json_str));
+        std::printf("%s\n", json.print(true).c_str());
+        data_queue->emplace(json.print(false));
     }
 
     while (!data_queue->empty())
@@ -892,11 +892,7 @@ void test_queued_json_data()
             const auto activity = json.get<bool>("activity");
             const auto& obj = json.get("answer");
             const auto answer = obj.get<int>("everything");
-            std::printf("sensor: %s - temp %f - %s - answer (%d)\n",
-                        name.c_str(),
-                        temp,
-                        activity ? "on":"off",
-                        answer);
+            std::printf("sensor: %s - temp %f - %s - answer (%d)\n", name.c_str(), temp, activity ? "on" : "off", answer);
         }
         else if (discriminant == "time")
         {
@@ -908,7 +904,276 @@ void test_queued_json_data()
 
         data_queue->pop();
     }
-    
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_packing_unpacking_json_data()
+{
+    std::printf("-- packing/unpacking json data --\n");
+
+    // example taken from https://www.iotforall.com/10-jsonata-examples
+    static const char json_str1[] = R"(
+    {
+      "device": "dev:5c0272356817",
+      "when": 1643398446,
+      "body": {
+        "humid": 56.23,
+        "temp": 35.52
+      },
+      "best_location_type": "triangulated",
+      "tower_country": "US",
+      "tower_lat": 44.9288392,
+      "tower_lon": -84.9283943,
+      "tower_location": "Grand Ledge, MI",
+      "tower_id": "310,410,25878,88213007",
+      "tri_country": "US",
+      "tri_lat": 44.76386883,
+      "tri_lon": -83.64839822,
+      "tri_location": "Lansing, MI",
+      "settings": [
+        { "name": "power_saving", "value": false },
+        { "name": "detect_motion", "value": true },
+        { "name": "sample_interval", "value": 5 }
+      ]
+    })";
+
+    // example taken from https://json.org/example.html
+    static const char json_str2[] = R"(
+    {
+        "glossary": {
+            "title": "example glossary",
+            "GlossDiv": {
+                "title": "S",
+                "GlossList": {
+                    "GlossEntry": {
+                        "ID": "SGML",
+                        "SortAs": "SGML",
+                        "GlossTerm": "Standard Generalized Markup Language",
+                        "Acronym": "SGML",
+                        "Abbrev": "ISO 8879:1986",
+                        "GlossDef": {
+                            "para": "A meta-markup language, used to create markup languages such as DocBook.",
+                            "GlossSeeAlso": ["GML", "XML"]
+                        },
+                        "GlossSee": "markup"
+                    }
+                }
+            }
+        }
+    })";
+
+    volatile CEXCEPTION_T ex = 0U;
+
+    Try
+    {
+        constexpr const unsigned int dict_size = 32768U;
+        constexpr const unsigned int hash_bits = 12U;
+        constexpr const std::size_t hash_size = sizeof(uzlib_hash_entry_t) * (1U << hash_bits);
+
+        uzlib_hash_entry_t* hash_table = static_cast<uzlib_hash_entry_t*>(std::malloc(hash_size));
+        if (nullptr == hash_table)
+        {
+            std::fprintf(stderr, "could not allocate hash_table\n");
+            Throw(0);
+        }
+
+        std::uint8_t* json_buf1 = reinterpret_cast<std::uint8_t*>(const_cast<char*>(json_str1));
+        const unsigned int json_buf1_sz = static_cast<unsigned int>(sizeof(json_str1));
+        std::uint8_t* json_buf2 = reinterpret_cast<std::uint8_t*>(const_cast<char*>(json_str2));
+        const unsigned int json_buf2_sz = static_cast<unsigned int>(sizeof(json_str2));
+
+        {
+            std::printf("sizeof of json file 1 - %u\n", sizeof(json_str1));
+
+            {
+                // pack
+                struct uzlib_comp comp = {};
+                comp.dict_size = dict_size;
+                comp.hash_bits = hash_bits;
+                comp.hash_table = hash_table;
+                std::memset(comp.hash_table, 0, hash_size);
+
+                zlib_start_block(&comp.out);
+                uzlib_compress(&comp, json_buf1, json_buf1_sz);
+                zlib_finish_block(&comp.out);
+
+                std::printf("compressed to %u raw bytes\n", comp.out.outlen);
+
+                std::uint32_t crc32 = ~uzlib_crc32(json_buf1, json_buf1_sz, ~0);
+                std::printf("original crc32 is %x\n", static_cast<unsigned int>(crc32));
+
+                // create other buffer with gzip header + footer
+                const std::size_t packed_size = comp.out.outlen;
+                const std::size_t gzip_buffer_sz = packed_size + 10U + 8U;
+                constexpr const std::size_t gzip_header_sz = 10U;
+                std::uint8_t* gzip_buffer = reinterpret_cast<std::uint8_t*>(std::malloc(gzip_buffer_sz));
+                if (nullptr == gzip_buffer)
+                {
+                    std::fprintf(stderr, "coult not allocate gzip buffer\n");
+                    std::free(hash_table);
+                    Throw(0);
+                }
+
+                gzip_buffer[0] = 0x1f; // magic tag
+                gzip_buffer[1] = 0x8b;
+                gzip_buffer[2] = 0x08;
+                gzip_buffer[3] = 0x00;
+                gzip_buffer[4] = 0x00; // time
+                gzip_buffer[5] = 0x00; // time
+                gzip_buffer[6] = 0x00; // time
+                gzip_buffer[7] = 0x00; // time
+                gzip_buffer[8] = 0x04; // XFL
+                gzip_buffer[9] = 0x03; // OS
+
+                std::memcpy(&gzip_buffer[gzip_header_sz], comp.out.outbuf, packed_size);
+
+                // little endian CRC32
+                gzip_buffer[gzip_header_sz + packed_size + 0U] = crc32 & 0xff;
+                gzip_buffer[gzip_header_sz + packed_size + 1U] = (crc32 >> 8) & 0xff;
+                gzip_buffer[gzip_header_sz + packed_size + 2U] = (crc32 >> 16) & 0xff;
+                gzip_buffer[gzip_header_sz + packed_size + 3U] = (crc32 >> 24) & 0xff;
+
+                // little endian source length
+                gzip_buffer[gzip_header_sz + packed_size + 4U] = json_buf1_sz & 0xff;
+                gzip_buffer[gzip_header_sz + packed_size + 5U] = (json_buf1_sz >> 8) & 0xff;
+                gzip_buffer[gzip_header_sz + packed_size + 6U] = (json_buf1_sz >> 16) & 0xff;
+                gzip_buffer[gzip_header_sz + packed_size + 7U] = (json_buf1_sz >> 24) & 0xff;
+
+                // free packed buffer
+                std::free(comp.out.outbuf);
+
+                // unpack
+                const unsigned int len = static_cast<unsigned int>(gzip_buffer_sz);
+                unsigned int dlen = gzip_buffer[len - 1U];
+                dlen = (dlen << 8) | gzip_buffer[len - 2U];
+                dlen = (dlen << 8) | gzip_buffer[len - 3U];
+                dlen = (dlen << 8) | gzip_buffer[len - 4U];
+                const std::size_t outlen = static_cast<std::size_t>(dlen);
+                ++dlen; // reserve one extra byte
+
+                std::printf("gzip file size %u\n", len);
+                std::printf("gzip file outlen %zu\n", outlen);
+
+                std::uint32_t source_crc32 = gzip_buffer[len - 5U];
+                source_crc32 = (source_crc32 << 8) | gzip_buffer[len - 6U];
+                source_crc32 = (source_crc32 << 8) | gzip_buffer[len - 7U];
+                source_crc32 = (source_crc32 << 8) | gzip_buffer[len - 8U];
+
+                std::printf("gzip file crc32 %x\n", static_cast<unsigned int>(source_crc32));
+
+                std::printf("alloc %u bytes for unpacking\n", dlen);
+
+                std::uint8_t* dest = reinterpret_cast<std::uint8_t*>(std::malloc(dlen));
+
+                if (nullptr == dest)
+                {
+                    std::fprintf(stderr, "could not allocate unpack buffer\n");
+                    std::free(gzip_buffer);
+                    std::free(hash_table);
+                    Throw(0);
+                }
+
+                struct uzlib_uncomp depack_ctxt = {};
+                uzlib_uncompress_init(&depack_ctxt, nullptr, 0);
+
+                depack_ctxt.source = reinterpret_cast<unsigned char*>(&gzip_buffer[0]);
+                depack_ctxt.source_limit = reinterpret_cast<unsigned char*>(&gzip_buffer[len - 4U]);
+                depack_ctxt.source_read_cb = nullptr;
+
+                int res = uzlib_gzip_parse_header(&depack_ctxt);
+                if (TINF_OK != res)
+                {
+                    std::fprintf(stderr, "error parsing header: %d\n", res);
+                    std::free(gzip_buffer);
+                    std::free(dest);
+                    std::free(hash_table);
+                    Throw(0);
+                }
+
+                depack_ctxt.dest = dest;
+                depack_ctxt.dest_start = dest;
+
+                // produce decompressed output in chunks of this size
+                // default is to decompress byte by byte; can be any other length
+                constexpr const unsigned int out_chunk_size = 1U;
+
+                while (dlen > 0U)
+                {
+                    unsigned int chunk_len = (dlen < out_chunk_size) ? dlen : out_chunk_size;
+                    depack_ctxt.dest_limit = depack_ctxt.dest + chunk_len;
+                    res = uzlib_uncompress_chksum(&depack_ctxt);
+                    dlen -= chunk_len;
+                    if (res != TINF_OK)
+                    {
+                        break;
+                    }
+                }
+
+                if (TINF_DONE != res)
+                {
+                    std::fprintf(stderr, "error during decompression: %d\n", res);
+                    std::free(gzip_buffer);
+                    std::free(dest);
+                    std::free(hash_table);
+                    Throw(0);
+                }
+                else
+                {
+                    std::printf("unpack succeeded\n");
+                }
+
+                const std::size_t depacked_sz = depack_ctxt.dest - reinterpret_cast<unsigned char*>(dest);
+                std::printf("decompressed %zu bytes\n", depacked_sz);
+
+                if (depacked_sz != outlen)
+                {
+                    std::fprintf(stderr, "Invalid decompressed length: %zu vs %zu\n", depacked_sz, outlen);
+                }
+
+                std::uint32_t check_crc32 = ~uzlib_crc32(dest, static_cast<unsigned int>(depacked_sz), ~0);
+
+                if (check_crc32 != source_crc32)
+                {
+                    std::fprintf(stderr, "invalid decompressed crc32\n");
+                }
+                else
+                {
+                    std::printf("crc32 verification succeeded\n");
+                }
+
+                std::free(gzip_buffer);
+                std::free(dest);
+            }
+        }
+
+        {
+            std::printf("sizeof of json file 2 - %u\n", sizeof(json_str2));
+
+            struct uzlib_comp comp = {};
+            comp.dict_size = dict_size;
+            comp.hash_bits = hash_bits;
+            comp.hash_table = hash_table;
+            std::memset(comp.hash_table, 0, hash_size);
+
+            zlib_start_block(&comp.out);
+            uzlib_compress(&comp, json_buf2, json_buf2_sz);
+            zlib_finish_block(&comp.out);
+
+            std::printf("compressed to %u raw bytes\n", comp.out.outlen);
+
+            std::uint32_t crc32 = ~uzlib_crc32(json_buf2, json_buf2_sz, ~0U);
+            std::printf("original crc32 is %x\n", static_cast<unsigned int>(crc32));
+
+            std::free(comp.out.outbuf);
+        }
+
+        std::free(hash_table);
+    }
+    Catch(ex)
+    {
+        std::fprintf(stderr, "error %u\n", ex);
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -1043,6 +1308,9 @@ int main()
 
     test_json();
     test_queued_json_data();
+
+    uzlib_init();
+    test_packing_unpacking_json_data();
 
 #if defined(ESP_PLATFORM)
     test_hardware_timer_interrupt();
