@@ -51,6 +51,7 @@
 #include "tools/data_task.hpp"
 #include "tools/gzip_wrapper.hpp"
 #include "tools/histogram.hpp"
+#include "tools/logger.hpp"
 #include "tools/periodic_task.hpp"
 #include "tools/platform_detection.hpp"
 #include "tools/platform_helpers.hpp"
@@ -72,9 +73,25 @@
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+inline void print_stats()
+{
+#if defined(ESP_PLATFORM)
+    std::printf("Current free heap size: %" PRIu32 " bytes\n", esp_get_free_heap_size());
+    std::printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
+#endif
+#if defined(FREERTOS_PLATFORM) 
+    UBaseType_t ux_high_water_mark = uxTaskGetStackHighWaterMark(nullptr);
+    std::printf("Minimum free stack size: %d bytes\n", ux_high_water_mark);
+#endif
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 void test_ring_buffer()
 {
-    std::printf("-- ring buffer --\n");
+    LOG_INFO("-- ring buffer --");
+    print_stats();
+
     auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
 
     str_queue->emplace("toto");
@@ -90,7 +107,8 @@ void test_ring_buffer()
 
 void test_ring_buffer_iteration()
 {
-    std::printf("-- ring buffer iteration --\n");
+    LOG_INFO("-- ring buffer iteration --");
+    print_stats();
 
     {
         auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
@@ -230,7 +248,9 @@ void test_ring_buffer_iteration()
 
 void test_sync_ring_buffer()
 {
-    std::printf("-- sync ring buffer --\n");
+    LOG_INFO("-- sync ring buffer --");
+    print_stats();
+
     tools::sync_ring_buffer<std::string, 64U> str_queue;
 
     str_queue.emplace("toto");
@@ -246,7 +266,9 @@ void test_sync_ring_buffer()
 
 void test_sync_queue()
 {
-    std::printf("-- sync queue --\n");
+    LOG_INFO("-- sync queue --");
+    print_stats();
+
     tools::sync_queue<std::string> str_queue;
 
     str_queue.emplace("toto");
@@ -262,7 +284,9 @@ void test_sync_queue()
 
 void test_sync_dictionary()
 {
-    std::printf("-- sync dictionary --\n");
+    LOG_INFO("-- sync dictionary --");
+    print_stats();
+
     tools::sync_dictionary<std::string, std::string> str_dict;
 
     str_dict.add("toto", "blob");
@@ -378,7 +402,9 @@ private:
 
 void test_publish_subscribe()
 {
-    std::printf("-- publish subscribe --\n");
+    LOG_INFO("-- publish subscribe --");
+    print_stats();
+
     auto observer1 = std::make_shared<my_observer>();
     auto observer2 = std::make_shared<my_observer>();
     auto async_observer = std::make_shared<my_async_observer>();
@@ -432,7 +458,9 @@ using my_periodic_task = tools::periodic_task<my_periodic_task_context>;
 
 void test_periodic_task()
 {
-    std::printf("-- periodic task --\n");
+    LOG_INFO("-- periodic task --");
+    print_stats();
+
     auto lambda = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
     {
         (void)task_name;
@@ -506,7 +534,9 @@ private:
 
 void test_periodic_publish_subscribe()
 {
-    std::printf("-- periodic publish subscribe --\n");
+    LOG_INFO("-- periodic publish subscribe --");
+    print_stats();
+
     auto monitoring = std::make_shared<my_async_observer>();
     auto data_source = std::make_shared<my_subject>("data_source");
     auto histogram_feeder = std::make_shared<my_collector>();
@@ -548,7 +578,9 @@ void test_periodic_publish_subscribe()
 
 void test_queued_commands()
 {
-    std::printf("-- queued commands --\n");
+    LOG_INFO("-- queued commands --");
+    print_stats();
+
     tools::sync_queue<std::function<void()>> commands_queue;
 
     commands_queue.emplace([]() { std::printf("hello\n"); });
@@ -567,7 +599,9 @@ void test_queued_commands()
 
 void test_ring_buffer_commands()
 {
-    std::printf("-- ring buffer commands --\n");
+    LOG_INFO("-- ring buffer commands --");
+    print_stats();
+
     tools::sync_ring_buffer<std::function<void()>, 128U> commands_queue;
 
     commands_queue.emplace([]() { std::printf("hello\n"); });
@@ -594,7 +628,8 @@ using my_worker_task = tools::worker_task<my_worker_task_context>;
 
 void test_worker_tasks()
 {
-    std::printf("-- worker tasks --\n");
+    LOG_INFO("-- worker tasks --");
+    print_stats();
 
     auto startup1 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name) -> void
     {
@@ -717,7 +752,9 @@ struct free_text
 
 void test_queued_bytepack_data()
 {
-    std::printf("-- queued bytepack data --\n");
+    LOG_INFO("-- queued bytepack data --");
+    print_stats();
+
     tools::sync_ring_buffer<std::vector<std::uint8_t>, 128U> data_queue;
     // tools::sync_queue<std::vector<std::uint8_t>> data_queue;
 
@@ -799,7 +836,8 @@ void test_queued_bytepack_data()
 
 void test_json()
 {
-    std::printf("-- json serialization/deserialization --\n");
+    LOG_INFO("-- json serialization/deserialization --");
+    print_stats();
 
     {
         // create an empty structure (null)
@@ -849,7 +887,9 @@ void test_json()
 
 void test_queued_json_data()
 {
-    std::printf("-- queued json data --\n");
+    LOG_INFO("-- queued json data --");
+    print_stats();
+
     auto data_queue = std::make_unique<tools::sync_ring_buffer<std::string, 128U>>();
 
     {
@@ -910,7 +950,8 @@ void test_queued_json_data()
 
 void test_packing_unpacking_json_data()
 {
-    std::printf("-- packing/unpacking json data --\n");
+    LOG_INFO("-- packing/unpacking json data --");
+    print_stats();
 
     // example taken from https://www.iotforall.com/10-jsonata-examples
     static const char json_str1[] = R"(
@@ -1049,7 +1090,8 @@ static void task_isr_processing(std::shared_ptr<isr_context> context, const std:
 
 void test_hardware_timer_interrupt()
 {
-    std::printf("-- hardware timer interrupt & data task --\n");
+    LOG_INFO("-- hardware timer interrupt & data task --");
+    print_stats();
 
     // https://phatiphatt.wordpress.com/esp32-sampling_mode/
     // https://www.electronicwings.com/esp32/esp32-timer-interrupts
@@ -1110,12 +1152,7 @@ void test_hardware_timer_interrupt()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
-
-#if defined(FREERTOS_PLATFORM)
-extern "C" void app_main()
-#else
-int main()
-#endif
+void runner()
 {
     test_ring_buffer();
     test_ring_buffer_iteration();
@@ -1130,6 +1167,7 @@ int main()
 
     test_queued_commands();
     test_ring_buffer_commands();
+
     test_worker_tasks();
     test_queued_bytepack_data();
 
@@ -1141,8 +1179,67 @@ int main()
 #if defined(ESP_PLATFORM)
     test_hardware_timer_interrupt();
 #endif
+}
 
-#if !defined(FREERTOS_PLATFORM)
+//--------------------------------------------------------------------------------------------------------------------------------
+#if defined(FREERTOS_PLATFORM)
+// https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/system/freertos.html
+
+constexpr const std::size_t stack_size = 8192;
+
+// Structure that will hold the TCB of the task being created.
+StaticTask_t x_task_buffer = {};
+
+// Buffer that the task being created will use as its stack.  Note this is
+// an array of StackType_t variables.  The size of StackType_t is dependent on
+// the RTOS port.
+StackType_t x_stack[stack_size] = {};
+
+ // Function that implements the task being created.
+ void v_task_code( void * pv_parameters )
+ {
+     // The parameter value is expected to be 1 as 1 is passed in the
+     // pvParameters value in the call to xTaskCreateStatic().
+     configASSERT( ( std::uint32_t ) pv_parameters == 1UL );
+
+     runner();
+
+     vTaskSuspend(nullptr); // suspend itself
+ }
+
+ // Function that creates a task.
+ void launch_runner(void)
+ {
+     TaskHandle_t x_handle = nullptr;
+
+     // Create the task without using any dynamic memory allocation.
+     x_handle = xTaskCreateStatic(
+                   v_task_code,       // Function that implements the task.
+                   "RUNNER",          // Text name for the task.
+                   stack_size,        // Stack size in bytes, not words.
+                   ( void * ) 1,      // Parameter passed into the task.
+                   tskIDLE_PRIORITY,  // Priority at which the task is created.
+                   x_stack,           // Array to use as the task's stack.
+                   &x_task_buffer );  // Variable to hold the task's data structure.
+
+    (void)x_handle;
+
+     vTaskSuspend(nullptr); // suspend main task
+ } 
+#endif
+//--------------------------------------------------------------------------------------------------------------------------------
+
+#if defined(FREERTOS_PLATFORM)
+extern "C" void app_main()
+#else
+int main()
+#endif
+{
+
+#if defined(FREERTOS_PLATFORM)
+    launch_runner();
+#else
+    runner();
     return 0;
 #endif
 }
