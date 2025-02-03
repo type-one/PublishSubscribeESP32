@@ -28,6 +28,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+#include "tools/logger.hpp"
 #include "tools/non_copyable.hpp"
 
 namespace tools
@@ -40,7 +41,7 @@ namespace tools
         {
             if (nullptr == m_mutex)
             {
-                fprintf(stderr, "FATAL error: xSemaphoreCreateMutex() failed (%s line %d function %s)\n", __FILE__, __LINE__, __FUNCTION__);
+                LOG_ERROR("FATAL error: xSemaphoreCreateMutex() failed");
             }
         }
 

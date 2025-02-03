@@ -19,6 +19,7 @@ Goodies:
 - bytepack serialization in C++20 using header-only 3rd party (Faruk Eryilmaz - MIT license)
 - json serialization and deserialization using 3rd party (Dave Gamble & Dmitry Pankratov - MIT license)
 - gzip compression / decompression C++ wrapper using 3rd party (Paul Sokolovsky, Joergen Ibsen & Simon Tatham - Zlib license)
+- some logging macros
 
 https://github.com/type-one/PublishSubscribeESP32
 

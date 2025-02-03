@@ -27,6 +27,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 
+#include "tools/logger.hpp"
 #include "tools/sync_object.hpp"
 
 namespace tools
@@ -36,7 +37,7 @@ namespace tools
     {
         if (nullptr == m_event_group)
         {
-            fprintf(stderr, "FATAL error: xEventGroupCreate() failed (%s line %d function %s)\n", __FILE__, __LINE__, __FUNCTION__);
+            LOG_ERROR("FATAL error: xEventGroupCreate() failed");
         }
     }
 

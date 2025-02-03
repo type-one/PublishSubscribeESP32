@@ -15,9 +15,10 @@
 
 // clang-format off
 #if defined(CJSONPP_NO_EXCEPTION)
+#include "tools/logger.hpp"
 #include "CException/CException.h"
-#define CJSONPP_THROW(msg, value) do { std::fprintf(stderr, "%s (%d)\n", msg, static_cast<int>(value)); \
-                                       std::fflush(stderr); Throw(0); } while (false)
+#define CJSONPP_THROW(msg, value) do { LOG_ERROR("%s (%d)", msg, static_cast<int>(value)); \
+                                       Throw(0); } while (false)
 #else
 #include <exception>
 #define CJSONPP_THROW(msg, value) throw std::runtime_error(msg + " (" + std::to_string(value) + ")")

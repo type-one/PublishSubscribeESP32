@@ -34,6 +34,7 @@
 #include <freertos/task.h>
 
 #include "tools/base_task.hpp"
+#include "tools/logger.hpp"
 #include "tools/sync_queue.hpp"
 
 namespace tools
@@ -63,8 +64,7 @@ namespace tools
 
             if (nullptr == m_data_queue)
             {
-                fprintf(stderr, "FATAL error: xQueueCreate() failed for task %s (%s line %d function %s)\n", this->task_name().c_str(),
-                    __FILE__, __LINE__, __FUNCTION__);
+                LOG_ERROR("FATAL error: xQueueCreate() failed for task %s", this->task_name().c_str());
             }
 
             auto ret = xTaskCreate(run_loop, this->task_name().c_str(), this->stack_size(),
@@ -77,8 +77,7 @@ namespace tools
             }
             else
             {
-                fprintf(stderr, "FATAL error: xTaskCreate() failed for task %s (%s line %d function %s)\n", this->task_name().c_str(),
-                    __FILE__, __LINE__, __FUNCTION__);
+                LOG_ERROR("FATAL error: xTaskCreate() failed for task %s", this->task_name().c_str());
             }
         }
 

@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "tools/gzip_wrapper.hpp"
+#include "tools/logger.hpp"
 #include "tools/non_copyable.hpp"
 #include "uzlib/uzlib.h"
 
@@ -56,7 +57,7 @@ namespace tools
         m_hash_table = static_cast<uzlib_hash_entry_t*>(std::malloc(hash_size));
         if (nullptr == m_hash_table)
         {
-            std::fprintf(stderr, "could not allocate hash_table\n");
+            LOG_ERROR("could not allocate hash_table");
         }
     }
 
@@ -155,7 +156,7 @@ namespace tools
             int res = uzlib_gzip_parse_header(&depack_ctxt);
             if (TINF_OK != res)
             {
-                std::fprintf(stderr, "error parsing header: %d\n", res);
+                LOG_ERROR("error parsing header: %d", res);
                 gzip_unpacked.clear();
                 return gzip_unpacked;
             }
@@ -181,7 +182,7 @@ namespace tools
 
             if (TINF_DONE != res)
             {
-                std::fprintf(stderr, "error during decompression: %d\n", res);
+                LOG_ERROR("error during decompression: %d", res);
                 gzip_unpacked.clear();
                 return gzip_unpacked;
             }
@@ -190,7 +191,7 @@ namespace tools
 
             if (depacked_sz != outlen)
             {
-                std::fprintf(stderr, "Invalid decompressed length: %zu vs %zu\n", depacked_sz, outlen);
+                LOG_ERROR("invalid decompressed length: %zu vs %zu", depacked_sz, outlen);
                 gzip_unpacked.clear();
                 return gzip_unpacked;
             }
@@ -199,7 +200,7 @@ namespace tools
 
             if (check_crc32 != source_crc32)
             {
-                std::fprintf(stderr, "invalid decompressed crc32\n");
+                LOG_ERROR("invalid decompressed crc32");
                 gzip_unpacked.clear();
                 return gzip_unpacked;
             }

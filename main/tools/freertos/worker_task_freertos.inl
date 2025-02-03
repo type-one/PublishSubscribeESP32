@@ -34,6 +34,7 @@
 #include <freertos/task.h>
 
 #include "tools/base_task.hpp"
+#include "tools/logger.hpp"
 #include "tools/sync_queue.hpp"
 
 namespace tools
@@ -62,8 +63,7 @@ namespace tools
             }
             else
             {
-                fprintf(stderr, "FATAL error: xTaskCreate() failed for task %s (%s line %d function %s)\n", this->task_name().c_str(),
-                    __FILE__, __LINE__, __FUNCTION__);
+                LOG_ERROR("FATAL error: xTaskCreate() failed for task %s", this->task_name().c_str());
             }
         }
 
