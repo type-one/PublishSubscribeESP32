@@ -1136,7 +1136,6 @@ int main()
     test_json();
     test_queued_json_data();
 
-    uzlib_init();
     test_packing_unpacking_json_data();
 
 #if defined(ESP_PLATFORM)
