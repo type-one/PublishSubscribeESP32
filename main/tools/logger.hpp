@@ -46,6 +46,14 @@
 #define _FUNCTION_ALIAS_ __FUNCTION__
 #endif
 
+#if defined(__FILE_BASENAME__)
+#define _FILE_ALIAS_ __FILE_BASENAME__
+#elif defined(__FILE_NAME__)
+#define _FILE_ALIAS_ __FILE_NAME__
+#else
+#define _FILE_ALIAS_ __FILE__
+#endif
+
 #if defined(ESP_PLATFORM)
 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/log.html
 // ESP_LOGE - Error (lowest)
@@ -60,13 +68,13 @@
 #define LOG_VERBOSE(...) ESP_LOGV(_FUNCTION_ALIAS_, __VA_ARGS__)
 #else
 // clang-format off
-#define LOG_ERROR(...) do { std::fprintf(stderr, "[ERROR] %s [function %s, line %d]", __FILE__, _FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false)
-#define LOG_WARNING(...) do { std::fprintf(stderr, "[WARNING] %s [function %s, line %d]", __FILE__, _FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false)
-#define LOG_INFO(...) do { std::printf("[INFO] %s [function %s, line %d]", __FILE__, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
+#define LOG_ERROR(...) do { std::fprintf(stderr, "[ERROR] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false)
+#define LOG_WARNING(...) do { std::fprintf(stderr, "[WARNING] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false)
+#define LOG_INFO(...) do { std::printf("[INFO] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
 
 #if defined(DEBUG)
-#define LOG_DEBUG(...) do { std::printf("[DEBUG] %s [function %s, line %d]", __FILE__, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
-#define LOG_VERBOSE(...) do { std::printf("[VERBOSE] %s [function %s, line %d]", __FILE__, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
+#define LOG_DEBUG(...) do { std::printf("[DEBUG] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
+#define LOG_VERBOSE(...) do { std::printf("[VERBOSE] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
 #else
 #define LOG_DEBUG(...)
 #define LOG_VERBOSE(...)

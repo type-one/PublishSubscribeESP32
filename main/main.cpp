@@ -40,6 +40,7 @@
 #include <thread>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "CException/CException.h"
@@ -60,6 +61,7 @@
 #include "tools/sync_observer.hpp"
 #include "tools/sync_queue.hpp"
 #include "tools/sync_ring_buffer.hpp"
+#include "tools/variant_overload.hpp"
 #include "tools/worker_task.hpp"
 
 #if defined(ESP_PLATFORM)
@@ -79,7 +81,7 @@ inline void print_stats()
     std::printf("Current free heap size: %" PRIu32 " bytes\n", esp_get_free_heap_size());
     std::printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 #endif
-#if defined(FREERTOS_PLATFORM) 
+#if defined(FREERTOS_PLATFORM)
     UBaseType_t ux_high_water_mark = uxTaskGetStackHighWaterMark(nullptr);
     std::printf("Minimum free stack size: %d bytes\n", ux_high_water_mark);
 #endif
@@ -1046,6 +1048,212 @@ void test_packing_unpacking_json_data()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+// clang-format off
+
+// https://www.cppstories.com/2023/finite-state-machines-variant-cpp/
+
+// possible states
+namespace traffic_light_state
+{
+    struct off {};
+    struct operable_initializing {};
+    struct operable_red
+    {
+        int count = 0;
+    };
+    struct operable_orange
+    {
+        int count = 0;
+    };
+    struct operable_green
+    {
+        int count = 0;
+    };
+}
+
+// possible events
+namespace traffic_light_event
+{
+    struct power_on {};
+    struct power_off {};
+    struct init_done {};
+    struct next_state {};
+}
+
+using traffic_light_state_v = std::variant<traffic_light_state::off,
+                                           traffic_light_state::operable_initializing,
+                                           traffic_light_state::operable_red,
+                                           traffic_light_state::operable_orange,
+                                           traffic_light_state::operable_green>;
+
+using traffic_light_event_v = std::variant<traffic_light_event::power_on,
+                                           traffic_light_event::power_off,
+                                           traffic_light_event::init_done,
+                                           traffic_light_event::next_state>;
+// clang-format on
+
+class traffic_light_fsm
+{
+public:
+    traffic_light_fsm() = default;
+    ~traffic_light_fsm() = default;
+
+    void start();
+
+    void handle_event(const traffic_light_event_v& event);
+
+private:
+    traffic_light_state_v m_state = traffic_light_state::off {}; // init state
+
+    // states transitions methods 
+    // define callbacks for [state, event]
+
+    traffic_light_state_v on_event(const traffic_light_state::off& state, const traffic_light_event::power_on& event);
+    traffic_light_state_v on_event(const traffic_light_state::operable_initializing& state, const traffic_light_event::init_done& event);
+    traffic_light_state_v on_event(const traffic_light_state::operable_red& state, const traffic_light_event::next_state& event);
+    traffic_light_state_v on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::next_state& event);
+    traffic_light_state_v on_event(const traffic_light_state::operable_green& state, const traffic_light_event::next_state& event);
+    traffic_light_state_v on_event(const traffic_light_state::operable_initializing& state, const traffic_light_event::power_off& event);
+    traffic_light_state_v on_event(const traffic_light_state::operable_red& state, const traffic_light_event::power_off& event);
+    traffic_light_state_v on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::power_off& event);
+    traffic_light_state_v on_event(const traffic_light_state::operable_green& state, const traffic_light_event::power_off& event);
+    
+    // fallback for undefined transitions
+    traffic_light_state_v on_event(const auto&, const auto&);
+};
+
+void traffic_light_fsm::start()
+{
+   m_state = traffic_light_state::off {}; // init state 
+}
+
+// event processing routines invoking states transitions routines through visitor
+void traffic_light_fsm::handle_event(const traffic_light_event_v& event)
+{
+        // clang-format off
+        m_state
+            = std::visit(tools::detail::overload 
+              { 
+                [&](const auto& state, const auto& evt)
+                  { 
+                    return traffic_light_fsm::on_event(state, evt);
+                  }
+              },
+              m_state,
+              event);
+        // clang-format on       
+}
+
+// define callbacks for [state, event]
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::off& state, const traffic_light_event::power_on& event)
+{
+    std::printf("switch ON traffic light\n");
+    tools::sleep_for(1000);
+
+    return traffic_light_state::operable_initializing {};
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_initializing& state, const traffic_light_event::init_done& event)
+{
+    std::printf("init traffic light completed\n");
+
+    return traffic_light_state::operable_red { 0 };
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_red& state, const traffic_light_event::next_state& event)
+{
+    std::printf("traffix light RED\n");
+    tools::sleep_for(1000);
+
+    traffic_light_state_v next_state;
+    if (state.count < 2 * 3)
+    {
+        next_state = traffic_light_state::operable_orange { state.count + 1 };
+    }
+    else
+    {
+        // finish the scenario
+        next_state = traffic_light_state::off {};
+    }
+
+    return next_state;
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::next_state& event)
+{
+    std::printf("traffix light ORANGE\n");
+    tools::sleep_for(1000);
+    return traffic_light_state::operable_green { state.count + 1 };
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_green& state, const traffic_light_event::next_state& event)
+{
+    std::printf("traffix light GREEN\n");
+    tools::sleep_for(1000);
+    return traffic_light_state::operable_red { state.count + 1 };
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_initializing& state, const traffic_light_event::power_off& event)
+{
+    std::printf("switch OFF traffic light\n");
+    return traffic_light_state::off {};
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_red& state, const traffic_light_event::power_off& event)
+{
+    std::printf("switch OFF traffic light\n");
+    return traffic_light_state::off {};
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::power_off& event)
+{
+    std::printf("switch OFF traffic light\n");
+    return traffic_light_state::off {};
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_green& state, const traffic_light_event::power_off& event)
+{
+    std::printf("switch OFF traffic light\n");
+    return traffic_light_state::off {};
+}
+
+traffic_light_state_v traffic_light_fsm::on_event(const auto&, const auto&)
+{
+    LOG_ERROR("Unsupported state transition");
+    return traffic_light_state::off {};
+}
+
+
+void test_variant_fsm()
+{
+    LOG_INFO("-- finite state machine (std::variant) --");
+    print_stats();
+
+    traffic_light_fsm fsm;
+
+    fsm.start();
+
+    // callback is invoked on state transition
+
+    fsm.handle_event(traffic_light_event::power_on {});
+    fsm.handle_event(traffic_light_event::init_done {});
+
+    fsm.handle_event(traffic_light_event::next_state {});
+    fsm.handle_event(traffic_light_event::next_state {});
+    fsm.handle_event(traffic_light_event::next_state {});
+
+    fsm.handle_event(traffic_light_event::next_state {});
+    fsm.handle_event(traffic_light_event::next_state {});
+    fsm.handle_event(traffic_light_event::next_state {});
+
+    fsm.handle_event(traffic_light_event::next_state {});
+
+    std::printf("end fsm test\n");     
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+
 #if defined(ESP_PLATFORM)
 
 constexpr std::size_t isr_queue_depth = 20;
@@ -1176,6 +1384,8 @@ void runner()
 
     test_packing_unpacking_json_data();
 
+    test_variant_fsm();
+
 #if defined(ESP_PLATFORM)
     test_hardware_timer_interrupt();
 #endif
@@ -1195,37 +1405,36 @@ StaticTask_t x_task_buffer = {};
 // the RTOS port.
 StackType_t x_stack[stack_size] = {};
 
- // Function that implements the task being created.
- void v_task_code( void * pv_parameters )
- {
-     // The parameter value is expected to be 1 as 1 is passed in the
-     // pvParameters value in the call to xTaskCreateStatic().
-     configASSERT( ( std::uint32_t ) pv_parameters == 1UL );
+// Function that implements the task being created.
+void v_task_code(void* pv_parameters)
+{
+    // The parameter value is expected to be 1 as 1 is passed in the
+    // pvParameters value in the call to xTaskCreateStatic().
+    configASSERT((std::uint32_t)pv_parameters == 1UL);
 
-     runner();
+    runner();
 
-     vTaskSuspend(nullptr); // suspend itself
- }
+    vTaskDelete(nullptr); // delete itself
+}
 
- // Function that creates a task.
- void launch_runner(void)
- {
-     TaskHandle_t x_handle = nullptr;
+// Function that creates a task.
+void launch_runner(void)
+{
+    TaskHandle_t x_handle = nullptr;
 
-     // Create the task without using any dynamic memory allocation.
-     x_handle = xTaskCreateStatic(
-                   v_task_code,       // Function that implements the task.
-                   "RUNNER",          // Text name for the task.
-                   stack_size,        // Stack size in bytes, not words.
-                   ( void * ) 1,      // Parameter passed into the task.
-                   tskIDLE_PRIORITY,  // Priority at which the task is created.
-                   x_stack,           // Array to use as the task's stack.
-                   &x_task_buffer );  // Variable to hold the task's data structure.
+    // Create the task without using any dynamic memory allocation.
+    x_handle = xTaskCreateStatic(v_task_code, // Function that implements the task.
+        "RUNNER",                             // Text name for the task.
+        stack_size,                           // Stack size in bytes, not words.
+        (void*)1,                             // Parameter passed into the task.
+        tskIDLE_PRIORITY,                     // Priority at which the task is created.
+        x_stack,                              // Array to use as the task's stack.
+        &x_task_buffer);                      // Variable to hold the task's data structure.
 
     (void)x_handle;
 
-     vTaskSuspend(nullptr); // suspend main task
- } 
+    vTaskSuspend(nullptr); // suspend main task
+}
 #endif
 //--------------------------------------------------------------------------------------------------------------------------------
 
