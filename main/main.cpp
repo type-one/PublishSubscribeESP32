@@ -1101,6 +1101,7 @@ public:
     void start();
 
     void handle_event(const traffic_light_event_v& event);
+    void update();
 
 private:
     traffic_light_state_v m_state = traffic_light_state::off {}; // init state
@@ -1117,9 +1118,19 @@ private:
     traffic_light_state_v on_event(const traffic_light_state::operable_red& state, const traffic_light_event::power_off& event);
     traffic_light_state_v on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::power_off& event);
     traffic_light_state_v on_event(const traffic_light_state::operable_green& state, const traffic_light_event::power_off& event);
-    
+
     // fallback for undefined transitions
     traffic_light_state_v on_event(const auto&, const auto&);
+
+    // defines callbacks for [state]
+    void on_state(const traffic_light_state::off& state);
+    void on_state(const traffic_light_state::operable_initializing& state);
+    void on_state(const traffic_light_state::operable_red& state);
+    void on_state(const traffic_light_state::operable_orange& state);
+    void on_state(const traffic_light_state::operable_green& state);
+
+    // fallback for undefined state
+    void on_state(const auto&);
 };
 
 void traffic_light_fsm::start()
@@ -1130,18 +1141,33 @@ void traffic_light_fsm::start()
 // event processing routines invoking states transitions routines through visitor
 void traffic_light_fsm::handle_event(const traffic_light_event_v& event)
 {
-        // clang-format off
-        m_state
-            = std::visit(tools::detail::overload 
-              { 
-                [&](const auto& state, const auto& evt)
-                  { 
-                    return traffic_light_fsm::on_event(state, evt);
-                  }
-              },
-              m_state,
-              event);
-        // clang-format on       
+    // clang-format off
+    m_state
+        = std::visit(tools::detail::overload 
+            { 
+            [&](const auto& state, const auto& evt)
+                { 
+                return traffic_light_fsm::on_event(state, evt);
+                }
+            },
+            m_state,
+            event);
+    // clang-format on       
+}
+
+// update cycle based on current state
+void traffic_light_fsm::update()
+{
+    // clang-format off
+    std::visit(tools::detail::overload 
+        { 
+        [&](const auto& state)
+            { 
+            return traffic_light_fsm::on_state(state);
+            }
+        },
+        m_state);
+    // clang-format on  
 }
 
 // define callbacks for [state, event]
@@ -1161,18 +1187,19 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 }
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_red& state, const traffic_light_event::next_state& event)
-{
-    std::printf("traffix light RED\n");
+{    
     tools::sleep_for(1000);
 
     traffic_light_state_v next_state;
     if (state.count < 2 * 3)
     {
+        std::printf("traffic light RED --> ORANGE\n");
         next_state = traffic_light_state::operable_orange { state.count + 1 };
     }
     else
     {
         // finish the scenario
+        std::printf("traffic light RED --> OFF\n");
         next_state = traffic_light_state::off {};
     }
 
@@ -1180,16 +1207,16 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 }
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::next_state& event)
-{
-    std::printf("traffix light ORANGE\n");
+{    
     tools::sleep_for(1000);
+    std::printf("traffix light ORANGE --> GREEN\n");
     return traffic_light_state::operable_green { state.count + 1 };
 }
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_green& state, const traffic_light_event::next_state& event)
 {
-    std::printf("traffix light GREEN\n");
     tools::sleep_for(1000);
+    std::printf("traffix light GREEN --> RED\n");
     return traffic_light_state::operable_red { state.count + 1 };
 }
 
@@ -1223,6 +1250,38 @@ traffic_light_state_v traffic_light_fsm::on_event(const auto&, const auto&)
     return traffic_light_state::off {};
 }
 
+// defines callbacks for [state]
+void traffic_light_fsm::on_state(const traffic_light_state::off& state)
+{
+    std::printf("traffic light off\n");
+}
+
+void traffic_light_fsm::on_state(const traffic_light_state::operable_initializing& state)
+{
+    std::printf("traffic light initializing\n");
+}
+
+void traffic_light_fsm::on_state(const traffic_light_state::operable_red& state)
+{
+    std::printf("traffic light RED\n");
+}
+
+void traffic_light_fsm::on_state(const traffic_light_state::operable_orange& state)
+{
+    std::printf("traffic light ORANGE\n");
+}
+
+void traffic_light_fsm::on_state(const traffic_light_state::operable_green& state)
+{
+    std::printf("traffic light GREEN\n");
+}
+
+// fallback for undefined state
+void traffic_light_fsm::on_state(const auto&)
+{
+        LOG_ERROR("Unsupported state");
+}
+
 
 void test_variant_fsm()
 {
@@ -1232,21 +1291,31 @@ void test_variant_fsm()
     traffic_light_fsm fsm;
 
     fsm.start();
+    fsm.update();
 
     // callback is invoked on state transition
 
     fsm.handle_event(traffic_light_event::power_on {});
+    fsm.update();
     fsm.handle_event(traffic_light_event::init_done {});
+    fsm.update();
 
     fsm.handle_event(traffic_light_event::next_state {});
+    fsm.update();
     fsm.handle_event(traffic_light_event::next_state {});
+    fsm.update();
     fsm.handle_event(traffic_light_event::next_state {});
+    fsm.update();
 
     fsm.handle_event(traffic_light_event::next_state {});
+    fsm.update();
     fsm.handle_event(traffic_light_event::next_state {});
+    fsm.update();
     fsm.handle_event(traffic_light_event::next_state {});
+    fsm.update();
 
     fsm.handle_event(traffic_light_event::next_state {});
+    fsm.update();
 
     std::printf("end fsm test\n");     
 }

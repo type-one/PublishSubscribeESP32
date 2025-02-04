@@ -20,6 +20,8 @@ Goodies:
 - json serialization and deserialization using 3rd party (Dave Gamble & Dmitry Pankratov - MIT license)
 - gzip compression / decompression C++ wrapper using 3rd party (Paul Sokolovsky, Joergen Ibsen & Simon Tatham - Zlib license)
 - some logging macros
+- finite state machine based on std::variant, std::visit and overload pattern with transitions and states callbacks (based on
+  Rainer Grimm and Bartlomiej Filipek C++ publications)
 
 https://github.com/type-one/PublishSubscribeESP32
 
@@ -30,6 +32,10 @@ https://github.com/DaveGamble/cJSON
 https://github.com/ThrowTheSwitch/CException
 https://github.com/pfalcon/uzlib
 https://github.com/jibsen/tinf
+
+Publications:
+https://www.cppstories.com/2023/finite-state-machines-variant-cpp/
+https://www.modernescpp.com/index.php/visiting-a-std-variant-with-the-overload-pattern/
 
 # What
 
