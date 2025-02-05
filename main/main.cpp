@@ -1322,6 +1322,33 @@ void test_variant_fsm()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_calendar_day()
+{
+    // https://www.modernescpp.com/index.php/c20-query-calendar-dates-and-ordinal-dates/
+
+    LOG_INFO("calendar time and day");
+
+    auto now = std::chrono::system_clock::now();   
+    auto current_date = std::chrono::year_month_day(std::chrono::floor<std::chrono::days>(now));
+    auto current_year = current_date.year();
+
+    std::printf("The current year is %d\n", static_cast<int>(current_year));    
+   
+    auto moon_landing = std::chrono::year(1969)/std::chrono::month(7)/std::chrono::day(21);      
+
+    auto anniversary_week_day = std::chrono::year_month_weekday(moon_landing);  
+
+    current_date = std::chrono::year_month_day(
+        std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now()));  
+    current_year = current_date.year();
+    
+    auto elapsed_years = static_cast<int>(current_date.year()) - static_cast<int>(moon_landing.year());
+    std::printf("Elapsed years since moon landing: %d\n", static_cast<int>(elapsed_years));
+
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 
 #if defined(ESP_PLATFORM)
 
@@ -1454,6 +1481,7 @@ void runner()
     test_packing_unpacking_json_data();
 
     test_variant_fsm();
+    test_calendar_day();
 
 #if defined(ESP_PLATFORM)
     test_hardware_timer_interrupt();

@@ -22,6 +22,7 @@ Goodies:
 - some logging macros
 - finite state machine based on std::variant, std::visit and overload pattern with transitions and states callbacks (based on
   Rainer Grimm and Bartlomiej Filipek C++ publications)
+- C++20 calendar day test
 
 https://github.com/type-one/PublishSubscribeESP32
 
