@@ -23,16 +23,18 @@ Goodies:
 - finite state machine based on std::variant, std::visit and overload pattern with transitions and states callbacks (based on
   Rainer Grimm and Bartlomiej Filipek C++ publications)
 - C++20 calendar day test
+- simple timer helper using 3rdparty (Michael Egli - MIT license) for standard implementation and using FreeRTOS timer for FreeRTOS platform
 
 https://github.com/type-one/PublishSubscribeESP32
 
 Third Parties used in the examples:
-https://github.com/farukeryilmaz/bytepack
-https://github.com/ancwrd1/cjsonpp
-https://github.com/DaveGamble/cJSON
-https://github.com/ThrowTheSwitch/CException
-https://github.com/pfalcon/uzlib
-https://github.com/jibsen/tinf
+https://github.com/farukeryilmaz/bytepack (v0.1.0)
+https://github.com/ancwrd1/cjsonpp  (master 71d876f)
+https://github.com/DaveGamble/cJSON (v1.7.18)
+https://github.com/ThrowTheSwitch/CException (v1.3.4)
+https://github.com/pfalcon/uzlib  (v2.9.5)
+https://github.com/jibsen/tinf    (from uzlib v2.9.5 bundle)
+https://github.com/eglimi/cpptime (master 08abf1d)
 
 Publications:
 https://www.cppstories.com/2023/finite-state-machines-variant-cpp/

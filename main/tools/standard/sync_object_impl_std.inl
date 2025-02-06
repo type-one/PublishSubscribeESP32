@@ -58,6 +58,12 @@ namespace tools
         m_cond.notify_one();
     }
 
+    void sync_object::isr_signal()
+    {
+        // no calls from ISRs in standard C++ platform, fallback to standard call
+        signal();
+    }
+
     void sync_object::wait_for_signal()
     {
         std::unique_lock<std::mutex> lock(m_mutex);

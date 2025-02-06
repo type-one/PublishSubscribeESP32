@@ -41,6 +41,7 @@ namespace tools
         void signal();
         void wait_for_signal();
         void wait_for_signal(const std::chrono::duration<int, std::micro>& timeout);
+        void isr_signal();
 
     private:
         bool m_signaled;

@@ -84,6 +84,12 @@ namespace tools
             m_work_sync.signal();
         }
 
+        void isr_delegate(call_back&& work)
+        {
+            // no calls from ISRs in standard C++ platform, fallback to standard call
+            delegate(work);
+        }
+
     private:
         void run_loop()
         {

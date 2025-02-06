@@ -91,6 +91,12 @@ namespace tools
             m_data_sync.signal();
         }
 
+        void isr_submit(const DataType& data)
+        {
+            // no calls from ISRs in standard C++ platform, fallback to standard call
+            submit(data);
+        }
+
     private:
         void run_loop()
         {
