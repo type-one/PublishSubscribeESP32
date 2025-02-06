@@ -1254,11 +1254,12 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
     return traffic_light_state::off {};
 }
 
-traffic_light_state_v traffic_light_fsm::on_event(const auto&, const auto&)
+traffic_light_state_v traffic_light_fsm::on_event(const auto& state, const auto&)
 {
     LOG_ERROR("Unsupported state transition");
-    m_entering_state = true;
-    return traffic_light_state::off {};
+    // don't switch to other state and do not execute entering state callback
+    m_entering_state = false;
+    return state;
 }
 
 // defines callbacks for [state]
@@ -1363,6 +1364,11 @@ void test_variant_fsm()
     fsm.update();
     fsm.update();
 
+    //fsm.handle_event(traffic_light_event::power_on {});
+    fsm.handle_event(traffic_light_event::next_state {});
+    fsm.update();
+    fsm.update();
+
     std::printf("end fsm test\n");     
 }
 
@@ -1382,7 +1388,7 @@ void test_calendar_day()
    
     auto moon_landing = std::chrono::year(1969)/std::chrono::month(7)/std::chrono::day(21);      
 
-    auto anniversary_week_day = std::chrono::year_month_weekday(moon_landing);  
+    //auto anniversary_week_day = std::chrono::year_month_weekday(moon_landing);  
 
     current_date = std::chrono::year_month_day(
         std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now()));  
