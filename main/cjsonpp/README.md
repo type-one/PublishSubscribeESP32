@@ -1,6 +1,8 @@
 Type-safe thin C++ wrapper over cJSON library (header-only).
 Version 0.4
 
+https://github.com/ancwrd1/cjsonpp
+
 When compiled with recent gcc compiler with c++11 support the following features are enabled:
 * initializer list for array object construction
 * default template parameters for constructor, get<> and asArray<> functions

@@ -1,11 +1,9 @@
-# Url 
-
-https://github.com/farukeryilmaz/bytepack
-
 # BytePack: Simple C++ Binary Serialization Library
 <p align="center">
   <img src="doc/images/bytepack-logo.jpg" alt="BytePack: Simple C++ Binary Serialization Library Logo" width="200"/>
 </p>
+
+https://github.com/farukeryilmaz/bytepack
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/farukeryilmaz/bytepack/blob/main/LICENSE)
 [![Windows build-test status](https://github.com/farukeryilmaz/bytepack/actions/workflows/platform_windows.yml/badge.svg)](https://github.com/farukeryilmaz/bytepack/actions/workflows/platform_windows.yml)
