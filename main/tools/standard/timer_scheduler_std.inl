@@ -27,16 +27,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <memory>
 #include <string>
 
+#include "cpptime/cpptime.hpp"
 #include "tools/non_copyable.hpp"
-
-// forward declaration
-namespace CppTime
-{
-    class Timer;
-}
 
 namespace tools
 {
@@ -45,8 +39,8 @@ namespace tools
     class timer_scheduler : non_copyable
     {
     public:
-        timer_scheduler();
-        ~timer_scheduler();
+        timer_scheduler() = default;
+        ~timer_scheduler() = default;
 
         /**
          * Add a new timer.
@@ -64,6 +58,6 @@ namespace tools
         bool remove(timer_handle hnd);       
 
     private:
-        std::unique_ptr<CppTime::Timer> m_timer_scheduler;
+        CppTime::Timer m_timer_scheduler;
     };
 }

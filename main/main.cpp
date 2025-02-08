@@ -1176,6 +1176,8 @@ void traffic_light_fsm::update()
 // define callbacks for [state, event]
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::off& state, const traffic_light_event::power_on& event)
 {
+    (void)state;
+    (void)event;
     std::printf("switch ON traffic light\n");
     tools::sleep_for(1000);
     m_entering_state = true;
@@ -1184,6 +1186,8 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::off
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_initializing& state, const traffic_light_event::init_done& event)
 {
+    (void)state;
+    (void)event;
     std::printf("init traffic light completed\n");
     m_entering_state = true;
     return traffic_light_state::operable_red { 0 };
@@ -1191,6 +1195,8 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_red& state, const traffic_light_event::next_state& event)
 {    
+    (void)state;
+    (void)event;
     tools::sleep_for(1000);
 
     traffic_light_state_v next_state;
@@ -1213,6 +1219,8 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::next_state& event)
 {    
+    (void)state;
+    (void)event;
     tools::sleep_for(1000);
     std::printf("traffix light ORANGE --> GREEN\n");
     m_entering_state = true;
@@ -1221,6 +1229,8 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_green& state, const traffic_light_event::next_state& event)
 {
+    (void)state;
+    (void)event;
     tools::sleep_for(1000);
     std::printf("traffix light GREEN --> RED\n");
     m_entering_state = true;
@@ -1229,6 +1239,8 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_initializing& state, const traffic_light_event::power_off& event)
 {
+    (void)state;
+    (void)event;
     std::printf("switch OFF traffic light\n");
     m_entering_state = true;
     return traffic_light_state::off {};
@@ -1236,6 +1248,8 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_red& state, const traffic_light_event::power_off& event)
 {
+    (void)state;
+    (void)event;
     std::printf("switch OFF traffic light\n");
     m_entering_state = true;
     return traffic_light_state::off {};
@@ -1243,6 +1257,8 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::power_off& event)
 {
+    (void)state;
+    (void)event;
     std::printf("switch OFF traffic light\n");
     m_entering_state = true;
     return traffic_light_state::off {};
@@ -1250,6 +1266,8 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::operable_green& state, const traffic_light_event::power_off& event)
 {
+    (void)state;
+    (void)event;
     std::printf("switch OFF traffic light\n");
     m_entering_state = true;
     return traffic_light_state::off {};
@@ -1266,6 +1284,7 @@ traffic_light_state_v traffic_light_fsm::on_event(const auto& state, const auto&
 // defines callbacks for [state]
 void traffic_light_fsm::on_state(const traffic_light_state::off& state)
 {
+    (void)state;
     if (m_entering_state)
     {
         std::printf("traffic light off\n");
@@ -1275,6 +1294,7 @@ void traffic_light_fsm::on_state(const traffic_light_state::off& state)
 
 void traffic_light_fsm::on_state(const traffic_light_state::operable_initializing& state)
 {
+    (void)state;
     if (m_entering_state)
     {    
         std::printf("traffic light initializing\n");
@@ -1284,6 +1304,7 @@ void traffic_light_fsm::on_state(const traffic_light_state::operable_initializin
 
 void traffic_light_fsm::on_state(const traffic_light_state::operable_red& state)
 {
+    (void)state;
     if (m_entering_state)
     {
         std::printf("traffic light RED\n");
@@ -1293,6 +1314,7 @@ void traffic_light_fsm::on_state(const traffic_light_state::operable_red& state)
 
 void traffic_light_fsm::on_state(const traffic_light_state::operable_orange& state)
 {
+    (void)state;
     if (m_entering_state)
     {
         std::printf("traffic light ORANGE\n");
@@ -1302,6 +1324,7 @@ void traffic_light_fsm::on_state(const traffic_light_state::operable_orange& sta
 
 void traffic_light_fsm::on_state(const traffic_light_state::operable_green& state)
 {
+    (void)state;
     if (m_entering_state)
     {
         std::printf("traffic light GREEN\n");
@@ -1311,7 +1334,7 @@ void traffic_light_fsm::on_state(const traffic_light_state::operable_green& stat
 
 // fallback for undefined state
 void traffic_light_fsm::on_state(const auto&)
-{
+{    
     if (m_entering_state)
     {
         LOG_ERROR("Unsupported state");
