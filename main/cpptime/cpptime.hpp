@@ -99,6 +99,7 @@
  */
 
 // Includes
+#include <functional>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>

@@ -47,7 +47,6 @@
 #include "bytepack/bytepack.hpp"
 #define CJSONPP_NO_EXCEPTION
 #include "cjsonpp/cjsonpp.hpp"
-#include "cpptime/cpptime.hpp"
 
 #include "tools/async_observer.hpp"
 #include "tools/data_task.hpp"
@@ -62,6 +61,7 @@
 #include "tools/sync_observer.hpp"
 #include "tools/sync_queue.hpp"
 #include "tools/sync_ring_buffer.hpp"
+#include "tools/timer_scheduler.hpp"
 #include "tools/variant_overload.hpp"
 #include "tools/worker_task.hpp"
 
@@ -1405,160 +1405,47 @@ void test_calendar_day()
 void test_timer()
 {
     LOG_INFO("timer");
-#if 0
-
-    CppTime::Timer timer;
-
-    // "Test uint64_t timeout argument"
-    std::atomic<int> i = 0;
-	timer.add(100000, [&](CppTime::timer_id) { i = 42; });
-    tools::sleep_for(120);
-    std::printf("Expect %d is 42\n", i.load());
-
-
-    // "Test duration timeout argument"
-    timer.add(std::chrono::milliseconds(100), [&](CppTime::timer_id) { i = 43; });
-	tools::sleep_for(120);
-    std::printf("Expect %d is 43\n", i.load());
-
-    // "Test time_point timeout argument"
-	timer.add(CppTime::clock::now() + std::chrono::milliseconds(100), [&](CppTime::timer_id) { i = 44; });
-	tools::sleep_for(120);
-    std::printf("Expect %d is 44\n", i.load());
-
-    // "Tests with three argument add" "Test std::uint64_t timeout argument"
-    std::atomic<std::size_t> count = 0;
-	auto id = timer.add(100000, [&](CppTime::timer_id) { ++count; }, 10000);
-    tools::sleep_for(125);    
-	timer.remove(id);
-    std::printf("Expect count %zu is 3\n", count.load());
-
-    // "Tests with three argument add" "Test duration timeout argument"
-    count = 0;
-	id = timer.add(std::chrono::milliseconds(100), [&](CppTime::timer_id) { ++count; }, std::chrono::microseconds(10000));
-    tools::sleep_for(130);
-	timer.remove(id);
-    std::printf("Expect count %zu is 4\n", count.load());
-
-    // "Test delete timer in callback" "Delete one timer"
-	count = 0;
-	timer.add(std::chrono::milliseconds(10),
-		    [&](CppTime::timer_id id) {
-			    ++count;
-			    timer.remove(id);
-		    },
-		    std::chrono::milliseconds(10));
-    tools::sleep_for(50);
-    std::printf("Expect count %zu is 1\n", count.load()); 
-
-
-   
-    // "Test delete timer in callback" "Ensure that the correct timer is freed and reused"
-    auto id1 = timer.add(std::chrono::milliseconds(40), [](CppTime::timer_id) {});
-    auto id2 = timer.add(std::chrono::milliseconds(10), [&](CppTime::timer_id id) { timer.remove(id); });
-    tools::sleep_for(30);
-    auto id3 = timer.add(std::chrono::microseconds(100), [](CppTime::timer_id) {});
-    auto id4 = timer.add(std::chrono::microseconds(100), [](CppTime::timer_id) {});
-    std::printf("Expect %zu == %zu\n", id3, id2);
-    std::printf("Expect %zu == %zu\n", id4, id1);
-    std::printf("Expect %zu == %zu\n", id4, id2);
-    tools::sleep_for(20);
-
-    // "Test delete timer in callback" "Ensure that the correct timer is freed and reused - different ordering"
-    id1 = timer.add(std::chrono::milliseconds(10), [&](CppTime::timer_id id) { timer.remove(id); });
-	id2 = timer.add(std::chrono::milliseconds(40), [](CppTime::timer_id) {});
-	tools::sleep_for(30);
-	id3 = timer.add(std::chrono::microseconds(100), [](CppTime::timer_id) {});
-	id4 = timer.add(std::chrono::microseconds(100), [](CppTime::timer_id) {});
-    std::printf("Expect %zu == %zu\n", id3, id1);
-    std::printf("Expect %zu != %zu\n", id4, id1);
-    std::printf("Expect %zu != %zu\n", id4, id2);
-	tools::sleep_for(20);
-
-    // "Test two identical timeouts"
-    i = 0;
-	std::atomic<int> j = 0;
-	CppTime::timestamp ts = CppTime::clock::now() + std::chrono::milliseconds(40);
-	timer.add(ts, [&](CppTime::timer_id) { i = 42; });
-	timer.add(ts, [&](CppTime::timer_id) { j = 43; });
-	tools::sleep_for(50);
-    std::printf("Expect %d is 42\n", i.load());
-    std::printf("Expect %d is 43\n", j.load());
-
-    // "Test negative timeouts"
-    i = 0;
-    j = 0;
-    CppTime::timestamp ts1 = CppTime::clock::now() - std::chrono::milliseconds(10);
-    CppTime::timestamp ts2 = CppTime::clock::now() - std::chrono::milliseconds(20);
-    timer.add(ts1, [&](CppTime::timer_id) { i = 42; });
-    timer.add(ts2, [&](CppTime::timer_id) { j = 43; });
-    tools::sleep_for(1);
-    std::printf("Expect %d is 42\n", i.load());
-    std::printf("Expect %d is 43\n", j.load());
-
-    // "Test time overflow when blocking timer thread."
-    i = 0;
-    ts1 = CppTime::clock::now() + std::chrono::milliseconds(10);
-    ts2 = CppTime::clock::now() + std::chrono::milliseconds(20);
-    timer.add(ts1, [&](CppTime::timer_id) { tools::sleep_for(20); });
-    timer.add(ts2, [&](CppTime::timer_id) { i = 42; });
-    tools::sleep_for(50);
-    std::printf("Expect %d is 42\n", i.load());
-
-    // "Test order of multiple timeouts"
-    i = 0;
-	timer.add(10000, [&](CppTime::timer_id) { i = 42; });
-	timer.add(20000, [&](CppTime::timer_id) { i = 43; });
-	timer.add(30000, [&](CppTime::timer_id) { i = 44; });
-	timer.add(40000, [&](CppTime::timer_id) { i = 45; });
-	tools::sleep_for(50);
-	std::printf("Expect %d is 45\n", i.load());
-
-
-    // "Test with multiple timers" "Update the same value at different times with different timers"
-    i = 0;
-	CppTime::Timer timer2;
-    timer.add(std::chrono::milliseconds(20), [&](CppTime::timer_id) { i = 42; });
-    timer2.add(std::chrono::milliseconds(40), [&](CppTime::timer_id) { i = 43; });
-    tools::sleep_for(30);
-    std::printf("Expect %d is 42\n", i.load());
-    tools::sleep_for(20);
-    std::printf("Expect %d is 43\n", i.load());
-
-    // "Test with multiple timers" "Remove one timer without affecting the other"
-    i = 0;
-    id1 = timer.add(std::chrono::milliseconds(20), [&](CppTime::timer_id) { i = 42; });
-    timer2.add(std::chrono::milliseconds(40), [&](CppTime::timer_id) { i = 43; });
-    tools::sleep_for(5);
-    timer.remove(id1);
-    tools::sleep_for(20);
-    std::printf("Expect %d is 0\n", i.load());
-    tools::sleep_for(20);
-    std::printf("Expect %d is 43\n", i.load());
-
-    // "Test remove timer_id" "Remove out of range timer_id"
-    id = timer.add(std::chrono::milliseconds(20), [](CppTime::timer_id) {});
-    tools::sleep_for(1);
-    bool ret = timer.remove(id + 1);
-    std::printf("Expect out of range timer removal to be false = %s\n", ret ? "true":"false");
-
-    // "Pass an argument to an action"
-    struct push_me_record
+    
     {
-		int i;
-	};
-	auto push_me = std::make_shared<push_me_record>();
-	push_me->i = 41;
+        tools::timer_scheduler timer_scheduler;
 
-	int res = 0;
+        // Test one shot timer - after completion
+        std::atomic<int> i = 0;
+        timer_scheduler.add("timer1", 100, [&](tools::timer_handle) { i = 42; }, false);
+        tools::sleep_for(120);
+        std::printf("Expect %d is 42\n", i.load());
 
-	// Share the shared_ptr with the lambda
-	timer.add(std::chrono::milliseconds(20), [&res, push_me](CppTime::timer_id) { res = push_me->i + 1; });
+        // Test one shot timer - not started yet
+        i = 0;
+        timer_scheduler.add("timer2", 100, [&](tools::timer_handle) { i = 42; }, false);
+        tools::sleep_for(50);
+        std::printf("Expect %d is 0\n", i.load());
 
-    std::printf("Expect %d is 0\n", res);
-    tools::sleep_for(30);
-    std::printf("Expect %d is 42\n", res);
-#endif    
+        // Test periodic timer (auto-reload) - check immediately started
+        std::atomic<std::size_t> count = 0;
+        auto id = timer_scheduler.add("timer3", 40, [&](tools::timer_handle) { ++count; }, true);
+        tools::sleep_for(20);    
+        timer_scheduler.remove(id);
+        std::printf("Expect count %zu is 1\n", count.load());
+
+        // Test periodic timer (auto-reload) - check after 3 cycles
+        count = 0;
+        id = timer_scheduler.add("timer4", 40, [&](tools::timer_handle) { ++count; }, true);
+        tools::sleep_for(100);    
+        timer_scheduler.remove(id);
+        std::printf("Expect count %zu is 3\n", count.load());
+
+        // Test delete periodic timer (auto-reload) in callback
+        count = 0;
+        timer_scheduler.add("timer5", 25,
+                [&](tools::timer_handle id) {
+                    ++count;
+                    timer_scheduler.remove(id);
+                },
+                true);
+        tools::sleep_for(75);
+        std::printf("Expect count %zu is 1\n", count.load());
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -1633,6 +1520,8 @@ void test_hardware_timer_interrupt()
 
         std::printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
+        tools::sleep_for(1000);
+
         gptimer_handle_t gptimer = nullptr;
         gptimer_config_t timer_config = {};
 
@@ -1657,7 +1546,7 @@ void test_hardware_timer_interrupt()
         ESP_ERROR_CHECK(gptimer_enable(gptimer));
         ESP_ERROR_CHECK(gptimer_start(gptimer));
 
-        tools::sleep_for(1000);
+        tools::sleep_for(500);
 
         ESP_ERROR_CHECK(gptimer_stop(gptimer));
         ESP_ERROR_CHECK(gptimer_disable(gptimer));
@@ -1689,6 +1578,11 @@ void test_hardware_timer_interrupt()
 
 void runner()
 {
+    
+#if defined(ESP_PLATFORM)
+    test_hardware_timer_interrupt();
+#endif
+
     test_ring_buffer();
     test_ring_buffer_iteration();
 
@@ -1715,9 +1609,7 @@ void runner()
     test_calendar_day();
     test_timer();
 
-#if defined(ESP_PLATFORM)
-    test_hardware_timer_interrupt();
-#endif
+    std::printf("This is The END\n");
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
