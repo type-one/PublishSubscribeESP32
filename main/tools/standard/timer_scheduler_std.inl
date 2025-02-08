@@ -23,10 +23,47 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#include "tools/platform_detection.hpp"
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
 
-#if defined(FREERTOS_PLATFORM)
-#include "tools/freertos/timer_scheduler_impl_freertos.inl"
-#else
-#include "tools/standard/timer_scheduler_impl_std.inl"
-#endif
+#include "tools/non_copyable.hpp"
+
+// forward declaration
+namespace CppTime
+{
+    class Timer;
+}
+
+namespace tools
+{
+    using timer_handle = std::size_t;
+
+    class timer_scheduler : non_copyable
+    {
+    public:
+        timer_scheduler();
+        ~timer_scheduler();
+
+        /**
+         * Add a new timer.
+         *
+         * \param period The period of the timer in ms
+         * \param handler The callable that is invoked when the timer fires.
+         * \param auto_reload If true, then the timer will expire repeatedly with a frequency set by the period parameter. If set to false,
+         * then the timer will be a one-shot timer.
+         */
+        timer_handle add(const std::string& timer_name, const std::uint64_t period, std::function<void(timer_handle)>&& handler, bool auto_reload = false);
+
+        /**
+         * Removes the timer with the given id.
+         */
+        bool remove(timer_handle hnd);       
+
+    private:
+        std::unique_ptr<CppTime::Timer> m_timer_scheduler;
+    };
+}

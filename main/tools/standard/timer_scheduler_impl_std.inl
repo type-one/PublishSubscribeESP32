@@ -23,10 +23,35 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#include "tools/platform_detection.hpp"
+#include <atomic>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
 
-#if defined(FREERTOS_PLATFORM)
-#include "tools/freertos/timer_scheduler_impl_freertos.inl"
-#else
-#include "tools/standard/timer_scheduler_impl_std.inl"
-#endif
+#include "cpptimer/cpptimer.hpp"
+#include "tools/timer_scheduler.hpp"
+
+namespace tools
+{
+    timer_scheduler::timer_scheduler()
+    {
+        m_timer_scheduler = std::make_unique<CppTime::Timer>();
+    }
+
+    timer_handle timer_scheduler::add(const std::string& timer_name, const std::uint64_t period, std::function<void(timer_handle)>&& handler, bool auto_reload)
+    {
+        (void)timer_name;
+        // inputs are in us
+        // auto-reload true:  start immediately and then repeat every period
+        // auto-reload false: start once after period
+        return m_timer_scheduler->add(auto_reload ? 0U : (period * 1000U), handler, auto_reload ? (period * 1000U) : 0U);
+    }
+
+    bool timer_scheduler::remove(timer_handle hnd)
+    {
+        return m_timer_scheduler->remove(id);
+    }
+}
