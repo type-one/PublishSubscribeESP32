@@ -131,7 +131,9 @@ namespace tools
 #else
         (void)timer_name;
         // inputs are in us
-        return m_timer_scheduler->add(period * 1000U, handler, auto_reload ? (period * 1000U) : 0U);
+        // auto-reload true:  start immediately and then repeat every period
+        // auto-reload false: start once after period
+        return m_timer_scheduler->add(auto_reload ? 0U : (period * 1000U), handler, auto_reload ? (period * 1000U) : 0U);
 #endif
     }
 
