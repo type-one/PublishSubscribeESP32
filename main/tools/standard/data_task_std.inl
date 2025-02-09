@@ -62,8 +62,9 @@ namespace tools
         using data_call_back = std::function<void(std::shared_ptr<Context>, const DataType& data, const std::string& task_name)>;
 
         data_task(call_back&& startup_routine, data_call_back&& process_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, std::size_t stack_size, int cpu_affinity = -1)
-            : base_task(task_name, stack_size, cpu_affinity)
+            const std::string& task_name, std::size_t stack_size, int cpu_affinity = base_task::run_on_all_cores,
+            int priority = base_task::default_priority)
+            : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_process_routine(std::move(process_routine))
             , m_context(context)
@@ -72,6 +73,7 @@ namespace tools
                 [this]()
                 {
                     int cpu_affinity = this->cpu_affinity();
+                    int priority = this->priority();
 
 #if defined(__linux__)
                     pthread_setname_np(pthread_self(), this->task_name().c_str());
@@ -89,7 +91,19 @@ namespace tools
                             LOG_ERROR("Could not set cpu affinity %d to thread %s", cpu_affinity, this->task_name().c_str());
                         }
                     }
-#elif defined(_WIN32)                    
+
+                    if (priority >= 0)
+                    {
+                        // https://man7.org/linux/man-pages/man2/sched_get_priority_min.2.html
+                        struct sched_param param = {};
+                        int policy = 0;
+                        pthread_getschedparam(pthread_self(), &policy, &param);
+                        const auto min_prio = sched_get_priority_min(SCHED_RR);
+                        const auto max_prio = sched_get_priority_max(SCHED_RR);
+                        param.sched_priority = std::clamp(min_prio + priority, min_prio, max_prio);
+                        pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+                    }
+#elif defined(_WIN32)
 
                     if (cpu_affinity >= 0)
                     {
@@ -100,6 +114,20 @@ namespace tools
                         if (0 == ret)
                         {
                             LOG_ERROR("Could not set cpu affinity %d to thread  %s", cpu_affinity, this->task_name().c_str());
+                        }
+                    }
+
+                    if (priority >= 0)
+                    {
+                        // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
+                        HANDLE thread_id = GetCurrentThread();
+                        auto prio = THREAD_PRIORITY_LOWEST;
+                        prio = std::clamp(THREAD_PRIORITY_LOWEST + priority, THREAD_PRIORITY_LOWEST, THREAD_PRIORITY_HIGHEST);
+                        auto ret = SetThreadPriority(thread_id, prio);
+
+                        if (!ret)
+                        {
+                            LOG_ERROR("Could not set priority %d to thread  %s", priority, this->task_name().c_str());
                         }
                     }
 #endif

@@ -23,6 +23,7 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
@@ -54,8 +55,8 @@ namespace tools
 
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
             const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size,
-            int cpu_affinity = -1)
-            : base_task(task_name, stack_size, cpu_affinity)
+            int cpu_affinity = base_task::run_on_all_cores, int priority = base_task::default_priority)
+            : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
             , m_context(context)
@@ -64,13 +65,22 @@ namespace tools
 
             BaseType_t ret = 0;
 
+            UBaseType_t freertos_priority = tskIDLE_PRIORITY;
+
+            if (priority >= 0)
+            {
+                // https://www.freertos.org/Documentation/02-Kernel/04-API-references/01-Task-creation/01-xTaskCreate
+                freertos_priority = std::clamp(static_cast<UBaseType_t>(priority + tskIDLE_PRIORITY),
+                    static_cast<UBaseType_t>(tskIDLE_PRIORITY), static_cast<UBaseType_t>(configMAX_PRIORITIES - 1));
+            }
+
 #if defined(ESP_PLATFORM)
             // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/freertos_idf.html
             if (cpu_affinity >= 0)
             {
                 ret = xTaskCreatePinnedToCore(periodic_call, this->task_name().c_str(), this->stack_size(),
                     reinterpret_cast<void*>(this), /* Parameter passed into the task. */
-                    tskIDLE_PRIORITY, &m_task, static_cast<BaseType_t>(cpu_affinity));
+                    freertos_priority, &m_task, static_cast<BaseType_t>(cpu_affinity));
 
                 if (pdPASS != ret)
                 {
@@ -83,17 +93,17 @@ namespace tools
             {
                 ret = xTaskCreate(periodic_call, this->task_name().c_str(), this->stack_size(),
                     reinterpret_cast<void*>(this), /* Parameter passed into the task. */
-                    tskIDLE_PRIORITY, &m_task);
+                    freertos_priority, &m_task);
             }
 
             if (pdPASS == ret)
             {
-#if defined(configUSE_CORE_AFFINITY) && !defined(ESP_PLATFORM) 
+#if defined(configUSE_CORE_AFFINITY) && !defined(ESP_PLATFORM)
                 if (cpu_affinity >= 0)
                 {
                     // https://github.com/dogusyuksel/rtos_hal_stm32
                     // https://www.freertos.org/Documentation/02-Kernel/02-Kernel-features/13-Symmetric-multiprocessing-introduction
-                    UBaseType_t mask = (1 << cpu_affinity);                  
+                    UBaseType_t mask = (1 << cpu_affinity);
                     vTaskCoreAffinitySet(m_task, mask);
                 }
 #endif

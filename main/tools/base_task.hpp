@@ -38,12 +38,16 @@ namespace tools
     {
 
     public:
+        static constexpr const int run_on_all_cores = -1;
+        static constexpr const int default_priority = -1;
+
         base_task() = default;
 
-        base_task(const std::string& task_name, std::size_t stack_size, int cpu_affinity)
+        base_task(const std::string& task_name, std::size_t stack_size, int cpu_affinity, int priority)
             : m_task_name(task_name)
             , m_stack_size(stack_size)
             , m_cpu_affinity(cpu_affinity)
+            , m_priority(priority)
         {
         }
 
@@ -69,10 +73,16 @@ namespace tools
             return m_cpu_affinity;
         }
 
+        int priority() const
+        {
+            return m_priority;
+        }
+
     private:
         const std::string m_task_name;
         const std::size_t m_stack_size;
         const int m_cpu_affinity;
+        const int m_priority;
     };
 }
 

@@ -1499,20 +1499,60 @@ void test_smp_tasks_cpu_affinity()
     {
         (void)context;
         static int count = 0;
-        std::printf("%s : count %d\n", task_name.c_str(), count);
+        std::printf("%s (core 0): count %d\n", task_name.c_str(), count);
         ++count;
 
         // delegate work on core 1
         task1.delegate([](auto context, const auto& task_name) -> void
         {
             (void)context;
-            std::printf("%s: work\n", task_name.c_str());
+            std::printf("%s (core 1): work\n", task_name.c_str());
         });
     };
 
     // 20 ms period
     constexpr const auto period = std::chrono::duration<int, std::milli>(100); 
     periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
+
+    // sleep 2 sec
+    tools::sleep_for(2000);
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_tasks_priority()
+{
+    LOG_INFO("-- tasks with priority --");
+    print_stats();
+
+    auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
+    {
+        (void)context;
+        (void)task_name;
+    };
+
+    auto context = std::make_shared<smp_task_context>();
+
+    worker_task1 task1(startup, context, "worker_task1", 2048, tools::base_task::run_on_all_cores, 0 /* lo prio */);
+
+    auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
+    {
+        (void)context;
+        static int count = 0;
+        std::printf("%s (hi prio): count %d\n", task_name.c_str(), count);
+        ++count;
+
+        // delegate work on lower priority task
+        task1.delegate([](auto context, const auto& task_name) -> void
+        {
+            (void)context;
+            std::printf("%s (lo prio): work\n", task_name.c_str());
+        });
+    };
+
+    // 20 ms period
+    constexpr const auto period = std::chrono::duration<int, std::milli>(100); 
+    periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, tools::base_task::run_on_all_cores, 3 /* prio + 3 */); 
 
     // sleep 2 sec
     tools::sleep_for(2000);
@@ -1680,6 +1720,7 @@ void runner()
     test_timer();
 
     test_smp_tasks_cpu_affinity();
+    test_tasks_priority();
 
     std::printf("This is The END\n");
 }
