@@ -38,12 +38,13 @@ namespace tools
     class ring_buffer
     {
     public:
-        ring_buffer() = default;
-        ~ring_buffer() = default;
         struct thread_safe
         {
             static constexpr bool value = false;
         };
+
+        ring_buffer() = default;
+        ~ring_buffer() = default;
 
         ring_buffer(const ring_buffer& other)
         {
@@ -163,6 +164,7 @@ namespace tools
         {
             return ring_buffer<T, Capacity>::iterator(*this, 0);
         }
+
         iterator end()
         {
             return ring_buffer<T, Capacity>::iterator(*this, this->size());
@@ -180,6 +182,7 @@ namespace tools
             {
                 return m_ring_buffer_ref[m_iterator_index];
             }
+            
             iterator& operator+(int step)
             {
                 m_iterator_index = ring_buffer<T, Capacity>::next_step_index(m_iterator_index, static_cast<std::size_t>(step));
