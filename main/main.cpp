@@ -57,6 +57,7 @@
 #include "tools/platform_detection.hpp"
 #include "tools/platform_helpers.hpp"
 #include "tools/ring_buffer.hpp"
+#include "tools/ring_vector.hpp"
 #include "tools/sync_dictionary.hpp"
 #include "tools/sync_observer.hpp"
 #include "tools/sync_queue.hpp"
@@ -96,6 +97,24 @@ void test_ring_buffer()
     print_stats();
 
     auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
+
+    str_queue->emplace("toto");
+
+    auto item = str_queue->front();
+
+    std::printf("%s\n", item.c_str());
+
+    str_queue->pop();
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_ring_vector()
+{
+    LOG_INFO("-- ring vector --");
+    print_stats();
+
+    auto str_queue = std::make_unique<tools::ring_vector<std::string>>(64U);
 
     str_queue->emplace("toto");
 
@@ -201,6 +220,147 @@ void test_ring_buffer_iteration()
 
     {
         auto val_queue = std::make_unique<tools::ring_buffer<double, 64U>>();
+
+        val_queue->emplace(5.6);
+        val_queue->emplace(7.2);
+        val_queue->emplace(1.2);
+        val_queue->emplace(9.1);
+        val_queue->emplace(10.1);
+        val_queue->emplace(7.5);
+
+        std::size_t cnt = val_queue->size() - 1U;
+
+        for (std::size_t i = 0U; i < cnt; ++i)
+        {
+            std::printf("content\n");
+
+            for (const auto& item : *val_queue)
+            {
+                std::printf("%f\n", item);
+            }
+
+            const auto avg_val = std::accumulate(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>()) / val_queue->size();
+            std::printf("avg: %f\n", avg_val);
+
+            const auto sqsum_val = std::transform_reduce(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>(),
+                [&avg_val](const auto& val)
+                {
+                    const auto d = (val - avg_val);
+                    return d * d;
+                });
+
+            const auto variance_val = std::sqrt(sqsum_val / val_queue->size());
+            std::printf("variance: %f\n", variance_val);
+
+            auto content = std::make_unique<std::vector<double>>(val_queue->size());
+            std::copy(val_queue->begin(), val_queue->end(), content->begin());
+
+            const auto [min_val_it, max_val_it] = std::minmax_element(content->cbegin(), content->cend());
+
+            std::printf("min: %f\n", *min_val_it);
+            std::printf("max: %f\n", *max_val_it);
+
+            std::printf("pop front\n");
+            val_queue->pop();
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_ring_vector_iteration()
+{
+    LOG_INFO("-- ring vector iteration --");
+    print_stats();
+
+    {
+        auto str_queue = std::make_unique<tools::ring_vector<std::string>>(64U);
+
+        str_queue->emplace("toto1");
+        str_queue->emplace("toto2");
+        str_queue->emplace("toto3");
+        str_queue->emplace("toto4");
+
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
+
+        std::printf("content\n");
+
+        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
+
+        std::printf("pop front\n");
+        str_queue->pop();
+
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
+
+        std::printf("content\n");
+        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
+
+        std::printf("pop front\n");
+        str_queue->pop();
+
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
+
+        std::printf("content\n");
+        for (const auto& item : *str_queue)
+        {
+            std::printf("%s\n", item.c_str());
+        }
+
+        str_queue->push("toto5");
+        str_queue->push("toto6");
+
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
+
+        std::printf("content\n");
+
+        for (const auto& item : *str_queue)
+        {
+            std::printf("%s\n", item.c_str());
+        }
+
+        int cnt = 0;
+        while (!str_queue->full())
+        {
+            str_queue->emplace("tintin" + std::to_string(cnt));
+            ++cnt;
+        }
+
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
+
+        std::printf("content\n");
+
+        for (const auto& item : *str_queue)
+        {
+            std::printf("%s\n", item.c_str());
+        }
+
+        const std::size_t remove_count = str_queue->size() - 5U;
+        for (std::size_t i = 0U; i < remove_count; ++i)
+        {
+            str_queue->pop();
+        }
+
+        str_queue->push("toutou1");
+        str_queue->push("toutou2");
+
+        std::printf("front %s\n", str_queue->front().c_str());
+        std::printf("back %s\n", str_queue->back().c_str());
+
+        std::printf("content\n");
+
+        for (const auto& item : *str_queue)
+        {
+            std::printf("%s\n", item.c_str());
+        }
+    }
+
+    {
+        auto val_queue = std::make_unique<tools::ring_vector<double>>(64U);
 
         val_queue->emplace(5.6);
         val_queue->emplace(7.2);
@@ -1727,6 +1887,9 @@ void runner()
 
     test_ring_buffer();
     test_ring_buffer_iteration();
+
+    test_ring_vector();
+    test_ring_vector_iteration();
 
     test_sync_ring_buffer();
     test_sync_queue();
