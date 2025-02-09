@@ -37,10 +37,7 @@
 #include "tools/base_task.hpp"
 #include "tools/logger.hpp"
 #include "tools/platform_detection.hpp"
-
-#if defined(ESP_PLATFORM)
-#include <freertos/idf_additions.h>
-#endif
+#include "tools/platform_helpers.hpp"
 
 namespace tools
 {
@@ -62,58 +59,8 @@ namespace tools
             , m_context(context)
             , m_period(period)
         {
-
-            BaseType_t ret = 0;
-
-            UBaseType_t freertos_priority = tskIDLE_PRIORITY;
-
-            if (priority >= 0)
-            {
-                // https://www.freertos.org/Documentation/02-Kernel/04-API-references/01-Task-creation/01-xTaskCreate
-                freertos_priority = std::clamp(static_cast<UBaseType_t>(priority + tskIDLE_PRIORITY),
-                    static_cast<UBaseType_t>(tskIDLE_PRIORITY), static_cast<UBaseType_t>(configMAX_PRIORITIES - 1));
-            }
-
-#if defined(ESP_PLATFORM)
-            // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/freertos_idf.html
-            if (cpu_affinity >= 0)
-            {
-                ret = xTaskCreatePinnedToCore(periodic_call, this->task_name().c_str(), this->stack_size(),
-                    reinterpret_cast<void*>(this), /* Parameter passed into the task. */
-                    freertos_priority, &m_task, static_cast<BaseType_t>(cpu_affinity));
-
-                if (pdPASS != ret)
-                {
-                    LOG_ERROR("xTaskCreatePinnedToCore() failed for task %s on core %d", this->task_name().c_str(), cpu_affinity);
-                }
-            }
-#endif
-
-            if (pdPASS != ret)
-            {
-                ret = xTaskCreate(periodic_call, this->task_name().c_str(), this->stack_size(),
-                    reinterpret_cast<void*>(this), /* Parameter passed into the task. */
-                    freertos_priority, &m_task);
-            }
-
-            if (pdPASS == ret)
-            {
-#if defined(configUSE_CORE_AFFINITY) && !defined(ESP_PLATFORM)
-                if (cpu_affinity >= 0)
-                {
-                    // https://github.com/dogusyuksel/rtos_hal_stm32
-                    // https://www.freertos.org/Documentation/02-Kernel/02-Kernel-features/13-Symmetric-multiprocessing-introduction
-                    UBaseType_t mask = (1 << cpu_affinity);
-                    vTaskCoreAffinitySet(m_task, mask);
-                }
-#endif
-
-                m_task_created = true;
-            }
-            else
-            {
-                LOG_ERROR("FATAL error: xTaskCreate() failed for task %s", this->task_name().c_str());
-            }
+            m_task_created = task_create(&m_task, this->task_name(), periodic_call, reinterpret_cast<void*>(this), this->stack_size(),
+                this->cpu_affinity(), this->priority());
         }
 
         ~periodic_task()
