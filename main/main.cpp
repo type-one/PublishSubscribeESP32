@@ -937,7 +937,8 @@ void test_queued_bytepack_data()
     LOG_INFO("-- queued bytepack data --");
     print_stats();
 
-    tools::sync_ring_buffer<std::vector<std::uint8_t>, 128U> data_queue;
+    tools::sync_ring_vector<std::vector<std::uint8_t>> data_queue(128U);
+    // tools::sync_ring_buffer<std::vector<std::uint8_t>, 128U> data_queue;
     // tools::sync_queue<std::vector<std::uint8_t>> data_queue;
 
     free_text message1 = { "jojo rabbit" };
@@ -1012,6 +1013,107 @@ void test_queued_bytepack_data()
 
         data_queue.pop();
     }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+struct data_task_context
+{
+};
+
+using binary_msg = std::array<std::uint8_t, 128>;
+
+using my_data_task = tools::data_task<data_task_context, binary_msg>;
+using my_data_periodic_task = tools::periodic_task<data_task_context>;
+
+static auto task_startup = [](std::shared_ptr<data_task_context> context, const std::string& task_name)
+{
+    (void)context;
+    std::printf("starting %s\n", task_name.c_str());
+};
+
+static auto task_1_processing = [](std::shared_ptr<data_task_context> context, binary_msg data_packed, const std::string& task_name)
+{
+    (void)context;
+    (void)task_name;
+
+    bytepack::binary_stream stream(bytepack::buffer_view(data_packed.data(), data_packed.size()));
+
+    message_type discriminant = {};
+    stream.read(discriminant);
+
+    switch (discriminant)
+    {
+        case message_type::freetext:
+        {
+            free_text text;
+            text.deserialize(stream);
+            std::printf("%s\n", text.text.c_str());
+        }
+        break;
+
+        case message_type::manufacturing:
+        {
+            manufacturing_info info;
+            info.deserialize(stream);
+            std::printf("%s\n%s\n%s\n", info.vendor_name, info.serial_number, info.manufacturing_date);
+        }
+        break;
+
+        case message_type::temperature:
+        {
+            temperature_sensor temp;
+            temp.deserialize(stream);
+            std::printf("%f\n%f\n%f\n", temp.cpu_temperature, temp.gpu_temperature, temp.room_temperature);
+        }
+        break;
+    };
+};
+
+
+void test_bytepack_data_task()
+{
+    LOG_INFO("-- test bytepack data task --");
+    print_stats();
+
+    auto context = std::make_shared<data_task_context>();
+
+    auto task_1 = std::make_unique<my_data_task>(std::move(task_startup), std::move(task_1_processing), context, 128, "task 1", 4096);
+
+    binary_msg buffer;
+
+    auto task_2_periodic = [&task_1, &buffer](std::shared_ptr<data_task_context> context, const std::string& task_name)
+    {
+        (void)context;
+        std::printf("periodic %s\n", task_name.c_str());
+
+        temperature_sensor message1 = { 45.2, 51.72, 21.5 };
+        manufacturing_info message2 = { "NVidia", "HTX-4589-22-1", "24/05/02" };
+        free_text message3 = { "jojo rabbit" };
+
+        bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer) };
+        
+        binary_stream.reset();
+        binary_stream.write(message_type::temperature);
+        message1.serialize(binary_stream);
+        task_1->submit(buffer);
+
+        binary_stream.reset();
+        binary_stream.write(message_type::manufacturing);
+        message2.serialize(binary_stream);
+        task_1->submit(buffer);
+
+        binary_stream.reset();
+        binary_stream.write(message_type::freetext);
+        message3.serialize(binary_stream);
+        task_1->submit(buffer);
+    };
+
+    constexpr const auto period = std::chrono::duration<int, std::milli>(500);
+    auto task_2
+        = std::make_unique<my_data_periodic_task>(std::move(task_startup), std::move(task_2_periodic), context, "task 2", period, 4096);
+
+    tools::sleep_for(2500);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -1778,11 +1880,11 @@ constexpr std::size_t isr_queue_depth = 20;
 struct isr_context
 {
     tools::ring_buffer<std::pair<std::uint32_t, std::uint32_t>, 1024> storage;
-    std::shared_ptr<tools::data_task<isr_context, std::uint32_t, isr_queue_depth>> data_task;
+    std::shared_ptr<tools::data_task<isr_context, std::uint32_t>> data_task;
     tools::ring_buffer<std::uint32_t, 1024> isr_queue;
 };
 
-using isr_data_task = tools::data_task<isr_context, std::uint32_t, isr_queue_depth>;
+using isr_data_task = tools::data_task<isr_context, std::uint32_t>;
 
 static bool timer_isr_handler(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_ctx)
 {
@@ -1836,7 +1938,7 @@ void test_hardware_timer_interrupt()
     auto my_isr_context = std::make_shared<isr_context>();
 
     {
-        auto my_isr_task = std::make_shared<isr_data_task>(task_isr_startup, task_isr_processing, my_isr_context, "isr_task", 4096);
+        auto my_isr_task = std::make_shared<isr_data_task>(task_isr_startup, task_isr_processing, my_isr_context, isr_queue_depth, "isr_task", 4096);
         my_isr_context->data_task = my_isr_task;
 
         std::printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
@@ -1924,6 +2026,7 @@ void runner()
 
     test_worker_tasks();
     test_queued_bytepack_data();
+    test_bytepack_data_task();
 
     test_json();
     test_queued_json_data();
