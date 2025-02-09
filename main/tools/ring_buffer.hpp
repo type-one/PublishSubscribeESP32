@@ -40,6 +40,10 @@ namespace tools
     public:
         ring_buffer() = default;
         ~ring_buffer() = default;
+        struct thread_safe
+        {
+            static constexpr bool value = false;
+        };
 
         ring_buffer(const ring_buffer& other)
         {

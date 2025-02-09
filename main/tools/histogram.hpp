@@ -47,6 +47,10 @@ namespace tools
     public:
         histogram() = default;
         ~histogram() = default;
+        struct thread_safe
+        {
+            static constexpr bool value = false;
+        };
 
         void add(const T& value)
         {

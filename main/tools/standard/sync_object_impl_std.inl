@@ -61,7 +61,7 @@ namespace tools
     void sync_object::isr_signal()
     {
         // no calls from ISRs in standard C++ platform, fallback to standard call
-        signal();
+        sync_object::signal();
     }
 
     void sync_object::wait_for_signal()

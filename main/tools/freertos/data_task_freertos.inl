@@ -30,6 +30,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -48,6 +49,8 @@ namespace tools
 #endif
     class data_task : public base_task
     {
+        static_assert(std::is_standard_layout<DataType>::value, "DataType has to provide standard layout");
+        static_assert(std::is_trivial<DataType>::value, "DataType has to be trivial type");
 
     public:
         data_task() = delete;

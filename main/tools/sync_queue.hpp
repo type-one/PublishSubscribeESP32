@@ -42,6 +42,10 @@ namespace tools
     public:
         sync_queue() = default;
         ~sync_queue() = default;
+        struct thread_safe
+        {
+            static constexpr bool value = true;
+        };
 
         void push(const T& elem)
         {
@@ -85,8 +89,6 @@ namespace tools
             return m_queue.size();
         }
 
-#if defined(FREERTOS_PLATFORM)
-
         void isr_push(const T& elem)
         {
             tools::isr_lock_guard guard(m_mutex);
@@ -104,7 +106,6 @@ namespace tools
             tools::isr_lock_guard guard(m_mutex);
             return m_queue.size();
         }
-#endif
 
     private:
         std::queue<T> m_queue;

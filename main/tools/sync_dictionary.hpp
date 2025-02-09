@@ -45,6 +45,10 @@ namespace tools
     public:
         sync_dictionary() = default;
         ~sync_dictionary() = default;
+        struct thread_safe
+        {
+            static constexpr bool value = true;
+        };
 
         void add(const K& key, const T& value)
         {

@@ -1468,6 +1468,38 @@ void test_timer()
                 true);
         tools::sleep_for(75);
         std::printf("Expect count %zu is 1\n", count.load());
+
+        // Test periodic timer delays        
+        auto start_point = std::chrono::high_resolution_clock::now();
+        std::queue<std::chrono::high_resolution_clock::time_point> time_points;
+        id = timer_scheduler.add("timer6", 40, [&](tools::timer_handle)
+        {
+            time_points.emplace(std::chrono::high_resolution_clock::now());
+        }, true);
+        tools::sleep_for(200);    
+        timer_scheduler.remove(id);
+
+        auto prev_point = start_point;
+        while(!time_points.empty())
+        {
+            const auto cur_point = time_points.front();
+            time_points.pop();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(cur_point - prev_point);
+            std::printf("timepoint (periodic): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
+            prev_point = cur_point;
+        }
+
+        // Test one shot timer delay        
+        start_point = std::chrono::high_resolution_clock::now();
+        std::chrono::high_resolution_clock::time_point time_point;
+        id = timer_scheduler.add("timer7", 120, [&](tools::timer_handle)
+        {
+            time_point = std::chrono::high_resolution_clock::now();
+        }, false);
+        tools::sleep_for(200);  
+
+        const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
+        std::printf("timepoint (one shot): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
     }
 }
 

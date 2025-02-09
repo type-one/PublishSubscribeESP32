@@ -44,6 +44,11 @@ namespace tools
         sync_ring_buffer() = default;
         ~sync_ring_buffer() = default;
 
+        struct thread_safe
+        {
+            static constexpr bool value = true;
+        };
+
         void push(const T& elem)
         {
             std::lock_guard guard(m_mutex);
@@ -94,8 +99,6 @@ namespace tools
 
         constexpr std::size_t capacity() const { return m_ring_buffer.capacity(); }
 
-#if defined(FREERTOS_PLATFORM)
-
         void isr_push(const T& elem)
         {
             tools::isr_lock_guard guard(m_mutex);
@@ -119,7 +122,6 @@ namespace tools
             tools::isr_lock_guard guard(m_mutex);
             return m_ring_buffer.size();
         }
-#endif
 
     private:
         ring_buffer<T, Capacity> m_ring_buffer;
