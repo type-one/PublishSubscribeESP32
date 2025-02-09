@@ -25,20 +25,20 @@
 
 #pragma once
 
-#if !defined(__SYNC_RING_BUFFER_HPP__)
-#define __SYNC_RING_BUFFER_HPP__
+#if !defined(__SYNC_RING_VECTOR_HPP__)
+#define __SYNC_RING_VECTOR_HPP__
 
 #include <cstddef>
 #include <mutex>
 
 #include "tools/critical_section.hpp"
 #include "tools/non_copyable.hpp"
-#include "tools/ring_buffer.hpp"
+#include "tools/ring_vector.hpp"
 
 namespace tools
 {
-    template <typename T, std::size_t Capacity>
-    class sync_ring_buffer : public non_copyable
+    template <typename T>
+    class sync_ring_vector : public non_copyable
     {
     public:
         struct thread_safe
@@ -46,90 +46,95 @@ namespace tools
             static constexpr bool value = true;
         };
 
-        sync_ring_buffer() = default;
-        ~sync_ring_buffer() = default;
+        sync_ring_vector() = delete;
+        ~sync_ring_vector() = default;
+
+        sync_ring_vector(std::size_t capacity)
+            : m_ring_vector(capacity)
+        {
+        }
 
         void push(const T& elem)
         {
             std::lock_guard guard(m_mutex);
-            m_ring_buffer.push(elem);
+            m_ring_vector.push(elem);
         }
 
         void emplace(T&& elem)
         {
             std::lock_guard guard(m_mutex);
-            m_ring_buffer.emplace(std::move(elem));
+            m_ring_vector.emplace(std::move(elem));
         }
 
         void pop()
         {
             std::lock_guard guard(m_mutex);
-            m_ring_buffer.pop();
+            m_ring_vector.pop();
         }
 
         T front()
         {
             std::lock_guard guard(m_mutex);
-            return m_ring_buffer.front();
+            return m_ring_vector.front();
         }
 
         T back()
         {
             std::lock_guard guard(m_mutex);
-            return m_ring_buffer.back();
+            return m_ring_vector.back();
         }
 
         bool empty()
         {
             std::lock_guard guard(m_mutex);
-            return m_ring_buffer.empty();
+            return m_ring_vector.empty();
         }
 
         bool full()
         {
             std::lock_guard guard(m_mutex);
-            return m_ring_buffer.full();
+            return m_ring_vector.full();
         }
 
         std::size_t size()
         {
             std::lock_guard guard(m_mutex);
-            return m_ring_buffer.size();
+            return m_ring_vector.size();
         }
 
-        constexpr std::size_t capacity() const
+        std::size_t capacity() const
         {
-            return m_ring_buffer.capacity();
+            return m_ring_vector.capacity();
         }
 
         void isr_push(const T& elem)
         {
             tools::isr_lock_guard guard(m_mutex);
-            m_ring_buffer.push(elem);
+            m_ring_vector.push(elem);
         }
 
         void isr_emplace(T&& elem)
         {
             tools::isr_lock_guard guard(m_mutex);
-            m_ring_buffer.emplace(elem);
+            m_ring_vector.emplace(elem);
         }
 
         bool isr_full()
         {
             tools::isr_lock_guard guard(m_mutex);
-            return m_ring_buffer.full();
+            return m_ring_vector.full();
         }
 
         std::size_t isr_size()
         {
             tools::isr_lock_guard guard(m_mutex);
-            return m_ring_buffer.size();
+            return m_ring_vector.size();
         }
 
     private:
-        ring_buffer<T, Capacity> m_ring_buffer;
+        ring_vector<T> m_ring_vector;
         critical_section m_mutex;
     };
 }
 
-#endif //  __SYNC_RING_BUFFER_HPP__
+#endif //  __SYNC_RING_VECTOR_HPP__

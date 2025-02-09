@@ -62,6 +62,7 @@
 #include "tools/sync_observer.hpp"
 #include "tools/sync_queue.hpp"
 #include "tools/sync_ring_buffer.hpp"
+#include "tools/sync_ring_vector.hpp"
 #include "tools/timer_scheduler.hpp"
 #include "tools/variant_overload.hpp"
 #include "tools/worker_task.hpp"
@@ -415,6 +416,24 @@ void test_sync_ring_buffer()
     print_stats();
 
     tools::sync_ring_buffer<std::string, 64U> str_queue;
+
+    str_queue.emplace("toto");
+
+    auto item = str_queue.front();
+
+    std::printf("%s\n", item.c_str());
+
+    str_queue.pop();
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_sync_ring_vector()
+{
+    LOG_INFO("-- sync ring vector --");
+    print_stats();
+
+    tools::sync_ring_vector<std::string> str_queue(64U);
 
     str_queue.emplace("toto");
 
@@ -1892,6 +1911,7 @@ void runner()
     test_ring_vector_iteration();
 
     test_sync_ring_buffer();
+    test_sync_ring_vector();
     test_sync_queue();
     test_sync_dictionary();
 
