@@ -42,7 +42,7 @@
 #endif
 
 #include "tools/base_task.hpp"
-#include "tools/logger.h"
+#include "tools/logger.hpp"
 #include "tools/sync_object.hpp"
 #include "tools/sync_ring_buffer.hpp"
 
@@ -71,10 +71,10 @@ namespace tools
             m_task = std::make_unique<std::thread>(
                 [this]()
                 {
+                    int cpu_affinity = this->cpu_affinity();
+
 #if defined(__linux__)
                     pthread_setname_np(pthread_self(), this->task_name().c_str());
-
-                    int cpu_affinity = this->cpu_affinity();
 
                     if (cpu_affinity >= 0)
                     {
@@ -89,7 +89,8 @@ namespace tools
                             LOG_ERROR("Could not set cpu affinity %d to thread %s", cpu_affinity, this->task_name().c_str());
                         }
                     }
-#elif defined(_WIN32)
+#elif defined(_WIN32)                    
+
                     if (cpu_affinity >= 0)
                     {
                         HANDLE thread_id = GetCurrentThread();

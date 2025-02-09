@@ -1487,6 +1487,7 @@ void test_smp_tasks_cpu_affinity()
 
     auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
     {
+        (void)context;
         (void)task_name;
     };
 
@@ -1496,15 +1497,16 @@ void test_smp_tasks_cpu_affinity()
 
     auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
     {
-        (void)task_name;
+        (void)context;
         static int count = 0;
-        std::printf("task 0 : count %d\n", count);
+        std::printf("%s : count %d\n", task_name.c_str(), count);
         ++count;
 
         // delegate work on core 1
         task1.delegate([](auto context, const auto& task_name) -> void
         {
-            std::printf("task 1: work\n");
+            (void)context;
+            std::printf("%s: work\n", task_name.c_str());
         });
     };
 

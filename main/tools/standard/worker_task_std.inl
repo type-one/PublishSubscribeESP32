@@ -64,6 +64,8 @@ namespace tools
             m_task = std::make_unique<std::thread>(
                 [this]()
                 {
+                    int cpu_affinity = this->cpu_affinity();
+
 #if defined(__linux__)
                     pthread_setname_np(pthread_self(), this->task_name().c_str());
 
