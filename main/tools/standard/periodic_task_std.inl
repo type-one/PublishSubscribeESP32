@@ -33,6 +33,11 @@
 
 #if defined(__linux__)
 #include <pthread.h>
+#include <sched.h>
+#endif
+
+#if defined(_WIN32)
+#include <windows.h>
 #endif
 
 #include "tools/base_task.hpp"
@@ -50,8 +55,9 @@ namespace tools
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size)
-            : base_task(task_name, stack_size)
+            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size,
+            int cpu_affinity = -1)
+            : base_task(task_name, stack_size, cpu_affinity)
             , m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
             , m_context(context)
@@ -62,6 +68,33 @@ namespace tools
                 {
 #if defined(__linux__)
                     pthread_setname_np(pthread_self(), this->task_name().c_str());
+                    int cpu_affinity = this->cpu_affinity();
+
+                    if (cpu_affinity >= 0)
+                    {
+                        cpu_set_t cpuset = {};
+                        pthread_t thread_id = pthread_self();
+                        CPU_ZERO(&cpuset);
+                        CPU_SET(cpu_affinity, &cpuset);
+
+                        int ret = pthread_setaffinity_np(thread_id, sizeof(cpuset), &cpuset);
+                        if (0 != ret)
+                        {
+                            LOG_ERROR("Could not set cpu affinity %d to thread %s", cpu_affinity, this->task_name().c_str());
+                        }
+                    }
+#elif defined(_WIN32)
+                    if (cpu_affinity >= 0)
+                    {
+                        HANDLE thread_id = GetCurrentThread();
+                        auto mask = (static_cast<DWORD_PTR>(1) << cpu_affinity);
+                        auto ret = SetThreadAffinityMask(thread_id, mask);
+
+                        if (0 == ret)
+                        {
+                            LOG_ERROR("Could not set cpu affinity %d to thread  %s", cpu_affinity, this->task_name().c_str());
+                        }
+                    }
 #endif
                     periodic_call();
                 });

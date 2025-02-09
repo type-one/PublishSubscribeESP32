@@ -1473,6 +1473,51 @@ void test_timer()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+struct smp_task_context
+{    
+};
+
+using periodic_task0 = tools::periodic_task<smp_task_context>;
+using worker_task1 = tools::worker_task<smp_task_context>;
+
+void test_smp_tasks_cpu_affinity()
+{
+    LOG_INFO("-- smp tasks with cpu affinity --");
+    print_stats();
+
+    auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
+    {
+        (void)task_name;
+    };
+
+    auto context = std::make_shared<smp_task_context>();
+
+    worker_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
+
+    auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
+    {
+        (void)task_name;
+        static int count = 0;
+        std::printf("task 0 : count %d\n", count);
+        ++count;
+
+        // delegate work on core 1
+        task1.delegate([](auto context, const auto& task_name) -> void
+        {
+            std::printf("task 1: work\n");
+        });
+    };
+
+    // 20 ms period
+    constexpr const auto period = std::chrono::duration<int, std::milli>(100); 
+    periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
+
+    // sleep 2 sec
+    tools::sleep_for(2000);
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 #if defined(ESP_PLATFORM)
 
 constexpr std::size_t isr_queue_depth = 20;
@@ -1631,6 +1676,8 @@ void runner()
     test_variant_fsm();
     test_calendar_day();
     test_timer();
+
+    test_smp_tasks_cpu_affinity();
 
     std::printf("This is The END\n");
 }

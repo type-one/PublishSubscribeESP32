@@ -40,9 +40,10 @@ namespace tools
     public:
         base_task() = default;
 
-        base_task(const std::string& task_name, std::size_t stack_size)
+        base_task(const std::string& task_name, std::size_t stack_size, int cpu_affinity)
             : m_task_name(task_name)
             , m_stack_size(stack_size)
+            , m_cpu_affinity(cpu_affinity)
         {
         }
 
@@ -63,9 +64,15 @@ namespace tools
             return m_stack_size;
         }
 
+        int cpu_affinity() const
+        {
+            return m_cpu_affinity;
+        }
+
     private:
         const std::string m_task_name;
         const std::size_t m_stack_size;
+        const int m_cpu_affinity;
     };
 }
 

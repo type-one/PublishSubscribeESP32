@@ -35,7 +35,12 @@
 
 #include "tools/base_task.hpp"
 #include "tools/logger.hpp"
+#include "tools/platform_detection.hpp"
 #include "tools/sync_queue.hpp"
+
+#if defined(ESP_PLATFORM)
+#include <freertos/idf_additions.h>
+#endif
 
 namespace tools
 {
@@ -48,17 +53,47 @@ namespace tools
 
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
-        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size)
-            : base_task(task_name, stack_size)
+        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size,
+            int cpu_affinity = -1)
+            : base_task(task_name, stack_size, cpu_affinity)
             , m_startup_routine(std::move(startup_routine))
             , m_context(context)
         {
-            auto ret = xTaskCreate(run_loop, this->task_name().c_str(), this->stack_size(),
-                reinterpret_cast<void*>(this), /* Parameter passed into the task. */
-                tskIDLE_PRIORITY, &m_task);
+            BaseType_t ret = 0;
+
+#if defined(ESP_PLATFORM)
+            // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/freertos_idf.html
+            if (cpu_affinity >= 0)
+            {
+                ret = xTaskCreatePinnedToCore(run_loop, this->task_name().c_str(), this->stack_size(),
+                    reinterpret_cast<void*>(this), /* Parameter passed into the task. */
+                    tskIDLE_PRIORITY, &m_task, static_cast<BaseType_t>(cpu_affinity));
+
+                if (pdPASS != ret)
+                {
+                    LOG_ERROR("xTaskCreatePinnedToCore() failed for task %s on core %d", this->task_name().c_str(), cpu_affinity);
+                }
+            }
+#endif
+
+            if (pdPASS != ret)
+            {
+                ret = xTaskCreate(run_loop, this->task_name().c_str(), this->stack_size(),
+                    reinterpret_cast<void*>(this), /* Parameter passed into the task. */
+                    tskIDLE_PRIORITY, &m_task);
+            }
 
             if (pdPASS == ret)
             {
+#if defined(configUSE_CORE_AFFINITY) && !defined(ESP_PLATFORM)
+                if (cpu_affinity >= 0)
+                {
+                    // https://github.com/dogusyuksel/rtos_hal_stm32 
+                    // https://www.freertos.org/Documentation/02-Kernel/02-Kernel-features/13-Symmetric-multiprocessing-introduction
+                    UBaseType_t mask = (1 << cpu_affinity);                 
+                    vTaskCoreAffinitySet(m_task, mask);
+                }
+#endif
                 m_task_created = true;
             }
             else
