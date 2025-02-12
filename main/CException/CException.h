@@ -79,6 +79,7 @@ typedef struct {
 //actual root frame storage (only one if single-tasking)
 extern volatile CEXCEPTION_FRAME_T CExceptionFrames[];
 
+// clang-format off
 //Try (see C file for explanation)
 #define Try                                                         \
     {                                                               \
@@ -107,6 +108,7 @@ extern volatile CEXCEPTION_FRAME_T CExceptionFrames[];
         CEXCEPTION_HOOK_AFTER_TRY;                                  \
     }                                                               \
     if (CExceptionFrames[CEXCEPTION_GET_ID].Exception != CEXCEPTION_NONE)
+// clang-format on
 
 //Throw an Error
 void Throw(CEXCEPTION_T ExceptionID);
