@@ -99,12 +99,20 @@ void test_ring_buffer()
 
     auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
 
-    str_queue->emplace("toto");
+    str_queue->emplace("toto1");
+    str_queue->emplace("toto2");
+    str_queue->emplace("toto3");
 
     auto item = str_queue->front();
-
     std::printf("%s\n", item.c_str());
+    str_queue->pop();
 
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
     str_queue->pop();
 }
 
@@ -117,13 +125,83 @@ void test_ring_vector()
 
     auto str_queue = std::make_unique<tools::ring_vector<std::string>>(64U);
 
-    str_queue->emplace("toto");
+    str_queue->emplace("toto1");
+    str_queue->emplace("toto2");
+    str_queue->emplace("toto3");
 
     auto item = str_queue->front();
-
     std::printf("%s\n", item.c_str());
-
     str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_ring_vector_resize()
+{
+    LOG_INFO("-- ring vector resize --");
+    print_stats();
+
+    auto str_queue = std::make_unique<tools::ring_vector<std::string>>(3U);
+
+    str_queue->emplace("toto1");
+    str_queue->emplace("toto2");
+    str_queue->emplace("toto3");
+
+    str_queue->resize(5U);
+
+    str_queue->emplace("toto4");
+    str_queue->emplace("toto5");
+
+    auto item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    str_queue->emplace("tito1");
+    str_queue->emplace("tito2");
+    str_queue->emplace("tito3");
+
+    str_queue->emplace("tito4");
+    str_queue->emplace("tito5");
+
+    str_queue->resize(3);
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    item = str_queue->front();
+    std::printf("%s\n", item.c_str());
+    str_queue->pop();
+
+    std::printf("expect is empty: %s\n", str_queue->empty() ? "empty" : "not empty");
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -2031,6 +2109,7 @@ void runner()
     test_ring_buffer_iteration();
 
     test_ring_vector();
+    test_ring_vector_resize();
     test_ring_vector_iteration();
 
     test_sync_ring_buffer();

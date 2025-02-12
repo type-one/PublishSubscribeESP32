@@ -28,6 +28,7 @@
 #if !defined(__RING_VECTOR_HPP__)
 #define __RING_VECTOR_HPP__
 
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <vector>
@@ -169,6 +170,56 @@ namespace tools
             return *(m_ring_vector.data() + next_step_index(m_pop_index, index));
         };
 
+        void resize(std::size_t new_capacity)
+        {
+            std::vector<T> tmp(std::max(new_capacity, m_size));
+
+            // vector filled from first to last pushed
+            std::size_t k = m_pop_index;
+            for (std::size_t i = 0; i < m_size; ++i)
+            {
+                tmp[i] = std::move(m_ring_vector[k]);
+                k = next_index(k);
+            }
+
+            m_ring_vector.clear();
+            m_ring_vector.resize(new_capacity);
+
+            if (m_size > new_capacity)
+            {
+                // shrink
+                // skip first pushed elements if we resize with a lower capacity
+                auto to_skip = (m_size - new_capacity);
+                for (std::size_t i = to_skip; i < tmp.size(); ++i)
+                {
+                    m_ring_vector[i - to_skip] = std::move(tmp[i]);
+                }
+                m_size -= to_skip;
+            }
+            else
+            {
+                for (std::size_t i = 0; i < m_size; ++i)
+                {
+                    m_ring_vector[i] = std::move(tmp[i]);
+                }
+            }
+
+            m_capacity = new_capacity;
+
+            m_pop_index = 0U;
+
+            if (m_size > 0U)
+            {
+                m_push_index = next_step_index(m_pop_index, m_size);
+                m_last_index = next_step_index(m_pop_index, m_size - 1U);
+            }
+            else
+            {
+                m_push_index = 0U;
+                m_last_index = 0U;
+            }
+        }
+
         class iterator;
 
         iterator begin()
@@ -247,7 +298,7 @@ namespace tools
         std::size_t m_pop_index = 0U;
         std::size_t m_last_index = 0U;
         std::size_t m_size = 0U;
-        std::size_t m_capacity = 1U;
+        std::size_t m_capacity = 0U;
     };
 }
 
