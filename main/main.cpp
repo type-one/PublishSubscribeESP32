@@ -619,7 +619,7 @@ public:
 private:
     void handle_events()
     {
-        const auto timeout = std::chrono::duration<int, std::micro>(1000);
+        const auto timeout = std::chrono::duration<std::uint64_t, std::micro>(1000);
 
         while (!m_stop_task.load())
         {
@@ -742,7 +742,7 @@ void test_periodic_task()
 
     auto context = std::make_shared<my_periodic_task_context>();
     // 20 ms period
-    constexpr const auto period = std::chrono::duration<int, std::micro>(20000);
+    constexpr const auto period = std::chrono::duration<std::uint64_t, std::micro>(20000);
     const auto start_timepoint = std::chrono::high_resolution_clock::now();
     my_periodic_task task1(startup, lambda, context, "my_periodic_task", period, 2048U);
 
@@ -833,7 +833,7 @@ void test_periodic_publish_subscribe()
 
     // "sample" with a 100 ms period
     auto context = std::make_shared<my_periodic_task_context>();
-    const auto period = std::chrono::duration<int, std::milli>(100);
+    const auto period = std::chrono::duration<std::uint64_t, std::milli>(100);
     {
         my_periodic_task periodic_task(startup, sampler, context, "sampler_task", period, 4096U);
 
@@ -1199,7 +1199,7 @@ void test_bytepack_data_task()
         task_1->submit(buffer);
     };
 
-    constexpr const auto period = std::chrono::duration<int, std::milli>(500);
+    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(500);
     auto task_2 = std::make_unique<my_data_periodic_task>(
         std::move(task_startup), std::move(task_2_periodic), context, "task 2", period, 4096);
 
@@ -1825,21 +1825,21 @@ void test_timer()
         std::printf("Expect %d is 0\n", i.load());
 
         // Test periodic timer (auto-reload) - check immediately started
-        std::atomic<std::size_t> count = 0;
+        std::atomic<std::size_t> count = 0U;
         auto id = timer_scheduler.add("timer3", 40, [&](tools::timer_handle) { ++count; }, true);
         tools::sleep_for(20);    
         timer_scheduler.remove(id);
         std::printf("Expect count %zu is 1\n", count.load());
 
         // Test periodic timer (auto-reload) - check after 3 cycles
-        count = 0;
+        count = 0U;
         id = timer_scheduler.add("timer4", 40, [&](tools::timer_handle) { ++count; }, true);
         tools::sleep_for(100);    
         timer_scheduler.remove(id);
         std::printf("Expect count %zu is 3\n", count.load());
 
         // Test delete periodic timer (auto-reload) in callback
-        count = 0;
+        count = 0U;
         timer_scheduler.add("timer5", 25,
                 [&](tools::timer_handle id) {
                     ++count;
@@ -1878,7 +1878,18 @@ void test_timer()
         }, false);
         tools::sleep_for(200);  
 
-        const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
+        std::printf("timepoint (one shot): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
+
+        // Test one shot timer delay (variant with std::chrono input)       
+        start_point = std::chrono::high_resolution_clock::now();
+        id = timer_scheduler.add("timer7", std::chrono::duration<std::uint64_t, std::micro>(120250), [&](tools::timer_handle)
+        {
+            time_point = std::chrono::high_resolution_clock::now();
+        }, false);
+        tools::sleep_for(200);  
+
+        elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
         std::printf("timepoint (one shot): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
     }
 }
@@ -1923,7 +1934,7 @@ void test_smp_tasks_cpu_affinity()
     };
 
     // 20 ms period
-    constexpr const auto period = std::chrono::duration<int, std::milli>(100); 
+    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(100); 
     periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
 
     // sleep 2 sec
@@ -1963,7 +1974,7 @@ void test_tasks_priority()
     };
 
     // 20 ms period
-    constexpr const auto period = std::chrono::duration<int, std::milli>(100); 
+    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(100); 
     periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, tools::base_task::run_on_all_cores, 3 /* prio + 3 */); 
 
     // sleep 2 sec

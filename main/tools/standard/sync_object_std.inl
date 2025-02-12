@@ -26,6 +26,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <mutex>
 
 #include "tools/non_copyable.hpp"
@@ -40,7 +41,7 @@ namespace tools
 
         void signal();
         void wait_for_signal();
-        void wait_for_signal(const std::chrono::duration<int, std::micro>& timeout);
+        void wait_for_signal(const std::chrono::duration<std::uint64_t, std::micro>& timeout);
         void isr_signal();
 
     private:

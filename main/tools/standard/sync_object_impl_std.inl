@@ -25,6 +25,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <mutex>
 
 #include "tools/sync_object.hpp"
@@ -71,7 +72,7 @@ namespace tools
         m_signaled = m_stop;
     }
 
-    void sync_object::wait_for_signal(const std::chrono::duration<int, std::micro>& timeout)
+    void sync_object::wait_for_signal(const std::chrono::duration<std::uint64_t, std::micro>& timeout)
     {
         std::unique_lock<std::mutex> lock(m_mutex);
         m_cond.wait_for(lock, timeout, [&]() { return m_signaled; });

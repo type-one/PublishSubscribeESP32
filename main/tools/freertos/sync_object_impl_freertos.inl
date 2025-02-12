@@ -24,6 +24,7 @@
 //-----------------------------------------------------------------------------//
 
 #include <cstdio>
+#include <cstdint>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 
@@ -77,11 +78,11 @@ namespace tools
         }
     }
 
-    void sync_object::wait_for_signal(const std::chrono::duration<int, std::micro>& timeout)
+    void sync_object::wait_for_signal(const std::chrono::duration<std::uint64_t, std::micro>& timeout)
     {
         if (nullptr != m_event_group)
         {
-            const TickType_t ticks_to_wait = (timeout.count() * portTICK_PERIOD_MS) / 1000;
+            const TickType_t ticks_to_wait = static_cast<TickType_t>((timeout.count() * portTICK_PERIOD_MS) / 1000);
             xEventGroupWaitBits(m_event_group, BIT0, pdTRUE, pdFALSE, ticks_to_wait);
         }
     }

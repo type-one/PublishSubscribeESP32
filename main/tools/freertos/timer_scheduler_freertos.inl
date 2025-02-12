@@ -24,6 +24,7 @@
 //-----------------------------------------------------------------------------//
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -59,6 +60,17 @@ namespace tools
             std::function<void(timer_handle)>&& handler, bool auto_reload = false);
 
         /**
+         * Add a new timer.
+         *
+         * \param period The period of the timer as std::chrono duration
+         * \param handler The callable that is invoked when the timer fires.
+         * \param auto_reload If true, then the timer will expire repeatedly with a frequency set by the period
+         * parameter. If set to false, then the timer will be a one-shot timer.
+         */
+        timer_handle add(const std::string& timer_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
+            std::function<void(timer_handle)>&& handler, bool auto_reload = false);
+
+        /**
          * Removes the timer with the given id.
          */
         bool remove(timer_handle hnd);
@@ -74,6 +86,9 @@ namespace tools
         void remove_and_delete_timer(timer_handle hnd);
 
     private:
+        timer_handle add_tick(const std::string& timer_name, const TickType_t period,
+            std::function<void(timer_handle)>&& handler, bool auto_reload);
+
         tools::critical_section m_mutex;
         std::list<std::unique_ptr<timer_context>> m_contexts;
         std::list<timer_handle> m_active_timers;

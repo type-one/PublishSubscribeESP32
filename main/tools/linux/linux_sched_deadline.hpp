@@ -122,7 +122,7 @@ namespace tools
     }
 
     static bool set_earliest_deadline_scheduling(
-        std::chrono::high_resolution_clock::time_point start_time, const std::chrono::duration<int, std::micro>& period)
+        std::chrono::high_resolution_clock::time_point start_time, const std::chrono::duration<std::uint64_t, std::micro>& period)
     {
         // Earliest Deadline scheduling if can run as root
 
@@ -171,7 +171,7 @@ namespace tools
 #else // end if #defined __linux__
 
 static bool set_earliest_deadline_scheduling(
-    std::chrono::high_resolution_clock::time_point start_time, const std::chrono::duration<int, std::micro>& period)
+    std::chrono::high_resolution_clock::time_point start_time, const std::chrono::duration<std::uint64_t, std::micro>& period)
 {
     (void)start_time;
     (void)period;

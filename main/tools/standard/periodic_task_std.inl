@@ -26,6 +26,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -48,8 +49,9 @@ namespace tools
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size,
-            int cpu_affinity = base_task::run_on_all_cores, int priority = base_task::default_priority)
+            const std::string& task_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
+            std::size_t stack_size, int cpu_affinity = base_task::run_on_all_cores,
+            int priority = base_task::default_priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
@@ -114,8 +116,8 @@ namespace tools
                     const double ratio = (earliest_deadline_enabled) ? 0.96 : 0.9;
 
                     // sleep until we are close to the deadline
-                    const auto sleep_time
-                        = std::chrono::duration<int, std::micro>(static_cast<int>(ratio * remaining_time.count()));
+                    const auto sleep_time = std::chrono::duration<std::uint64_t, std::micro>(
+                        static_cast<int>(ratio * remaining_time.count()));
                     std::this_thread::sleep_for(sleep_time);
 
                 } // end if wait period needed
@@ -125,7 +127,7 @@ namespace tools
         call_back m_startup_routine;
         call_back m_periodic_routine;
         std::shared_ptr<Context> m_context;
-        std::chrono::duration<int, std::micro> m_period;
+        std::chrono::duration<std::uint64_t, std::micro> m_period;
         std::atomic_bool m_stop_task = false;
         std::unique_ptr<std::thread> m_task;
     };

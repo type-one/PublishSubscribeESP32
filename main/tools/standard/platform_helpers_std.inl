@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <thread>
 
 #if defined(__linux__)
@@ -40,9 +41,9 @@
 
 namespace tools
 {
-    inline void sleep_for(int ms)
+    inline void sleep_for(std::uint64_t ms)
     {
-        std::this_thread::sleep_for(std::chrono::duration<int, std::milli>(ms));
+        std::this_thread::sleep_for(std::chrono::duration<std::uint64_t, std::milli>(ms));
     }
 
     // -- specific posix and win32 task helper --

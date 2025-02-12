@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <memory>
@@ -51,8 +52,9 @@ namespace tools
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, const std::chrono::duration<int, std::micro>& period, std::size_t stack_size,
-            int cpu_affinity = base_task::run_on_all_cores, int priority = base_task::default_priority)
+            const std::string& task_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
+            std::size_t stack_size, int cpu_affinity = base_task::run_on_all_cores,
+            int priority = base_task::default_priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
@@ -87,7 +89,7 @@ namespace tools
 
             auto x_last_wake_time = xTaskGetTickCount();
             const auto us = std::chrono::duration_cast<std::chrono::microseconds>(instance->m_period);
-            const TickType_t x_period = (pdMS_TO_TICKS(us.count()) / 1000);
+            const TickType_t x_period = static_cast<TickType_t>((pdMS_TO_TICKS(us.count()) / 1000U));
 
             const std::string& task_name = instance->task_name();
 
@@ -106,7 +108,7 @@ namespace tools
         call_back m_startup_routine;
         call_back m_periodic_routine;
         std::shared_ptr<Context> m_context;
-        std::chrono::duration<int, std::micro> m_period;
+        std::chrono::duration<std::uint64_t, std::micro> m_period;
         std::atomic_bool m_stop_task = false;
 
         TaskHandle_t m_task;

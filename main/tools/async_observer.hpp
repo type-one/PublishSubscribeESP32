@@ -115,7 +115,7 @@ namespace tools
             m_wakeable.wait_for_signal();
         }
 
-        void wait_for_events(const std::chrono::duration<int, std::micro>& timeout)
+        void wait_for_events(const std::chrono::duration<std::uint64_t, std::micro>& timeout)
         {
             m_wakeable.wait_for_signal(timeout);
         }
