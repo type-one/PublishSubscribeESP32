@@ -36,7 +36,8 @@ namespace bytepack
 {
 
     template <typename T>
-    concept SerializableBuffer = std::is_fundamental_v<T> && std::is_pointer_v<T> == false && std::is_reference_v<T> == false;
+    concept SerializableBuffer = std::is_fundamental_v<T> && std::is_pointer_v<T>
+    == false && std::is_reference_v<T> == false;
 
     template <typename T>
     concept ValidBufferAccessType = sizeof(T) == 1 || std::is_void_v<T>;
@@ -60,7 +61,8 @@ namespace bytepack
          * @param array Reference to the array.
          */
         template <typename T, std::size_t N>
-        requires SerializableBuffer<T> explicit constexpr buffer_view(T (&array)[N]) noexcept
+        requires SerializableBuffer<T>
+        explicit constexpr buffer_view(T (&array)[N]) noexcept
             : data_ { static_cast<void*>(array) }
             , size_ { N * sizeof(T) }
             , ssize_ { to_ssize(N * sizeof(T)) }
@@ -68,7 +70,8 @@ namespace bytepack
         }
 
         template <typename T>
-        requires SerializableBuffer<T> explicit constexpr buffer_view(T* ptr, const std::size_t size) noexcept
+        requires SerializableBuffer<T>
+        explicit constexpr buffer_view(T* ptr, const std::size_t size) noexcept
             : data_ { static_cast<void*>(ptr) }
             , size_ { size * sizeof(T) }
             , ssize_ { to_ssize(size * sizeof(T)) }
@@ -83,7 +86,8 @@ namespace bytepack
         }
 
         template <typename T, std::size_t N>
-        requires SerializableBuffer<T> explicit constexpr buffer_view(std::array<T, N>& array) noexcept
+        requires SerializableBuffer<T>
+        explicit constexpr buffer_view(std::array<T, N>& array) noexcept
             : data_ { static_cast<void*>(array.data()) }
             , size_ { N * sizeof(T) }
             , ssize_ { to_ssize(N * sizeof(T)) }
@@ -111,18 +115,31 @@ namespace bytepack
          * @return T* Typed pointer to the buffer data.
          */
         template <typename T>
-        requires ValidBufferAccessType<T> [[nodiscard]] constexpr T* as() const noexcept
+        requires ValidBufferAccessType<T>
+        [[nodiscard]] constexpr T* as() const noexcept
         {
             return static_cast<T*>(data_);
         }
 
-        [[nodiscard]] constexpr std::size_t size() const noexcept { return size_; }
+        [[nodiscard]] constexpr std::size_t size() const noexcept
+        {
+            return size_;
+        }
 
-        [[nodiscard]] constexpr std::ptrdiff_t ssize() const noexcept { return ssize_; }
+        [[nodiscard]] constexpr std::ptrdiff_t ssize() const noexcept
+        {
+            return ssize_;
+        }
 
-        [[nodiscard]] constexpr bool is_empty() const noexcept { return size_ == 0; }
+        [[nodiscard]] constexpr bool is_empty() const noexcept
+        {
+            return size_ == 0;
+        }
 
-        [[nodiscard]] constexpr operator bool() const noexcept { return data_ != nullptr && size_ > 0; }
+        [[nodiscard]] constexpr operator bool() const noexcept
+        {
+            return data_ != nullptr && size_ > 0;
+        }
 
     private:
         static constexpr std::ptrdiff_t to_ssize(const std::size_t size) noexcept
@@ -137,8 +154,8 @@ namespace bytepack
     };
 
     template <typename T>
-    concept NetworkSerializableBasic
-        = (std::is_fundamental_v<T> || std::is_enum_v<T>)&&std::is_pointer_v<T> == false && std::is_reference_v<T> == false;
+    concept NetworkSerializableBasic = (std::is_fundamental_v<T> || std::is_enum_v<T>)&&std::is_pointer_v<T> == false
+        && std::is_reference_v<T> == false;
 
     template <typename T>
     concept NetworkSerializableBasicArray = std::is_array_v<T> && NetworkSerializableBasic<std::remove_extent_t<T>>;
@@ -149,17 +166,19 @@ namespace bytepack
         typename T::value_type;
         { std::tuple_size<T>::value };
     }
-    &&std::is_same_v<T, std::array<typename T::value_type, std::tuple_size<T>::value>>&& NetworkSerializableBasic<typename T::value_type>;
+    &&std::is_same_v<T, std::array<typename T::value_type, std::tuple_size<T>::value>>&&
+        NetworkSerializableBasic<typename T::value_type>;
 
     template <typename T>
-    concept NetworkSerializableVector = std::is_same_v<T, std::vector<typename T::value_type, typename T::allocator_type>>
-        && NetworkSerializableBasic<typename T::value_type>;
+    concept NetworkSerializableVector = std::is_same_v<T,
+        std::vector<typename T::value_type,
+            typename T::allocator_type>> && NetworkSerializableBasic<typename T::value_type>;
     template <typename T>
     concept NetworkSerializableString = std::same_as<T, std::string> || std::same_as<T, std::string_view>;
 
     template <typename T>
-    concept NetworkSerializableType = NetworkSerializableBasic<T> || NetworkSerializableBasicArray<T> || NetworkSerializableArray<T>
-        || NetworkSerializableString<T> || NetworkSerializableVector<T>;
+    concept NetworkSerializableType = NetworkSerializableBasic<T> || NetworkSerializableBasicArray<
+        T> || NetworkSerializableArray<T> || NetworkSerializableString<T> || NetworkSerializableVector<T>;
 
     template <typename T>
     concept IntegralType = std::is_integral_v<T>;
@@ -238,7 +257,8 @@ namespace bytepack
                 // requires platform-specific headers. It is possible to implement hton/ntoh like functions
                 // in the library in a platform-independent way using bit shifts.
                 // Benchmark link: https://quick-bench.com/q/va-kzUk1J1BfvSgR05Z1YPnrJhg
-                std::ranges::reverse(buffer_.as<std::uint8_t>() + write_index_, buffer_.as<std::uint8_t>() + write_index_ + sizeof(T));
+                std::ranges::reverse(
+                    buffer_.as<std::uint8_t>() + write_index_, buffer_.as<std::uint8_t>() + write_index_ + sizeof(T));
             }
 
             write_index_ += sizeof(T);
@@ -272,8 +292,8 @@ namespace bytepack
                 for (std::size_t i = 0; i < numElements; ++i)
                 {
                     std::memcpy(buffer_.as<std::uint8_t>() + write_index_, &value[i], elementSize);
-                    std::ranges::reverse(
-                        buffer_.as<std::uint8_t>() + write_index_, buffer_.as<std::uint8_t>() + write_index_ + elementSize);
+                    std::ranges::reverse(buffer_.as<std::uint8_t>() + write_index_,
+                        buffer_.as<std::uint8_t>() + write_index_ + elementSize);
                     write_index_ += elementSize;
                 }
             }
@@ -282,7 +302,8 @@ namespace bytepack
         }
 
         template <typename T, std::size_t N>
-        requires NetworkSerializableBasic<T> bool write(const std::array<T, N>& array) noexcept
+        requires NetworkSerializableBasic<T>
+        bool write(const std::array<T, N>& array) noexcept
         {
             if (buffer_.size() < (write_index_ + N * sizeof(T)))
             {
@@ -303,7 +324,8 @@ namespace bytepack
                 for (std::size_t i = 0; i < N; ++i)
                 {
                     std::memcpy(buffer_.as<std::uint8_t>() + write_index_, &array[i], sizeof(T));
-                    std::ranges::reverse(buffer_.as<std::uint8_t>() + write_index_, buffer_.as<std::uint8_t>() + write_index_ + sizeof(T));
+                    std::ranges::reverse(buffer_.as<std::uint8_t>() + write_index_,
+                        buffer_.as<std::uint8_t>() + write_index_ + sizeof(T));
                     write_index_ += sizeof(T);
                 }
             }
@@ -311,11 +333,12 @@ namespace bytepack
         }
 
         template <IntegralType SizeType = std::uint32_t, typename T>
-        requires NetworkSerializableBasic<T> bool write(const std::vector<T>& vector) noexcept
+        requires NetworkSerializableBasic<T>
+        bool write(const std::vector<T>& vector) noexcept
         {
-            // When serializing dynamic size containers (if fixed size is not given), always include the container's size as
-            // metadata before the container data. This is crucial even for empty containers, as it allows the deserializer to
-            // accurately determine if the container is empty or contains data.
+            // When serializing dynamic size containers (if fixed size is not given), always include the container's
+            // size as metadata before the container data. This is crucial even for empty containers, as it allows the
+            // deserializer to accurately determine if the container is empty or contains data.
             if (buffer_.size() < (write_index_ + sizeof(SizeType) + vector.size() * sizeof(T)))
             {
                 // Vector size field and its elements cannot fit in the remaining buffer space
@@ -323,7 +346,8 @@ namespace bytepack
             }
 
             const auto size_custom = static_cast<SizeType>(vector.size());
-            if ((std::is_signed_v<SizeType> && size_custom < 0) || static_cast<std::size_t>(size_custom) != vector.size())
+            if ((std::is_signed_v<SizeType> && size_custom < 0)
+                || static_cast<std::size_t>(size_custom) != vector.size())
             {
                 // Overflow or incorrect size type
                 return false;
@@ -348,7 +372,8 @@ namespace bytepack
                 for (std::size_t i = 0; i < vector.size(); ++i)
                 {
                     std::memcpy(buffer_.as<std::uint8_t>() + write_index_, &vector[i], sizeof(T));
-                    std::ranges::reverse(buffer_.as<std::uint8_t>() + write_index_, buffer_.as<std::uint8_t>() + write_index_ + sizeof(T));
+                    std::ranges::reverse(buffer_.as<std::uint8_t>() + write_index_,
+                        buffer_.as<std::uint8_t>() + write_index_ + sizeof(T));
                     write_index_ += sizeof(T);
                 }
             }
@@ -356,7 +381,8 @@ namespace bytepack
         }
 
         template <std::size_t N, typename T>
-        requires NetworkSerializableBasic<T> bool write(const std::vector<T>& vector) noexcept
+        requires NetworkSerializableBasic<T>
+        bool write(const std::vector<T>& vector) noexcept
         {
             if (vector.size() < N || buffer_.size() < (write_index_ + N * sizeof(T)))
             {
@@ -376,7 +402,8 @@ namespace bytepack
                 for (std::size_t i = 0; i < N; ++i)
                 {
                     std::memcpy(buffer_.as<std::uint8_t>() + write_index_, &vector[i], sizeof(T));
-                    std::ranges::reverse(buffer_.as<std::uint8_t>() + write_index_, buffer_.as<std::uint8_t>() + write_index_ + sizeof(T));
+                    std::ranges::reverse(buffer_.as<std::uint8_t>() + write_index_,
+                        buffer_.as<std::uint8_t>() + write_index_ + sizeof(T));
                     write_index_ += sizeof(T);
                 }
             }
@@ -387,7 +414,8 @@ namespace bytepack
         bool write(const StringType& value) noexcept
         {
             const auto str_length = static_cast<SizeType>(value.length());
-            if ((std::is_signed_v<SizeType> && str_length < 0) || static_cast<std::size_t>(str_length) != value.length())
+            if ((std::is_signed_v<SizeType> && str_length < 0)
+                || static_cast<std::size_t>(str_length) != value.length())
             {
                 // Overflow or incorrect size type
                 return false;
@@ -471,8 +499,8 @@ namespace bytepack
         // due to the variation in wchar_t size across platforms (e.g., 2 bytes on Windows, 4 bytes on Unix/Linux).
         // A future enhancement could involve standardizing on a character encoding like UTF-8 for network
         // transmission and handling the conversion from/to std::wstring while considering platform differences.
-        // This would ensure consistent behavior across different systems and avoid issues with wchar_t size discrepancies.
-        // For now, users can use std::string and std::string_view for string serialization.
+        // This would ensure consistent behavior across different systems and avoid issues with wchar_t size
+        // discrepancies. For now, users can use std::string and std::string_view for string serialization.
 
         template <NetworkSerializableBasic T>
         bool read(T& value) noexcept
@@ -489,7 +517,8 @@ namespace bytepack
                 // Using reinterpret_cast to treat 'value' as an array of bytes is safe here because:
                 // The `NetworkSerializableBasic` concept ensures 'T' is a non-class, fundamental type, making
                 // it trivially copyable and ensuring a consistent, predictable memory layout across systems.
-                std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&value), reinterpret_cast<std::uint8_t*>(&value) + sizeof(T));
+                std::ranges::reverse(
+                    reinterpret_cast<std::uint8_t*>(&value), reinterpret_cast<std::uint8_t*>(&value) + sizeof(T));
             }
 
             read_index_ += sizeof(T);
@@ -523,8 +552,8 @@ namespace bytepack
                 for (size_t i = 0; i < numElements; ++i)
                 {
                     std::memcpy(&value[i], buffer_.as<std::uint8_t>() + read_index_, elementSize);
-                    std::ranges::reverse(
-                        reinterpret_cast<std::uint8_t*>(&value[i]), reinterpret_cast<std::uint8_t*>(&value[i]) + elementSize);
+                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&value[i]),
+                        reinterpret_cast<std::uint8_t*>(&value[i]) + elementSize);
                     read_index_ += elementSize;
                 }
             }
@@ -533,7 +562,8 @@ namespace bytepack
         }
 
         template <typename T, std::size_t N>
-        requires NetworkSerializableBasic<T> bool read(std::array<T, N>& array) noexcept
+        requires NetworkSerializableBasic<T>
+        bool read(std::array<T, N>& array) noexcept
         {
             // Check if there is enough data in the buffer to read the entire array
             if (buffer_.size() < (read_index_ + N * sizeof(T)))
@@ -554,8 +584,8 @@ namespace bytepack
                 for (size_t i = 0; i < N; ++i)
                 {
                     std::memcpy(&array[i], buffer_.as<std::uint8_t>() + read_index_, sizeof(T));
-                    std::ranges::reverse(
-                        reinterpret_cast<std::uint8_t*>(&array[i]), reinterpret_cast<std::uint8_t*>(&array[i]) + sizeof(T));
+                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&array[i]),
+                        reinterpret_cast<std::uint8_t*>(&array[i]) + sizeof(T));
                     read_index_ += sizeof(T);
                 }
             }
@@ -564,11 +594,12 @@ namespace bytepack
         }
 
         template <IntegralType SizeType = std::uint32_t, typename T>
-        requires NetworkSerializableBasic<T> bool read(std::vector<T>& vector) noexcept
+        requires NetworkSerializableBasic<T>
+        bool read(std::vector<T>& vector) noexcept
         {
             SizeType size_custom {};
-            // vector size cannot be negative, so it's treated as an error. Zero size is well-defined for dynamic containers if
-            // they are not serialized with a given fixed size because it indicates an empty container.
+            // vector size cannot be negative, so it's treated as an error. Zero size is well-defined for dynamic
+            // containers if they are not serialized with a given fixed size because it indicates an empty container.
             if (read(size_custom) == false || size_custom < 0)
             {
                 return false;
@@ -595,8 +626,8 @@ namespace bytepack
                 for (std::size_t i = 0; i < size; ++i)
                 {
                     std::memcpy(&vector[i], buffer_.as<std::uint8_t>() + read_index_, sizeof(T));
-                    std::ranges::reverse(
-                        reinterpret_cast<std::uint8_t*>(&vector[i]), reinterpret_cast<std::uint8_t*>(&vector[i]) + sizeof(T));
+                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&vector[i]),
+                        reinterpret_cast<std::uint8_t*>(&vector[i]) + sizeof(T));
                     read_index_ += sizeof(T);
                 }
             }
@@ -604,7 +635,8 @@ namespace bytepack
         }
 
         template <std::size_t N, typename T>
-        requires NetworkSerializableBasic<T> bool read(std::vector<T>& vector) noexcept
+        requires NetworkSerializableBasic<T>
+        bool read(std::vector<T>& vector) noexcept
         {
             if (buffer_.size() < (read_index_ + N * sizeof(T)))
             {
@@ -626,8 +658,8 @@ namespace bytepack
                 for (std::size_t i = 0; i < N; ++i)
                 {
                     std::memcpy(&vector[i], buffer_.as<std::uint8_t>() + read_index_, sizeof(T));
-                    std::ranges::reverse(
-                        reinterpret_cast<std::uint8_t*>(&vector[i]), reinterpret_cast<std::uint8_t*>(&vector[i]) + sizeof(T));
+                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&vector[i]),
+                        reinterpret_cast<std::uint8_t*>(&vector[i]) + sizeof(T));
                     read_index_ += sizeof(T);
                 }
             }
@@ -649,12 +681,12 @@ namespace bytepack
             // Handle endianness for the string length
             if constexpr (BufferEndian != std::endian::native && sizeof(SizeType) > 1)
             {
-                std::ranges::reverse(
-                    reinterpret_cast<std::uint8_t*>(&str_length), reinterpret_cast<std::uint8_t*>(&str_length) + sizeof(SizeType));
+                std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&str_length),
+                    reinterpret_cast<std::uint8_t*>(&str_length) + sizeof(SizeType));
             }
 
-            // String length cannot be negative, so it's treated as an error. Zero length is well-defined for dynamic strings if
-            // they are not serialized with a given fixed length because it indicates an empty string.
+            // String length cannot be negative, so it's treated as an error. Zero length is well-defined for dynamic
+            // strings if they are not serialized with a given fixed length because it indicates an empty string.
             if (str_length < 0)
             {
                 return false;
@@ -685,11 +717,12 @@ namespace bytepack
 
             value.assign(buffer_.as<char>() + read_index_, N);
 
-            // TODO: This code uses `value.find('\0')` for a linear search to locate the first null character, suitable for
-            // shorter strings. For longer strings, especially when nulls are at the end, first checking the last character for
-            // null can optimize performance. If it's not null, we can avoid the search entirely. Otherwise, a binary
-            // search-like method is more efficient for such strings, as it exponentially narrows the search space, quickly
-            // finding the initial null character, thus enhancing performance for longer lengths.
+            // TODO: This code uses `value.find('\0')` for a linear search to locate the first null character, suitable
+            // for shorter strings. For longer strings, especially when nulls are at the end, first checking the last
+            // character for null can optimize performance. If it's not null, we can avoid the search entirely.
+            // Otherwise, a binary search-like method is more efficient for such strings, as it exponentially narrows
+            // the search space, quickly finding the initial null character, thus enhancing performance for longer
+            // lengths.
             if (const std::size_t null_pos = value.find('\0'); null_pos != std::string::npos)
             {
                 // If the string in the buffer is null-terminated, resize the string to the actual length
