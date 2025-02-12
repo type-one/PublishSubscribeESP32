@@ -28,6 +28,6 @@
 namespace tools
 {
     using critical_section = std::mutex;
-    template<typename T>
+    template <typename T>
     using isr_lock_guard = std::lock_guard<T>; // no ISR calls in standard C++, fallback
 }

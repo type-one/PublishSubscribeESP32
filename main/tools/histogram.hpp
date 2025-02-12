@@ -129,7 +129,8 @@ namespace tools
                 }
             }
 
-            return (total > 0.0) ? static_cast<T>((vari / total) - static_cast<double>(average * average) + 0.5) : static_cast<T>(0);
+            return (total > 0.0) ? static_cast<T>((vari / total) - static_cast<double>(average * average) + 0.5)
+                                 : static_cast<T>(0);
         }
 
         T median() const

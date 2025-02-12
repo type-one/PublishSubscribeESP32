@@ -72,7 +72,8 @@ namespace tools
         if (nullptr != m_event_group)
         {
             constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
-            xEventGroupWaitBits(m_event_group, BIT0, pdTRUE /* clear on exit */, pdFALSE /* wait for all bits */, x_block_time);
+            xEventGroupWaitBits(
+                m_event_group, BIT0, pdTRUE /* clear on exit */, pdFALSE /* wait for all bits */, x_block_time);
         }
     }
 

@@ -42,7 +42,7 @@ namespace tools
 {
     template <typename Context, typename DataType>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-        requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
+    requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
 #endif
     class data_task : public base_task
     {
@@ -53,10 +53,11 @@ namespace tools
         data_task() = delete;
 
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
-        using data_call_back = std::function<void(std::shared_ptr<Context>, const DataType& data, const std::string& task_name)>;
+        using data_call_back
+            = std::function<void(std::shared_ptr<Context>, const DataType& data, const std::string& task_name)>;
 
         data_task(call_back&& startup_routine, data_call_back&& process_routine, std::shared_ptr<Context> context,
-            std::size_t data_queue_depth, const std::string& task_name, std::size_t stack_size, 
+            std::size_t data_queue_depth, const std::string& task_name, std::size_t stack_size,
             int cpu_affinity = base_task::run_on_all_cores, int priority = base_task::default_priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))

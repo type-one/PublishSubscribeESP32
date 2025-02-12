@@ -51,14 +51,15 @@ namespace tools
 
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
-        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size,
-            int cpu_affinity = base_task::run_on_all_cores, int priority = base_task::default_priority)
+        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name,
+            std::size_t stack_size, int cpu_affinity = base_task::run_on_all_cores,
+            int priority = base_task::default_priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_context(context)
         {
-            m_task_created = task_create(&m_task, this->task_name(), run_loop, reinterpret_cast<void*>(this), this->stack_size(),
-                this->cpu_affinity(), this->priority());
+            m_task_created = task_create(&m_task, this->task_name(), run_loop, reinterpret_cast<void*>(this),
+                this->stack_size(), this->cpu_affinity(), this->priority());
         }
 
         ~worker_task()
@@ -84,7 +85,8 @@ namespace tools
             m_work_queue.emplace(std::move(work));
 
             // Likewise, bits are set using the xTaskNotify() and xTaskNotifyFromISR() API functions (with their eAction
-            // parameter set to eSetBits) in place of the xEventGroupSetBits() and xEventGroupSetBitsFromISR() functions respectively.
+            // parameter set to eSetBits) in place of the xEventGroupSetBits() and xEventGroupSetBitsFromISR() functions
+            // respectively.
 
             xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
         }
@@ -109,14 +111,13 @@ namespace tools
 
             while (!instance->m_stop_task.load())
             {
-                // A direct to task notification is an event sent directly to a task, rather than indirectly to a task via an
-                // intermediary object such as a queue, event group or semaphore.
-                // Unblocking an RTOS task with a direct notification is 45% faster and uses less RAM than unblocking a task
-                // with a binary semaphore.
+                // A direct to task notification is an event sent directly to a task, rather than indirectly to a task
+                // via an intermediary object such as a queue, event group or semaphore. Unblocking an RTOS task with a
+                // direct notification is 45% faster and uses less RAM than unblocking a task with a binary semaphore.
 
-                // RTOS task notifications can only be used when there is only one task that can be the recipient of the event.
-                // This condition is however met in the majority of real world use cases, such as an interrupt unblocking a
-                // task that will process the data received by the interrupt.
+                // RTOS task notifications can only be used when there is only one task that can be the recipient of the
+                // event. This condition is however met in the majority of real world use cases, such as an interrupt
+                // unblocking a task that will process the data received by the interrupt.
 
                 constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
 

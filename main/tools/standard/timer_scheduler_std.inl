@@ -47,15 +47,16 @@ namespace tools
          *
          * \param period The period of the timer in ms
          * \param handler The callable that is invoked when the timer fires.
-         * \param auto_reload If true, then the timer will expire repeatedly with a frequency set by the period parameter. If set to false,
-         * then the timer will be a one-shot timer.
+         * \param auto_reload If true, then the timer will expire repeatedly with a frequency set by the period
+         * parameter. If set to false, then the timer will be a one-shot timer.
          */
-        timer_handle add(const std::string& timer_name, const std::uint64_t period, std::function<void(timer_handle)>&& handler, bool auto_reload = false);
+        timer_handle add(const std::string& timer_name, const std::uint64_t period,
+            std::function<void(timer_handle)>&& handler, bool auto_reload = false);
 
         /**
          * Removes the timer with the given id.
          */
-        bool remove(timer_handle hnd);       
+        bool remove(timer_handle hnd);
 
     private:
         CppTime::Timer m_timer_scheduler;

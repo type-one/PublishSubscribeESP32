@@ -182,10 +182,11 @@ namespace tools
             {
                 return m_ring_buffer_ref[m_iterator_index];
             }
-            
+
             iterator& operator+(int step)
             {
-                m_iterator_index = ring_buffer<T, Capacity>::next_step_index(m_iterator_index, static_cast<std::size_t>(step));
+                m_iterator_index
+                    = ring_buffer<T, Capacity>::next_step_index(m_iterator_index, static_cast<std::size_t>(step));
                 return *this;
             }
 

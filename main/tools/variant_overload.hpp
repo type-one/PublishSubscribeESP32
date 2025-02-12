@@ -31,24 +31,24 @@
 namespace tools
 {
 
-// overload pattern using variadic template
-// Rainer Grimm
-// Typically, you use the overload pattern for a std::variant.
-// A std::variant (C++17) has one value from one of its types. std::visit allows you to apply a visitor to it.
-// Typically, the overload pattern is used for visiting the value held by a std::variant.
-// https://www.modernescpp.com/index.php/visiting-a-std-variant-with-the-overload-pattern/
-// https://www.cppstories.com/2023/finite-state-machines-variant-cpp/
+    // overload pattern using variadic template
+    // Rainer Grimm
+    // Typically, you use the overload pattern for a std::variant.
+    // A std::variant (C++17) has one value from one of its types. std::visit allows you to apply a visitor to it.
+    // Typically, the overload pattern is used for visiting the value held by a std::variant.
+    // https://www.modernescpp.com/index.php/visiting-a-std-variant-with-the-overload-pattern/
+    // https://www.cppstories.com/2023/finite-state-machines-variant-cpp/
 
-namespace detail
-{
-    template <typename... Ts>
-    struct overload : Ts...
+    namespace detail
     {
-        using Ts::operator()...;
-    };
-    template <class... Ts>
-    overload(Ts...) -> overload<Ts...>;
-}
+        template <typename... Ts>
+        struct overload : Ts...
+        {
+            using Ts::operator()...;
+        };
+        template <class... Ts>
+        overload(Ts...) -> overload<Ts...>;
+    }
 
 }
 

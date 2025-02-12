@@ -42,19 +42,19 @@ namespace
 {
     void timer_callback(tools::timer_handle x_timer)
     {
-        auto* context = reinterpret_cast<tools::timer_scheduler::timer_context*>(pvTimerGetTimerID(x_timer)); 
+        auto* context = reinterpret_cast<tools::timer_scheduler::timer_context*>(pvTimerGetTimerID(x_timer));
         if (nullptr != context)
         {
-            (context->m_callback)(x_timer); 
+            (context->m_callback)(x_timer);
 
             if (context->m_auto_release)
             {
                 auto* timer_scheduler = context->m_this;
                 delete context;
-                timer_scheduler->remove_and_delete_timer(x_timer);                
+                timer_scheduler->remove_and_delete_timer(x_timer);
             }
         }
-    } 
+    }
 }
 
 namespace tools
@@ -62,16 +62,17 @@ namespace tools
 
     timer_scheduler::~timer_scheduler()
     {
-        std::lock_guard guard(m_mutex);     
-        for(auto hnd: m_active_timers)
+        std::lock_guard guard(m_mutex);
+        for (auto hnd : m_active_timers)
         {
             xTimerStop(hnd, static_cast<TickType_t>(100));
             tools::sleep_for(1);
             xTimerDelete(hnd, static_cast<TickType_t>(100));
-        }    
-    }    
+        }
+    }
 
-    timer_handle timer_scheduler::add(const std::string& timer_name, const std::uint64_t period, std::function<void(timer_handle)>&& handler, bool auto_reload)
+    timer_handle timer_scheduler::add(const std::string& timer_name, const std::uint64_t period,
+        std::function<void(timer_handle)>&& handler, bool auto_reload)
     {
         auto context = std::make_unique<timer_context>();
         context->m_callback = std::move(handler);
@@ -79,10 +80,10 @@ namespace tools
         context->m_this = this;
 
         // https://mcuoneclipse.com/2018/05/27/tutorial-understanding-and-using-freertos-software-timers/
-        // https://freertos.org/Documentation/02-Kernel/04-API-references/11-Software-timers/01-xTimerCreate 
+        // https://freertos.org/Documentation/02-Kernel/04-API-references/11-Software-timers/01-xTimerCreate
         // https://stackoverflow.com/questions/71199868/c-use-a-class-non-static-method-as-a-function-pointer-callback-in-freertos-xti
         timer_handle hnd = nullptr;
-        
+
         if (auto_reload)
         {
             hnd = xTimerCreate(timer_name.c_str(), pdMS_TO_TICKS(period), pdTRUE, context.get(), timer_callback);
@@ -90,7 +91,7 @@ namespace tools
         else
         {
             hnd = xTimerCreate(timer_name.c_str(), pdMS_TO_TICKS(period), pdFALSE, context.release(), timer_callback);
-        } 
+        }
 
         if (nullptr != hnd)
         {
@@ -101,16 +102,16 @@ namespace tools
 
                 if (auto_reload)
                 {
-                    context->m_timer_handle = hnd;                
+                    context->m_timer_handle = hnd;
                     m_contexts.emplace_back(std::move(context));
                 }
             }
 
             while (xTimerStart(hnd, static_cast<TickType_t>(100)) != pdPASS)
             {
-            } 
+            }
         }
-        
+
         return hnd;
     }
 
@@ -122,10 +123,8 @@ namespace tools
 
         {
             std::lock_guard guard(m_mutex);
-            auto it = std::find_if(m_contexts.begin(), m_contexts.end(), [&hnd](const auto& context) -> bool
-            {
-                return (context->m_timer_handle == hnd);
-            });
+            auto it = std::find_if(m_contexts.begin(), m_contexts.end(),
+                [&hnd](const auto& context) -> bool { return (context->m_timer_handle == hnd); });
 
             if (it != m_contexts.end())
             {
@@ -143,10 +142,8 @@ namespace tools
         {
             std::lock_guard guard(m_mutex);
 
-            auto it = std::find_if(m_active_timers.begin(), m_active_timers.end(), [&hnd](const auto* active_hnd) -> bool
-            {
-                return (active_hnd == hnd);
-            });
+            auto it = std::find_if(m_active_timers.begin(), m_active_timers.end(),
+                [&hnd](const auto* active_hnd) -> bool { return (active_hnd == hnd); });
 
             if (it != m_active_timers.end())
             {

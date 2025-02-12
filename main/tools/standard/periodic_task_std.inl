@@ -108,12 +108,14 @@ namespace tools
                 // wait period
                 if (deadline > current_time)
                 {
-                    const auto remaining_time = std::chrono::duration_cast<std::chrono::microseconds>(deadline - current_time);
+                    const auto remaining_time
+                        = std::chrono::duration_cast<std::chrono::microseconds>(deadline - current_time);
                     // wait between 90% and 96% of the remaining time depending on scheduling mode
                     const double ratio = (earliest_deadline_enabled) ? 0.96 : 0.9;
 
                     // sleep until we are close to the deadline
-                    const auto sleep_time = std::chrono::duration<int, std::micro>(static_cast<int>(ratio * remaining_time.count()));
+                    const auto sleep_time
+                        = std::chrono::duration<int, std::micro>(static_cast<int>(ratio * remaining_time.count()));
                     std::this_thread::sleep_for(sleep_time);
 
                 } // end if wait period needed

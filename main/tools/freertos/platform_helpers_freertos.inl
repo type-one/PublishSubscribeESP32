@@ -45,10 +45,10 @@ namespace tools
 
     // -- specific FreeRTOS task helper --
 
-    using task_func_handler = void (void*);
+    using task_func_handler = void(void*);
 
-    inline bool task_create(TaskHandle_t* task_handle, const std::string& task_name, task_func_handler task_function, void* task_param,
-        std::size_t stack_size, int cpu_affinity, int priority)
+    inline bool task_create(TaskHandle_t* task_handle, const std::string& task_name, task_func_handler task_function,
+        void* task_param, std::size_t stack_size, int cpu_affinity, int priority)
     {
         BaseType_t ret = 0;
         bool task_created = false;
@@ -66,8 +66,8 @@ namespace tools
         // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/freertos_idf.html
         if (cpu_affinity >= 0)
         {
-            ret = xTaskCreatePinnedToCore(task_function, task_name.c_str(), stack_size, task_param, freertos_priority, task_handle,
-                static_cast<BaseType_t>(cpu_affinity));
+            ret = xTaskCreatePinnedToCore(task_function, task_name.c_str(), stack_size, task_param, freertos_priority,
+                task_handle, static_cast<BaseType_t>(cpu_affinity));
 
             if (pdPASS != ret)
             {

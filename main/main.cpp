@@ -146,7 +146,8 @@ void test_ring_buffer_iteration()
 
         std::printf("content\n");
 
-        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
+        std::for_each(
+            str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
 
         std::printf("pop front\n");
         str_queue->pop();
@@ -155,7 +156,8 @@ void test_ring_buffer_iteration()
         std::printf("back %s\n", str_queue->back().c_str());
 
         std::printf("content\n");
-        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
+        std::for_each(
+            str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
 
         std::printf("pop front\n");
         str_queue->pop();
@@ -240,7 +242,8 @@ void test_ring_buffer_iteration()
                 std::printf("%f\n", item);
             }
 
-            const auto avg_val = std::accumulate(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>()) / val_queue->size();
+            const auto avg_val
+                = std::accumulate(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>()) / val_queue->size();
             std::printf("avg: %f\n", avg_val);
 
             const auto sqsum_val = std::transform_reduce(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>(),
@@ -287,7 +290,8 @@ void test_ring_vector_iteration()
 
         std::printf("content\n");
 
-        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
+        std::for_each(
+            str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
 
         std::printf("pop front\n");
         str_queue->pop();
@@ -296,7 +300,8 @@ void test_ring_vector_iteration()
         std::printf("back %s\n", str_queue->back().c_str());
 
         std::printf("content\n");
-        std::for_each(str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
+        std::for_each(
+            str_queue->begin(), str_queue->end(), [](const auto& item) { std::printf("%s\n", item.c_str()); });
 
         std::printf("pop front\n");
         str_queue->pop();
@@ -381,7 +386,8 @@ void test_ring_vector_iteration()
                 std::printf("%f\n", item);
             }
 
-            const auto avg_val = std::accumulate(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>()) / val_queue->size();
+            const auto avg_val
+                = std::accumulate(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>()) / val_queue->size();
             std::printf("avg: %f\n", avg_val);
 
             const auto sqsum_val = std::transform_reduce(val_queue->begin(), val_queue->end(), 0.0, std::plus<double>(),
@@ -502,8 +508,8 @@ public:
 
     virtual void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
-        std::printf("sync [topic %d] received: event (%s) from %s\n", static_cast<std::underlying_type<my_topic>::type>(topic),
-            event.c_str(), origin.c_str());
+        std::printf("sync [topic %d] received: event (%s) from %s\n",
+            static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
     }
 
 private:
@@ -526,8 +532,8 @@ public:
 
     virtual void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
-        std::printf("async/push [topic %d] received: event (%s) from %s\n", static_cast<std::underlying_type<my_topic>::type>(topic),
-            event.c_str(), origin.c_str());
+        std::printf("async/push [topic %d] received: event (%s) from %s\n",
+            static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
 
         base_async_observer::inform(topic, event, origin);
     }
@@ -606,8 +612,8 @@ void test_publish_subscribe()
     subject1->subscribe(my_topic::generic, "loose_coupled_handler_1",
         [](const my_topic& topic, const std::string& event, const std::string& origin)
         {
-            std::printf("handler [topic %d] received: event (%s) from %s\n", static_cast<std::underlying_type<my_topic>::type>(topic),
-                event.c_str(), origin.c_str());
+            std::printf("handler [topic %d] received: event (%s) from %s\n",
+                static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
         });
 
     subject1->publish(my_topic::generic, "toto");
@@ -672,7 +678,8 @@ void test_periodic_task()
     {
         const auto measured_timepoint = context->time_points.front();
         context->time_points.pop();
-        const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(measured_timepoint - previous_timepoint);
+        const auto elapsed
+            = std::chrono::duration_cast<std::chrono::microseconds>(measured_timepoint - previous_timepoint);
         std::printf("timepoint: %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
         previous_timepoint = measured_timepoint;
     }
@@ -705,7 +712,8 @@ public:
         std::printf("median value is %f\n", m_histogram.median());
         auto variance = m_histogram.variance(avg);
         std::printf("variance is %f\n", variance);
-        std::printf("gaussian probability of %f occuring is %f\n", top, m_histogram.gaussian_probability(top, avg, variance));
+        std::printf(
+            "gaussian probability of %f occuring is %f\n", top, m_histogram.gaussian_probability(top, avg, variance));
     }
 
 private:
@@ -723,7 +731,8 @@ void test_periodic_publish_subscribe()
     auto data_source = std::make_shared<my_subject>("data_source");
     auto histogram_feeder = std::make_shared<my_collector>();
 
-    auto sampler = [&data_source](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
+    auto sampler
+        = [&data_source](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
     {
         (void)task_name;
         context->loop_counter += 1;
@@ -865,7 +874,8 @@ void test_worker_tasks()
     {
         const auto measured_timepoint = context->time_points.front();
         context->time_points.pop();
-        const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(measured_timepoint - previous_timepoint);
+        const auto elapsed
+            = std::chrono::duration_cast<std::chrono::microseconds>(measured_timepoint - previous_timepoint);
         std::printf("timepoint: %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
         previous_timepoint = measured_timepoint;
     }
@@ -1032,7 +1042,8 @@ static auto task_startup = [](std::shared_ptr<data_task_context> context, const 
     std::printf("starting %s\n", task_name.c_str());
 };
 
-static auto task_1_processing = [](std::shared_ptr<data_task_context> context, binary_msg data_packed, const std::string& task_name)
+static auto task_1_processing
+    = [](std::shared_ptr<data_task_context> context, binary_msg data_packed, const std::string& task_name)
 {
     (void)context;
     (void)task_name;
@@ -1078,7 +1089,8 @@ void test_bytepack_data_task()
 
     auto context = std::make_shared<data_task_context>();
 
-    auto task_1 = std::make_unique<my_data_task>(std::move(task_startup), std::move(task_1_processing), context, 128, "task 1", 4096);
+    auto task_1 = std::make_unique<my_data_task>(
+        std::move(task_startup), std::move(task_1_processing), context, 128, "task 1", 4096);
 
     binary_msg buffer;
 
@@ -1092,7 +1104,7 @@ void test_bytepack_data_task()
         free_text message3 = { "jojo rabbit" };
 
         bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer) };
-        
+
         binary_stream.reset();
         binary_stream.write(message_type::temperature);
         message1.serialize(binary_stream);
@@ -1110,8 +1122,8 @@ void test_bytepack_data_task()
     };
 
     constexpr const auto period = std::chrono::duration<int, std::milli>(500);
-    auto task_2
-        = std::make_unique<my_data_periodic_task>(std::move(task_startup), std::move(task_2_periodic), context, "task 2", period, 4096);
+    auto task_2 = std::make_unique<my_data_periodic_task>(
+        std::move(task_startup), std::move(task_2_periodic), context, "task 2", period, 4096);
 
     tools::sleep_for(2500);
 }
@@ -1216,7 +1228,8 @@ void test_queued_json_data()
             const auto activity = json.get<bool>("activity");
             const auto& obj = json.get("answer");
             const auto answer = obj.get<int>("everything");
-            std::printf("sensor: %s - temp %f - %s - answer (%d)\n", name.c_str(), temp, activity ? "on" : "off", answer);
+            std::printf(
+                "sensor: %s - temp %f - %s - answer (%d)\n", name.c_str(), temp, activity ? "on" : "off", answer);
         }
         else if (discriminant == "time")
         {
@@ -1393,14 +1406,22 @@ private:
     // define callbacks for [state, event]
 
     traffic_light_state_v on_event(const traffic_light_state::off& state, const traffic_light_event::power_on& event);
-    traffic_light_state_v on_event(const traffic_light_state::operable_initializing& state, const traffic_light_event::init_done& event);
-    traffic_light_state_v on_event(const traffic_light_state::operable_red& state, const traffic_light_event::next_state& event);
-    traffic_light_state_v on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::next_state& event);
-    traffic_light_state_v on_event(const traffic_light_state::operable_green& state, const traffic_light_event::next_state& event);
-    traffic_light_state_v on_event(const traffic_light_state::operable_initializing& state, const traffic_light_event::power_off& event);
-    traffic_light_state_v on_event(const traffic_light_state::operable_red& state, const traffic_light_event::power_off& event);
-    traffic_light_state_v on_event(const traffic_light_state::operable_orange& state, const traffic_light_event::power_off& event);
-    traffic_light_state_v on_event(const traffic_light_state::operable_green& state, const traffic_light_event::power_off& event);
+    traffic_light_state_v on_event(
+        const traffic_light_state::operable_initializing& state, const traffic_light_event::init_done& event);
+    traffic_light_state_v on_event(
+        const traffic_light_state::operable_red& state, const traffic_light_event::next_state& event);
+    traffic_light_state_v on_event(
+        const traffic_light_state::operable_orange& state, const traffic_light_event::next_state& event);
+    traffic_light_state_v on_event(
+        const traffic_light_state::operable_green& state, const traffic_light_event::next_state& event);
+    traffic_light_state_v on_event(
+        const traffic_light_state::operable_initializing& state, const traffic_light_event::power_off& event);
+    traffic_light_state_v on_event(
+        const traffic_light_state::operable_red& state, const traffic_light_event::power_off& event);
+    traffic_light_state_v on_event(
+        const traffic_light_state::operable_orange& state, const traffic_light_event::power_off& event);
+    traffic_light_state_v on_event(
+        const traffic_light_state::operable_green& state, const traffic_light_event::power_off& event);
 
     // fallback for undefined transitions
     traffic_light_state_v on_event(const auto&, const auto&);

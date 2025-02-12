@@ -59,8 +59,8 @@ namespace tools
             , m_context(context)
             , m_period(period)
         {
-            m_task_created = task_create(&m_task, this->task_name(), periodic_call, reinterpret_cast<void*>(this), this->stack_size(),
-                this->cpu_affinity(), this->priority());
+            m_task_created = task_create(&m_task, this->task_name(), periodic_call, reinterpret_cast<void*>(this),
+                this->stack_size(), this->cpu_affinity(), this->priority());
         }
 
         ~periodic_task()
