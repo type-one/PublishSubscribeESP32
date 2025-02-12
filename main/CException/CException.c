@@ -12,7 +12,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
-volatile CEXCEPTION_FRAME_T CExceptionFrames[CEXCEPTION_NUM_ID] = {{ 0 }};
+volatile CEXCEPTION_FRAME_T CExceptionFrames[CEXCEPTION_NUM_ID] = { { 0 } };
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
@@ -35,6 +35,7 @@ void Throw(CEXCEPTION_T ExceptionID)
 //------------------------------------------------------------------------------------------
 //  Explanation of what it's all for:
 //------------------------------------------------------------------------------------------
+// clang-format off
 /*
 #define Try
     {                                                                   <- give us some local scope.  most compilers are happy with this
@@ -56,4 +57,4 @@ void Throw(CEXCEPTION_T ExceptionID)
     }                                                                   <- finish off that local scope we created to have our own variables
     if (CExceptionFrames[CEXCEPTION_GET_ID].Exception != CEXCEPTION_NONE)  <- start the actual 'catch' processing if we have an exception id saved away
  */
-
+// clang-format on
