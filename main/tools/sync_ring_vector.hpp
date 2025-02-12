@@ -107,6 +107,12 @@ namespace tools
             return m_ring_vector.capacity();
         }
 
+        void resize(std::size_t new_size)
+        {
+            std::lock_guard guard(m_mutex);
+            m_ring_vector.resize(new_size);
+        }
+
         void isr_push(const T& elem)
         {
             tools::isr_lock_guard guard(m_mutex);
@@ -129,6 +135,12 @@ namespace tools
         {
             tools::isr_lock_guard guard(m_mutex);
             return m_ring_vector.size();
+        }
+
+        void isr_resize(std::size_t new_size)
+        {
+            tools::isr_lock_guard guard(m_mutex);
+            m_ring_vector.resize(new_size);
         }
 
     private:
