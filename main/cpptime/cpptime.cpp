@@ -179,7 +179,8 @@ namespace CppTime
     }
 
     /**
-     * Removes the timer with the given id.
+     * @brief 
+     * 
      */
     bool Timer::remove(timer_id id)
     {
@@ -190,7 +191,8 @@ namespace CppTime
         }
         events[id].valid = false;
         events[id].handler = nullptr;
-        auto it = std::find_if(time_events.begin(), time_events.end(), [&](const detail::Time_event& te) { return te.ref == id; });
+        auto it = std::find_if(
+            time_events.begin(), time_events.end(), [&](const detail::Time_event& te) { return te.ref == id; });
         if (it != time_events.end())
         {
             free_ids.push(it->ref);

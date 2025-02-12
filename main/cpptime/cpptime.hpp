@@ -99,9 +99,9 @@
  */
 
 // Includes
-#include <functional>
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <set>
 #include <stack>
@@ -207,9 +207,11 @@ namespace CppTime
          * `time_point` for the first timeout.
          */
         template <class Rep, class Period>
-        inline timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t&& handler, const duration& period = duration::zero())
+        inline timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t&& handler,
+            const duration& period = duration::zero())
         {
-            return add(clock::now() + std::chrono::duration_cast<std::chrono::microseconds>(when), std::move(handler), period);
+            return add(
+                clock::now() + std::chrono::duration_cast<std::chrono::microseconds>(when), std::move(handler), period);
         }
 
         /**
