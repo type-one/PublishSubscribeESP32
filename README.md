@@ -16,6 +16,7 @@ Goodies:
 - simple data processing task helper on top of FreeRTOS task or C++ thread
 - simple thread-safe ring buffer and iterable ring buffer on top of std::array
 - simple thread-safe resizeable ring buffer and iterable resizeable ring buffer on top of std::vector
+- simple single producer/single consumer lock-free ring buffer on top of std::array and scalar types/pointers
 - queuable commands
 - bytepack serialization in C++20 using header-only 3rd party (Faruk Eryilmaz - MIT license)
 - json serialization and deserialization using 3rd party (Dave Gamble & Dmitry Pankratov - MIT license)

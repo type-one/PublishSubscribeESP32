@@ -52,6 +52,7 @@
 #include "tools/data_task.hpp"
 #include "tools/gzip_wrapper.hpp"
 #include "tools/histogram.hpp"
+#include "tools/lock_free_ring_buffer.hpp"
 #include "tools/logger.hpp"
 #include "tools/periodic_task.hpp"
 #include "tools/platform_detection.hpp"
@@ -490,6 +491,79 @@ void test_ring_vector_iteration()
             val_queue->pop();
         }
     }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_lock_free_ring_buffer()
+{
+    LOG_INFO("-- lock free ring buffer --");
+    print_stats();
+
+    auto str_queue = std::make_unique<tools::lock_free_ring_buffer<std::uint8_t, 3U>>();
+    bool result = false;
+
+    result = str_queue->push(1U);
+    result = str_queue->push(2U);
+    result = str_queue->push(3U);
+
+    std::uint8_t val = 0;
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    std::printf("expect success - %s\n", result ? "success" : "failure");
+
+    result = str_queue->pop(val);
+    std::printf("expect failure - %s\n", result ? "success" : "failure");
+
+    result = str_queue->push(1U);
+    result = str_queue->push(2U);
+    result = str_queue->push(3U);
+    result = str_queue->push(4U);
+
+    std::printf("expect success - %s\n", result ? "success" : "failure");
+
+    result = str_queue->push(5U);
+    std::printf("expect success - %s\n", result ? "success" : "failure");
+
+    result = str_queue->push(6U);
+    std::printf("expect success - %s\n", result ? "success" : "failure");
+
+    result = str_queue->push(7U);
+    std::printf("expect success - %s\n", result ? "success" : "failure");
+
+    result = str_queue->push(8U);
+    std::printf("expect failure - %s\n", result ? "success" : "failure");
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    result = str_queue->pop(val);
+    std::printf("%u\n", val);
+
+    std::printf("expect success - %s\n", result ? "success" : "failure");
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -1943,6 +2017,66 @@ void test_smp_tasks_cpu_affinity()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+struct smp_ring_task_context
+{
+    tools::lock_free_ring_buffer<std::uint8_t, 5U> m_to_worker_pipe;
+    tools::lock_free_ring_buffer<std::uint8_t, 5U> m_from_worker_pipe;    
+};
+
+using periodic_ring_task0 = tools::periodic_task<smp_ring_task_context>;
+using worker_ring_task1 = tools::worker_task<smp_ring_task_context>;
+
+
+void test_smp_tasks_lock_free_ring_buffer()
+{
+    LOG_INFO("-- smp tasks with lock free ring buffer --");
+    print_stats();
+
+    auto startup = [](std::shared_ptr<smp_ring_task_context> context, const std::string& task_name) -> void
+    {
+        (void)context;
+        (void)task_name;
+    };
+
+    auto context = std::make_shared<smp_ring_task_context>();
+
+    worker_ring_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
+
+    auto periodic_lambda = [&task1](std::shared_ptr<smp_ring_task_context> context, const std::string& task_name) -> void
+    {        
+        static int count = 0;
+        std::printf("%s (core 0): count %d\n", task_name.c_str(), count);
+        ++count;
+
+        context->m_to_worker_pipe.push(static_cast<std::uint8_t>(count & 0xff));
+
+        std::uint8_t val = 0U; 
+        if (context->m_from_worker_pipe.pop(val))
+        {
+            std::printf("(core 0): received computed (from core 1) %" PRIu8 "\n", val);
+        }
+
+        // delegate work on core 1
+        task1.delegate([](auto context, const auto& task_name) -> void
+        {
+            std::uint8_t value = 0U; 
+            if (context->m_to_worker_pipe.pop(value))
+            {
+                context->m_from_worker_pipe.push(static_cast<std::uint8_t>(value * value));
+            }
+        });
+    };
+
+    // 20 ms period
+    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(100); 
+    periodic_ring_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
+
+    // sleep 2 sec
+    tools::sleep_for(2000);
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 void test_tasks_priority()
 {
     LOG_INFO("-- tasks with priority --");
@@ -2123,6 +2257,7 @@ void runner()
     test_ring_vector_resize();
     test_ring_vector_iteration();
 
+    test_lock_free_ring_buffer();
     test_sync_ring_buffer();
     test_sync_ring_vector();
     test_sync_queue();
@@ -2149,6 +2284,7 @@ void runner()
     test_timer();
 
     test_smp_tasks_cpu_affinity();
+    test_smp_tasks_lock_free_ring_buffer();
     test_tasks_priority();
 
     std::printf("This is The END\n");
