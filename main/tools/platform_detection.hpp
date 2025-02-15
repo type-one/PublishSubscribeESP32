@@ -33,7 +33,7 @@
 #elif defined(STM32F103xB) || defined(STM32F103xE) || defined(STM32F303xC) || defined(STM32F401xC)                     \
     || defined(STM32F401xE) || defined(STM32F407xx) || defined(STM32F411xE) || defined(STM32F412Vx)                    \
     || defined(STM32F446xx) || defined(STM32F756xx) || defined(STM32F765xx) || defined(STM32H743xx)                    \
-    || defined(STM32H723xx)
+    || defined(STM32H723xx) || defined(STM32H7) || defined(STM32H5)
 #define STM32_PLATFORM
 #endif
 
