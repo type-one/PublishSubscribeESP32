@@ -831,7 +831,9 @@ static void generic_function(std::shared_ptr<my_generic_task_context> context, c
 
     while (!context->stop_tasks.load())
     {
-        tools::sleep_for(1);
+        tools::sleep_for(250);
+        std::printf("loop generic task %s\n", task_name.c_str());
+        tools::sleep_for(250);
     }
 
     std::printf("ending generic task %s\n", task_name.c_str());
@@ -848,7 +850,8 @@ void test_generic_task()
 
         while (!context->stop_tasks.load())
         {
-            tools::sleep_for(1);
+            std::printf("loop generic task %s\n", task_name.c_str());
+            tools::sleep_for(500);
         }
 
         std::printf("ending generic task %s\n", task_name.c_str());
@@ -865,7 +868,7 @@ void test_generic_task()
 
     context->stop_tasks.store(true);
 
-    tools::sleep_for(20);
+    tools::sleep_for(1000);
 
     std::printf("join tasks\n");
 }

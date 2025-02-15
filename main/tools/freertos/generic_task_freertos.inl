@@ -81,6 +81,8 @@ namespace tools
 
             // execute given function
             instance->m_routine(instance->m_context, task_name);
+
+            vTaskSuspend(NULL);
         }
 
         call_back m_routine;

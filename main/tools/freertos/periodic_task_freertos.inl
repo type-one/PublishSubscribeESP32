@@ -101,6 +101,8 @@ namespace tools
                 // execute given periodic function
                 instance->m_periodic_routine(instance->m_context, task_name);
             }
+
+            vTaskSuspend(NULL);
         }
 
         call_back m_startup_routine;

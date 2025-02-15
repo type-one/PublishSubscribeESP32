@@ -133,6 +133,8 @@ namespace tools
                     work(instance->m_context, task_name);
                 }
             } // run loop
+
+            vTaskSuspend(NULL);
         }
 
         call_back m_startup_routine;

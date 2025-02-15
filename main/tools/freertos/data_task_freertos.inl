@@ -140,6 +140,8 @@ namespace tools
                     }
                 }
             } // run loop
+
+            vTaskSuspend(NULL);
         }
 
         call_back m_startup_routine;
