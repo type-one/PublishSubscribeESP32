@@ -32,6 +32,8 @@
 #include <thread>
 
 #include "tools/base_task.hpp"
+#include "tools/platform_detection.hpp"
+#include "tools/platform_helpers.hpp"
 #include "tools/sync_object.hpp"
 #include "tools/sync_queue.hpp"
 

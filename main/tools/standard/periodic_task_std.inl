@@ -33,6 +33,8 @@
 #include <thread>
 
 #include "tools/base_task.hpp"
+#include "tools/platform_detection.hpp"
+#include "tools/platform_helpers.hpp"
 #include "tools/linux/linux_sched_deadline.hpp"
 
 namespace tools
