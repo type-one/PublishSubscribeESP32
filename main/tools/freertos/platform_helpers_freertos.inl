@@ -29,6 +29,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "tools/platform_detection.hpp"
+
 #if defined(ESP_PLATFORM)
 #include <freertos/idf_additions.h>
 #endif

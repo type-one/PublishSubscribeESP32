@@ -35,8 +35,6 @@
 #include <freertos/task.h>
 
 #include "tools/base_task.hpp"
-#include "tools/logger.hpp"
-#include "tools/platform_detection.hpp"
 #include "tools/platform_helpers.hpp"
 #include "tools/sync_queue.hpp"
 

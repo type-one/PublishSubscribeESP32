@@ -25,7 +25,6 @@
 
 
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -33,41 +32,36 @@
 #include <thread>
 
 #include "tools/base_task.hpp"
-#include "tools/linux/linux_sched_deadline.hpp"
 
 namespace tools
 {
     template <typename Context>
-    class periodic_task : public base_task
+    class generic_task : public base_task
     {
 
     public:
-        periodic_task() = delete;
+        generic_task() = delete;
 
         using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
 
-        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
-            const std::string& task_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
+        generic_task(call_back&& routine, std::shared_ptr<Context> context, const std::string& task_name,
             std::size_t stack_size, int cpu_affinity = base_task::run_on_all_cores,
             int priority = base_task::default_priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
-            , m_startup_routine(std::move(startup_routine))
-            , m_periodic_routine(std::move(periodic_routine))
+            , m_routine(std::move(routine))
             , m_context(context)
-            , m_period(period)
         {
             m_task = std::make_unique<std::thread>(
                 [this]()
                 {
                     set_current_thread_params(this->task_name(), this->cpu_affinity(), this->priority());
 
-                    periodic_call();
+                    single_call();
                 });
         }
 
-        ~periodic_task()
+        ~generic_task()
         {
-            m_stop_task.store(true);
             m_task->join();
         }
 
@@ -78,55 +72,14 @@ namespace tools
         }
 
     private:
-        void periodic_call()
+        void single_call()
         {
-            auto start_time = std::chrono::high_resolution_clock::now();
-            auto deadline = start_time + m_period;
-
-            bool earliest_deadline_enabled = set_earliest_deadline_scheduling(start_time, m_period);
-
-            // execute given startup function
-            m_startup_routine(m_context, this->task_name());
-
-            while (!m_stop_task.load())
-            {
-                // active wait loop
-                std::chrono::high_resolution_clock::time_point current_time;
-                do
-                {
-                    current_time = std::chrono::high_resolution_clock::now();
-                } while (deadline > current_time);
-
-                // execute given periodic function
-                m_periodic_routine(m_context, this->task_name());
-
-                // compute next deadline
-                deadline += m_period;
-
-                current_time = std::chrono::high_resolution_clock::now();
-
-                // wait period
-                if (deadline > current_time)
-                {
-                    const auto remaining_time
-                        = std::chrono::duration_cast<std::chrono::microseconds>(deadline - current_time);
-                    // wait between 90% and 96% of the remaining time depending on scheduling mode
-                    const double ratio = (earliest_deadline_enabled) ? 0.96 : 0.9;
-
-                    // sleep until we are close to the deadline
-                    const auto sleep_time = std::chrono::duration<std::uint64_t, std::micro>(
-                        static_cast<int>(ratio * remaining_time.count()));
-                    std::this_thread::sleep_for(sleep_time);
-
-                } // end if wait period needed
-            }     // periodic task loop
+            // execute given function
+            m_routine(m_context, this->task_name());
         }
 
-        call_back m_startup_routine;
-        call_back m_periodic_routine;
+        call_back m_routine;
         std::shared_ptr<Context> m_context;
-        std::chrono::duration<std::uint64_t, std::micro> m_period;
-        std::atomic_bool m_stop_task = false;
         std::unique_ptr<std::thread> m_task;
     };
 }

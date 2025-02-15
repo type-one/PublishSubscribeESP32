@@ -51,6 +51,7 @@
 
 #include "tools/async_observer.hpp"
 #include "tools/data_task.hpp"
+#include "tools/generic_task.hpp"
 #include "tools/gzip_wrapper.hpp"
 #include "tools/histogram.hpp"
 #include "tools/lock_free_ring_buffer.hpp"
@@ -813,6 +814,60 @@ void test_publish_subscribe()
 
     subject2->publish(my_topic::generic, "tonton");
     subject2->publish(my_topic::system, "tantine");
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+struct my_generic_task_context
+{
+    std::atomic<bool> stop_tasks;
+};
+
+using my_generic_task = tools::generic_task<my_generic_task_context>;
+
+static void generic_function(std::shared_ptr<my_generic_task_context> context, const std::string& task_name)
+{
+    std::printf("starting generic task %s\n", task_name.c_str());
+
+    while (!context->stop_tasks.load())
+    {
+        tools::sleep_for(1);
+    }
+
+    std::printf("ending generic task %s\n", task_name.c_str());
+}
+
+void test_generic_task()
+{
+    LOG_INFO("-- generic task --");
+    print_stats();
+
+    auto lambda = [](std::shared_ptr<my_generic_task_context> context, const std::string& task_name) -> void
+    {
+        std::printf("starting generic task %s\n", task_name.c_str());
+
+        while (!context->stop_tasks.load())
+        {
+            tools::sleep_for(1);
+        }
+
+        std::printf("ending generic task %s\n", task_name.c_str());
+    };
+
+    auto context = std::make_shared<my_generic_task_context>();
+    context->stop_tasks.store(false);
+
+    my_generic_task task1(std::move(lambda), context, "my_generic_task1", 2048U);
+    my_generic_task task2(std::move(generic_function), context, "my_generic_task2", 2048U);
+
+    // sleep 2 sec
+    tools::sleep_for(2000);
+
+    context->stop_tasks.store(true);
+
+    tools::sleep_for(20);
+
+    std::printf("join tasks\n");
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -2405,6 +2460,7 @@ void runner()
     test_sync_dictionary();
 
     test_publish_subscribe();
+    test_generic_task();
     test_periodic_task();
     test_periodic_publish_subscribe();
 

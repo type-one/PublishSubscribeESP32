@@ -37,7 +37,6 @@
 
 #include "tools/base_task.hpp"
 #include "tools/logger.hpp"
-#include "tools/platform_detection.hpp"
 #include "tools/platform_helpers.hpp"
 
 namespace tools
