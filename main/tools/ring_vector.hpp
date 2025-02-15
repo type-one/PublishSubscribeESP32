@@ -167,7 +167,7 @@ namespace tools
 
         T& operator[](std::size_t index)
         {
-            return *(m_ring_vector.data() + next_step_index(m_pop_index, index));
+            return m_ring_vector[next_step_index(m_pop_index, index)];
         };
 
         void resize(std::size_t new_capacity)
@@ -219,69 +219,6 @@ namespace tools
                 m_last_index = 0U;
             }
         }
-
-        class iterator;
-
-        iterator begin()
-        {
-            return ring_vector<T>::iterator(*this, 0);
-        }
-
-        iterator end()
-        {
-            return ring_vector<T>::iterator(*this, this->size());
-        }
-
-        // https://stackoverflow.com/questions/58887399/create-a-simple-forward-iterator-which-automatically-wraps-at-the-end-of-a-cir
-        // https://internalpointers.com/post/writing-custom-iterators-modern-cpp
-        // https://lorenzotoso.wordpress.com/2016/01/13/defining-a-custom-iterator-in-c/
-        class iterator : public std::iterator<std::output_iterator_tag, T, int, T*, T&>
-        {
-            friend ring_vector<T>;
-
-        public:
-            T& operator*() const
-            {
-                return m_ring_vector_ref[m_iterator_index];
-            }
-
-            iterator& operator+(int step)
-            {
-                m_iterator_index = m_ring_vector_ref.next_step_index(m_iterator_index, static_cast<std::size_t>(step));
-                return *this;
-            }
-
-            iterator& operator++()
-            {
-                m_iterator_index = m_ring_vector_ref.next_index(m_iterator_index);
-                return *this;
-            }
-
-            iterator operator++(int)
-            {
-                return ++(*this);
-            }
-
-            bool operator!=(const iterator& rhs) const
-            {
-                return m_iterator_index != rhs.m_iterator_index;
-            }
-
-            bool operator==(const iterator& rhs) const
-            {
-                return m_iterator_index == rhs.m_iterator_index;
-            }
-
-            explicit iterator(ring_vector<T>& container, std::size_t index = 0U)
-                : m_ring_vector_ref(container)
-                , m_iterator_index(index % container.capacity())
-            {
-            }
-
-        private:
-            ring_vector<T>& m_ring_vector_ref;
-            std::size_t m_iterator_index = 0U;
-        };
 
     private:
         std::size_t next_index(std::size_t index) const

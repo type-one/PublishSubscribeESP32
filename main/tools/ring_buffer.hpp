@@ -155,71 +155,7 @@ namespace tools
 
         T& operator[](std::size_t index)
         {
-            return *(m_ring_buffer.data() + next_step_index(m_pop_index, index));
-        };
-
-        class iterator;
-
-        iterator begin()
-        {
-            return ring_buffer<T, Capacity>::iterator(*this, 0);
-        }
-
-        iterator end()
-        {
-            return ring_buffer<T, Capacity>::iterator(*this, this->size());
-        }
-
-        // https://stackoverflow.com/questions/58887399/create-a-simple-forward-iterator-which-automatically-wraps-at-the-end-of-a-cir
-        // https://internalpointers.com/post/writing-custom-iterators-modern-cpp
-        // https://lorenzotoso.wordpress.com/2016/01/13/defining-a-custom-iterator-in-c/
-        class iterator : public std::iterator<std::output_iterator_tag, T, int, T*, T&>
-        {
-            friend ring_buffer<T, Capacity>;
-
-        public:
-            T& operator*() const
-            {
-                return m_ring_buffer_ref[m_iterator_index];
-            }
-
-            iterator& operator+(int step)
-            {
-                m_iterator_index
-                    = ring_buffer<T, Capacity>::next_step_index(m_iterator_index, static_cast<std::size_t>(step));
-                return *this;
-            }
-
-            iterator& operator++()
-            {
-                m_iterator_index = ring_buffer<T, Capacity>::next_index(m_iterator_index);
-                return *this;
-            }
-
-            iterator operator++(int)
-            {
-                return ++(*this);
-            }
-
-            bool operator!=(const iterator& rhs) const
-            {
-                return m_iterator_index != rhs.m_iterator_index;
-            }
-
-            bool operator==(const iterator& rhs) const
-            {
-                return m_iterator_index == rhs.m_iterator_index;
-            }
-
-            explicit iterator(ring_buffer<T, Capacity>& container, std::size_t index = 0U)
-                : m_ring_buffer_ref(container)
-                , m_iterator_index(index % Capacity)
-            {
-            }
-
-        private:
-            ring_buffer<T, Capacity>& m_ring_buffer_ref;
-            std::size_t m_iterator_index = 0U;
+            return m_ring_buffer[next_step_index(m_pop_index, index)];
         };
 
     private:
