@@ -33,6 +33,7 @@
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <random>
@@ -1039,7 +1040,8 @@ enum class message_type : std::uint8_t
 {
     temperature = 1,
     manufacturing = 2,
-    freetext = 3
+    freetext = 3,
+    aggregat = 4
 };
 
 struct temperature_sensor
@@ -1107,8 +1109,8 @@ void test_queued_bytepack_data()
     manufacturing_info message2 = { "NVidia", "HTX-4589-22-1", "24/05/02" };
     temperature_sensor message3 = { 45.2, 51.72, 21.5 };
 
-    std::array<std::uint8_t, 1024> buffer;
-    bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer) };
+    std::vector<std::uint8_t> buffer(1024);
+    bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer.data(), buffer.size()) };
 
     binary_stream.reset();
     binary_stream.write(message_type::freetext);
@@ -1171,9 +1173,116 @@ void test_queued_bytepack_data()
                 std::printf("%f\n%f\n%f\n", temp.cpu_temperature, temp.gpu_temperature, temp.room_temperature);
             }
             break;
+
+            case message_type::aggregat:
+                break;
         };
 
         data_queue.pop();
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+struct aggregated_info
+{
+    std::map<std::string, temperature_sensor> m_dictionary;
+    std::vector<manufacturing_info> m_list;
+    bool m_status;
+    std::vector<double> m_values;
+
+    void serialize(bytepack::binary_stream<>& stream) const
+    {
+        stream.write(static_cast<std::uint32_t>(m_dictionary.size()));
+        for (const auto& e : m_dictionary)
+        {
+            stream.write(e.first);
+            e.second.serialize(stream);
+        }
+
+        stream.write(static_cast<std::uint32_t>(m_list.size()));
+        for (const auto& e : m_list)
+        {
+            e.serialize(stream);
+        }
+
+        stream.write(m_status, m_values);
+    }
+
+    bool deserialize(bytepack::binary_stream<>& stream)
+    {
+        std::uint32_t len = 0U;
+        std::string key;
+        temperature_sensor sensor = {};
+        manufacturing_info manuf = {};
+
+        m_dictionary.clear();
+        m_list.clear();
+
+        stream.read(len);
+
+        for (std::uint32_t i = 0U; i < len; ++i)
+        {
+            stream.read(key);
+            sensor.deserialize(stream);
+            m_dictionary.emplace(key, sensor);
+        }
+
+        len = 0U;
+        stream.read(len);
+        for (std::uint32_t i = 0U; i < len; ++i)
+        {
+            manuf.deserialize(stream);
+            m_list.emplace_back(manuf);
+        }
+
+        stream.read(m_status, m_values);
+
+        return true; // pretend success
+    }
+};
+
+void test_aggregated_bytepack_data()
+{
+    LOG_INFO("-- test aggregated bytepack data --");
+    print_stats();
+
+    aggregated_info aggr = { { { "sensor1", { 45.2, 51.72, 21.5 } }, { "sensor2", { 17.2, 34.7, 18.3 } } },
+        { { "NVidia", "HTX-4589-22-1", "24/05/02" }, { "AMD", "HTX-7788-22-5", "12/05/07" } }, false,
+        { 0.7, 1.5, 2.1, -0.5 } };
+
+    auto sens = aggr.m_dictionary.find("sensor2");
+    std::printf(
+        "%f %f %f \n", sens->second.cpu_temperature, sens->second.gpu_temperature, sens->second.room_temperature);
+    std::printf(
+        "%s %s %s\n", aggr.m_list[1].manufacturing_date, aggr.m_list[1].serial_number, aggr.m_list[1].vendor_name);
+    std::printf("%f %f %f\n", aggr.m_values[0], aggr.m_values[1], aggr.m_values[2]);
+
+    std::vector<std::uint8_t> buffer(1024);
+    bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer.data(), buffer.size()) };
+
+    binary_stream.reset();
+    binary_stream.write(message_type::aggregat);
+    aggr.serialize(binary_stream);
+
+    // deserialize
+
+    aggregated_info aggr_dup;
+    auto bin_buf = binary_stream.data();
+    std::vector<std::uint8_t> data_packed(bin_buf.size());
+    std::memcpy(data_packed.data(), bin_buf.as<void>(), bin_buf.size());
+
+    bytepack::binary_stream stream(bytepack::buffer_view(data_packed.data(), data_packed.size()));
+    message_type typ;
+    stream.read(typ);
+    if (message_type::aggregat == typ)
+    {
+        aggr_dup.deserialize(stream);
+
+        auto s = aggr_dup.m_dictionary.find("sensor2");
+        std::printf("%f %f %f \n", s->second.cpu_temperature, s->second.gpu_temperature, s->second.room_temperature);
+        std::printf("%s %s %s\n", aggr_dup.m_list[1].manufacturing_date, aggr_dup.m_list[1].serial_number,
+            aggr_dup.m_list[1].vendor_name);
+        std::printf("%f %f %f\n", aggr_dup.m_values[0], aggr_dup.m_values[1], aggr_dup.m_values[2]);
     }
 }
 
@@ -1230,6 +1339,9 @@ static auto task_1_processing
             std::printf("%f\n%f\n%f\n", temp.cpu_temperature, temp.gpu_temperature, temp.room_temperature);
         }
         break;
+
+        case message_type::aggregat:
+            break;
     };
 };
 
@@ -2059,6 +2171,7 @@ void test_smp_tasks_lock_free_ring_buffer()
         // delegate work on core 1
         task1.delegate([](auto context, const auto& task_name) -> void
         {
+            (void)task_name;
             std::uint8_t value = 0U; 
             if (context->m_to_worker_pipe.pop(value))
             {
@@ -2272,6 +2385,7 @@ void runner()
 
     test_worker_tasks();
     test_queued_bytepack_data();
+    test_aggregated_bytepack_data();
     test_bytepack_data_task();
 
     test_json();
