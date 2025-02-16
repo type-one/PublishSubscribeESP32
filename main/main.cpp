@@ -38,6 +38,7 @@
 #include <numeric>
 #include <random>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -56,6 +57,7 @@
 #include "tools/histogram.hpp"
 #include "tools/lock_free_ring_buffer.hpp"
 #include "tools/logger.hpp"
+#include "tools/memory_pipe.hpp"
 #include "tools/periodic_task.hpp"
 #include "tools/platform_detection.hpp"
 #include "tools/platform_helpers.hpp"
@@ -2224,7 +2226,6 @@ struct smp_ring_task_context
 using periodic_ring_task0 = tools::periodic_task<smp_ring_task_context>;
 using worker_ring_task1 = tools::worker_task<smp_ring_task_context>;
 
-
 void test_smp_tasks_lock_free_ring_buffer()
 {
     LOG_INFO("-- smp tasks with lock free ring buffer --");
@@ -2275,6 +2276,90 @@ void test_smp_tasks_lock_free_ring_buffer()
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
+
+struct smp_mem_task_context
+{
+    tools::memory_pipe m_to_worker_pipe;
+    tools::memory_pipe m_from_worker_pipe;
+    
+    smp_mem_task_context(std::size_t to_size, std::size_t from_size) : m_to_worker_pipe(to_size), m_from_worker_pipe(from_size)
+    {
+    }
+};
+
+using periodic_mem_task0 = tools::periodic_task<smp_mem_task_context>;
+using worker_mem_task1 = tools::worker_task<smp_mem_task_context>;
+
+void test_smp_tasks_memory_pipe()
+{
+    LOG_INFO("-- smp tasks with memory pipe --");
+    print_stats();
+
+    auto startup = [](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name) -> void
+    {
+        (void)context;
+        (void)task_name;
+    };
+
+    auto context = std::make_shared<smp_mem_task_context>(128U, 128U);
+
+    worker_mem_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
+
+    static const std::string label = "this\nis\na\ntest\nto\ntransmit\nseveral\nmessages\nbetween\ntwo\ncores\n";
+
+    std::atomic_bool stop(false);
+
+    // delegate work on core 1
+    task1.delegate([&stop](auto context, const auto& task_name) -> void
+    {
+        std::printf("%s (core 1)\n", task_name.c_str());
+
+        const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(20);        
+
+        while(!stop.load())
+        {
+            std::vector<std::uint8_t> received;
+            const auto received_bytes = context->m_to_worker_pipe.receive(received, 256, timeout);
+            if (received_bytes > 0U)
+            {
+                for(const auto v : received)
+                {
+                   std::printf("%c", v);   
+                }
+            }
+            
+        }
+
+        std::printf("\n");
+    });
+
+    std::size_t offset = 0U;
+    auto periodic_lambda = [&offset](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name) -> void
+    { 
+        std::printf(" / %s (core 0)\n", task_name.c_str());
+
+        std::size_t to_send = std::min(static_cast<std::size_t>(4U), label.size() - offset);
+        
+        if (offset < label.size())
+        {            
+            const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(10);
+            const auto sent = context->m_to_worker_pipe.send(reinterpret_cast<const std::uint8_t*>(label.data() + offset), to_send, timeout);
+            offset += sent; // try again on characters left 
+        }
+    };
+
+    // 50 ms period
+    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(50); 
+    periodic_mem_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
+
+    // sleep 2 sec
+    tools::sleep_for(2000);
+    stop.store(true);
+    tools::sleep_for(250);
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 
 void test_tasks_priority()
 {
@@ -2486,6 +2571,7 @@ void runner()
 
     test_smp_tasks_cpu_affinity();
     test_smp_tasks_lock_free_ring_buffer();
+    test_smp_tasks_memory_pipe();
     test_tasks_priority();
 
     std::printf("This is The END\n");
