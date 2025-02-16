@@ -2277,18 +2277,20 @@ void test_smp_tasks_lock_free_ring_buffer()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+//static std::array<std::uint8_t, 1024> static_storage;
 struct smp_mem_task_context
 {
     tools::memory_pipe m_to_worker_pipe;
-    tools::memory_pipe m_from_worker_pipe;
     
-    smp_mem_task_context(std::size_t to_size, std::size_t from_size) : m_to_worker_pipe(to_size), m_from_worker_pipe(from_size)
+    smp_mem_task_context(std::size_t to_size) : m_to_worker_pipe(to_size)
+    //smp_mem_task_context(std::size_t to_size) : m_to_worker_pipe(to_size, static_storage.data())
     {
     }
 };
 
 using periodic_mem_task0 = tools::periodic_task<smp_mem_task_context>;
 using worker_mem_task1 = tools::worker_task<smp_mem_task_context>;
+
 
 void test_smp_tasks_memory_pipe()
 {
@@ -2301,7 +2303,7 @@ void test_smp_tasks_memory_pipe()
         (void)task_name;
     };
 
-    auto context = std::make_shared<smp_mem_task_context>(128U, 128U);
+    auto context = std::make_shared<smp_mem_task_context>(128U);
 
     worker_mem_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
 
