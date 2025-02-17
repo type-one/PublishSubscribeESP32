@@ -41,15 +41,25 @@ namespace tools
     class memory_pipe : public non_copyable
     {
     public:
+        using static_buffer_holder = StaticMessageBuffer_t;
+
         memory_pipe() = delete;
 
-        memory_pipe(std::size_t buffer_size, std::uint8_t* buffer_addr = nullptr)
+        memory_pipe(
+            std::size_t buffer_size, std::uint8_t* buffer_addr = nullptr, static_buffer_holder* static_holder = nullptr)
             : m_capacity(buffer_size)
         {
             // https://www.freertos.org/Community/Blogs/2020/simple-multicore-core-to-core-communication-using-freertos-message-buffers
             // https://www.freertos.org/Documentation/02-Kernel/02-Kernel-features/04-Stream-and-message-buffers/03-Message-buffer-example
+            // https://github.com/MaJerle/stm32h7-dual-core-inter-cpu-async-communication/tree/main
 
-            if (nullptr == buffer_addr)
+            // When a message is written to
+            // the message buffer an additional sizeof( size_t ) bytes are also written to
+            // store the message's length.  sizeof( size_t ) is typically 4 bytes on a
+            // 32-bit architecture, so on most 32-bit architectures a 10 byte message will
+            // take up 14 bytes of message buffer space.
+
+            if ((nullptr == buffer_addr) || (nullptr == static_holder))
             {
                 // https://freertos.org/Documentation/02-Kernel/04-API-references/09-Message-buffers/01-xMessageBufferCreate
                 m_message_buffer_hnd = xMessageBufferCreate(m_capacity);
@@ -61,12 +71,18 @@ namespace tools
             }
             else
             {
+                // https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/system/freertos.html
                 // https://www.freertos.org/Documentation/02-Kernel/04-API-references/09-Message-buffers/02-xMessageBufferCreateStatic
-                m_message_buffer_hnd = xMessageBufferCreateStatic(m_capacity, buffer_addr, &m_static_msg_buffer);
+
+                m_message_buffer_hnd = xMessageBufferCreateStatic(m_capacity, buffer_addr, static_holder);
 
                 if (nullptr == m_message_buffer_hnd)
                 {
                     LOG_ERROR("FATAL error: xMessageBufferCreateStatic() failed");
+                }
+                else
+                {
+                    m_static_msg_buffer = static_holder;
                 }
             }
         }
@@ -91,8 +107,11 @@ namespace tools
 
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
-                const TickType_t ticks_to_wait = static_cast<TickType_t>(timeout.count() * portTICK_PERIOD_MS);
-                sent = xMessageBufferSend(m_message_buffer_hnd, data, send_bytes, ticks_to_wait);
+                if (pdFALSE == xMessageBufferIsFull(m_message_buffer_hnd))
+                {
+                    const TickType_t ticks_to_wait = static_cast<TickType_t>(timeout.count() * portTICK_PERIOD_MS);
+                    sent = xMessageBufferSend(m_message_buffer_hnd, data, send_bytes, ticks_to_wait);
+                }
             }
 
             return sent;
@@ -111,8 +130,11 @@ namespace tools
 
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
-                const TickType_t ticks_to_wait = static_cast<TickType_t>(timeout.count() * portTICK_PERIOD_MS);
-                received = xMessageBufferReceive(m_message_buffer_hnd, data, rcv_bytes, ticks_to_wait);
+                if (pdFALSE == xMessageBufferIsEmpty(m_message_buffer_hnd))
+                {
+                    const TickType_t ticks_to_wait = static_cast<TickType_t>(timeout.count() * portTICK_PERIOD_MS);
+                    received = xMessageBufferReceive(m_message_buffer_hnd, data, rcv_bytes, ticks_to_wait);
+                }
             }
 
             return received;
@@ -133,10 +155,13 @@ namespace tools
 
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
-                BaseType_t px_higher_priority_task_woken = pdFALSE;
-                sent
-                    = xMessageBufferSendFromISR(m_message_buffer_hnd, data, send_bytes, &px_higher_priority_task_woken);
-                portYIELD_FROM_ISR(px_higher_priority_task_woken);
+                if (pdFALSE == xMessageBufferIsFull(m_message_buffer_hnd))
+                {
+                    BaseType_t px_higher_priority_task_woken = pdFALSE;
+                    sent = xMessageBufferSendFromISR(
+                        m_message_buffer_hnd, data, send_bytes, &px_higher_priority_task_woken);
+                    portYIELD_FROM_ISR(px_higher_priority_task_woken);
+                }
             }
 
             return sent;
@@ -153,10 +178,13 @@ namespace tools
 
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
-                BaseType_t px_higher_priority_task_woken = pdFALSE;
-                received = xMessageBufferReceiveFromISR(
-                    m_message_buffer_hnd, data, rcv_bytes, &px_higher_priority_task_woken);
-                portYIELD_FROM_ISR(px_higher_priority_task_woken);
+                if (pdFALSE == xMessageBufferIsEmpty(m_message_buffer_hnd))
+                {
+                    BaseType_t px_higher_priority_task_woken = pdFALSE;
+                    received = xMessageBufferReceiveFromISR(
+                        m_message_buffer_hnd, data, rcv_bytes, &px_higher_priority_task_woken);
+                    portYIELD_FROM_ISR(px_higher_priority_task_woken);
+                }
             }
 
             return received;
@@ -173,6 +201,6 @@ namespace tools
     private:
         std::size_t m_capacity = 0;
         MessageBufferHandle_t m_message_buffer_hnd = nullptr;
-        StaticMessageBuffer_t m_static_msg_buffer = {};
+        static_buffer_holder* m_static_msg_buffer = nullptr;
     };
 }

@@ -1876,7 +1876,7 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
     (void)state;
     (void)event;
     tools::sleep_for(1000);
-    std::printf("traffix light ORANGE --> GREEN\n");
+    std::printf("traffic light ORANGE --> GREEN\n");
     m_entering_state = true;
     return traffic_light_state::operable_green { state.count + 1 };
 }
@@ -1886,7 +1886,7 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
     (void)state;
     (void)event;
     tools::sleep_for(1000);
-    std::printf("traffix light GREEN --> RED\n");
+    std::printf("traffic light GREEN --> RED\n");
     m_entering_state = true;
     return traffic_light_state::operable_red { state.count + 1 };
 }
@@ -2277,13 +2277,18 @@ void test_smp_tasks_lock_free_ring_buffer()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
-//static std::array<std::uint8_t, 1024> static_storage;
+// The variable used to hold the message buffer structure.
+static tools::memory_pipe::static_buffer_holder static_buf_holder = {};
+// Used to dimension the array used to hold the messages.  The available space
+// will actually be one less than this, so 999.
+static std::array<std::uint8_t, 1000> static_storage;
+
 struct smp_mem_task_context
 {
-    tools::memory_pipe m_to_worker_pipe;
+    tools::memory_pipe m_to_worker_pipe;    
     
-    smp_mem_task_context(std::size_t to_size) : m_to_worker_pipe(to_size)
-    //smp_mem_task_context(std::size_t to_size) : m_to_worker_pipe(to_size, static_storage.data())
+    //smp_mem_task_context(std::size_t to_size) : m_to_worker_pipe(to_size)
+    smp_mem_task_context(std::size_t to_size) : m_to_worker_pipe(to_size, static_storage.data(), &static_buf_holder)
     {
     }
 };
@@ -2291,11 +2296,10 @@ struct smp_mem_task_context
 using periodic_mem_task0 = tools::periodic_task<smp_mem_task_context>;
 using worker_mem_task1 = tools::worker_task<smp_mem_task_context>;
 
-
 void test_smp_tasks_memory_pipe()
 {
     LOG_INFO("-- smp tasks with memory pipe --");
-    print_stats();
+    print_stats();    
 
     auto startup = [](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name) -> void
     {
@@ -2303,61 +2307,64 @@ void test_smp_tasks_memory_pipe()
         (void)task_name;
     };
 
-    auto context = std::make_shared<smp_mem_task_context>(128U);
+    std::memset(&static_buf_holder, 0, sizeof(static_buf_holder));
+    auto context = std::make_shared<smp_mem_task_context>(static_storage.size());
 
-    worker_mem_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
-
-    static const std::string label = "this\nis\na\ntest\nto\ntransmit\nseveral\nmessages\nbetween\ntwo\ncores\n";
-
-    std::atomic_bool stop(false);
-
-    // delegate work on core 1
-    task1.delegate([&stop](auto context, const auto& task_name) -> void
     {
-        std::printf("%s (core 1)\n", task_name.c_str());
+        worker_mem_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
 
-        const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(20);        
+        static const std::string label = "this\nis\na\ntest\nto\ntransmit\nseveral\nmessages\nbetween\ntwo\ncores\n";
 
-        while(!stop.load())
+        std::atomic_bool stop(false);
+
+        // delegate work on core 1
+        task1.delegate([&stop](auto context, const auto& task_name) -> void
         {
-            std::vector<std::uint8_t> received;
-            const auto received_bytes = context->m_to_worker_pipe.receive(received, 256, timeout);
-            if (received_bytes > 0U)
+            std::printf("%s (core 1)\n", task_name.c_str());
+
+            const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(20);        
+
+            while(!stop.load())
             {
-                for(const auto v : received)
+                std::vector<std::uint8_t> received;
+                const auto received_bytes = context->m_to_worker_pipe.receive(received, 128, timeout);
+                if (received_bytes > 0U)
                 {
-                   std::printf("%c", v);   
+                    for(const auto v : received)
+                    {
+                        std::printf("%c", v);   
+                    }
                 }
+                
             }
+
+            std::printf("\n");
+        });
+
+        std::size_t offset = 0U;
+        auto periodic_lambda = [&offset](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name) -> void
+        { 
+            std::printf(" / %s (core 0)\n", task_name.c_str());
+
+            std::size_t to_send = std::min(static_cast<std::size_t>(16U), label.size() - offset);
             
-        }
+            if (offset < label.size())
+            {            
+                const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(10);
+                const auto sent = context->m_to_worker_pipe.send(reinterpret_cast<const std::uint8_t*>(label.data() + offset), to_send, timeout);
+                offset += sent; // try again on characters left 
+            }
+        };
 
-        std::printf("\n");
-    });
+        // 50 ms period
+        constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(50); 
+        periodic_mem_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
 
-    std::size_t offset = 0U;
-    auto periodic_lambda = [&offset](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name) -> void
-    { 
-        std::printf(" / %s (core 0)\n", task_name.c_str());
-
-        std::size_t to_send = std::min(static_cast<std::size_t>(4U), label.size() - offset);
-        
-        if (offset < label.size())
-        {            
-            const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(10);
-            const auto sent = context->m_to_worker_pipe.send(reinterpret_cast<const std::uint8_t*>(label.data() + offset), to_send, timeout);
-            offset += sent; // try again on characters left 
-        }
-    };
-
-    // 50 ms period
-    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(50); 
-    periodic_mem_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
-
-    // sleep 2 sec
-    tools::sleep_for(2000);
-    stop.store(true);
-    tools::sleep_for(250);
+        // sleep 1 sec
+        tools::sleep_for(1000);
+        stop.store(true);
+        tools::sleep_for(250);
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------

@@ -39,13 +39,20 @@ namespace tools
     class memory_pipe : public non_copyable
     {
     public:
+        struct static_buffer_holder
+        {
+            int dummy;
+        };
+
         memory_pipe() = delete;
         ~memory_pipe() = default;
 
-        memory_pipe(std::size_t buffer_size, std::uint8_t* buffer_addr = nullptr)
+        memory_pipe(
+            std::size_t buffer_size, std::uint8_t* buffer_addr = nullptr, static_buffer_holder* static_holder = nullptr)
             : m_capacity(buffer_size)
             , m_active_buffer(buffer_addr)
         {
+            (void)static_holder;
             m_push_index.store(0U);
             m_pop_index.store(0U);
             m_reading.store(false);

@@ -66,6 +66,11 @@
 #define LOG_INFO(...) ESP_LOGI(_FUNCTION_ALIAS_, __VA_ARGS__)
 #define LOG_DEBUG(...) ESP_LOGD(_FUNCTION_ALIAS_, __VA_ARGS__)
 #define LOG_VERBOSE(...) ESP_LOGV(_FUNCTION_ALIAS_, __VA_ARGS__)
+
+//#elif defined(STM32_PLATFORM)
+// TODO
+// https://wiki.st.com/stm32mcu/wiki/Connectivity:STM32CubeWBA_Trace_management
+
 #else
 // clang-format off
 #define LOG_ERROR(...) do { std::fprintf(stderr, "[ERROR] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false)
