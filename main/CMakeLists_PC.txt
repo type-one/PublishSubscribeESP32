@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.10)
 
 # set the project name and version
 project(PublishSubscribe VERSION 1.0)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=-*,modernize-*,cppcoreguidelines-*,-cppcoreguidelines-pro-type-vararg,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-bounds-pointer-arithmetic,bugprone-*,-bugprone-suspicious-include,fuchsia-*,-fuchsia-default-arguments-calls,performance-*,readability-*")
 
 # https://stackoverflow.com/questions/11944060/how-to-detect-target-architecture-using-cmake
 
@@ -156,5 +158,47 @@ elseif(WIN32)
 endif()
 
 
+################################
+# Google Test
+################################
 
+# https://matgomes.com/integrate-google-test-into-cmake/
+include(FetchContent)
 
+# https://cmake.org/cmake/help/latest/module/FindGit.html
+find_package(Git REQUIRED)
+if(Git_FOUND)
+  message("Git found: ${GIT_EXECUTABLE}")
+endif()
+
+# https://cmake.org/cmake/help/latest/module/FindGTest.html
+find_package(GTest 1.16.0)
+if(GTest_FOUND)
+  message("Google Test found")
+else()
+    message("Google Test fetch from github")
+    FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        v1.16.0
+    )
+
+    if(MSVC OR MSYS OR MINGW)
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    endif()
+
+    set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+    set(BUILD_GTEST ON CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable(googletest)
+endif()
+
+enable_testing()
+
+################################
+# Tests
+################################
+# Add test cpp file
+#add_executable(${TESTNAME} testgtest.cpp)
+# Link test executable against gtest & gtest_main
+#target_link_libraries(${TESTNAME} gtest gtest_main)

@@ -115,31 +115,31 @@ namespace tools
 
         void isr_push(const T& elem)
         {
-            tools::isr_lock_guard guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.push(elem);
         }
 
         void isr_emplace(T&& elem)
         {
-            tools::isr_lock_guard guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.emplace(elem);
         }
 
         bool isr_full()
         {
-            tools::isr_lock_guard guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.full();
         }
 
         std::size_t isr_size()
         {
-            tools::isr_lock_guard guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.size();
         }
 
         void isr_resize(std::size_t new_size)
         {
-            tools::isr_lock_guard guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.resize(new_size);
         }
 

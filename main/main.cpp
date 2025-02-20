@@ -1385,54 +1385,56 @@ using binary_msg = std::array<std::uint8_t, 128>;
 using my_data_task = tools::data_task<data_task_context, binary_msg>;
 using my_data_periodic_task = tools::periodic_task<data_task_context>;
 
-static auto task_startup = [](std::shared_ptr<data_task_context> context, const std::string& task_name)
+namespace
 {
-    (void)context;
-    std::printf("starting %s\n", task_name.c_str());
-};
-
-static auto task_1_processing
-    = [](std::shared_ptr<data_task_context> context, binary_msg data_packed, const std::string& task_name)
-{
-    (void)context;
-    (void)task_name;
-
-    bytepack::binary_stream stream(bytepack::buffer_view(data_packed.data(), data_packed.size()));
-
-    message_type discriminant = {};
-    stream.read(discriminant);
-
-    switch (discriminant)
+    auto task_startup = [](std::shared_ptr<data_task_context> context, const std::string& task_name)
     {
-        case message_type::freetext:
-        {
-            free_text text;
-            text.deserialize(stream);
-            std::printf("%s\n", text.text.c_str());
-        }
-        break;
-
-        case message_type::manufacturing:
-        {
-            manufacturing_info info;
-            info.deserialize(stream);
-            std::printf("%s\n%s\n%s\n", info.vendor_name, info.serial_number, info.manufacturing_date);
-        }
-        break;
-
-        case message_type::temperature:
-        {
-            temperature_sensor temp;
-            temp.deserialize(stream);
-            std::printf("%f\n%f\n%f\n", temp.cpu_temperature, temp.gpu_temperature, temp.room_temperature);
-        }
-        break;
-
-        case message_type::aggregat:
-            break;
+        (void)context;
+        std::printf("starting %s\n", task_name.c_str());
     };
-};
 
+    auto task_1_processing
+        = [](std::shared_ptr<data_task_context> context, binary_msg data_packed, const std::string& task_name)
+    {
+        (void)context;
+        (void)task_name;
+
+        bytepack::binary_stream stream(bytepack::buffer_view(data_packed.data(), data_packed.size()));
+
+        message_type discriminant = {};
+        stream.read(discriminant);
+
+        switch (discriminant)
+        {
+            case message_type::freetext:
+            {
+                free_text text = {};
+                text.deserialize(stream);
+                std::printf("%s\n", text.text.c_str());
+            }
+            break;
+
+            case message_type::manufacturing:
+            {
+                manufacturing_info info = {};
+                info.deserialize(stream);
+                std::printf("%s\n%s\n%s\n", info.vendor_name, info.serial_number, info.manufacturing_date);
+            }
+            break;
+
+            case message_type::temperature:
+            {
+                temperature_sensor temp = {};
+                temp.deserialize(stream);
+                std::printf("%f\n%f\n%f\n", temp.cpu_temperature, temp.gpu_temperature, temp.room_temperature);
+            }
+            break;
+
+            case message_type::aggregat:
+                break;
+        };
+    };
+}
 
 void test_bytepack_data_task()
 {
@@ -2087,7 +2089,7 @@ void test_timer()
         tools::timer_scheduler timer_scheduler;
 
         // Test one shot timer - after completion
-        std::atomic<int> i = 0;
+        std::atomic<int> i(0);
         timer_scheduler.add("timer1", 100, [&](tools::timer_handle) { i = 42; }, false);
         tools::sleep_for(120);
         std::printf("Expect %d is 42\n", i.load());
@@ -2099,7 +2101,7 @@ void test_timer()
         std::printf("Expect %d is 0\n", i.load());
 
         // Test periodic timer (auto-reload) - check immediately started
-        std::atomic<std::size_t> count = 0U;
+        std::atomic<std::size_t> count(0U);
         auto id = timer_scheduler.add("timer3", 40, [&](tools::timer_handle) { ++count; }, true);
         tools::sleep_for(20);    
         timer_scheduler.remove(id);
@@ -2360,8 +2362,8 @@ void test_smp_tasks_memory_pipe()
         constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(50); 
         periodic_mem_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
 
-        // sleep 1 sec
-        tools::sleep_for(1000);
+        // sleep 2 sec
+        tools::sleep_for(2000);
         stop.store(true);
         tools::sleep_for(250);
     }
