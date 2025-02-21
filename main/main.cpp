@@ -690,7 +690,7 @@ public:
     {
     }
 
-    virtual void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
+    void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
         std::printf("sync [topic %d] received: event (%s) from %s\n",
             static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
@@ -714,7 +714,7 @@ public:
         m_task_loop.join();
     }
 
-    virtual void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
+    void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
         std::printf("async/push [topic %d] received: event (%s) from %s\n",
             static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
@@ -763,7 +763,7 @@ public:
     {
     }
 
-    virtual void publish(const my_topic& topic, const std::string& event) override
+    void publish(const my_topic& topic, const std::string& event) override
     {
         std::printf("publish: event (%s) to %s\n", event.c_str(), name().c_str());
         base_subject::publish(topic, event);
@@ -936,7 +936,7 @@ public:
     {
     }
 
-    virtual void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
+    void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
         (void)topic;
         (void)origin;
@@ -1778,7 +1778,7 @@ private:
         const traffic_light_state::operable_green& state, const traffic_light_event::power_off& event);
 
     // fallback for undefined transitions
-    traffic_light_state_v on_event(const auto&, const auto&);
+    traffic_light_state_v on_event(const auto& state, const auto& event);
 
     // defines callbacks for [state]
     void on_state(const traffic_light_state::off& state);
@@ -1788,7 +1788,7 @@ private:
     void on_state(const traffic_light_state::operable_green& state);
 
     // fallback for undefined state
-    void on_state(const auto&);
+    void on_state(const auto& state);
 };
 
 void traffic_light_fsm::start()
@@ -1929,8 +1929,9 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
     return traffic_light_state::off {};
 }
 
-traffic_light_state_v traffic_light_fsm::on_event(const auto& state, const auto&)
+traffic_light_state_v traffic_light_fsm::on_event(const auto& state, const auto& event)
 {
+    (void)event;
     LOG_ERROR("Unsupported state transition");
     // don't switch to other state and do not execute entering state callback
     m_entering_state = false;
@@ -1989,8 +1990,9 @@ void traffic_light_fsm::on_state(const traffic_light_state::operable_green& stat
 }
 
 // fallback for undefined state
-void traffic_light_fsm::on_state(const auto&)
+void traffic_light_fsm::on_state(const auto& state)
 {    
+    (void)state;
     if (m_entering_state)
     {
         LOG_ERROR("Unsupported state");
