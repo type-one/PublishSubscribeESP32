@@ -850,7 +850,7 @@ void test_generic_task()
     LOG_INFO("-- generic task --");
     print_stats();
 
-    auto lambda = [](std::shared_ptr<my_generic_task_context> context, const std::string& task_name) -> void
+    auto lambda = [](std::shared_ptr<my_generic_task_context> context, const std::string& task_name)
     {
         std::printf("starting generic task %s\n", task_name.c_str());
 
@@ -894,14 +894,14 @@ void test_periodic_task()
     LOG_INFO("-- periodic task --");
     print_stats();
 
-    auto lambda = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
+    auto lambda = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name)
     {
         (void)task_name;
         context->loop_counter += 1;
         context->time_points.emplace(std::chrono::high_resolution_clock::now());
     };
 
-    auto startup = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
+    auto startup = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name)
     {
         (void)task_name;
         context->loop_counter = 0;
@@ -977,7 +977,7 @@ void test_periodic_publish_subscribe()
     auto histogram_feeder = std::make_shared<my_collector>();
 
     auto sampler
-        = [&data_source](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
+        = [&data_source](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name)
     {
         (void)task_name;
         context->loop_counter += 1;
@@ -989,7 +989,7 @@ void test_periodic_publish_subscribe()
         data_source->publish(my_topic::external, std::to_string(signal));
     };
 
-    auto startup = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name) -> void
+    auto startup = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name)
     {
         (void)task_name;
         context->loop_counter = 0;
@@ -1067,14 +1067,14 @@ void test_worker_tasks()
     LOG_INFO("-- worker tasks --");
     print_stats();
 
-    auto startup1 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name) -> void
+    auto startup1 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name)
     {
         (void)context;
         std::printf("welcome 1\n");
         std::printf("task %s started\n", task_name.c_str());
     };
 
-    auto startup2 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name) -> void
+    auto startup2 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name)
     {
         (void)context;
         std::printf("welcome 2\n");
@@ -1099,7 +1099,7 @@ void test_worker_tasks()
         auto idx = distribution(generator);
 
         tasks[idx]->delegate(
-            [](auto context, const auto& task_name) -> void
+            [](auto context, const auto& task_name)
             {
                 std::printf("job %d on worker task %s\n", context->loop_counter.load(), task_name.c_str());
                 context->loop_counter++;
@@ -2190,7 +2190,7 @@ void test_smp_tasks_cpu_affinity()
     LOG_INFO("-- smp tasks with cpu affinity --");
     print_stats();
 
-    auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
+    auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -2200,7 +2200,7 @@ void test_smp_tasks_cpu_affinity()
 
     worker_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
 
-    auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
+    auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name)
     {
         (void)context;
         static int count = 0;
@@ -2208,7 +2208,7 @@ void test_smp_tasks_cpu_affinity()
         ++count;
 
         // delegate work on core 1
-        task1.delegate([](auto context, const auto& task_name) -> void
+        task1.delegate([](auto context, const auto& task_name)
         {
             (void)context;
             std::printf("%s (core 1): work\n", task_name.c_str());
@@ -2239,7 +2239,7 @@ void test_smp_tasks_lock_free_ring_buffer()
     LOG_INFO("-- smp tasks with lock free ring buffer --");
     print_stats();
 
-    auto startup = [](std::shared_ptr<smp_ring_task_context> context, const std::string& task_name) -> void
+    auto startup = [](std::shared_ptr<smp_ring_task_context> context, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -2249,7 +2249,7 @@ void test_smp_tasks_lock_free_ring_buffer()
 
     worker_ring_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
 
-    auto periodic_lambda = [&task1](std::shared_ptr<smp_ring_task_context> context, const std::string& task_name) -> void
+    auto periodic_lambda = [&task1](std::shared_ptr<smp_ring_task_context> context, const std::string& task_name)
     {        
         static int count = 0;
         std::printf("%s (core 0): count %d\n", task_name.c_str(), count);
@@ -2264,7 +2264,7 @@ void test_smp_tasks_lock_free_ring_buffer()
         }
 
         // delegate work on core 1
-        task1.delegate([](auto context, const auto& task_name) -> void
+        task1.delegate([](auto context, const auto& task_name)
         {
             (void)task_name;
             std::uint8_t value = 0U; 
@@ -2309,7 +2309,7 @@ void test_smp_tasks_memory_pipe()
     LOG_INFO("-- smp tasks with memory pipe --");
     print_stats();    
 
-    auto startup = [](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name) -> void
+    auto startup = [](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -2326,7 +2326,7 @@ void test_smp_tasks_memory_pipe()
         std::atomic_bool stop(false);
 
         // delegate work on core 1
-        task1.delegate([&stop](auto context, const auto& task_name) -> void
+        task1.delegate([&stop](auto context, const auto& task_name)
         {
             std::printf("%s (core 1)\n", task_name.c_str());
 
@@ -2350,7 +2350,7 @@ void test_smp_tasks_memory_pipe()
         });
 
         std::size_t offset = 0U;
-        auto periodic_lambda = [&offset](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name) -> void
+        auto periodic_lambda = [&offset](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name)
         { 
             std::printf(" / %s (core 0)\n", task_name.c_str());
 
@@ -2383,7 +2383,7 @@ void test_tasks_priority()
     LOG_INFO("-- tasks with priority --");
     print_stats();
 
-    auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
+    auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
