@@ -45,6 +45,10 @@
 #include <variant>
 #include <vector>
 
+#if !defined(FREERTOS_PLATFORM)
+#include <exception>
+#endif
+
 #include "CException/CException.h"
 #include "bytepack/bytepack.hpp"
 #define CJSONPP_NO_EXCEPTION
@@ -2387,9 +2391,11 @@ void test_tasks_priority()
 
     auto context = std::make_shared<smp_task_context>();
 
-    worker_task1 task1(startup, context, "worker_task1", 2048, tools::base_task::run_on_all_cores, 0 /* lo prio */);
+    constexpr const auto task1_stack_size = 2048U;
+    constexpr const auto task1_priority = 0; // lo prio 
+    worker_task1 task1(startup, context, "worker_task1", task1_stack_size, tools::base_task::run_on_all_cores, task1_priority);
 
-    auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name) -> void
+    auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name)
     {
         (void)context;
         static int count = 0;
@@ -2397,19 +2403,21 @@ void test_tasks_priority()
         ++count;
 
         // delegate work on lower priority task
-        task1.delegate([](auto context, const auto& task_name) -> void
+        task1.delegate([](auto context, const auto& task_name)
         {
             (void)context;
             std::printf("%s (lo prio): work\n", task_name.c_str());
         });
     };
 
-    // 20 ms period
-    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(100); 
-    periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, tools::base_task::run_on_all_cores, 3 /* prio + 3 */); 
+    constexpr const auto period_ms = 100;
+    constexpr const auto task0_stack_size = 4096U;
+    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(period_ms); 
+    periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, task0_stack_size, tools::base_task::run_on_all_cores, 3 /* prio + 3 */); 
 
     // sleep 2 sec
-    tools::sleep_for(2000);
+    constexpr const auto sleep_time_ms = 2000;
+    tools::sleep_for(sleep_time_ms);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -2542,7 +2550,7 @@ void test_hardware_timer_interrupt()
 
 void runner()
 {
-    
+
 #if defined(ESP_PLATFORM)
     test_hardware_timer_interrupt();
 #endif
@@ -2617,7 +2625,7 @@ void v_task_code(void* pv_parameters)
 }
 
 // Function that creates a task.
-void launch_runner(void)
+void launch_runner(void) noexcept
 {
     TaskHandle_t x_handle = nullptr;
 
@@ -2637,17 +2645,31 @@ void launch_runner(void)
 #endif
 //--------------------------------------------------------------------------------------------------------------------------------
 
+#if !defined(FREERTOS_PLATFORM)
+void runner_except_catch()
+{
+    try
+    {
+        runner();
+    }
+    catch(std::exception& exc)
+    {
+        LOG_ERROR("Exception catched - %s", exc.what());
+    }
+}
+#endif
+
 #if defined(FREERTOS_PLATFORM)
-extern "C" void app_main()
+extern "C" void app_main() noexcept
 #else
-int main()
+int main() noexcept
 #endif
 {
 
 #if defined(FREERTOS_PLATFORM)
     launch_runner();
 #else
-    runner();
+    runner_except_catch();
     return 0;
 #endif
 }
