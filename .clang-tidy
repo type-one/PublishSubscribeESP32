@@ -1,4 +1,4 @@
-Checks:          'clang-diagnostic-*,clang-analyzer-*,modernize-*,performance-*,readability-*,bugprone-*,fuchsia-*,cppcoreguidelines-*,-modernize-use-trailing-return-type,-cppcoreguidelines-pro-type-vararg,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-bounds-pointer-arithmetic,bugprone-*,-bugprone-suspicious-include,-fuchsia-default-arguments-calls'
+Checks:          'clang-diagnostic-*,clang-analyzer-*,modernize-*,performance-*,readability-*,bugprone-*,fuchsia-*,cppcoreguidelines-*,-modernize-use-trailing-return-type,-cppcoreguidelines-pro-type-vararg,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-bounds-pointer-arithmetic,bugprone-*,-bugprone-suspicious-include,-fuchsia-default-arguments-calls,-fuchsia-overloaded-operator'
 WarningsAsErrors: false
 HeaderFilterRegex: ''
 AnalyzeTemporaryDtors: true

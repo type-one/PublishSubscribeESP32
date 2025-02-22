@@ -13,6 +13,8 @@
 
 #include "cJSON/cJSON.h"
 
+// modified for clang-tidy checks
+
 // clang-format off
 #if defined(CJSONPP_NO_EXCEPTION)
 #include "tools/logger.hpp"
@@ -50,7 +52,7 @@ namespace cjsonpp
             Holder(cJSON* obj, bool own);
             ~Holder();
 
-            cJSON* operator->();
+            cJSON* operator->() const;
 
             // no copy constructor
             explicit Holder(const Holder&) = delete;
@@ -91,13 +93,13 @@ namespace cjsonpp
         JSONObject();
 
         // non-virtual destructor (no subclassing intended)
-        ~JSONObject();
+        ~JSONObject() = default;
 
         // wrap existing cJSON object
         JSONObject(cJSON* obj, bool own);
 
         // wrap existing cJSON object with parent
-        JSONObject(JSONObject parent, cJSON* obj, bool own);
+        JSONObject(const JSONObject& parent, cJSON* obj, bool own);
 
         // create boolean object
         explicit JSONObject(bool value);
@@ -153,7 +155,7 @@ namespace cjsonpp
         }
 
         // copy constructor
-        JSONObject(const JSONObject& other);
+        JSONObject(const JSONObject& other) = default;
 
         // copy operator
         JSONObject& operator=(const JSONObject& other);

@@ -106,7 +106,8 @@ void test_ring_buffer()
     LOG_INFO("-- ring buffer --");
     print_stats();
 
-    auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
+    constexpr const std::size_t queue_size = 64U;
+    auto str_queue = std::make_unique<tools::ring_buffer<std::string, queue_size>>();
 
     str_queue->emplace("toto1");
     str_queue->emplace("toto2");
@@ -132,7 +133,8 @@ void test_ring_vector()
     LOG_INFO("-- ring vector --");
     print_stats();
 
-    auto str_queue = std::make_unique<tools::ring_vector<std::string>>(64U);
+    constexpr const std::size_t queue_size = 64U;
+    auto str_queue = std::make_unique<tools::ring_vector<std::string>>(queue_size);
 
     str_queue->emplace("toto1");
     str_queue->emplace("toto2");
@@ -158,13 +160,15 @@ void test_ring_vector_resize()
     LOG_INFO("-- ring vector resize --");
     print_stats();
 
-    auto str_queue = std::make_unique<tools::ring_vector<std::string>>(3U);
+    constexpr const std::size_t queue_size = 3U; 
+    auto str_queue = std::make_unique<tools::ring_vector<std::string>>(queue_size);
 
     str_queue->emplace("toto1");
     str_queue->emplace("toto2");
     str_queue->emplace("toto3");
 
-    str_queue->resize(5U);
+    constexpr const std::size_t new_queue_size = 5U;
+    str_queue->resize(new_queue_size);
 
     str_queue->emplace("toto4");
     str_queue->emplace("toto5");
@@ -221,7 +225,8 @@ void test_ring_buffer_iteration()
     print_stats();
 
     {
-        auto str_queue = std::make_unique<tools::ring_buffer<std::string, 64U>>();
+        constexpr const std::size_t queue_size = 64U;
+        auto str_queue = std::make_unique<tools::ring_buffer<std::string, queue_size>>();
 
         str_queue->emplace("toto1");
         str_queue->emplace("toto2");
@@ -292,7 +297,8 @@ void test_ring_buffer_iteration()
             std::printf("%s\n", (*str_queue)[i].c_str());
         }
 
-        const std::size_t remove_count = str_queue->size() - 5U;
+        constexpr const std::size_t nb_of_items_to_keep = 5U;
+        const std::size_t remove_count = str_queue->size() - nb_of_items_to_keep;
         for (std::size_t i = 0U; i < remove_count; ++i)
         {
             str_queue->pop();
@@ -313,7 +319,8 @@ void test_ring_buffer_iteration()
     }
 
     {
-        auto val_queue = std::make_unique<tools::ring_buffer<double, 64U>>();
+        constexpr const std::size_t queue_size = 64U;
+        auto val_queue = std::make_unique<tools::ring_buffer<double, queue_size>>();
 
         val_queue->emplace(5.6);
         val_queue->emplace(7.2);
@@ -329,7 +336,7 @@ void test_ring_buffer_iteration()
             std::printf("%f\n", (*val_queue)[i]);
         }
 
-        std::size_t cnt = val_queue->size() - 1U;
+        std::size_t cnt = val_queue->size() - 1U; // NOLINT
 
         for (std::size_t i = 0U; i < cnt; ++i)
         {
@@ -536,7 +543,8 @@ void test_lock_free_ring_buffer()
     LOG_INFO("-- lock free ring buffer --");
     print_stats();
 
-    auto str_queue = std::make_unique<tools::lock_free_ring_buffer<std::uint8_t, 3U>>();
+    constexpr const std::size_t queue_size_pow2 = 3U;
+    auto str_queue = std::make_unique<tools::lock_free_ring_buffer<std::uint8_t, queue_size_pow2>>();
     bool result = false;
 
     result = str_queue->push(1U);

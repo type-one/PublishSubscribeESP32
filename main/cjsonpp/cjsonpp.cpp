@@ -1,3 +1,4 @@
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -11,6 +12,8 @@
 #define CJSONPP_NO_EXCEPTION
 #include "cJSON/cJSON.h"
 #include "cjsonpp/cjsonpp.hpp"
+
+// modified for clang-tidy checks
 
 namespace cjsonpp
 {
@@ -28,7 +31,7 @@ namespace cjsonpp
         }
     }
 
-    cJSON* JSONObject::Holder::operator->()
+    cJSON* JSONObject::Holder::operator->() const
     {
         return o;
     }
@@ -42,7 +45,7 @@ namespace cjsonpp
     {
         char* json = formatted ? cJSON_Print(obj_->o) : cJSON_PrintUnformatted(obj_->o);
         std::string retval(json);
-        std::free(json);
+        std::free(json); // NOLINT allocated from C with malloc
         return retval;
     }
 
@@ -59,12 +62,7 @@ namespace cjsonpp
         , refs_(new ObjectSet)
     {
     }
-
-    // non-virtual destructor (no subclassing intended)
-    JSONObject::~JSONObject()
-    {
-    }
-
+ 
     // wrap existing cJSON object
     JSONObject::JSONObject(cJSON* obj, bool own)
         : obj_(new Holder(obj, own))
@@ -73,7 +71,7 @@ namespace cjsonpp
     }
 
     // wrap existing cJSON object with parent
-    JSONObject::JSONObject(JSONObject parent, cJSON* obj, bool own)
+    JSONObject::JSONObject(const JSONObject& parent, cJSON* obj, bool own)
         : obj_(new Holder(obj, own))
         , refs_(new ObjectSet)
     {
@@ -115,13 +113,6 @@ namespace cjsonpp
     {
     }
 
-    // copy constructor
-    JSONObject::JSONObject(const JSONObject& other)
-        : obj_(other.obj_)
-        , refs_(other.refs_)
-    {
-    }
-
     // copy operator
     JSONObject& JSONObject::operator=(const JSONObject& other)
     {
@@ -136,8 +127,10 @@ namespace cjsonpp
     // get object type
     JSONType JSONObject::type() const
     {
-        static JSONType vmap[] = { Bool, Bool, Null, Number, String, Array, Object };
-        return vmap[(*obj_)->type & 0xff];
+        constexpr const std::size_t nb_json_types = 7U;
+        static std::array<JSONType, nb_json_types> vmap = { Bool, Bool, Null, Number, String, Array, Object };
+        constexpr const int mask = 0xff;
+        return vmap.at((*obj_)->type & mask);
     }
 
     bool JSONObject::has(const char* name) const
@@ -159,16 +152,17 @@ namespace cjsonpp
     // remove item from object
     void JSONObject::remove(const char* name)
     {
-        if (((*obj_)->type & 0xff) != cJSON_Object)
+        constexpr const int mask = 0xff;
+        if (((*obj_)->type & mask) != cJSON_Object)
         {
-            CJSONPP_THROW("Not an object type", (*obj_)->type & 0xff);
+            CJSONPP_THROW("Not an object type", (*obj_)->type & mask);
         }
         cJSON* detached = cJSON_DetachItemFromObject(obj_->o, name);
-        if (!detached)
+        if (nullptr == detached)
         {
             CJSONPP_THROW("No such item", 0);
         }
-        for (ObjectSet::iterator it = refs_->begin(); it != refs_->end(); it++)
+        for (auto it = refs_->begin(); it != refs_->end(); it++)
         {
             if (it->obj_->o == detached)
             {
@@ -187,16 +181,17 @@ namespace cjsonpp
     // remove item from array
     void JSONObject::remove(int index)
     {
-        if (((*obj_)->type & 0xff) != cJSON_Array)
+        constexpr const int mask = 0xff;
+        if (((*obj_)->type & mask) != cJSON_Array)
         {
-            CJSONPP_THROW("Not an array type", (*obj_)->type & 0xff);
+            CJSONPP_THROW("Not an array type", (*obj_)->type & mask);
         }
         cJSON* detached = cJSON_DetachItemFromArray(obj_->o, index);
-        if (!detached)
+        if (nullptr == detached)
         {
             CJSONPP_THROW("No such item", 0);
         }
-        for (ObjectSet::iterator it = refs_->begin(); it != refs_->end(); it++)
+        for (auto it = refs_->begin(); it != refs_->end(); it++)
         {
             if (it->obj_->o == detached)
             {
@@ -215,7 +210,7 @@ namespace cjsonpp
         {
             CJSONPP_THROW("Parse error", 0);
         }
-        return JSONObject(cjson, true);
+        return {cjson, true};
     }
 
     // parse from std::string
@@ -227,13 +222,13 @@ namespace cjsonpp
     // create null object
     JSONObject nullObject()
     {
-        return JSONObject(cJSON_CreateNull(), true);
+        return {cJSON_CreateNull(), true};
     }
 
     // create empty array object
     JSONObject arrayObject()
     {
-        return JSONObject(cJSON_CreateArray(), true);
+        return {cJSON_CreateArray(), true};
     }
 
 } // namespace cjsonpp

@@ -4,11 +4,12 @@
     Copyright (c) 2007-24 Mark VanderVoord
     SPDX-License-Identifier: MIT
 ========================================================================= */
+// modified for clang-tidy checks
 
 #ifndef CEXCEPTION_H_
 #define CEXCEPTION_H_
 
-#include <setjmp.h>
+#include <setjmp.h> // NOLINT C header
 
 #ifdef __cplusplus
 extern "C"
@@ -16,9 +17,9 @@ extern "C"
 #endif
 
 
-#define CEXCEPTION_VERSION_MAJOR 1
-#define CEXCEPTION_VERSION_MINOR 3
-#define CEXCEPTION_VERSION_BUILD 4
+#define CEXCEPTION_VERSION_MAJOR 1 // NOLINT C header
+#define CEXCEPTION_VERSION_MINOR 3 // NOLINT C header
+#define CEXCEPTION_VERSION_BUILD 4 // NOLINT C header
 #define CEXCEPTION_VERSION                                                                                             \
     ((CEXCEPTION_VERSION_MAJOR << 16) | (CEXCEPTION_VERSION_MINOR << 8) | CEXCEPTION_VERSION_BUILD)
 
@@ -73,14 +74,14 @@ extern "C"
 #endif
 
     // exception frame structures
-    typedef struct
+    typedef struct // NOLINT C header
     {
         jmp_buf* pFrame;
         CEXCEPTION_T volatile Exception;
     } CEXCEPTION_FRAME_T;
 
     // actual root frame storage (only one if single-tasking)
-    extern volatile CEXCEPTION_FRAME_T CExceptionFrames[];
+    extern volatile CEXCEPTION_FRAME_T CExceptionFrames[];  // NOLINT C header
 
 // clang-format off
 //Try (see C file for explanation)
@@ -96,7 +97,7 @@ extern "C"
             if (1)
 
 //Catch (see C file for explanation)
-#define Catch(e)                                                    \
+#define Catch(e)         /* NOLINT C Header */                      \
             else { }                                                \
             CExceptionFrames[MY_ID].Exception = CEXCEPTION_NONE;    \
             CEXCEPTION_HOOK_HAPPY_TRY;                              \
@@ -117,7 +118,7 @@ extern "C"
     void Throw(CEXCEPTION_T ExceptionID);
 
 // Just exit the Try block and skip the Catch.
-#define ExitTry() Throw(CEXCEPTION_NONE)
+#define ExitTry() Throw(CEXCEPTION_NONE)  // NOLINT C header
 
 #ifdef __cplusplus
 } // extern "C"

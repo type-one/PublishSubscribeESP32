@@ -4,6 +4,7 @@
     Copyright (c) 2007-24 Mark VanderVoord
     SPDX-License-Identifier: MIT
 ========================================================================= */
+// modified for clang-tidy checks
 
 #include "CException.h"
 
@@ -12,7 +13,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
-volatile CEXCEPTION_FRAME_T CExceptionFrames[CEXCEPTION_NUM_ID] = { { 0 } };
+volatile CEXCEPTION_FRAME_T CExceptionFrames[CEXCEPTION_NUM_ID] = { { 0 } };  // NOLINT C
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
@@ -24,10 +25,10 @@ volatile CEXCEPTION_FRAME_T CExceptionFrames[CEXCEPTION_NUM_ID] = { { 0 } };
 void Throw(CEXCEPTION_T ExceptionID)
 {
     unsigned int MY_ID = CEXCEPTION_GET_ID;
-    CExceptionFrames[MY_ID].Exception = ExceptionID;
-    if (CExceptionFrames[MY_ID].pFrame)
+    CExceptionFrames[MY_ID].Exception = ExceptionID; // NOLINT C
+    if (CExceptionFrames[MY_ID].pFrame)              // NOLINT C
     {
-        longjmp(*CExceptionFrames[MY_ID].pFrame, 1);
+        longjmp(*CExceptionFrames[MY_ID].pFrame, 1); // NOLINT C
     }
     CEXCEPTION_NO_CATCH_HANDLER(ExceptionID);
 }
