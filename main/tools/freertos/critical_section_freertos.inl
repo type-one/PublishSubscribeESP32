@@ -33,7 +33,7 @@
 
 namespace tools
 {
-    class critical_section : public non_copyable
+    class critical_section : public non_copyable // NOLINT inherits from non copyable and non movable
     {
     public:
         critical_section()
@@ -53,7 +53,7 @@ namespace tools
             }
         }
 
-        void lock()
+        void lock() // NOLINT keep same interface than standard mutex
         {
             if (nullptr != m_mutex)
             {
@@ -63,11 +63,11 @@ namespace tools
             }
         }
 
-        void isr_lock()
+        void isr_lock() // NOLINT keep same interface than standard implementation
         {
             if (nullptr != m_mutex)
             {
-                BaseType_t px_higher_priority_task_woken = pdFALSE;
+                BaseType_t px_higher_priority_task_woken = pdFALSE; // NOLINT initialized to pdFALSE
                 while (xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken) != pdTRUE)
                 {
                     portYIELD_FROM_ISR(px_higher_priority_task_woken);
@@ -76,7 +76,7 @@ namespace tools
             }
         }
 
-        bool try_lock()
+        bool try_lock() // NOLINT keep same interface than standard mutex
         {
             bool result = false;
 
@@ -88,13 +88,13 @@ namespace tools
             return result;
         }
 
-        bool try_isr_lock()
+        bool try_isr_lock() // NOLINT keep same interface than standard implementation
         {
             bool result = false;
 
             if (nullptr != m_mutex)
             {
-                BaseType_t px_higher_priority_task_woken = pdFALSE;
+                BaseType_t px_higher_priority_task_woken = pdFALSE; // NOLINT initialized to pdFALSE
                 result = (pdTRUE == xSemaphoreTakeFromISR(m_mutex, &px_higher_priority_task_woken));
                 portYIELD_FROM_ISR(px_higher_priority_task_woken);
             }
@@ -102,7 +102,7 @@ namespace tools
             return result;
         }
 
-        void unlock()
+        void unlock() // NOLINT keep same interface than standard mutex
         {
             if (nullptr != m_mutex)
             {
@@ -110,22 +110,22 @@ namespace tools
             }
         }
 
-        void isr_unlock()
+        void isr_unlock() // NOLINT keep same interface than standard implementation
         {
             if (nullptr != m_mutex)
             {
-                BaseType_t px_higher_priority_task_woken = pdFALSE;
+                BaseType_t px_higher_priority_task_woken = pdFALSE; // NOLINT initialized to pdFALSE
                 xSemaphoreGiveFromISR(m_mutex, &px_higher_priority_task_woken);
                 portYIELD_FROM_ISR(px_higher_priority_task_woken);
             }
         }
 
     private:
-        SemaphoreHandle_t m_mutex;
+        SemaphoreHandle_t m_mutex = {};
     };
 
     template <typename T>
-    class isr_lock_guard : public non_copyable
+    class isr_lock_guard : public non_copyable // NOLINT inherits from non copyable and non movable
     {
     public:
         isr_lock_guard() = delete;

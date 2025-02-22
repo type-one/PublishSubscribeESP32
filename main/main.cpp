@@ -843,11 +843,13 @@ static void generic_function(std::shared_ptr<my_generic_task_context> context, c
 {
     std::printf("starting generic task %s\n", task_name.c_str());
 
+    constexpr const int sleeping_time_ms = 250;
+
     while (!context->stop_tasks.load())
     {
-        tools::sleep_for(250);
+        tools::sleep_for(sleeping_time_ms);
         std::printf("loop generic task %s\n", task_name.c_str());
-        tools::sleep_for(250);
+        tools::sleep_for(sleeping_time_ms);
     }
 
     std::printf("ending generic task %s\n", task_name.c_str());
@@ -862,10 +864,12 @@ void test_generic_task()
     {
         std::printf("starting generic task %s\n", task_name.c_str());
 
+        constexpr const int sleeping_time_ms = 500;
+
         while (!context->stop_tasks.load())
         {
             std::printf("loop generic task %s\n", task_name.c_str());
-            tools::sleep_for(500);
+            tools::sleep_for(sleeping_time_ms);
         }
 
         std::printf("ending generic task %s\n", task_name.c_str());
@@ -874,15 +878,18 @@ void test_generic_task()
     auto context = std::make_shared<my_generic_task_context>();
     context->stop_tasks.store(false);
 
-    my_generic_task task1(std::move(lambda), context, "my_generic_task1", 2048U);
-    my_generic_task task2(std::move(generic_function), context, "my_generic_task2", 2048U);
+    constexpr const std::size_t stack_size = 2048U;
 
-    // sleep 2 sec
-    tools::sleep_for(2000);
+    my_generic_task task1(std::move(lambda), context, "my_generic_task1", stack_size);
+    my_generic_task task2(std::move(generic_function), context, "my_generic_task2", stack_size);
+
+    constexpr const int wait_tasks_time_ms = 2000;
+    tools::sleep_for(wait_tasks_time_ms);
 
     context->stop_tasks.store(true);
 
-    tools::sleep_for(1000);
+    constexpr const int wait_join_ms = 1000;
+    tools::sleep_for(wait_join_ms);
 
     std::printf("join tasks\n");
 }
@@ -916,13 +923,17 @@ void test_periodic_task()
     };
 
     auto context = std::make_shared<my_periodic_task_context>();
-    // 20 ms period
-    constexpr const auto period = std::chrono::duration<std::uint64_t, std::micro>(20000);
+
+    constexpr const int period_20ms = 20000;
+    constexpr const auto period = std::chrono::duration<std::uint64_t, std::micro>(period_20ms);
     const auto start_timepoint = std::chrono::high_resolution_clock::now();
-    my_periodic_task task1(startup, lambda, context, "my_periodic_task", period, 2048U);
+
+    constexpr const std::size_t stack_size = 2048U;
+    my_periodic_task task1(startup, lambda, context, "my_periodic_task", period, stack_size);
 
     // sleep 2 sec
-    tools::sleep_for(2000);
+    constexpr const int wait_task_startup_ms = 2000;
+    tools::sleep_for(wait_task_startup_ms);
 
     std::printf("nb of periodic loops = %d\n", context->loop_counter.load());
 
