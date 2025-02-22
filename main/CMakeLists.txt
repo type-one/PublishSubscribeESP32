@@ -1,3 +1,6 @@
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+#set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
+
 # Local header files here ONLY
 file(GLOB_RECURSE TARGET_H
     *.h

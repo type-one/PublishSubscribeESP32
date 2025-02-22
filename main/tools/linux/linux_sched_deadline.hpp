@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__LINUX_SCHED_DEADLINE_HPP__)
-#define __LINUX_SCHED_DEADLINE_HPP__
+#if !defined(LINUX_SCHED_DEADLINE_HPP_)
+#define LINUX_SCHED_DEADLINE_HPP_
 
 #if defined(__linux__)
 #include <algorithm>
@@ -182,4 +182,4 @@ static bool set_earliest_deadline_scheduling(
 
 #endif
 
-#endif // __LINUX_SCHED_DEADLINE_HPP__
+#endif // LINUX_SCHED_DEADLINE_HPP_

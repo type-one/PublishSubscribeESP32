@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__LOCK_FREE_RING_BUFFER_HPP__)
-#define __LOCK_FREE_RING_BUFFER_HPP__
+#if !defined(LOCK_FREE_RING_BUFFER_HPP_)
+#define LOCK_FREE_RING_BUFFER_HPP_
 
 #include <array>
 #include <atomic>
@@ -129,4 +129,4 @@ namespace tools
     };
 }
 
-#endif //  __LOCK_FREE_RING_BUFFER_HPP__
+#endif //  LOCK_FREE_RING_BUFFER_HPP_

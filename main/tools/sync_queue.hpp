@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__SYNC_QUEUE_HPP__)
-#define __SYNC_QUEUE_HPP__
+#if !defined(SYNC_QUEUE_HPP_)
+#define SYNC_QUEUE_HPP_
 
 #include <mutex>
 #include <queue>
@@ -37,7 +37,7 @@
 namespace tools
 {
     template <typename T>
-    class sync_queue : public non_copyable
+    class sync_queue : public non_copyable // NOLINT inherits from non copyable/non movable
     {
     public:
         sync_queue() = default;
@@ -113,4 +113,4 @@ namespace tools
     };
 }
 
-#endif //  __SYNC_QUEUE_HPP__
+#endif //  SYNC_QUEUE_HPP_

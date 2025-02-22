@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__GZIP_WRAPPER_HPP__)
-#define __GZIP_WRAPPER_HPP__
+#if !defined(GZIP_WRAPPER_HPP_)
+#define GZIP_WRAPPER_HPP_
 
 #include <cstdint>
 #include <vector>
@@ -51,4 +51,4 @@ namespace tools
     };
 }
 
-#endif //  __GZIP_WRAPPER_HPP__
+#endif //  GZIP_WRAPPER_HPP_

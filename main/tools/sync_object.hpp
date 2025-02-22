@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__SYNC_OBJECT_HPP__)
-#define __SYNC_OBJECT_HPP__
+#if !defined(SYNC_OBJECT_HPP_)
+#define SYNC_OBJECT_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/sync_object_std.inl"
 #endif
 
-#endif //  __SYNC_OBJECT_HPP__
+#endif //  SYNC_OBJECT_HPP_

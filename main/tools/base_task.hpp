@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__BASE_TASK_HPP__)
-#define __BASE_TASK_HPP__
+#if !defined(BASE_TASK_HPP_)
+#define BASE_TASK_HPP_
 
 #include <string>
 
@@ -87,4 +87,4 @@ namespace tools
 }
 
 
-#endif //  __BASE_TASK_HPP__
+#endif //  BASE_TASK_HPP_

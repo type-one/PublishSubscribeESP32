@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__GENERIC_TASK_HPP__)
-#define __GENERIC_TASK_HPP__
+#if !defined(GENERIC_TASK_HPP_)
+#define GENERIC_TASK_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/generic_task_std.inl"
 #endif
 
-#endif //  __GENERIC_TASK_HPP__
+#endif //  GENERIC_TASK_HPP_

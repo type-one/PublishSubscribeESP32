@@ -5,8 +5,8 @@
     SPDX-License-Identifier: MIT
 ========================================================================= */
 
-#ifndef _CEXCEPTION_H
-#define _CEXCEPTION_H
+#ifndef CEXCEPTION_H_
+#define CEXCEPTION_H_
 
 #include <setjmp.h>
 
@@ -124,4 +124,4 @@ extern "C"
 #endif
 
 
-#endif // _CEXCEPTION_H
+#endif // CEXCEPTION_H_

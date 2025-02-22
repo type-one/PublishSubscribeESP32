@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__PLATFORM_HELPERS_HPP__)
-#define __PLATFORM_HELPERS_HPP__
+#if !defined(PLATFORM_HELPERS_HPP_)
+#define PLATFORM_HELPERS_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/platform_helpers_std.inl"
 #endif
 
-#endif //  __PLATFORM_HELPERS_HPP__
+#endif //  PLATFORM_HELPERS_HPP_

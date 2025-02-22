@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__DATA_TASK_HPP__)
-#define __DATA_TASK_HPP__
+#if !defined(DATA_TASK_HPP_)
+#define DATA_TASK_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/data_task_std.inl"
 #endif
 
-#endif //  __DATA_TASK_HPP__
+#endif //  DATA_TASK_HPP_

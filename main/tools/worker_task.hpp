@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__WORKER_TASK_HPP__)
-#define __WORKER_TASK_HPP__
+#if !defined(WORKER_TASK_HPP_)
+#define WORKER_TASK_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/worker_task_std.inl"
 #endif
 
-#endif //  __WORKER_TASK_HPP__
+#endif //  WORKER_TASK_HPP_

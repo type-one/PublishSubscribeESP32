@@ -2499,14 +2499,17 @@ void test_hardware_timer_interrupt()
 
         timer_config.clk_src = GPTIMER_CLK_SRC_DEFAULT;
         timer_config.direction = GPTIMER_COUNT_UP;
-        timer_config.resolution_hz = 1 * 1000 * 1000; // 1MHz, 1 tick = 1us
+        constexpr const int one_mhz_clock = 1 * 1000 * 1000; // 1MHz, 1 tick = 1us
+        timer_config.resolution_hz = one_mhz_clock; 
 
         ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
         gptimer_alarm_config_t alarm_config = {};
 
-        alarm_config.reload_count = 0;                  // counter will reload with 0 on alarm event
-        alarm_config.alarm_count = 1000;                // period = 0.001s @resolution 1MHz
+        constexpr const int counter_reload_val = 0; // counter will reload with 0 on alarm event
+        constexpr const int period_1ms = 1000;      // period = 0.001s @resolution 1MHz
+        alarm_config.reload_count = counter_reload_val;                  
+        alarm_config.alarm_count = period_1ms;                
         alarm_config.flags.auto_reload_on_alarm = true; // enable auto-reload
 
         ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
@@ -2605,12 +2608,12 @@ void runner()
 constexpr const std::size_t stack_size = 8192;
 
 // Structure that will hold the TCB of the task being created.
-StaticTask_t x_task_buffer = {};
+StaticTask_t x_task_buffer = {}; // NOLINT required for xTaskCreateStatic
 
 // Buffer that the task being created will use as its stack.  Note this is
 // an array of StackType_t variables.  The size of StackType_t is dependent on
 // the RTOS port.
-StackType_t x_stack[stack_size] = {};
+std::array<StackType_t, stack_size> x_stack = {}; // NOLINT required for xTaskCreateStatic
 
 // Function that implements the task being created.
 void v_task_code(void* pv_parameters)
@@ -2625,7 +2628,7 @@ void v_task_code(void* pv_parameters)
 }
 
 // Function that creates a task.
-void launch_runner(void) noexcept
+void launch_runner() noexcept
 {
     TaskHandle_t x_handle = nullptr;
 
@@ -2633,9 +2636,9 @@ void launch_runner(void) noexcept
     x_handle = xTaskCreateStatic(v_task_code, // Function that implements the task.
         "RUNNER",                             // Text name for the task.
         stack_size,                           // Stack size in bytes, not words.
-        (void*)1,                             // Parameter passed into the task.
+        reinterpret_cast<void*>(1),           // Parameter passed into the task.
         tskIDLE_PRIORITY,                     // Priority at which the task is created.
-        x_stack,                              // Array to use as the task's stack.
+        x_stack.data(),                       // Array to use as the task's stack.
         &x_task_buffer);                      // Variable to hold the task's data structure.
 
     (void)x_handle;

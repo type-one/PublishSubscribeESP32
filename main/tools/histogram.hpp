@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__HISTOGRAM_HPP__)
-#define __HISTOGRAM_HPP__
+#if !defined(HISTOGRAM_HPP_)
+#define HISTOGRAM_HPP_
 
 #include <algorithm>
 #include <cmath>
@@ -178,4 +178,4 @@ namespace tools
     };
 }
 
-#endif //  __HISTOGRAM_HPP__
+#endif //  HISTOGRAM_HPP_

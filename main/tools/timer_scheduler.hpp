@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__TIMER_SCHEDULER_HPP__)
-#define __TIMER_SCHEDULER_HPP__
+#if !defined(TIMER_SCHEDULER_HPP_)
+#define TIMER_SCHEDULER_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/timer_scheduler_std.inl"
 #endif
 
-#endif //  __TIMER_SCHEDULER_HPP__
+#endif //  TIMER_SCHEDULER_HPP_

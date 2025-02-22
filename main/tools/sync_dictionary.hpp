@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__SYNC_DICTIONARY_HPP__)
-#define __SYNC_DICTIONARY_HPP__
+#if !defined(SYNC_DICTIONARY_HPP_)
+#define SYNC_DICTIONARY_HPP_
 
 #include <cstddef>
 #include <map>
@@ -123,4 +123,4 @@ namespace tools
     };
 }
 
-#endif //  __SYNC_DICTIONARY_HPP__
+#endif //  SYNC_DICTIONARY_HPP_

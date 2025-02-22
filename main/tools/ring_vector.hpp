@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__RING_VECTOR_HPP__)
-#define __RING_VECTOR_HPP__
+#if !defined(RING_VECTOR_HPP_)
+#define RING_VECTOR_HPP_
 
 #include <algorithm>
 #include <cstddef>
@@ -239,4 +239,4 @@ namespace tools
     };
 }
 
-#endif //  __RING_VECTOR_HPP__
+#endif //  RING_VECTOR_HPP_

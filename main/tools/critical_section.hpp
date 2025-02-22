@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__CRITICAL_SECTION_HPP__)
-#define __CRITICAL_SECTION_HPP__
+#if !defined(CRITICAL_SECTION_HPP_)
+#define CRITICAL_SECTION_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/critical_section_std.inl"
 #endif
 
-#endif //  __CRITICAL_SECTION_HPP__
+#endif //  CRITICAL_SECTION_HPP_

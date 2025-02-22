@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__MEMORY_PIPE_HPP__)
-#define __MEMORY_PIPE_HPP__
+#if !defined(MEMORY_PIPE_HPP_)
+#define MEMORY_PIPE_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/memory_pipe_std.inl"
 #endif
 
-#endif //  __MEMORY_PIPE_HPP__
+#endif //  MEMORY_PIPE_HPP_

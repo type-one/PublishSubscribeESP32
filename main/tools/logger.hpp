@@ -26,8 +26,11 @@
 
 #pragma once
 
-#if !defined(__LOGGER_HPP__)
-#define __LOGGER_HPP__
+#if !defined(LOGGER_HPP_)
+#define LOGGER_HPP_
+
+#include <filesystem>
+#include <string>
 
 #if defined(ESP_PLATFORM)
 #if defined(DEBUG)
@@ -41,18 +44,22 @@
 #endif
 
 #if defined(__func__)
-#define _FUNCTION_ALIAS_ __func__
+#define FUNCTION_ALIAS_ __func__
 #else
-#define _FUNCTION_ALIAS_ __FUNCTION__
+#define FUNCTION_ALIAS_ __FUNCTION__
 #endif
 
 #if defined(__FILE_BASENAME__)
-#define _FILE_ALIAS_ __FILE_BASENAME__
+#define FILE_ALIAS_ __FILE_BASENAME__
+#define FILE_ALIAS_STR std::string{FILE_ALIAS_}
 #elif defined(__FILE_NAME__)
-#define _FILE_ALIAS_ __FILE_NAME__
+#define FILE_ALIAS_ __FILE_NAME__
+#define FILE_ALIAS_STR std::string{FILE_ALIAS_}
 #else
-#define _FILE_ALIAS_ __FILE__
+#define FILE_ALIAS_STR std::filesystem::path(__FILE__).filename()
+#define FILE_ALIAS_ (FILE_ALIAS_STR).c_str()
 #endif
+
 
 #if defined(ESP_PLATFORM)
 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/log.html
@@ -61,11 +68,11 @@
 // ESP_LOGI - Info
 // ESP_LOGD - Debug
 // ESP_LOGV - Verbose (highest)
-#define LOG_ERROR(...) ESP_LOGE(_FUNCTION_ALIAS_, __VA_ARGS__)
-#define LOG_WARNING(...) ESP_LOGW(_FUNCTION_ALIAS_, __VA_ARGS__)
-#define LOG_INFO(...) ESP_LOGI(_FUNCTION_ALIAS_, __VA_ARGS__)
-#define LOG_DEBUG(...) ESP_LOGD(_FUNCTION_ALIAS_, __VA_ARGS__)
-#define LOG_VERBOSE(...) ESP_LOGV(_FUNCTION_ALIAS_, __VA_ARGS__)
+#define LOG_ERROR(...) ESP_LOGE((FILE_ALIAS_STR + " [" + FUNCTION_ALIAS_ + ", line " + std::to_string(__LINE__) + "] ").c_str(), __VA_ARGS__)   // NOLINT
+#define LOG_WARNING(...) ESP_LOGW((FILE_ALIAS_STR + " [" + FUNCTION_ALIAS_ + ", line " + std::to_string(__LINE__) + " ]").c_str(), __VA_ARGS__) // NOLINT
+#define LOG_INFO(...) ESP_LOGI((FILE_ALIAS_STR + " [" + FUNCTION_ALIAS_ + ", line " + std::to_string(__LINE__) + "] ").c_str(), __VA_ARGS__)    // NOLINT
+#define LOG_DEBUG(...) ESP_LOGD((FILE_ALIAS_STR + " [" + FUNCTION_ALIAS_ + ", line " + std::to_string(__LINE__) + "] ").c_str(), __VA_ARGS__)   // NOLINT
+#define LOG_VERBOSE(...) ESP_LOGV((FILE_ALIAS_STR + " [" + FUNCTION_ALIAS_ + ", line " + std::to_string(__LINE__) + "] ").c_str(), __VA_ARGS__) // NOLINT
 
 //#elif defined(STM32_PLATFORM)
 // TODO
@@ -73,13 +80,13 @@
 
 #else
 // clang-format off
-#define LOG_ERROR(...) do { std::fprintf(stderr, "[ERROR] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false)
-#define LOG_WARNING(...) do { std::fprintf(stderr, "[WARNING] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false)
-#define LOG_INFO(...) do { std::printf("[INFO] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
+#define LOG_ERROR(...) do { std::fprintf(stderr, "[ERROR] %s [%s, line %d] ", FILE_ALIAS_, FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false)     // NOLINT
+#define LOG_WARNING(...) do { std::fprintf(stderr, "[WARNING] %s [%s, line %d] ", FILE_ALIAS_, FUNCTION_ALIAS_, __LINE__); std::fprintf(stderr, __VA_ARGS__); std::fprintf(stderr, "\n"); std::fflush(stderr); } while(false) // NOLINT
+#define LOG_INFO(...) do { std::printf("[INFO] %s [%s, line %d] ", FILE_ALIAS_, FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false) // NOLINT
 
 #if defined(DEBUG)
-#define LOG_DEBUG(...) do { std::printf("[DEBUG] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
-#define LOG_VERBOSE(...) do { std::printf("[VERBOSE] %s [function %s, line %d]", _FILE_ALIAS_, _FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)
+#define LOG_DEBUG(...) do { std::printf("[DEBUG] %s [%s, line %d] ", FILE_ALIAS_, FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false)     // NOLINT
+#define LOG_VERBOSE(...) do { std::printf("[VERBOSE] %s [%s, line %d] ", FILE_ALIAS_, FUNCTION_ALIAS_, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); std::fflush(stdout); } while(false) // NOLINT
 #else
 #define LOG_DEBUG(...)
 #define LOG_VERBOSE(...)
@@ -88,4 +95,4 @@
 // clang-format on
 #endif
 
-#endif //  __LOGGER_HPP__
+#endif //  LOGGER_HPP_

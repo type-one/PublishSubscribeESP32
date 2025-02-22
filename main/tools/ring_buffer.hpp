@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__RING_BUFFER_HPP__)
-#define __RING_BUFFER_HPP__
+#if !defined(RING_BUFFER_HPP_)
+#define RING_BUFFER_HPP_
 
 #include <array>
 #include <cstddef>
@@ -176,4 +176,4 @@ namespace tools
     };
 }
 
-#endif //  __RING_BUFFER_HPP__
+#endif //  RING_BUFFER_HPP_

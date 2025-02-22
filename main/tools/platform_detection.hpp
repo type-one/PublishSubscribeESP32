@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__PLATFORM_DETECTION_HPP__)
-#define __PLATFORM_DETECTION_HPP__
+#if !defined(PLATFORM_DETECTION_HPP_)
+#define PLATFORM_DETECTION_HPP_
 
 #if defined(ESP_PLATFORM)
 #define FREERTOS_PLATFORM
@@ -41,4 +41,4 @@
 #define FREERTOS_PLATFORM
 #endif
 
-#endif //  __PLATFORM_DETECTION_HPP__
+#endif //  PLATFORM_DETECTION_HPP_

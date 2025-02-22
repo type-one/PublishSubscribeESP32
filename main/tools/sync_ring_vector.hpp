@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__SYNC_RING_VECTOR_HPP__)
-#define __SYNC_RING_VECTOR_HPP__
+#if !defined(SYNC_RING_VECTOR_HPP_)
+#define SYNC_RING_VECTOR_HPP_
 
 #include <cstddef>
 #include <mutex>
@@ -149,4 +149,4 @@ namespace tools
     };
 }
 
-#endif //  __SYNC_RING_VECTOR_HPP__
+#endif //  SYNC_RING_VECTOR_HPP_

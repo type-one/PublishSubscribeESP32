@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__PERIODIC_TASK_HPP__)
-#define __PERIODIC_TASK_HPP__
+#if !defined(PERIODIC_TASK_HPP_)
+#define PERIODIC_TASK_HPP_
 
 #include "tools/platform_detection.hpp"
 
@@ -36,4 +36,4 @@
 #include "tools/standard/periodic_task_std.inl"
 #endif
 
-#endif //  __PERIODIC_TASK_HPP__
+#endif //  PERIODIC_TASK_HPP_

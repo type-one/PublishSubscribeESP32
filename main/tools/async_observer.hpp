@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__ASYNC_OBSERVER_HPP__)
-#define __ASYNC_OBSERVER_HPP__
+#if !defined(ASYNC_OBSERVER_HPP_)
+#define ASYNC_OBSERVER_HPP_
 
 #include <cstddef>
 #include <optional>
@@ -127,4 +127,4 @@ namespace tools
 
 }
 
-#endif //  __ASYNC_OBSERVER_HPP__
+#endif //  ASYNC_OBSERVER_HPP_

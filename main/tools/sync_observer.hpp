@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__SYNC_OBSERVER_HPP__)
-#define __SYNC_OBSERVER_HPP__
+#if !defined(SYNC_OBSERVER_HPP_)
+#define SYNC_OBSERVER_HPP_
 
 #include <cstddef>
 #include <functional>
@@ -163,4 +163,4 @@ namespace tools
 
 }
 
-#endif //  __SYNC_OBSERVER_HPP__
+#endif //  SYNC_OBSERVER_HPP_

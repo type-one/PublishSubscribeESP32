@@ -25,12 +25,11 @@
 
 #pragma once
 
-#if !defined(__VARIANT_OVERLOAD_HPP__)
-#define __VARIANT_OVERLOAD_HPP__
+#if !defined(VARIANT_OVERLOAD_HPP_)
+#define VARIANT_OVERLOAD_HPP_
 
-namespace tools
+namespace tools::detail
 {
-
     // overload pattern using variadic template
     // Rainer Grimm
     // Typically, you use the overload pattern for a std::variant.
@@ -39,17 +38,13 @@ namespace tools
     // https://www.modernescpp.com/index.php/visiting-a-std-variant-with-the-overload-pattern/
     // https://www.cppstories.com/2023/finite-state-machines-variant-cpp/
 
-    namespace detail
+    template <typename... Ts>
+    struct overload : Ts...
     {
-        template <typename... Ts>
-        struct overload : Ts...
-        {
-            using Ts::operator()...;
-        };
-        template <class... Ts>
-        overload(Ts...) -> overload<Ts...>;
-    }
-
+        using Ts::operator()...;
+    };
+    template <class... Ts>
+    overload(Ts...) -> overload<Ts...>;
 }
 
-#endif //  __VARIANT_OVERLOAD_HPP__
+#endif //  VARIANT_OVERLOAD_HPP_

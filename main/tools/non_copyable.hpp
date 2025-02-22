@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__NON_COPYABLE_HPP__)
-#define __NON_COPYABLE_HPP__
+#if !defined(NON_COPYABLE_HPP_)
+#define NON_COPYABLE_HPP_
 
 namespace tools
 {
@@ -43,4 +43,4 @@ namespace tools
     };
 }
 
-#endif //  __NON_COPYABLE_HPP__
+#endif //  NON_COPYABLE_HPP_

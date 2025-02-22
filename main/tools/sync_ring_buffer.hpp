@@ -25,8 +25,8 @@
 
 #pragma once
 
-#if !defined(__SYNC_RING_BUFFER_HPP__)
-#define __SYNC_RING_BUFFER_HPP__
+#if !defined(SYNC_RING_BUFFER_HPP_)
+#define SYNC_RING_BUFFER_HPP_
 
 #include <cstddef>
 #include <mutex>
@@ -132,4 +132,4 @@ namespace tools
     };
 }
 
-#endif //  __SYNC_RING_BUFFER_HPP__
+#endif //  SYNC_RING_BUFFER_HPP_
