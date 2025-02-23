@@ -322,12 +322,12 @@ void test_ring_buffer_iteration()
         constexpr const std::size_t queue_size = 64U;
         auto val_queue = std::make_unique<tools::ring_buffer<double, queue_size>>();
 
-        val_queue->emplace(5.6);
-        val_queue->emplace(7.2);
-        val_queue->emplace(1.2);
-        val_queue->emplace(9.1);
-        val_queue->emplace(10.1);
-        val_queue->emplace(7.5);
+        val_queue->emplace(5.6);  // NOLINT test value
+        val_queue->emplace(7.2);  // NOLINT test value
+        val_queue->emplace(1.2);  // NOLINT test value
+        val_queue->emplace(9.1);  // NOLINT test value
+        val_queue->emplace(10.1); // NOLINT test value
+        val_queue->emplace(7.5);  // NOLINT test value
 
         std::printf("content\n");
 
@@ -386,7 +386,8 @@ void test_ring_vector_iteration()
     print_stats();
 
     {
-        auto str_queue = std::make_unique<tools::ring_vector<std::string>>(64U);
+        constexpr const std::size_t array_size = 64U;
+        auto str_queue = std::make_unique<tools::ring_vector<std::string>>(array_size);
 
         str_queue->emplace("toto1");
         str_queue->emplace("toto2");
@@ -477,14 +478,15 @@ void test_ring_vector_iteration()
     }
 
     {
-        auto val_queue = std::make_unique<tools::ring_vector<double>>(64U);
+        constexpr const std::size_t array_size = 64U;
+        auto val_queue = std::make_unique<tools::ring_vector<double>>(array_size);
 
-        val_queue->emplace(5.6);
-        val_queue->emplace(7.2);
-        val_queue->emplace(1.2);
-        val_queue->emplace(9.1);
-        val_queue->emplace(10.1);
-        val_queue->emplace(7.5);
+        val_queue->emplace(5.6);  // NOLINT test value
+        val_queue->emplace(7.2);  // NOLINT test value
+        val_queue->emplace(1.2);  // NOLINT test value
+        val_queue->emplace(9.1);  // NOLINT test value
+        val_queue->emplace(10.1); // NOLINT test value
+        val_queue->emplace(7.5);  // NOLINT test value
 
         std::printf("content\n");
 
@@ -547,19 +549,19 @@ void test_lock_free_ring_buffer()
     auto str_queue = std::make_unique<tools::lock_free_ring_buffer<std::uint8_t, queue_size_pow2>>();
     bool result = false;
 
-    result = str_queue->push(1U);
-    result = str_queue->push(2U);
-    result = str_queue->push(3U);
+    result = str_queue->push(1U);           // NOLINT test value
+    result = result && str_queue->push(2U); // NOLINT test value
+    result = result && str_queue->push(3U); // NOLINT test value
 
     std::uint8_t val = 0;
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
     std::printf("expect success - %s\n", result ? "success" : "failure");
@@ -567,44 +569,44 @@ void test_lock_free_ring_buffer()
     result = str_queue->pop(val);
     std::printf("expect failure - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(1U);
-    result = str_queue->push(2U);
-    result = str_queue->push(3U);
-    result = str_queue->push(4U);
+    result = str_queue->push(1U);           // NOLINT test value
+    result = result && str_queue->push(2U); // NOLINT test value
+    result = result && str_queue->push(3U); // NOLINT test value
+    result = result && str_queue->push(4U); // NOLINT test value
 
     std::printf("expect success - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(5U);
+    result = str_queue->push(5U); // NOLINT test value
     std::printf("expect success - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(6U);
+    result = str_queue->push(6U); // NOLINT test value
     std::printf("expect success - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(7U);
+    result = str_queue->push(7U); // NOLINT test value
     std::printf("expect success - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(8U);
+    result = str_queue->push(8U); // NOLINT test value
     std::printf("expect failure - %s\n", result ? "success" : "failure");
 
     result = str_queue->pop(val);
     std::printf("%u\n", val);
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
-    result = str_queue->pop(val);
+    result = result && str_queue->pop(val);
     std::printf("%u\n", val);
 
     std::printf("expect success - %s\n", result ? "success" : "failure");
@@ -617,7 +619,8 @@ void test_sync_ring_buffer()
     LOG_INFO("-- sync ring buffer --");
     print_stats();
 
-    tools::sync_ring_buffer<std::string, 64U> str_queue;
+    constexpr const std::size_t queue_size = 64U;
+    tools::sync_ring_buffer<std::string, queue_size> str_queue;
 
     str_queue.emplace("toto");
 
@@ -635,7 +638,8 @@ void test_sync_ring_vector()
     LOG_INFO("-- sync ring vector --");
     print_stats();
 
-    tools::sync_ring_vector<std::string> str_queue(64U);
+    constexpr const std::size_t queue_size = 64U;
+    tools::sync_ring_vector<std::string> str_queue(queue_size);
 
     str_queue.emplace("toto");
 
@@ -818,7 +822,8 @@ void test_publish_subscribe()
 
     subject1->unsubscribe(my_topic::generic, "loose_coupled_handler_1");
 
-    tools::sleep_for(500);
+    constexpr const int wait_time_500ms = 500;
+    tools::sleep_for(wait_time_500ms);
 
     subject1->publish(my_topic::generic, "tintin");
 
@@ -1013,9 +1018,10 @@ void test_periodic_publish_subscribe()
 
     // "sample" with a 100 ms period
     auto context = std::make_shared<my_periodic_task_context>();
+    constexpr const std::size_t stack_size = 4096U;
     const auto period = std::chrono::duration<std::uint64_t, std::milli>(100);
     {
-        my_periodic_task periodic_task(startup, sampler, context, "sampler_task", period, 4096U);
+        my_periodic_task periodic_task(startup, sampler, context, "sampler_task", period, stack_size);
 
         tools::sleep_for(2000);
     }
@@ -1051,7 +1057,8 @@ void test_ring_buffer_commands()
     LOG_INFO("-- ring buffer commands --");
     print_stats();
 
-    tools::sync_ring_buffer<std::function<void()>, 128U> commands_queue;
+    constexpr const std::size_t commands_queue_depth = 128U;
+    tools::sync_ring_buffer<std::function<void()>, commands_queue_depth> commands_queue;
 
     commands_queue.emplace([]() { std::printf("hello\n"); });
 
@@ -1096,14 +1103,16 @@ void test_worker_tasks()
 
     auto context = std::make_shared<my_worker_task_context>();
 
-    auto task1 = std::make_unique<my_worker_task>(std::move(startup1), context, "worker_1", 4096U);
-    auto task2 = std::make_unique<my_worker_task>(std::move(startup2), context, "worker_2", 4096U);
+    constexpr const std::size_t stack_size = 4096U;
+    auto task1 = std::make_unique<my_worker_task>(std::move(startup1), context, "worker_1", stack_size);
+    auto task2 = std::make_unique<my_worker_task>(std::move(startup2), context, "worker_2", stack_size);
 
     std::default_random_engine generator;
     std::uniform_int_distribution<int> distribution(0, 1);
     std::array<std::unique_ptr<my_worker_task>, 2> tasks = { std::move(task1), std::move(task2) };
 
-    tools::sleep_for(100); // 100 ms
+    constexpr const int wait_tasks_ms = 100;
+    tools::sleep_for(wait_tasks_ms);
 
     const auto start_timepoint = std::chrono::high_resolution_clock::now();
 
@@ -1268,8 +1277,8 @@ void test_queued_bytepack_data()
             {
                 manufacturing_info info = {};
                 info.deserialize(stream);
-                std::printf(
-                    "%s\n%s\n%s\n", info.vendor_name.c_str(), info.serial_number.c_str(), info.manufacturing_date.c_str());
+                std::printf("%s\n%s\n%s\n", info.vendor_name.c_str(), info.serial_number.c_str(),
+                    info.manufacturing_date.c_str());
             }
             break;
 
@@ -1354,10 +1363,12 @@ void test_aggregated_bytepack_data()
     print_stats();
 
     aggregated_info aggr = {};
-    aggr.m_dictionary = {{ "sensor1", { 45.2, 51.72, 21.5 } }, { "sensor2", { 17.2, 34.7, 18.3 } }}; // NOLINT test values
-    aggr.m_list = {{ {"NVidia"}, {"HTX-4589-22-1"}, {"24/05/02"} }, { {"AMD"}, {"HTX-7788-22-5"}, {"12/05/07"} }};
+    aggr.m_dictionary
+        = { { "sensor1", { 45.2, 51.72, 21.5 } }, { "sensor2", { 17.2, 34.7, 18.3 } } }; // NOLINT test values
+    aggr.m_list
+        = { { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" } }, { { "AMD" }, { "HTX-7788-22-5" }, { "12/05/07" } } };
     aggr.m_status = false;
-    aggr.m_values = { 0.7, 1.5, 2.1, -0.5 };  // NOLINT test values
+    aggr.m_values = { 0.7, 1.5, 2.1, -0.5 }; // NOLINT test values
 
     auto sens = aggr.m_dictionary.find("sensor2");
     std::printf(
@@ -1366,7 +1377,7 @@ void test_aggregated_bytepack_data()
         aggr.m_list[1].vendor_name.c_str());
     std::printf("%f %f %f\n", aggr.m_values[0], aggr.m_values[1], aggr.m_values[2]);
 
-    constexpr const size_t buffer_size = 1024;
+    constexpr const std::size_t buffer_size = 1024U;
     std::vector<std::uint8_t> buffer(buffer_size);
     bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer.data(), buffer.size()) };
 
@@ -1391,8 +1402,8 @@ void test_aggregated_bytepack_data()
         auto sensor = aggr_dup.m_dictionary.find("sensor2");
         std::printf("%f %f %f \n", sensor->second.cpu_temperature, sensor->second.gpu_temperature,
             sensor->second.room_temperature);
-        std::printf("%s %s %s\n", aggr_dup.m_list[1].manufacturing_date.c_str(), aggr_dup.m_list[1].serial_number.c_str(),
-            aggr_dup.m_list[1].vendor_name.c_str());
+        std::printf("%s %s %s\n", aggr_dup.m_list[1].manufacturing_date.c_str(),
+            aggr_dup.m_list[1].serial_number.c_str(), aggr_dup.m_list[1].vendor_name.c_str());
         std::printf("%f %f %f\n", aggr_dup.m_values[0], aggr_dup.m_values[1], aggr_dup.m_values[2]);
     }
 }
@@ -1403,7 +1414,7 @@ struct data_task_context
 {
 };
 
-constexpr const size_t binary_msg_size = 128U;
+constexpr const std::size_t binary_msg_size = 128U;
 using binary_msg = std::array<std::uint8_t, binary_msg_size>;
 
 using my_data_task = tools::data_task<data_task_context, binary_msg>;
@@ -1442,8 +1453,8 @@ namespace
             {
                 manufacturing_info info = {};
                 info.deserialize(stream);
-                std::printf(
-                    "%s\n%s\n%s\n", info.vendor_name.c_str(), info.serial_number.c_str(), info.manufacturing_date.c_str());
+                std::printf("%s\n%s\n%s\n", info.vendor_name.c_str(), info.serial_number.c_str(),
+                    info.manufacturing_date.c_str());
             }
             break;
 
@@ -1468,8 +1479,11 @@ void test_bytepack_data_task()
 
     auto context = std::make_shared<data_task_context>();
 
+    constexpr const std::size_t queue_depth = 128U;
+    constexpr const std::size_t stack_size = 4096U;
+
     auto task_1 = std::make_unique<my_data_task>(
-        std::move(task_startup), std::move(task_1_processing), context, 128, "task 1", 4096);
+        std::move(task_startup), std::move(task_1_processing), context, queue_depth, "task 1", stack_size);
 
     binary_msg buffer;
 
@@ -1479,7 +1493,7 @@ void test_bytepack_data_task()
         (void)context;
         std::printf("periodic %s\n", task_name.c_str());
 
-        temperature_sensor message1 = { 45.2, 51.72, 21.5 };
+        temperature_sensor message1 = { 45.2, 51.72, 21.5 }; // NOLINT test values
         manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" } };
         free_text message3 = { "jojo rabbit" };
 
@@ -1503,9 +1517,10 @@ void test_bytepack_data_task()
 
     constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(500);
     auto task_2 = std::make_unique<my_data_periodic_task>(
-        std::move(task_startup), std::move(task_2_periodic), context, "task 2", period, 4096);
+        std::move(task_startup), std::move(task_2_periodic), context, "task 2", period, stack_size);
 
-    tools::sleep_for(2500);
+    constexpr const std::size_t wait_task_ms = 2500;
+    tools::sleep_for(wait_task_ms);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -1522,7 +1537,8 @@ void test_json()
         cjsonpp::JSONObject obj3 = {};
         cjsonpp::JSONObject obj4 = {};
 
-        obj.set("pi", 3.141592);                   // add a number that is stored as double
+        constexpr const double pi = 3.141592;
+        obj.set("pi", pi);                         // add a number that is stored as double
         obj.set("happy", true);                    // add a Boolean that is stored as bool
         obj.set("name", "Niels");                  // add a string that is stored as std::string
         obj.set("nothing", cjsonpp::nullObject()); // add another null object by passing nullptr
@@ -2116,51 +2132,60 @@ void test_timer()
     {
         tools::timer_scheduler timer_scheduler;
 
+        constexpr const int period_200ms = 200;
+        constexpr const int period_120ms = 120;
+        constexpr const int period_100ms = 100;
+        constexpr const int period_75ms = 75;
+        constexpr const int period_50ms = 50;
+        constexpr const int period_40ms = 40;
+        constexpr const int period_25ms = 25;
+        constexpr const int period_20ms = 20;
+
         // Test one shot timer - after completion
-        std::atomic<int> i(0);
-        timer_scheduler.add("timer1", 100, [&](tools::timer_handle) { i = 42; }, false);
-        tools::sleep_for(120);
-        std::printf("Expect %d is 42\n", i.load());
+        std::atomic<int> val(0);
+        timer_scheduler.add("timer1", period_100ms, [&](tools::timer_handle) { val.store(42); }, false);
+        tools::sleep_for(period_120ms);
+        std::printf("Expect %d is 42\n", val.load());
 
         // Test one shot timer - not started yet
-        i = 0;
-        timer_scheduler.add("timer2", 100, [&](tools::timer_handle) { i = 42; }, false);
-        tools::sleep_for(50);
-        std::printf("Expect %d is 0\n", i.load());
+        val.store(0);
+        timer_scheduler.add("timer2", period_100ms, [&](tools::timer_handle) { val.store(42); }, false);
+        tools::sleep_for(period_50ms);
+        std::printf("Expect %d is 0\n", val.load());
 
         // Test periodic timer (auto-reload) - check immediately started
         std::atomic<std::size_t> count(0U);
-        auto timer_id = timer_scheduler.add("timer3", 40, [&](tools::timer_handle) { ++count; }, true);
-        tools::sleep_for(20);    
+        auto timer_id = timer_scheduler.add("timer3", period_40ms, [&](tools::timer_handle) { ++count; }, true);
+        tools::sleep_for(period_20ms);    
         timer_scheduler.remove(timer_id);
         std::printf("Expect count %zu is 1\n", count.load());
 
         // Test periodic timer (auto-reload) - check after 3 cycles
-        count = 0U;
-        timer_id = timer_scheduler.add("timer4", 40, [&](tools::timer_handle) { ++count; }, true);
-        tools::sleep_for(100);    
+        count.store(0U);
+        timer_id = timer_scheduler.add("timer4", period_40ms, [&](tools::timer_handle) { ++count; }, true);
+        tools::sleep_for(period_100ms);    
         timer_scheduler.remove(timer_id);
         std::printf("Expect count %zu is 3\n", count.load());
 
         // Test delete periodic timer (auto-reload) in callback
-        count = 0U;
-        timer_scheduler.add("timer5", 25,
+        count.store(0U);
+        timer_scheduler.add("timer5", period_25ms,
                 [&](tools::timer_handle timer_id) {
                     ++count;
                     timer_scheduler.remove(timer_id);
                 },
                 true);
-        tools::sleep_for(75);
+        tools::sleep_for(period_75ms);
         std::printf("Expect count %zu is 1\n", count.load());
 
         // Test periodic timer delays        
         auto start_point = std::chrono::high_resolution_clock::now();
         std::queue<std::chrono::high_resolution_clock::time_point> time_points;
-        timer_id = timer_scheduler.add("timer6", 40, [&](tools::timer_handle)
+        timer_id = timer_scheduler.add("timer6", period_40ms, [&](tools::timer_handle)
         {
             time_points.emplace(std::chrono::high_resolution_clock::now());
         }, true);
-        tools::sleep_for(200);    
+        tools::sleep_for(period_200ms);    
         timer_scheduler.remove(timer_id);
 
         auto prev_point = start_point;
@@ -2176,22 +2201,22 @@ void test_timer()
         // Test one shot timer delay        
         start_point = std::chrono::high_resolution_clock::now();
         std::chrono::high_resolution_clock::time_point time_point;
-        timer_id = timer_scheduler.add("timer7", 120, [&](tools::timer_handle)
+        timer_scheduler.add("timer7", period_120ms, [&](tools::timer_handle)
         {
             time_point = std::chrono::high_resolution_clock::now();
         }, false);
-        tools::sleep_for(200);  
+        tools::sleep_for(period_200ms);  
 
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
         std::printf("timepoint (one shot): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
 
         // Test one shot timer delay (variant with std::chrono input)       
         start_point = std::chrono::high_resolution_clock::now();
-        timer_id = timer_scheduler.add("timer7", std::chrono::duration<std::uint64_t, std::micro>(120250), [&](tools::timer_handle)
+        timer_scheduler.add("timer7", std::chrono::duration<std::uint64_t, std::micro>(120250), [&](tools::timer_handle)
         {
             time_point = std::chrono::high_resolution_clock::now();
         }, false);
-        tools::sleep_for(200);  
+        tools::sleep_for(period_200ms);  
 
         elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
         std::printf("timepoint (one shot): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
@@ -2252,10 +2277,11 @@ void test_smp_tasks_cpu_affinity()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+constexpr const std::size_t worker_pipe_depth = 5U;
 struct smp_ring_task_context
-{
-    tools::lock_free_ring_buffer<std::uint8_t, 5U> m_to_worker_pipe;
-    tools::lock_free_ring_buffer<std::uint8_t, 5U> m_from_worker_pipe;    
+{    
+    tools::lock_free_ring_buffer<std::uint8_t, worker_pipe_depth> m_to_worker_pipe;
+    tools::lock_free_ring_buffer<std::uint8_t, worker_pipe_depth> m_from_worker_pipe;    
 };
 
 using periodic_ring_task0 = tools::periodic_task<smp_ring_task_context>;
@@ -2275,7 +2301,8 @@ void test_smp_tasks_lock_free_ring_buffer()
     auto context = std::make_shared<smp_ring_task_context>();
 
     constexpr const std::size_t task1_stack_size = 2048U;
-    worker_ring_task1 task1(startup, context, "worker_task1", task1_stack_size, 1 /* core 1 */, tools::base_task::default_priority);
+    constexpr const int core1 = 1;
+    worker_ring_task1 task1(startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
 
     auto periodic_lambda = [&task1](const std::shared_ptr<smp_ring_task_context>& context, const std::string& task_name)
     {        
@@ -2306,7 +2333,8 @@ void test_smp_tasks_lock_free_ring_buffer()
 
     constexpr const auto period_100ms = std::chrono::duration<std::uint64_t, std::milli>(100); 
     constexpr const std::size_t task0_stack_size = 4096U;
-    periodic_ring_task0 task0(startup, periodic_lambda, context, "periodic_task0", period_100ms, task0_stack_size, 0 /* core 0 */, tools::base_task::default_priority); 
+    constexpr const int core0 = 0;
+    periodic_ring_task0 task0(startup, periodic_lambda, context, "periodic_task0", period_100ms, task0_stack_size, core0, tools::base_task::default_priority); 
 
     // sleep 2 sec
     tools::sleep_for(2000);
@@ -2315,10 +2343,11 @@ void test_smp_tasks_lock_free_ring_buffer()
 //--------------------------------------------------------------------------------------------------------------------------------
 
 // The variable used to hold the message buffer structure.
-static tools::memory_pipe::static_buffer_holder static_buf_holder = {};
+static tools::memory_pipe::static_buffer_holder static_buf_holder = {}; // NOLINT this is the purpose to have a statically allocated holder
 // Used to dimension the array used to hold the messages.  The available space
 // will actually be one less than this, so 999.
-static std::array<std::uint8_t, 1000> static_storage;
+constexpr const std::size_t static_storage_size = 1000U;
+static std::array<std::uint8_t, static_storage_size> static_storage;
 
 struct smp_mem_task_context
 {
