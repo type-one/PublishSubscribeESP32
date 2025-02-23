@@ -62,6 +62,7 @@
 #include "tools/lock_free_ring_buffer.hpp"
 #include "tools/logger.hpp"
 #include "tools/memory_pipe.hpp"
+#include "tools/non_copyable.hpp"
 #include "tools/periodic_task.hpp"
 #include "tools/platform_detection.hpp"
 #include "tools/platform_helpers.hpp"
@@ -1023,7 +1024,8 @@ void test_periodic_publish_subscribe()
     {
         my_periodic_task periodic_task(startup, sampler, context, "sampler_task", period, stack_size);
 
-        tools::sleep_for(2000);
+        constexpr const std::size_t wait_task = 2000;
+        tools::sleep_for(wait_task);
     }
 
     histogram_feeder->display_stats();
@@ -1115,8 +1117,9 @@ void test_worker_tasks()
     tools::sleep_for(wait_tasks_ms);
 
     const auto start_timepoint = std::chrono::high_resolution_clock::now();
+    constexpr const int nb_loops = 20;
 
-    for (int i = 0; i < 20; ++i)
+    for (int i = 0; i < nb_loops; ++i)
     {
         auto idx = distribution(generator);
 
@@ -1131,8 +1134,8 @@ void test_worker_tasks()
         std::this_thread::yield();
     }
 
-    // sleep 2 sec
-    tools::sleep_for(2000);
+    constexpr const int wait_loops_ms = 2000;
+    tools::sleep_for(wait_loops_ms);
 
     std::printf("nb of loops = %d\n", context->loop_counter.load());
 
@@ -1215,13 +1218,14 @@ void test_queued_bytepack_data()
     LOG_INFO("-- queued bytepack data --");
     print_stats();
 
-    tools::sync_ring_vector<std::vector<std::uint8_t>> data_queue(128U);
-    // tools::sync_ring_buffer<std::vector<std::uint8_t>, 128U> data_queue;
+    constexpr const std::size_t queue_depth = 128U;
+    tools::sync_ring_vector<std::vector<std::uint8_t>> data_queue(queue_depth);
+    // tools::sync_ring_buffer<std::vector<std::uint8_t>, queue_depth> data_queue;
     // tools::sync_queue<std::vector<std::uint8_t>> data_queue;
 
     free_text message1 = { "jojo rabbit" };
     manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" } };
-    temperature_sensor message3 = { 45.2, 51.72, 21.5 };
+    temperature_sensor message3 = { 45.2, 51.72, 21.5 }; // NOLINT tests values
 
     constexpr const std::size_t buffer_size = 1024U;
     std::vector<std::uint8_t> buffer(buffer_size);
@@ -1422,13 +1426,14 @@ using my_data_periodic_task = tools::periodic_task<data_task_context>;
 
 namespace
 {
-    const auto task_startup = [](const std::shared_ptr<data_task_context>& context, const std::string& task_name)
+    constexpr const auto task_startup
+        = [](const std::shared_ptr<data_task_context>& context, const std::string& task_name)
     {
         (void)context;
         std::printf("starting %s\n", task_name.c_str());
     };
 
-    const auto task_1_processing
+    constexpr const auto task_1_processing
         = [](const std::shared_ptr<data_task_context>& context, binary_msg data_packed, const std::string& task_name)
     {
         (void)context;
@@ -1537,8 +1542,8 @@ void test_json()
         cjsonpp::JSONObject obj3 = {};
         cjsonpp::JSONObject obj4 = {};
 
-        constexpr const double pi = 3.141592;
-        obj.set("pi", pi);                         // add a number that is stored as double
+        constexpr const double number_pi = 3.141592;
+        obj.set("pi", number_pi);                  // add a number that is stored as double
         obj.set("happy", true);                    // add a Boolean that is stored as bool
         obj.set("name", "Niels");                  // add a string that is stored as std::string
         obj.set("nothing", cjsonpp::nullObject()); // add another null object by passing nullptr
@@ -1548,12 +1553,12 @@ void test_json()
         obj.set("list", val);
 
         // add an object inside the object
-        obj2.set("everything", 42);
+        obj2.set("everything", 42); // NOLINT test value
         obj.set("answer", obj2);
 
         // add another object (using an initializer list of pairs)
         obj3.set("currency", "USD");
-        obj4.set("value", 42.99);
+        obj4.set("value", 42.99); // NOLINT test value
 
         cjsonpp::JSONObject arr = cjsonpp::arrayObject();
         arr.add(obj3);
@@ -1567,7 +1572,7 @@ void test_json()
 
     {
         // create object from string literal
-        std::string jsonstr = "{ \"happy\": true, \"pi\": 3.141 }";
+        std::string jsonstr = R"({ "happy": true, "pi": 3.141 })";
         cjsonpp::JSONObject obj = cjsonpp::parse(jsonstr);
 
         const auto str = obj.print();
@@ -1582,17 +1587,18 @@ void test_queued_json_data()
     LOG_INFO("-- queued json data --");
     print_stats();
 
-    auto data_queue = std::make_unique<tools::sync_ring_buffer<std::string, 128U>>();
+    constexpr const std::size_t queue_depth = 128U;
+    auto data_queue = std::make_unique<tools::sync_ring_buffer<std::string, queue_depth>>();
 
     {
         cjsonpp::JSONObject json = {};
         json.set("msg_type", "sensor");
         json.set("sensor_name", "indoor_temperature");
-        json.set("temp", 19.47);
+        json.set("temp", 19.47); // NOLINT test value
         json.set("activity", true);
 
         cjsonpp::JSONObject json_answer = {};
-        json_answer.set("everything", 42);
+        json_answer.set("everything", 42); // NOLINT test value
         json.set("answer", json_answer);
 
         std::printf("%s\n", json.print(true).c_str());
@@ -1647,7 +1653,7 @@ void test_packing_unpacking_json_data()
     print_stats();
 
     // example taken from https://www.iotforall.com/10-jsonata-examples
-    static const char json_str1[] = R"(
+    static const std::string json_str1 = R"(
     {
       "device": "dev:5c0272356817",
       "when": 1643398446,
@@ -1673,7 +1679,7 @@ void test_packing_unpacking_json_data()
     })";
 
     // example taken from https://json.org/example.html
-    static const char json_str2[] = R"(
+    static const std::string json_str2 = R"(
     {
         "glossary": {
             "title": "example glossary",
@@ -1704,8 +1710,9 @@ void test_packing_unpacking_json_data()
 
     // json 1
 
-    unpacked_buffer.resize(sizeof(json_str1));
-    std::memcpy(unpacked_buffer.data(), json_str1, sizeof(json_str1));
+    unpacked_buffer.resize(json_str1.length() + 1U);
+    std::memcpy(unpacked_buffer.data(), json_str1.c_str(), json_str1.length());
+    unpacked_buffer[json_str1.length()] = '\0';
 
     std::printf("json file 1 of %zu bytes\n", unpacked_buffer.size());
     std::printf("packing json file 1\n");
@@ -1721,8 +1728,9 @@ void test_packing_unpacking_json_data()
 
     // json 2
 
-    unpacked_buffer.resize(sizeof(json_str2));
-    std::memcpy(unpacked_buffer.data(), json_str2, sizeof(json_str2));
+    unpacked_buffer.resize(json_str2.length() + 1U);
+    std::memcpy(unpacked_buffer.data(), json_str2.c_str(), json_str2.length());
+    unpacked_buffer[json_str2.length()] = '\0';
 
     std::printf("json file 2 of %zu bytes\n", unpacked_buffer.size());
     std::printf("packing json file 2\n");
@@ -1783,7 +1791,7 @@ using traffic_light_event_v = std::variant<traffic_light_event::power_on,
                                            traffic_light_event::next_state>;
 // clang-format on
 
-class traffic_light_fsm
+class traffic_light_fsm : tools::non_copyable // NOLINT inherits from non copyable and non movable class
 {
 public:
     traffic_light_fsm() = default;
@@ -1871,13 +1879,15 @@ void traffic_light_fsm::update()
     // clang-format on  
 }
 
+constexpr const int traffic_light_wait_ms = 1000;
+
 // define callbacks for [state, event]
 traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::off& state, const traffic_light_event::power_on& event)
 {
     (void)state;
     (void)event;
-    std::printf("switch ON traffic light\n");
-    tools::sleep_for(1000);
+    std::printf("switch ON traffic light\n");    
+    tools::sleep_for(traffic_light_wait_ms);
     m_entering_state = true;
     return traffic_light_state::operable_initializing {};
 }
@@ -1895,10 +1905,12 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 {    
     (void)state;
     (void)event;
-    tools::sleep_for(1000);
+    tools::sleep_for(traffic_light_wait_ms);
 
     traffic_light_state_v next_state;
-    if (state.count < 2 * 3)
+    constexpr const int max_cycles = 2;
+    constexpr const int nb_light_states = 3;
+    if (state.count < max_cycles * nb_light_states)
     {
         std::printf("traffic light RED --> ORANGE\n");
         next_state = traffic_light_state::operable_orange { state.count + 1 };
@@ -1919,7 +1931,7 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 {    
     (void)state;
     (void)event;
-    tools::sleep_for(1000);
+    tools::sleep_for(traffic_light_wait_ms);
     std::printf("traffic light ORANGE --> GREEN\n");
     m_entering_state = true;
     return traffic_light_state::operable_green { state.count + 1 };
@@ -1929,7 +1941,7 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
 {
     (void)state;
     (void)event;
-    tools::sleep_for(1000);
+    tools::sleep_for(traffic_light_wait_ms);
     std::printf("traffic light GREEN --> RED\n");
     m_entering_state = true;
     return traffic_light_state::operable_red { state.count + 1 };
@@ -2110,7 +2122,7 @@ void test_calendar_day()
 
     std::printf("The current year is %d\n", static_cast<int>(current_year));    
    
-    auto moon_landing = std::chrono::year(1969)/std::chrono::month(7)/std::chrono::day(21);      
+    auto moon_landing = std::chrono::year(1969)/std::chrono::month(7)/std::chrono::day(21); // NOLINT test value    
 
     //auto anniversary_week_day = std::chrono::year_month_weekday(moon_landing);  
 
@@ -2142,14 +2154,15 @@ void test_timer()
         constexpr const int period_20ms = 20;
 
         // Test one shot timer - after completion
+        constexpr const int test_value = 42;
         std::atomic<int> val(0);
-        timer_scheduler.add("timer1", period_100ms, [&](tools::timer_handle) { val.store(42); }, false);
+        timer_scheduler.add("timer1", period_100ms, [&](tools::timer_handle) { val.store(test_value); }, false);
         tools::sleep_for(period_120ms);
         std::printf("Expect %d is 42\n", val.load());
 
         // Test one shot timer - not started yet
         val.store(0);
-        timer_scheduler.add("timer2", period_100ms, [&](tools::timer_handle) { val.store(42); }, false);
+        timer_scheduler.add("timer2", period_100ms, [&](tools::timer_handle) { val.store(test_value); }, false);
         tools::sleep_for(period_50ms);
         std::printf("Expect %d is 0\n", val.load());
 
@@ -2212,7 +2225,8 @@ void test_timer()
 
         // Test one shot timer delay (variant with std::chrono input)       
         start_point = std::chrono::high_resolution_clock::now();
-        timer_scheduler.add("timer7", std::chrono::duration<std::uint64_t, std::micro>(120250), [&](tools::timer_handle)
+        constexpr const int timer_timeout_us = 120250;
+        timer_scheduler.add("timer7", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us), [&](tools::timer_handle)
         {
             time_point = std::chrono::high_resolution_clock::now();
         }, false);
@@ -2336,8 +2350,8 @@ void test_smp_tasks_lock_free_ring_buffer()
     constexpr const int core0 = 0;
     periodic_ring_task0 task0(startup, periodic_lambda, context, "periodic_task0", period_100ms, task0_stack_size, core0, tools::base_task::default_priority); 
 
-    // sleep 2 sec
-    tools::sleep_for(2000);
+    constexpr const int wait_tasks_ms = 2000;
+    tools::sleep_for(wait_tasks_ms);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -2347,7 +2361,7 @@ static tools::memory_pipe::static_buffer_holder static_buf_holder = {}; // NOLIN
 // Used to dimension the array used to hold the messages.  The available space
 // will actually be one less than this, so 999.
 constexpr const std::size_t static_storage_size = 1000U;
-static std::array<std::uint8_t, static_storage_size> static_storage;
+static std::array<std::uint8_t, static_storage_size> static_storage; // NOLINT this is the purpose to have a statically allocated buffer
 
 struct smp_mem_task_context
 {
@@ -2415,7 +2429,8 @@ void test_smp_tasks_memory_pipe()
         { 
             std::printf(" / %s (core 0)\n", task_name.c_str());
 
-            std::size_t to_send = std::min(static_cast<std::size_t>(16U), label.size() - offset);
+            constexpr const std::size_t chunk_size = 16U; 
+            std::size_t to_send = std::min(chunk_size, label.size() - offset);
             
             if (offset < label.size())
             {            
