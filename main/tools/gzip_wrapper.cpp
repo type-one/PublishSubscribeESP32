@@ -23,11 +23,13 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <vector>
 
 #include "tools/gzip_wrapper.hpp"
@@ -35,16 +37,9 @@
 #include "tools/non_copyable.hpp"
 #include "uzlib/uzlib.h"
 
-namespace
-{
-    constexpr const unsigned int dict_size = 32768U;
-    constexpr const unsigned int hash_bits = 12U;
-    constexpr const std::size_t hash_size = sizeof(uzlib_hash_entry_t) * (1U << hash_bits);
-}
-
 namespace tools
 {
-    bool gzip_wrapper::m_uzlib_initialized = false;
+    bool gzip_wrapper::m_uzlib_initialized = false; // NOLINT private variable common to all wrapper instances
 
     gzip_wrapper::gzip_wrapper()
     {
@@ -54,18 +49,11 @@ namespace tools
             m_uzlib_initialized = true;
         }
 
-        m_hash_table = static_cast<uzlib_hash_entry_t*>(std::malloc(hash_size));
+        m_hash_table = std::make_unique<hash_table>();
+
         if (nullptr == m_hash_table)
         {
             LOG_ERROR("could not allocate hash_table");
-        }
-    }
-
-    gzip_wrapper::~gzip_wrapper()
-    {
-        if (nullptr != m_hash_table)
-        {
-            std::free(m_hash_table);
         }
     }
 
@@ -76,10 +64,10 @@ namespace tools
         if (nullptr != m_hash_table)
         {
             struct uzlib_comp comp = {};
-            comp.dict_size = dict_size;
-            comp.hash_bits = hash_bits;
-            comp.hash_table = m_hash_table;
-            std::memset(comp.hash_table, 0, hash_size);
+            comp.dict_size = gzip_dict_size;
+            comp.hash_bits = gzip_hash_bits;
+            comp.hash_table = m_hash_table->data();
+            std::memset(comp.hash_table, 0, gzip_hash_size);
 
             zlib_start_block(&comp.out);
             uzlib_compress(&comp, unpacked_input.data(), unpacked_input.size());
@@ -94,32 +82,32 @@ namespace tools
 
             gzip_packed.resize(gzip_buffer_sz);
 
-            gzip_packed[0] = 0x1f; // magic tag
-            gzip_packed[1] = 0x8b;
-            gzip_packed[2] = 0x08;
-            gzip_packed[3] = 0x00;
-            gzip_packed[4] = 0x00; // time
-            gzip_packed[5] = 0x00; // time
-            gzip_packed[6] = 0x00; // time
-            gzip_packed[7] = 0x00; // time
-            gzip_packed[8] = 0x04; // XFL
-            gzip_packed[9] = 0x03; // OS
+            gzip_packed.at(0) = 0x1f; // magic tag
+            gzip_packed.at(1) = 0x8b;
+            gzip_packed.at(2) = 0x08;
+            gzip_packed.at(3) = 0x00;
+            gzip_packed.at(4) = 0x00; // time
+            gzip_packed.at(5) = 0x00; // time
+            gzip_packed.at(6) = 0x00; // time
+            gzip_packed.at(7) = 0x00; // time
+            gzip_packed.at(8) = 0x04; // XFL
+            gzip_packed.at(9) = 0x03; // OS
 
             std::memcpy(gzip_packed.data() + gzip_header_sz, comp.out.outbuf, packed_size);
             // free packed buffer
             std::free(comp.out.outbuf);
 
             // little endian CRC32
-            gzip_packed[gzip_header_sz + packed_size + 0U] = crc32 & 0xff;
-            gzip_packed[gzip_header_sz + packed_size + 1U] = (crc32 >> 8) & 0xff;
-            gzip_packed[gzip_header_sz + packed_size + 2U] = (crc32 >> 16) & 0xff;
-            gzip_packed[gzip_header_sz + packed_size + 3U] = (crc32 >> 24) & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 0U) = crc32 & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 1U) = (crc32 >> 8) & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 2U) = (crc32 >> 16) & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 3U) = (crc32 >> 24) & 0xff;
 
             // little endian source length
-            gzip_packed[gzip_header_sz + packed_size + 4U] = unpacked_input.size() & 0xff;
-            gzip_packed[gzip_header_sz + packed_size + 5U] = (unpacked_input.size() >> 8) & 0xff;
-            gzip_packed[gzip_header_sz + packed_size + 6U] = (unpacked_input.size() >> 16) & 0xff;
-            gzip_packed[gzip_header_sz + packed_size + 7U] = (unpacked_input.size() >> 24) & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 4U) = unpacked_input.size() & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 5U) = (unpacked_input.size() >> 8) & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 6U) = (unpacked_input.size() >> 16) & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 7U) = (unpacked_input.size() >> 24) & 0xff;
         } // (nullptr != m_hash_table)
 
         return gzip_packed;
@@ -132,17 +120,17 @@ namespace tools
         if (nullptr != m_hash_table)
         {
             const unsigned int len = static_cast<unsigned int>(packed_input.size());
-            unsigned int dlen = packed_input[len - 1U];
-            dlen = (dlen << 8) | packed_input[len - 2U];
-            dlen = (dlen << 8) | packed_input[len - 3U];
-            dlen = (dlen << 8) | packed_input[len - 4U];
+            unsigned int dlen = packed_input.at(len - 1U);
+            dlen = (dlen << 8) | packed_input.at(len - 2U);
+            dlen = (dlen << 8) | packed_input.at(len - 3U);
+            dlen = (dlen << 8) | packed_input.at(len - 4U);
             const std::size_t outlen = static_cast<std::size_t>(dlen);
             ++dlen; // reserve one extra byte
 
-            std::uint32_t source_crc32 = packed_input[len - 5U];
-            source_crc32 = (source_crc32 << 8) | packed_input[len - 6U];
-            source_crc32 = (source_crc32 << 8) | packed_input[len - 7U];
-            source_crc32 = (source_crc32 << 8) | packed_input[len - 8U];
+            std::uint32_t source_crc32 = packed_input.at(len - 5U);
+            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 6U);
+            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 7U);
+            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 8U);
 
             gzip_unpacked.resize(dlen);
 

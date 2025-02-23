@@ -3,6 +3,8 @@
 #ifndef CPPTIME_HPP_
 #define CPPTIME_HPP_
 
+// modified to pass clang-tidy issues
+
 /**
  * The MIT License (MIT)
  *
@@ -101,6 +103,7 @@
 // Includes
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <set>
@@ -125,13 +128,14 @@ namespace CppTime
         // The event structure that holds the information about a timer.
         struct Event
         {
-            timer_id id;
+            timer_id tid;
             timestamp start;
             duration period;
             handler_t handler;
             bool valid;
+            
             Event()
-                : id(0)
+                : tid(0)
                 , start(duration::zero())
                 , period(duration::zero())
                 , handler(nullptr)
@@ -139,8 +143,8 @@ namespace CppTime
             {
             }
             template <typename Func>
-            Event(timer_id id, timestamp start, duration period, Func&& handler)
-                : id(id)
+            Event(timer_id tid_, timestamp start, duration period, Func&& handler)
+                : tid(tid_)
                 , start(start)
                 , period(period)
                 , handler(std::forward<Func>(handler))
@@ -161,19 +165,17 @@ namespace CppTime
             timer_id ref;
         };
 
-        inline bool operator<(const Time_event& l, const Time_event& r)
+        inline bool operator<(const Time_event& left, const Time_event& right)
         {
-            return l.next < r.next;
+            return left.next < right.next;
         }
 
     } // end namespace detail
 
     class Timer
     {
-        using scoped_m = std::unique_lock<std::mutex>;
-
         // Thread and locking variables.
-        std::mutex m;
+        std::mutex mutex;
         std::condition_variable cond;
         std::thread worker;
 
@@ -218,12 +220,12 @@ namespace CppTime
          * Overloaded `add` function that uses a uint64_t instead of a `time_point` for
          * the first timeout and the period.
          */
-        timer_id add(const uint64_t when, handler_t&& handler, const uint64_t period = 0);
+        timer_id add(std::uint64_t when, handler_t&& handler, std::uint64_t period = 0);
 
         /**
          * Removes the timer with the given id.
          */
-        bool remove(timer_id id);
+        bool remove(timer_id tid);
 
     private:
         void run();

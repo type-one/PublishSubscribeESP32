@@ -1,3 +1,4 @@
+// modified to pass clang-tidy issues
 
 /**
  * The MIT License (MIT)
@@ -110,21 +111,14 @@
 namespace CppTime
 {
     Timer::Timer()
-        : m {}
-        , cond {}
-        , worker {}
-        , events {}
-        , time_events {}
-        , free_ids {}
     {
-        scoped_m lock(m);
-        done = false;
+        std::unique_lock<std::mutex> lock(mutex);
         worker = std::thread([this] { run(); });
     }
 
     Timer::~Timer()
     {
-        scoped_m lock(m);
+        std::unique_lock<std::mutex> lock(mutex);
         done = true;
         lock.unlock();
         cond.notify_all();
@@ -146,27 +140,27 @@ namespace CppTime
      */
     timer_id Timer::add(const timestamp& when, handler_t&& handler, const duration& period)
     {
-        scoped_m lock(m);
-        timer_id id = 0;
+        std::unique_lock<std::mutex> lock(mutex);
+        timer_id tid = 0;
         // Add a new event. Prefer an existing and free id. If none is available, add
         // a new one.
         if (free_ids.empty())
         {
-            id = events.size();
-            detail::Event e(id, when, period, std::move(handler));
-            events.push_back(std::move(e));
+            tid = events.size();
+            detail::Event evt(tid, when, period, std::move(handler));
+            events.emplace_back(std::move(evt));
         }
         else
         {
-            id = free_ids.top();
+            tid = free_ids.top();
             free_ids.pop();
-            detail::Event e(id, when, period, std::move(handler));
-            events[id] = std::move(e);
+            detail::Event evt(tid, when, period, std::move(handler));
+            events.at(tid) = std::move(evt);
         }
-        time_events.insert(detail::Time_event { when, id });
+        time_events.insert(detail::Time_event { when, tid });
         lock.unlock();
         cond.notify_all();
-        return id;
+        return tid;
     }
 
     /**
@@ -179,24 +173,24 @@ namespace CppTime
     }
 
     /**
-     * @brief 
-     * 
+     * @brief
+     *
      */
-    bool Timer::remove(timer_id id)
+    bool Timer::remove(timer_id tid)
     {
-        scoped_m lock(m);
-        if (events.size() == 0 || events.size() <= id)
+        std::unique_lock<std::mutex> lock(mutex);
+        if (events.empty() || (events.size() <= tid))
         {
             return false;
         }
-        events[id].valid = false;
-        events[id].handler = nullptr;
-        auto it = std::find_if(
-            time_events.begin(), time_events.end(), [&](const detail::Time_event& te) { return te.ref == id; });
-        if (it != time_events.end())
+        events.at(tid).valid = false;
+        events.at(tid).handler = nullptr;
+        auto itr = std::find_if(
+            time_events.begin(), time_events.end(), [&](const detail::Time_event& tev) { return tev.ref == tid; });
+        if (itr != time_events.end())
         {
-            free_ids.push(it->ref);
-            time_events.erase(it);
+            free_ids.push(itr->ref);
+            time_events.erase(itr);
         }
         lock.unlock();
         cond.notify_all();
@@ -205,7 +199,7 @@ namespace CppTime
 
     void Timer::run()
     {
-        scoped_m lock(m);
+        std::unique_lock<std::mutex> lock(mutex);
 
         while (!done)
         {
@@ -217,8 +211,8 @@ namespace CppTime
             }
             else
             {
-                detail::Time_event te = *time_events.begin();
-                if (CppTime::clock::now() >= te.next)
+                detail::Time_event tev = *time_events.begin();
+                if (CppTime::clock::now() >= tev.next)
                 {
 
                     // Remove time event
@@ -226,27 +220,27 @@ namespace CppTime
 
                     // Invoke the handler
                     lock.unlock();
-                    events[te.ref].handler(te.ref);
+                    events.at(tev.ref).handler(tev.ref);
                     lock.lock();
 
-                    if (events[te.ref].valid && events[te.ref].period.count() > 0)
+                    if (events.at(tev.ref).valid && events.at(tev.ref).period.count() > 0)
                     {
                         // The event is valid and a periodic timer.
-                        te.next += events[te.ref].period;
-                        time_events.insert(te);
+                        tev.next += events.at(tev.ref).period;
+                        time_events.insert(tev);
                     }
                     else
                     {
                         // The event is either no longer valid because it was removed in the
                         // callback, or it is a one-shot timer.
-                        events[te.ref].valid = false;
-                        events[te.ref].handler = nullptr;
-                        free_ids.push(te.ref);
+                        events.at(tev.ref).valid = false;
+                        events.at(tev.ref).handler = nullptr;
+                        free_ids.push(tev.ref);
                     }
                 }
                 else
                 {
-                    cond.wait_until(lock, te.next);
+                    cond.wait_until(lock, tev.next);
                 }
             }
         }

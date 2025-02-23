@@ -28,26 +28,33 @@
 #if !defined(GZIP_WRAPPER_HPP_)
 #define GZIP_WRAPPER_HPP_
 
+#include <array>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "tools/non_copyable.hpp"
 #include "uzlib/uzlib.h"
-
 namespace tools
-{
-    class gzip_wrapper : public non_copyable
+{   
+    constexpr const unsigned int gzip_dict_size = 32768U;
+    constexpr const unsigned int gzip_hash_bits = 12U;
+    constexpr const std::size_t gzip_hash_nb_entries = (1U << gzip_hash_bits);
+    constexpr const std::size_t gzip_hash_size = sizeof(uzlib_hash_entry_t) * gzip_hash_nb_entries;
+    class gzip_wrapper : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         gzip_wrapper();
-        ~gzip_wrapper();
+        ~gzip_wrapper() = default;
 
         std::vector<std::uint8_t> pack(const std::vector<std::uint8_t>& unpacked_input);
         std::vector<std::uint8_t> unpack(const std::vector<std::uint8_t>& packed_input);
 
     private:
-        static bool m_uzlib_initialized;
-        uzlib_hash_entry_t* m_hash_table = nullptr;
+        using hash_table = std::array<uzlib_hash_entry_t, gzip_hash_nb_entries>;
+
+        static bool m_uzlib_initialized; // NOLINT common to all wrapper instances
+        std::unique_ptr<hash_table> m_hash_table;
     };
 }
 
