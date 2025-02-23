@@ -36,7 +36,7 @@
 
 namespace tools
 {
-    class memory_pipe : public non_copyable
+    class memory_pipe : public non_copyable // NOLINT inherits from non copyable/non movable class
     {
     public:
         struct static_buffer_holder

@@ -49,7 +49,7 @@ namespace
 
             if (context->m_auto_release)
             {
-                auto* timer_scheduler = context->m_this;
+                auto* timer_scheduler = context->m_this; // NOLINT initialized to this object instance
                 delete context;
                 timer_scheduler->remove_and_delete_timer(x_timer);
             }
@@ -72,7 +72,7 @@ namespace tools
     }
 
     timer_handle timer_scheduler::add_tick(const std::string& timer_name, const TickType_t period,
-        std::function<void(timer_handle)>&& handler, bool auto_reload)
+        std::function<void(timer_handle)>&& handler, timer_type type)
     {
         auto context = std::make_unique<timer_context>();
         context->m_callback = std::move(handler);
@@ -83,6 +83,8 @@ namespace tools
         // https://freertos.org/Documentation/02-Kernel/04-API-references/11-Software-timers/01-xTimerCreate
         // https://stackoverflow.com/questions/71199868/c-use-a-class-non-static-method-as-a-function-pointer-callback-in-freertos-xti
         timer_handle hnd = nullptr;
+
+        const bool auto_reload = (timer_type::periodic == type);
 
         if (auto_reload)
         {
@@ -115,18 +117,18 @@ namespace tools
         return hnd;
     }
 
-    timer_handle timer_scheduler::add(const std::string& timer_name, const std::uint64_t period,
-        std::function<void(timer_handle)>&& handler, bool auto_reload)
+    timer_handle timer_scheduler::add(const std::string& timer_name, std::uint64_t period,
+        std::function<void(timer_handle)>&& handler, timer_type type)
     {
-        return add_tick(timer_name, pdMS_TO_TICKS(period), std::move(handler), auto_reload);
+        return add_tick(timer_name, pdMS_TO_TICKS(period), std::move(handler), type);
     }
 
     timer_handle timer_scheduler::add(const std::string& timer_name,
         const std::chrono::duration<std::uint64_t, std::micro>& period, std::function<void(timer_handle)>&& handler,
-        bool auto_reload)
+        timer_type type)
     {
         const TickType_t x_period = static_cast<TickType_t>((pdMS_TO_TICKS(period.count()) / 1000U));
-        return add_tick(timer_name, x_period, std::move(handler), auto_reload);
+        return add_tick(timer_name, x_period, std::move(handler), type);
     }
 
     bool timer_scheduler::remove(timer_handle hnd)

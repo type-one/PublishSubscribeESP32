@@ -33,7 +33,7 @@
 
 namespace tools
 {
-    class sync_object : public non_copyable
+    class sync_object : public non_copyable // NOLINT inherits from non copyable/non movable class
     {
     public:
         sync_object(bool initial_state = false);

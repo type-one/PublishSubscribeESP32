@@ -40,9 +40,15 @@
 
 namespace tools
 {
+    enum class timer_type
+    {
+        one_shot,
+        periodic
+    };
+
     using timer_handle = TimerHandle_t;
 
-    class timer_scheduler : non_copyable
+    class timer_scheduler : non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         timer_scheduler() = default;
@@ -53,22 +59,22 @@ namespace tools
          *
          * \param period The period of the timer in ms
          * \param handler The callable that is invoked when the timer fires.
-         * \param auto_reload If true, then the timer will expire repeatedly with a frequency set by the period
-         * parameter. If set to false, then the timer will be a one-shot timer.
+         * \param type    If periodic, then the timer will expire repeatedly with a frequency set by the period
+         * parameter. If set to one_shot, then the timer will be a one-shot timer.
          */
-        timer_handle add(const std::string& timer_name, const std::uint64_t period,
-            std::function<void(timer_handle)>&& handler, bool auto_reload = false);
+        timer_handle add(const std::string& timer_name, std::uint64_t period,
+            std::function<void(timer_handle)>&& handler, timer_type type);
 
         /**
          * Add a new timer.
          *
          * \param period The period of the timer as std::chrono duration
          * \param handler The callable that is invoked when the timer fires.
-         * \param auto_reload If true, then the timer will expire repeatedly with a frequency set by the period
-         * parameter. If set to false, then the timer will be a one-shot timer.
+         * \param type If periodic, then the timer will expire repeatedly with a frequency set by the period
+         * parameter. If set to one_shot, then the timer will be a one-shot timer.
          */
         timer_handle add(const std::string& timer_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
-            std::function<void(timer_handle)>&& handler, bool auto_reload = false);
+            std::function<void(timer_handle)>&& handler, timer_type type);
 
         /**
          * Removes the timer with the given id.
@@ -77,7 +83,7 @@ namespace tools
 
         struct timer_context
         {
-            std::function<void(timer_handle)> m_callback;
+            std::function<void(timer_handle)> m_callback = {};
             timer_handle m_timer_handle = nullptr;
             bool m_auto_release = false;
             timer_scheduler* m_this = nullptr;
@@ -87,10 +93,10 @@ namespace tools
 
     private:
         timer_handle add_tick(const std::string& timer_name, const TickType_t period,
-            std::function<void(timer_handle)>&& handler, bool auto_reload);
+            std::function<void(timer_handle)>&& handler, timer_type type);
 
         tools::critical_section m_mutex;
-        std::list<std::unique_ptr<timer_context>> m_contexts;
-        std::list<timer_handle> m_active_timers;
+        std::list<std::unique_ptr<timer_context>> m_contexts = {};
+        std::list<timer_handle> m_active_timers = {};
     };
 }

@@ -36,22 +36,24 @@
 
 namespace tools
 {
-    timer_handle timer_scheduler::add(const std::string& timer_name, const std::uint64_t period,
-        std::function<void(timer_handle)>&& handler, bool auto_reload)
+    timer_handle timer_scheduler::add(const std::string& timer_name, std::uint64_t period,
+        std::function<void(timer_handle)>&& handler, timer_type type)
     {
         (void)timer_name;
         // inputs are in us
         // auto-reload true:  start immediately and then repeat every period
         // auto-reload false: start once after period
+        const bool auto_reload = (timer_type::periodic == type);
         return m_timer_scheduler.add(
             auto_reload ? 0U : (period * 1000U), std::move(handler), auto_reload ? (period * 1000U) : 0U);
     }
 
     timer_handle timer_scheduler::add(const std::string& timer_name,
         const std::chrono::duration<std::uint64_t, std::micro>& period, std::function<void(timer_handle)>&& handler,
-        bool auto_reload)
+        timer_type type)
     {
         (void)timer_name;
+        const bool auto_reload = (timer_type::periodic == type);
         return m_timer_scheduler.add(
             auto_reload ? 0U : period.count(), std::move(handler), auto_reload ? period.count() : 0U);
     }

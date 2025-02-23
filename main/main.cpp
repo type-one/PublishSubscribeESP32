@@ -765,7 +765,8 @@ private:
                     auto& [topic, event, origin] = *entry;
 
                     std::printf("async/pop [topic %d] received: event (%s) from %s\n",
-                        static_cast<std::underlying_type<my_topic>::type>(topic), event.description.c_str(), origin.c_str());
+                        static_cast<std::underlying_type<my_topic>::type>(topic), event.description.c_str(),
+                        origin.c_str());
                 }
             }
         }
@@ -824,23 +825,23 @@ void test_publish_subscribe()
                 static_cast<std::underlying_type<my_topic>::type>(topic), event.description.c_str(), origin.c_str());
         });
 
-    subject1->publish(my_topic::generic, my_event{my_event::type::notification, "toto"});
+    subject1->publish(my_topic::generic, my_event { my_event::type::notification, "toto" });
 
     subject1->unsubscribe(my_topic::generic, observer1);
 
-    subject1->publish(my_topic::generic, my_event{my_event::type::notification, "titi"});
+    subject1->publish(my_topic::generic, my_event { my_event::type::notification, "titi" });
 
-    subject1->publish(my_topic::system, my_event{my_event::type::notification, "tata"});
+    subject1->publish(my_topic::system, my_event { my_event::type::notification, "tata" });
 
     subject1->unsubscribe(my_topic::generic, "loose_coupled_handler_1");
 
     constexpr const int wait_time_500ms = 500;
     tools::sleep_for(wait_time_500ms);
 
-    subject1->publish(my_topic::generic, my_event{my_event::type::notification, "tintin"});
+    subject1->publish(my_topic::generic, my_event { my_event::type::notification, "tintin" });
 
-    subject2->publish(my_topic::generic, my_event{my_event::type::notification, "tonton"});
-    subject2->publish(my_topic::system, my_event{my_event::type::notification, "tantine"});
+    subject2->publish(my_topic::generic, my_event { my_event::type::notification, "tonton" });
+    subject2->publish(my_topic::system, my_event { my_event::type::notification, "tantine" });
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -1016,7 +1017,7 @@ void test_periodic_publish_subscribe()
         double signal = std::sin(context->loop_counter.load());
 
         // emit "signal" as a 'string' event
-        data_source->publish(my_topic::external, my_event{my_event::type::notification, std::to_string(signal)});
+        data_source->publish(my_topic::external, my_event { my_event::type::notification, std::to_string(signal) });
     };
 
     auto startup = [](const std::shared_ptr<my_periodic_task_context>& context, const std::string& task_name)
@@ -1444,7 +1445,8 @@ namespace
         std::printf("starting %s\n", task_name.c_str());
     };
 
-    void task_1_processing(const std::shared_ptr<data_task_context>& context, binary_msg data_packed, const std::string& task_name)
+    void task_1_processing(
+        const std::shared_ptr<data_task_context>& context, binary_msg data_packed, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -2166,26 +2168,26 @@ void test_timer()
         // Test one shot timer - after completion
         constexpr const int test_value = 42;
         std::atomic<int> val(0);
-        timer_scheduler.add("timer1", period_100ms, [&](tools::timer_handle) { val.store(test_value); }, false);
+        timer_scheduler.add("timer1", period_100ms, [&](tools::timer_handle) { val.store(test_value); }, tools::timer_type::one_shot);
         tools::sleep_for(period_120ms);
         std::printf("Expect %d is 42\n", val.load());
 
         // Test one shot timer - not started yet
         val.store(0);
-        timer_scheduler.add("timer2", period_100ms, [&](tools::timer_handle) { val.store(test_value); }, false);
+        timer_scheduler.add("timer2", period_100ms, [&](tools::timer_handle) { val.store(test_value); }, tools::timer_type::one_shot);
         tools::sleep_for(period_50ms);
         std::printf("Expect %d is 0\n", val.load());
 
         // Test periodic timer (auto-reload) - check immediately started
         std::atomic<std::size_t> count(0U);
-        auto timer_id = timer_scheduler.add("timer3", period_40ms, [&](tools::timer_handle) { ++count; }, true);
+        auto timer_id = timer_scheduler.add("timer3", period_40ms, [&](tools::timer_handle) { ++count; }, tools::timer_type::periodic);
         tools::sleep_for(period_20ms);    
         timer_scheduler.remove(timer_id);
         std::printf("Expect count %zu is 1\n", count.load());
 
         // Test periodic timer (auto-reload) - check after 3 cycles
         count.store(0U);
-        timer_id = timer_scheduler.add("timer4", period_40ms, [&](tools::timer_handle) { ++count; }, true);
+        timer_id = timer_scheduler.add("timer4", period_40ms, [&](tools::timer_handle) { ++count; }, tools::timer_type::periodic);
         tools::sleep_for(period_100ms);    
         timer_scheduler.remove(timer_id);
         std::printf("Expect count %zu is 3\n", count.load());
@@ -2197,7 +2199,7 @@ void test_timer()
                     ++count;
                     timer_scheduler.remove(timer_id);
                 },
-                true);
+                tools::timer_type::periodic);
         tools::sleep_for(period_75ms);
         std::printf("Expect count %zu is 1\n", count.load());
 
@@ -2207,7 +2209,7 @@ void test_timer()
         timer_id = timer_scheduler.add("timer6", period_40ms, [&](tools::timer_handle)
         {
             time_points.emplace(std::chrono::high_resolution_clock::now());
-        }, true);
+        }, tools::timer_type::periodic);
         tools::sleep_for(period_200ms);    
         timer_scheduler.remove(timer_id);
 
@@ -2227,7 +2229,7 @@ void test_timer()
         timer_scheduler.add("timer7", period_120ms, [&](tools::timer_handle)
         {
             time_point = std::chrono::high_resolution_clock::now();
-        }, false);
+        }, tools::timer_type::one_shot);
         tools::sleep_for(period_200ms);  
 
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
@@ -2239,7 +2241,7 @@ void test_timer()
         timer_scheduler.add("timer7", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us), [&](tools::timer_handle)
         {
             time_point = std::chrono::high_resolution_clock::now();
-        }, false);
+        }, tools::timer_type::one_shot);
         tools::sleep_for(period_200ms);  
 
         elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
