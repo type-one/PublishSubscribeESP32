@@ -698,23 +698,34 @@ enum class my_topic
     external
 };
 
-using base_observer = tools::sync_observer<my_topic, std::string>;
+struct my_event
+{
+    enum class type
+    {
+        notification,
+        failure
+    } type;
+
+    std::string description = {};
+};
+
+using base_observer = tools::sync_observer<my_topic, my_event>;
 class my_observer : public base_observer // NOLINT inherits from non copyable and non movable class
 {
 public:
     my_observer() = default;
     ~my_observer() override = default;
 
-    void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
+    void inform(const my_topic& topic, const my_event& event, const std::string& origin) override
     {
         std::printf("sync [topic %d] received: event (%s) from %s\n",
-            static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
+            static_cast<std::underlying_type<my_topic>::type>(topic), event.description.c_str(), origin.c_str());
     }
 
 private:
 };
 
-using base_async_observer = tools::async_observer<my_topic, std::string>;
+using base_async_observer = tools::async_observer<my_topic, my_event>;
 class my_async_observer : public base_async_observer // NOLINT inherits from non copyable and non movable
 {
 public:
@@ -729,10 +740,10 @@ public:
         m_task_loop.join();
     }
 
-    void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
+    void inform(const my_topic& topic, const my_event& event, const std::string& origin) override
     {
         std::printf("async/push [topic %d] received: event (%s) from %s\n",
-            static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
+            static_cast<std::underlying_type<my_topic>::type>(topic), event.description.c_str(), origin.c_str());
 
         base_async_observer::inform(topic, event, origin);
     }
@@ -754,7 +765,7 @@ private:
                     auto& [topic, event, origin] = *entry;
 
                     std::printf("async/pop [topic %d] received: event (%s) from %s\n",
-                        static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
+                        static_cast<std::underlying_type<my_topic>::type>(topic), event.description.c_str(), origin.c_str());
                 }
             }
         }
@@ -764,7 +775,7 @@ private:
     std::atomic_bool m_stop_task = false;
 };
 
-using base_subject = tools::sync_subject<my_topic, std::string>;
+using base_subject = tools::sync_subject<my_topic, my_event>;
 class my_subject : public base_subject // NOLINT inherits from non_copyable and non_movable
 {
 public:
@@ -776,9 +787,9 @@ public:
 
     ~my_subject() override = default;
 
-    void publish(const my_topic& topic, const std::string& event) override
+    void publish(const my_topic& topic, const my_event& event) override
     {
-        std::printf("publish: event (%s) to %s\n", event.c_str(), name().c_str());
+        std::printf("publish: event (%s) to %s\n", event.description.c_str(), name().c_str());
         base_subject::publish(topic, event);
     }
 
@@ -807,29 +818,29 @@ void test_publish_subscribe()
     subject2->subscribe(my_topic::generic, async_observer);
 
     subject1->subscribe(my_topic::generic, "loose_coupled_handler_1",
-        [](const my_topic& topic, const std::string& event, const std::string& origin)
+        [](const my_topic& topic, const my_event& event, const std::string& origin)
         {
             std::printf("handler [topic %d] received: event (%s) from %s\n",
-                static_cast<std::underlying_type<my_topic>::type>(topic), event.c_str(), origin.c_str());
+                static_cast<std::underlying_type<my_topic>::type>(topic), event.description.c_str(), origin.c_str());
         });
 
-    subject1->publish(my_topic::generic, "toto");
+    subject1->publish(my_topic::generic, my_event{my_event::type::notification, "toto"});
 
     subject1->unsubscribe(my_topic::generic, observer1);
 
-    subject1->publish(my_topic::generic, "titi");
+    subject1->publish(my_topic::generic, my_event{my_event::type::notification, "titi"});
 
-    subject1->publish(my_topic::system, "tata");
+    subject1->publish(my_topic::system, my_event{my_event::type::notification, "tata"});
 
     subject1->unsubscribe(my_topic::generic, "loose_coupled_handler_1");
 
     constexpr const int wait_time_500ms = 500;
     tools::sleep_for(wait_time_500ms);
 
-    subject1->publish(my_topic::generic, "tintin");
+    subject1->publish(my_topic::generic, my_event{my_event::type::notification, "tintin"});
 
-    subject2->publish(my_topic::generic, "tonton");
-    subject2->publish(my_topic::system, "tantine");
+    subject2->publish(my_topic::generic, my_event{my_event::type::notification, "tonton"});
+    subject2->publish(my_topic::system, my_event{my_event::type::notification, "tantine"});
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -959,12 +970,12 @@ public:
     my_collector() = default;
     ~my_collector() override = default;
 
-    void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
+    void inform(const my_topic& topic, const my_event& event, const std::string& origin) override
     {
         (void)topic;
         (void)origin;
 
-        m_histogram.add(static_cast<double>(std::strtod(event.c_str(), nullptr)));
+        m_histogram.add(static_cast<double>(std::strtod(event.description.c_str(), nullptr)));
     }
 
     void display_stats()
@@ -1005,7 +1016,7 @@ void test_periodic_publish_subscribe()
         double signal = std::sin(context->loop_counter.load());
 
         // emit "signal" as a 'string' event
-        data_source->publish(my_topic::external, std::to_string(signal));
+        data_source->publish(my_topic::external, my_event{my_event::type::notification, std::to_string(signal)});
     };
 
     auto startup = [](const std::shared_ptr<my_periodic_task_context>& context, const std::string& task_name)
@@ -1433,8 +1444,7 @@ namespace
         std::printf("starting %s\n", task_name.c_str());
     };
 
-    constexpr const auto task_1_processing
-        = [](const std::shared_ptr<data_task_context>& context, binary_msg data_packed, const std::string& task_name)
+    void task_1_processing(const std::shared_ptr<data_task_context>& context, binary_msg data_packed, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -1473,7 +1483,7 @@ namespace
 
             case message_type::aggregat:
                 break;
-        };
+        }
     };
 }
 
