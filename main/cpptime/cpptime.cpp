@@ -101,6 +101,7 @@
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <set>
@@ -167,7 +168,7 @@ namespace CppTime
      * Overloaded `add` function that uses a uint64_t instead of a `time_point` for
      * the first timeout and the period.
      */
-    timer_id Timer::add(const uint64_t when, handler_t&& handler, const uint64_t period)
+    timer_id Timer::add(std::uint64_t when, handler_t&& handler, std::uint64_t period)
     {
         return add(duration(when), std::move(handler), duration(period));
     }
