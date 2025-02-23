@@ -82,119 +82,118 @@ namespace tools
 
             gzip_packed.resize(gzip_buffer_sz);
 
-            gzip_packed.at(0) = 0x1f; // magic tag
-            gzip_packed.at(1) = 0x8b;
-            gzip_packed.at(2) = 0x08;
-            gzip_packed.at(3) = 0x00;
-            gzip_packed.at(4) = 0x00; // time
-            gzip_packed.at(5) = 0x00; // time
-            gzip_packed.at(6) = 0x00; // time
-            gzip_packed.at(7) = 0x00; // time
-            gzip_packed.at(8) = 0x04; // XFL
-            gzip_packed.at(9) = 0x03; // OS
+            gzip_packed.at(0) = 0x1f; // NOLINT magic tag
+            gzip_packed.at(1) = 0x8b; // NOLINT magic tag
+            gzip_packed.at(2) = 0x08; // NOLINT magic tag
+            gzip_packed.at(3) = 0x00; // NOLINT magic tag
+            gzip_packed.at(4) = 0x00; // NOLINT time
+            gzip_packed.at(5) = 0x00; // NOLINT time
+            gzip_packed.at(6) = 0x00; // NOLINT time
+            gzip_packed.at(7) = 0x00; // NOLINT time
+            gzip_packed.at(8) = 0x04; // NOLINT XFL
+            gzip_packed.at(9) = 0x03; // NOLINT OS
 
             std::memcpy(gzip_packed.data() + gzip_header_sz, comp.out.outbuf, packed_size);
             // free packed buffer
-            std::free(comp.out.outbuf);
+            std::free(comp.out.outbuf); // NOLINT allocated by malloc in uzib lib
+
+            constexpr const std::uint32_t lo_byte_mask = 0xff;
 
             // little endian CRC32
-            gzip_packed.at(gzip_header_sz + packed_size + 0U) = crc32 & 0xff;
-            gzip_packed.at(gzip_header_sz + packed_size + 1U) = (crc32 >> 8) & 0xff;
-            gzip_packed.at(gzip_header_sz + packed_size + 2U) = (crc32 >> 16) & 0xff;
-            gzip_packed.at(gzip_header_sz + packed_size + 3U) = (crc32 >> 24) & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 0U) = crc32 & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 1U) = (crc32 >> 8) & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 2U) = (crc32 >> 16) & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 3U) = (crc32 >> 24) & lo_byte_mask; // NOLINT little endian transformation
 
             // little endian source length
-            gzip_packed.at(gzip_header_sz + packed_size + 4U) = unpacked_input.size() & 0xff;
-            gzip_packed.at(gzip_header_sz + packed_size + 5U) = (unpacked_input.size() >> 8) & 0xff;
-            gzip_packed.at(gzip_header_sz + packed_size + 6U) = (unpacked_input.size() >> 16) & 0xff;
-            gzip_packed.at(gzip_header_sz + packed_size + 7U) = (unpacked_input.size() >> 24) & 0xff;
+            gzip_packed.at(gzip_header_sz + packed_size + 4U) = unpacked_input.size() & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 5U) = (unpacked_input.size() >> 8) & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 6U) = (unpacked_input.size() >> 16) & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 7U) = (unpacked_input.size() >> 24) & lo_byte_mask; // NOLINT little endian transformation
         } // (nullptr != m_hash_table)
 
         return gzip_packed;
     }
 
-    std::vector<std::uint8_t> gzip_wrapper::unpack(const std::vector<std::uint8_t>& packed_input)
+    std::vector<std::uint8_t> gzip_wrapper::unpack(const std::vector<std::uint8_t>& packed_input) // NOLINT cognitive complexity
     {
         std::vector<std::uint8_t> gzip_unpacked;
 
-        if (nullptr != m_hash_table)
+        const auto len = static_cast<unsigned int>(packed_input.size());
+        unsigned int dlen = packed_input.at(len - 1U);  // NOLINT little endian transformation
+        dlen = (dlen << 8) | packed_input.at(len - 2U); // NOLINT little endian transformation
+        dlen = (dlen << 8) | packed_input.at(len - 3U); // NOLINT little endian transformation
+        dlen = (dlen << 8) | packed_input.at(len - 4U); // NOLINT little endian transformation
+        const auto outlen = static_cast<std::size_t>(dlen);
+        ++dlen; // reserve one extra byte
+
+        std::uint32_t source_crc32 = packed_input.at(len - 5U); // NOLINT little endian transformation
+        source_crc32 = (source_crc32 << 8) | packed_input.at(len - 6U); // NOLINT little endian transformation
+        source_crc32 = (source_crc32 << 8) | packed_input.at(len - 7U); // NOLINT little endian transformation
+        source_crc32 = (source_crc32 << 8) | packed_input.at(len - 8U); // NOLINT little endian transformation
+
+        gzip_unpacked.resize(dlen);
+
+        struct uzlib_uncomp depack_ctxt = {};
+        uzlib_uncompress_init(&depack_ctxt, nullptr, 0);
+
+        depack_ctxt.source = reinterpret_cast<const unsigned char*>(packed_input.data());
+        depack_ctxt.source_limit = reinterpret_cast<const unsigned char*>(packed_input.data() + len - 4U); // NOLINT space for length
+        depack_ctxt.source_read_cb = nullptr;
+
+        int res = uzlib_gzip_parse_header(&depack_ctxt);
+        if (TINF_OK != res)
         {
-            const unsigned int len = static_cast<unsigned int>(packed_input.size());
-            unsigned int dlen = packed_input.at(len - 1U);
-            dlen = (dlen << 8) | packed_input.at(len - 2U);
-            dlen = (dlen << 8) | packed_input.at(len - 3U);
-            dlen = (dlen << 8) | packed_input.at(len - 4U);
-            const std::size_t outlen = static_cast<std::size_t>(dlen);
-            ++dlen; // reserve one extra byte
+            LOG_ERROR("error parsing header: %d", res);
+            gzip_unpacked.clear();
+            return gzip_unpacked;
+        }
 
-            std::uint32_t source_crc32 = packed_input.at(len - 5U);
-            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 6U);
-            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 7U);
-            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 8U);
+        depack_ctxt.dest = gzip_unpacked.data();
+        depack_ctxt.dest_start = gzip_unpacked.data();
 
-            gzip_unpacked.resize(dlen);
+        // produce decompressed output in chunks of this size
+        // default is to decompress byte by byte; can be any other length
+        constexpr const unsigned int out_chunk_size = 1U;
 
-            struct uzlib_uncomp depack_ctxt = {};
-            uzlib_uncompress_init(&depack_ctxt, nullptr, 0);
-
-            depack_ctxt.source = reinterpret_cast<const unsigned char*>(packed_input.data());
-            depack_ctxt.source_limit = reinterpret_cast<const unsigned char*>(packed_input.data() + len - 4U);
-            depack_ctxt.source_read_cb = nullptr;
-
-            int res = uzlib_gzip_parse_header(&depack_ctxt);
-            if (TINF_OK != res)
+        while (dlen > 0U)
+        {
+            unsigned int chunk_len = (dlen < out_chunk_size) ? dlen : out_chunk_size;
+            depack_ctxt.dest_limit = depack_ctxt.dest + chunk_len;
+            res = uzlib_uncompress_chksum(&depack_ctxt);
+            dlen -= chunk_len;
+            if (res != TINF_OK)
             {
-                LOG_ERROR("error parsing header: %d", res);
-                gzip_unpacked.clear();
-                return gzip_unpacked;
+                break;
             }
+        }
 
-            depack_ctxt.dest = gzip_unpacked.data();
-            depack_ctxt.dest_start = gzip_unpacked.data();
+        if (TINF_DONE != res)
+        {
+            LOG_ERROR("error during decompression: %d", res);
+            gzip_unpacked.clear();
+            return gzip_unpacked;
+        }
 
-            // produce decompressed output in chunks of this size
-            // default is to decompress byte by byte; can be any other length
-            constexpr const unsigned int out_chunk_size = 1U;
+        const std::size_t depacked_sz = depack_ctxt.dest - reinterpret_cast<unsigned char*>(gzip_unpacked.data());
 
-            while (dlen > 0U)
-            {
-                unsigned int chunk_len = (dlen < out_chunk_size) ? dlen : out_chunk_size;
-                depack_ctxt.dest_limit = depack_ctxt.dest + chunk_len;
-                res = uzlib_uncompress_chksum(&depack_ctxt);
-                dlen -= chunk_len;
-                if (res != TINF_OK)
-                {
-                    break;
-                }
-            }
+        if (depacked_sz != outlen)
+        {
+            LOG_ERROR("invalid decompressed length: %zu vs %zu", depacked_sz, outlen);
+            gzip_unpacked.clear();
+            return gzip_unpacked;
+        }
 
-            if (TINF_DONE != res)
-            {
-                LOG_ERROR("error during decompression: %d", res);
-                gzip_unpacked.clear();
-                return gzip_unpacked;
-            }
+        std::uint32_t check_crc32 = ~uzlib_crc32(gzip_unpacked.data(), static_cast<unsigned int>(depacked_sz), ~0);
 
-            const std::size_t depacked_sz = depack_ctxt.dest - reinterpret_cast<unsigned char*>(gzip_unpacked.data());
+        if (check_crc32 != source_crc32)
+        {
+            LOG_ERROR("invalid decompressed crc32");
+            gzip_unpacked.clear();
+            return gzip_unpacked;
+        }
 
-            if (depacked_sz != outlen)
-            {
-                LOG_ERROR("invalid decompressed length: %zu vs %zu", depacked_sz, outlen);
-                gzip_unpacked.clear();
-                return gzip_unpacked;
-            }
-
-            std::uint32_t check_crc32 = ~uzlib_crc32(gzip_unpacked.data(), static_cast<unsigned int>(depacked_sz), ~0);
-
-            if (check_crc32 != source_crc32)
-            {
-                LOG_ERROR("invalid decompressed crc32");
-                gzip_unpacked.clear();
-                return gzip_unpacked;
-            }
-
-            gzip_unpacked.resize(outlen);
-        } // (nullptr != m_hash_table)
+        gzip_unpacked.resize(outlen);
 
         return gzip_unpacked;
     }
