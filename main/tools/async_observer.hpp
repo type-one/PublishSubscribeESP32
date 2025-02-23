@@ -49,7 +49,7 @@ namespace tools
         {
         }
 
-        virtual void inform(const Topic& topic, const Evt& event, const std::string& origin) override
+        void inform(const Topic& topic, const Evt& event, const std::string& origin) override
         {
             m_evt_queue.push({ topic, event, origin });
             m_wakeable.signal();

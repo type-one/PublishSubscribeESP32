@@ -160,7 +160,7 @@ void test_ring_vector_resize()
     LOG_INFO("-- ring vector resize --");
     print_stats();
 
-    constexpr const std::size_t queue_size = 3U; 
+    constexpr const std::size_t queue_size = 3U;
     auto str_queue = std::make_unique<tools::ring_vector<std::string>>(queue_size);
 
     str_queue->emplace("toto1");
@@ -353,18 +353,18 @@ void test_ring_buffer_iteration()
             {
                 std::printf("%f\n", item);
             }
-            const auto avg_val
-                = std::accumulate(snapshot.cbegin(), snapshot.cend(), 0.0, std::plus<double>()) / snapshot.size();
+            const auto avg_val = std::accumulate(snapshot.cbegin(), snapshot.cend(), 0.0, std::plus<>())
+                / static_cast<double>(snapshot.size());
             std::printf("avg: %f\n", avg_val);
 
-            const auto sqsum_val = std::transform_reduce(snapshot.begin(), snapshot.end(), 0.0, std::plus<double>(),
+            const auto sqsum_val = std::transform_reduce(snapshot.begin(), snapshot.end(), 0.0, std::plus<>(),
                 [&avg_val](const auto& val)
                 {
-                    const auto d = (val - avg_val);
-                    return d * d;
+                    const auto delta = (val - avg_val);
+                    return delta * delta;
                 });
 
-            const auto variance_val = std::sqrt(sqsum_val / snapshot.size());
+            const auto variance_val = std::sqrt(sqsum_val / static_cast<double>(snapshot.size()));
             std::printf("variance: %f\n", variance_val);
 
             const auto [min_val_it, max_val_it] = std::minmax_element(snapshot.cbegin(), snapshot.cend());
@@ -511,18 +511,18 @@ void test_ring_vector_iteration()
                 std::printf("%f\n", item);
             }
 
-            const auto avg_val
-                = std::accumulate(snapshot.cbegin(), snapshot.cend(), 0.0, std::plus<double>()) / snapshot.size();
+            const auto avg_val = std::accumulate(snapshot.cbegin(), snapshot.cend(), 0.0, std::plus<>())
+                / static_cast<double>(snapshot.size());
             std::printf("avg: %f\n", avg_val);
 
-            const auto sqsum_val = std::transform_reduce(snapshot.cbegin(), snapshot.cend(), 0.0, std::plus<double>(),
+            const auto sqsum_val = std::transform_reduce(snapshot.cbegin(), snapshot.cend(), 0.0, std::plus<>(),
                 [&avg_val](const auto& val)
                 {
-                    const auto d = (val - avg_val);
-                    return d * d;
+                    const auto delta = (val - avg_val);
+                    return delta * delta;
                 });
 
-            const auto variance_val = std::sqrt(sqsum_val / snapshot.size());
+            const auto variance_val = std::sqrt(sqsum_val / static_cast<double>(snapshot.size()));
             std::printf("variance: %f\n", variance_val);
 
             const auto [min_val_it, max_val_it] = std::minmax_element(snapshot.cbegin(), snapshot.cend());
@@ -694,13 +694,11 @@ enum class my_topic
 };
 
 using base_observer = tools::sync_observer<my_topic, std::string>;
-class my_observer : public base_observer
+class my_observer : public base_observer // NOLINT inherits from non copyable and non movable class
 {
 public:
     my_observer() = default;
-    virtual ~my_observer()
-    {
-    }
+    ~my_observer() override = default;
 
     void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
@@ -712,7 +710,7 @@ private:
 };
 
 using base_async_observer = tools::async_observer<my_topic, std::string>;
-class my_async_observer : public base_async_observer
+class my_async_observer : public base_async_observer // NOLINT inherits from non copyable and non movable
 {
 public:
     my_async_observer()
@@ -720,7 +718,7 @@ public:
     {
     }
 
-    virtual ~my_async_observer()
+    ~my_async_observer() override
     {
         m_stop_task.store(true);
         m_task_loop.join();
@@ -762,18 +760,16 @@ private:
 };
 
 using base_subject = tools::sync_subject<my_topic, std::string>;
-class my_subject : public base_subject
+class my_subject : public base_subject // NOLINT inherits from non_copyable and non_movable
 {
 public:
     my_subject() = delete;
-    my_subject(const std::string name)
+    my_subject(const std::string& name)
         : base_subject(name)
     {
     }
 
-    virtual ~my_subject()
-    {
-    }
+    ~my_subject() override = default;
 
     void publish(const my_topic& topic, const std::string& event) override
     {
@@ -839,7 +835,7 @@ struct my_generic_task_context
 
 using my_generic_task = tools::generic_task<my_generic_task_context>;
 
-static void generic_function(std::shared_ptr<my_generic_task_context> context, const std::string& task_name)
+static void generic_function(const std::shared_ptr<my_generic_task_context>& context, const std::string& task_name)
 {
     std::printf("starting generic task %s\n", task_name.c_str());
 
@@ -860,7 +856,7 @@ void test_generic_task()
     LOG_INFO("-- generic task --");
     print_stats();
 
-    auto lambda = [](std::shared_ptr<my_generic_task_context> context, const std::string& task_name)
+    auto lambda = [](const std::shared_ptr<my_generic_task_context>& context, const std::string& task_name)
     {
         std::printf("starting generic task %s\n", task_name.c_str());
 
@@ -909,14 +905,14 @@ void test_periodic_task()
     LOG_INFO("-- periodic task --");
     print_stats();
 
-    auto lambda = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name)
+    auto lambda = [](const std::shared_ptr<my_periodic_task_context>& context, const std::string& task_name)
     {
         (void)task_name;
         context->loop_counter += 1;
         context->time_points.emplace(std::chrono::high_resolution_clock::now());
     };
 
-    auto startup = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name)
+    auto startup = [](const std::shared_ptr<my_periodic_task_context>& context, const std::string& task_name)
     {
         (void)task_name;
         context->loop_counter = 0;
@@ -951,13 +947,11 @@ void test_periodic_task()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
-class my_collector : public base_observer
+class my_collector : public base_observer // NOLINT inherits from non copyable and non movable class
 {
 public:
     my_collector() = default;
-    virtual ~my_collector()
-    {
-    }
+    ~my_collector() override = default;
 
     void inform(const my_topic& topic, const std::string& event, const std::string& origin) override
     {
@@ -996,7 +990,7 @@ void test_periodic_publish_subscribe()
     auto histogram_feeder = std::make_shared<my_collector>();
 
     auto sampler
-        = [&data_source](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name)
+        = [&data_source](const std::shared_ptr<my_periodic_task_context>& context, const std::string& task_name)
     {
         (void)task_name;
         context->loop_counter += 1;
@@ -1008,7 +1002,7 @@ void test_periodic_publish_subscribe()
         data_source->publish(my_topic::external, std::to_string(signal));
     };
 
-    auto startup = [](std::shared_ptr<my_periodic_task_context> context, const std::string& task_name)
+    auto startup = [](const std::shared_ptr<my_periodic_task_context>& context, const std::string& task_name)
     {
         (void)task_name;
         context->loop_counter = 0;
@@ -1086,14 +1080,14 @@ void test_worker_tasks()
     LOG_INFO("-- worker tasks --");
     print_stats();
 
-    auto startup1 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name)
+    auto startup1 = [](const std::shared_ptr<my_worker_task_context>& context, const std::string& task_name)
     {
         (void)context;
         std::printf("welcome 1\n");
         std::printf("task %s started\n", task_name.c_str());
     };
 
-    auto startup2 = [](std::shared_ptr<my_worker_task_context> context, const std::string& task_name)
+    auto startup2 = [](const std::shared_ptr<my_worker_task_context>& context, const std::string& task_name)
     {
         (void)context;
         std::printf("welcome 2\n");
@@ -1117,7 +1111,7 @@ void test_worker_tasks()
     {
         auto idx = distribution(generator);
 
-        tasks[idx]->delegate(
+        tasks.at(idx)->delegate(
             [](auto context, const auto& task_name)
             {
                 std::printf("job %d on worker task %s\n", context->loop_counter.load(), task_name.c_str());
@@ -1175,9 +1169,9 @@ struct temperature_sensor
 
 struct manufacturing_info
 {
-    char vendor_name[32];
-    char serial_number[16];
-    char manufacturing_date[10];
+    std::string vendor_name;
+    std::string serial_number;
+    std::string manufacturing_date;
 
     void serialize(bytepack::binary_stream<>& stream) const
     {
@@ -1217,10 +1211,11 @@ void test_queued_bytepack_data()
     // tools::sync_queue<std::vector<std::uint8_t>> data_queue;
 
     free_text message1 = { "jojo rabbit" };
-    manufacturing_info message2 = { "NVidia", "HTX-4589-22-1", "24/05/02" };
+    manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" } };
     temperature_sensor message3 = { 45.2, 51.72, 21.5 };
 
-    std::vector<std::uint8_t> buffer(1024);
+    constexpr const std::size_t buffer_size = 1024U;
+    std::vector<std::uint8_t> buffer(buffer_size);
     bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer.data(), buffer.size()) };
 
     binary_stream.reset();
@@ -1263,7 +1258,7 @@ void test_queued_bytepack_data()
         {
             case message_type::freetext:
             {
-                free_text text;
+                free_text text = {};
                 text.deserialize(stream);
                 std::printf("%s\n", text.text.c_str());
             }
@@ -1271,15 +1266,16 @@ void test_queued_bytepack_data()
 
             case message_type::manufacturing:
             {
-                manufacturing_info info;
+                manufacturing_info info = {};
                 info.deserialize(stream);
-                std::printf("%s\n%s\n%s\n", info.vendor_name, info.serial_number, info.manufacturing_date);
+                std::printf(
+                    "%s\n%s\n%s\n", info.vendor_name.c_str(), info.serial_number.c_str(), info.manufacturing_date.c_str());
             }
             break;
 
             case message_type::temperature:
             {
-                temperature_sensor temp;
+                temperature_sensor temp = {};
                 temp.deserialize(stream);
                 std::printf("%f\n%f\n%f\n", temp.cpu_temperature, temp.gpu_temperature, temp.room_temperature);
             }
@@ -1298,22 +1294,22 @@ struct aggregated_info
 {
     std::map<std::string, temperature_sensor> m_dictionary;
     std::vector<manufacturing_info> m_list;
-    bool m_status;
+    bool m_status = false;
     std::vector<double> m_values;
 
     void serialize(bytepack::binary_stream<>& stream) const
     {
         stream.write(static_cast<std::uint32_t>(m_dictionary.size()));
-        for (const auto& e : m_dictionary)
+        for (const auto& elt : m_dictionary)
         {
-            stream.write(e.first);
-            e.second.serialize(stream);
+            stream.write(elt.first);
+            elt.second.serialize(stream);
         }
 
         stream.write(static_cast<std::uint32_t>(m_list.size()));
-        for (const auto& e : m_list)
+        for (const auto& elt : m_list)
         {
-            e.serialize(stream);
+            elt.serialize(stream);
         }
 
         stream.write(m_status, m_values);
@@ -1357,18 +1353,21 @@ void test_aggregated_bytepack_data()
     LOG_INFO("-- test aggregated bytepack data --");
     print_stats();
 
-    aggregated_info aggr = { { { "sensor1", { 45.2, 51.72, 21.5 } }, { "sensor2", { 17.2, 34.7, 18.3 } } },
-        { { "NVidia", "HTX-4589-22-1", "24/05/02" }, { "AMD", "HTX-7788-22-5", "12/05/07" } }, false,
-        { 0.7, 1.5, 2.1, -0.5 } };
+    aggregated_info aggr = {};
+    aggr.m_dictionary = {{ "sensor1", { 45.2, 51.72, 21.5 } }, { "sensor2", { 17.2, 34.7, 18.3 } }}; // NOLINT test values
+    aggr.m_list = {{ {"NVidia"}, {"HTX-4589-22-1"}, {"24/05/02"} }, { {"AMD"}, {"HTX-7788-22-5"}, {"12/05/07"} }};
+    aggr.m_status = false;
+    aggr.m_values = { 0.7, 1.5, 2.1, -0.5 };  // NOLINT test values
 
     auto sens = aggr.m_dictionary.find("sensor2");
     std::printf(
         "%f %f %f \n", sens->second.cpu_temperature, sens->second.gpu_temperature, sens->second.room_temperature);
-    std::printf(
-        "%s %s %s\n", aggr.m_list[1].manufacturing_date, aggr.m_list[1].serial_number, aggr.m_list[1].vendor_name);
+    std::printf("%s %s %s\n", aggr.m_list[1].manufacturing_date.c_str(), aggr.m_list[1].serial_number.c_str(),
+        aggr.m_list[1].vendor_name.c_str());
     std::printf("%f %f %f\n", aggr.m_values[0], aggr.m_values[1], aggr.m_values[2]);
 
-    std::vector<std::uint8_t> buffer(1024);
+    constexpr const size_t buffer_size = 1024;
+    std::vector<std::uint8_t> buffer(buffer_size);
     bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer.data(), buffer.size()) };
 
     binary_stream.reset();
@@ -1383,16 +1382,17 @@ void test_aggregated_bytepack_data()
     std::memcpy(data_packed.data(), bin_buf.as<void>(), bin_buf.size());
 
     bytepack::binary_stream stream(bytepack::buffer_view(data_packed.data(), data_packed.size()));
-    message_type typ;
+    message_type typ = {};
     stream.read(typ);
     if (message_type::aggregat == typ)
     {
         aggr_dup.deserialize(stream);
 
-        auto s = aggr_dup.m_dictionary.find("sensor2");
-        std::printf("%f %f %f \n", s->second.cpu_temperature, s->second.gpu_temperature, s->second.room_temperature);
-        std::printf("%s %s %s\n", aggr_dup.m_list[1].manufacturing_date, aggr_dup.m_list[1].serial_number,
-            aggr_dup.m_list[1].vendor_name);
+        auto sensor = aggr_dup.m_dictionary.find("sensor2");
+        std::printf("%f %f %f \n", sensor->second.cpu_temperature, sensor->second.gpu_temperature,
+            sensor->second.room_temperature);
+        std::printf("%s %s %s\n", aggr_dup.m_list[1].manufacturing_date.c_str(), aggr_dup.m_list[1].serial_number.c_str(),
+            aggr_dup.m_list[1].vendor_name.c_str());
         std::printf("%f %f %f\n", aggr_dup.m_values[0], aggr_dup.m_values[1], aggr_dup.m_values[2]);
     }
 }
@@ -1403,21 +1403,22 @@ struct data_task_context
 {
 };
 
-using binary_msg = std::array<std::uint8_t, 128>;
+constexpr const size_t binary_msg_size = 128U;
+using binary_msg = std::array<std::uint8_t, binary_msg_size>;
 
 using my_data_task = tools::data_task<data_task_context, binary_msg>;
 using my_data_periodic_task = tools::periodic_task<data_task_context>;
 
 namespace
 {
-    auto task_startup = [](std::shared_ptr<data_task_context> context, const std::string& task_name)
+    const auto task_startup = [](const std::shared_ptr<data_task_context>& context, const std::string& task_name)
     {
         (void)context;
         std::printf("starting %s\n", task_name.c_str());
     };
 
-    auto task_1_processing
-        = [](std::shared_ptr<data_task_context> context, binary_msg data_packed, const std::string& task_name)
+    const auto task_1_processing
+        = [](const std::shared_ptr<data_task_context>& context, binary_msg data_packed, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -1441,7 +1442,8 @@ namespace
             {
                 manufacturing_info info = {};
                 info.deserialize(stream);
-                std::printf("%s\n%s\n%s\n", info.vendor_name, info.serial_number, info.manufacturing_date);
+                std::printf(
+                    "%s\n%s\n%s\n", info.vendor_name.c_str(), info.serial_number.c_str(), info.manufacturing_date.c_str());
             }
             break;
 
@@ -1471,13 +1473,14 @@ void test_bytepack_data_task()
 
     binary_msg buffer;
 
-    auto task_2_periodic = [&task_1, &buffer](std::shared_ptr<data_task_context> context, const std::string& task_name)
+    auto task_2_periodic
+        = [&task_1, &buffer](const std::shared_ptr<data_task_context>& context, const std::string& task_name)
     {
         (void)context;
         std::printf("periodic %s\n", task_name.c_str());
 
         temperature_sensor message1 = { 45.2, 51.72, 21.5 };
-        manufacturing_info message2 = { "NVidia", "HTX-4589-22-1", "24/05/02" };
+        manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" } };
         free_text message3 = { "jojo rabbit" };
 
         bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer) };
@@ -1525,8 +1528,8 @@ void test_json()
         obj.set("nothing", cjsonpp::nullObject()); // add another null object by passing nullptr
 
         // add an array that is stored as std::vector (using an initializer list)
-        std::vector<int> v = { 0, 1, 2 };
-        obj.set("list", v);
+        std::vector<int> val = { 0, 1, 2 };
+        obj.set("list", val);
 
         // add an object inside the object
         obj2.set("everything", 42);
@@ -1542,8 +1545,8 @@ void test_json()
 
         obj.set("object", arr);
 
-        const auto s = obj.print();
-        std::printf("%s\n", s.c_str());
+        const auto str = obj.print();
+        std::printf("%s\n", str.c_str());
     }
 
     {
@@ -1551,8 +1554,8 @@ void test_json()
         std::string jsonstr = "{ \"happy\": true, \"pi\": 3.141 }";
         cjsonpp::JSONObject obj = cjsonpp::parse(jsonstr);
 
-        const auto s = obj.print();
-        std::printf("%s\n", s.c_str());
+        const auto str = obj.print();
+        std::printf("%s\n", str.c_str());
     }
 }
 
@@ -2127,24 +2130,24 @@ void test_timer()
 
         // Test periodic timer (auto-reload) - check immediately started
         std::atomic<std::size_t> count(0U);
-        auto id = timer_scheduler.add("timer3", 40, [&](tools::timer_handle) { ++count; }, true);
+        auto timer_id = timer_scheduler.add("timer3", 40, [&](tools::timer_handle) { ++count; }, true);
         tools::sleep_for(20);    
-        timer_scheduler.remove(id);
+        timer_scheduler.remove(timer_id);
         std::printf("Expect count %zu is 1\n", count.load());
 
         // Test periodic timer (auto-reload) - check after 3 cycles
         count = 0U;
-        id = timer_scheduler.add("timer4", 40, [&](tools::timer_handle) { ++count; }, true);
+        timer_id = timer_scheduler.add("timer4", 40, [&](tools::timer_handle) { ++count; }, true);
         tools::sleep_for(100);    
-        timer_scheduler.remove(id);
+        timer_scheduler.remove(timer_id);
         std::printf("Expect count %zu is 3\n", count.load());
 
         // Test delete periodic timer (auto-reload) in callback
         count = 0U;
         timer_scheduler.add("timer5", 25,
-                [&](tools::timer_handle id) {
+                [&](tools::timer_handle timer_id) {
                     ++count;
-                    timer_scheduler.remove(id);
+                    timer_scheduler.remove(timer_id);
                 },
                 true);
         tools::sleep_for(75);
@@ -2153,12 +2156,12 @@ void test_timer()
         // Test periodic timer delays        
         auto start_point = std::chrono::high_resolution_clock::now();
         std::queue<std::chrono::high_resolution_clock::time_point> time_points;
-        id = timer_scheduler.add("timer6", 40, [&](tools::timer_handle)
+        timer_id = timer_scheduler.add("timer6", 40, [&](tools::timer_handle)
         {
             time_points.emplace(std::chrono::high_resolution_clock::now());
         }, true);
         tools::sleep_for(200);    
-        timer_scheduler.remove(id);
+        timer_scheduler.remove(timer_id);
 
         auto prev_point = start_point;
         while(!time_points.empty())
@@ -2173,7 +2176,7 @@ void test_timer()
         // Test one shot timer delay        
         start_point = std::chrono::high_resolution_clock::now();
         std::chrono::high_resolution_clock::time_point time_point;
-        id = timer_scheduler.add("timer7", 120, [&](tools::timer_handle)
+        timer_id = timer_scheduler.add("timer7", 120, [&](tools::timer_handle)
         {
             time_point = std::chrono::high_resolution_clock::now();
         }, false);
@@ -2184,7 +2187,7 @@ void test_timer()
 
         // Test one shot timer delay (variant with std::chrono input)       
         start_point = std::chrono::high_resolution_clock::now();
-        id = timer_scheduler.add("timer7", std::chrono::duration<std::uint64_t, std::micro>(120250), [&](tools::timer_handle)
+        timer_id = timer_scheduler.add("timer7", std::chrono::duration<std::uint64_t, std::micro>(120250), [&](tools::timer_handle)
         {
             time_point = std::chrono::high_resolution_clock::now();
         }, false);
@@ -2209,7 +2212,7 @@ void test_smp_tasks_cpu_affinity()
     LOG_INFO("-- smp tasks with cpu affinity --");
     print_stats();
 
-    auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name)
+    auto startup = [](const std::shared_ptr<smp_task_context>& context, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -2217,9 +2220,11 @@ void test_smp_tasks_cpu_affinity()
 
     auto context = std::make_shared<smp_task_context>();
 
-    worker_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
+    constexpr const std::size_t task1_stack_size = 2048U;
+    constexpr const int core1 = 1;
+    worker_task1 task1(startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
 
-    auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name)
+    auto periodic_lambda = [&task1](const std::shared_ptr<smp_task_context>& context, const std::string& task_name)
     {
         (void)context;
         static int count = 0;
@@ -2234,12 +2239,15 @@ void test_smp_tasks_cpu_affinity()
         });
     };
 
-    // 20 ms period
-    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(100); 
-    periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
+    constexpr const auto period_100ms = std::chrono::duration<std::uint64_t, std::milli>(100);
+    constexpr const std::size_t task0_stack_size = 4096U;
+    constexpr const int core0 = 0; 
+
+    periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period_100ms, task0_stack_size, core0, tools::base_task::default_priority); 
 
     // sleep 2 sec
-    tools::sleep_for(2000);
+    constexpr const int wait_task_ms = 2000;
+    tools::sleep_for(wait_task_ms);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -2258,7 +2266,7 @@ void test_smp_tasks_lock_free_ring_buffer()
     LOG_INFO("-- smp tasks with lock free ring buffer --");
     print_stats();
 
-    auto startup = [](std::shared_ptr<smp_ring_task_context> context, const std::string& task_name)
+    auto startup = [](const std::shared_ptr<smp_ring_task_context>& context, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -2266,15 +2274,17 @@ void test_smp_tasks_lock_free_ring_buffer()
 
     auto context = std::make_shared<smp_ring_task_context>();
 
-    worker_ring_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
+    constexpr const std::size_t task1_stack_size = 2048U;
+    worker_ring_task1 task1(startup, context, "worker_task1", task1_stack_size, 1 /* core 1 */, tools::base_task::default_priority);
 
-    auto periodic_lambda = [&task1](std::shared_ptr<smp_ring_task_context> context, const std::string& task_name)
+    auto periodic_lambda = [&task1](const std::shared_ptr<smp_ring_task_context>& context, const std::string& task_name)
     {        
         static int count = 0;
         std::printf("%s (core 0): count %d\n", task_name.c_str(), count);
         ++count;
 
-        context->m_to_worker_pipe.push(static_cast<std::uint8_t>(count & 0xff));
+        constexpr const int mask = 0xff;
+        context->m_to_worker_pipe.push(static_cast<std::uint8_t>(count & mask));
 
         std::uint8_t val = 0U; 
         if (context->m_from_worker_pipe.pop(val))
@@ -2283,7 +2293,7 @@ void test_smp_tasks_lock_free_ring_buffer()
         }
 
         // delegate work on core 1
-        task1.delegate([](auto context, const auto& task_name)
+        task1.delegate([](const auto& context, const auto& task_name)
         {
             (void)task_name;
             std::uint8_t value = 0U; 
@@ -2294,9 +2304,9 @@ void test_smp_tasks_lock_free_ring_buffer()
         });
     };
 
-    // 20 ms period
-    constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(100); 
-    periodic_ring_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
+    constexpr const auto period_100ms = std::chrono::duration<std::uint64_t, std::milli>(100); 
+    constexpr const std::size_t task0_stack_size = 4096U;
+    periodic_ring_task0 task0(startup, periodic_lambda, context, "periodic_task0", period_100ms, task0_stack_size, 0 /* core 0 */, tools::base_task::default_priority); 
 
     // sleep 2 sec
     tools::sleep_for(2000);
@@ -2328,7 +2338,7 @@ void test_smp_tasks_memory_pipe()
     LOG_INFO("-- smp tasks with memory pipe --");
     print_stats();    
 
-    auto startup = [](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name)
+    auto startup = [](const std::shared_ptr<smp_mem_task_context>& context, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -2338,14 +2348,16 @@ void test_smp_tasks_memory_pipe()
     auto context = std::make_shared<smp_mem_task_context>(static_storage.size());
 
     {
-        worker_mem_task1 task1(startup, context, "worker_task1", 2048, 1 /* core 1 */);
+        constexpr const std::size_t task1_stack_size = 2048U;
+        constexpr const int core1 = 1;
+        worker_mem_task1 task1(startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
 
         static const std::string label = "this\nis\na\ntest\nto\ntransmit\nseveral\nmessages\nbetween\ntwo\ncores\n";
 
         std::atomic_bool stop(false);
 
         // delegate work on core 1
-        task1.delegate([&stop](auto context, const auto& task_name)
+        task1.delegate([&stop](const auto& context, const auto& task_name)
         {
             std::printf("%s (core 1)\n", task_name.c_str());
 
@@ -2354,12 +2366,13 @@ void test_smp_tasks_memory_pipe()
             while(!stop.load())
             {
                 std::vector<std::uint8_t> received;
-                const auto received_bytes = context->m_to_worker_pipe.receive(received, 128, timeout);
+                constexpr const std::size_t bytes_to_receive = 128U;
+                const auto received_bytes = context->m_to_worker_pipe.receive(received, bytes_to_receive, timeout);
                 if (received_bytes > 0U)
                 {
-                    for(const auto v : received)
+                    for(const auto val : received)
                     {
-                        std::printf("%c", v);   
+                        std::printf("%c", val);   
                     }
                 }
                 
@@ -2369,7 +2382,7 @@ void test_smp_tasks_memory_pipe()
         });
 
         std::size_t offset = 0U;
-        auto periodic_lambda = [&offset](std::shared_ptr<smp_mem_task_context> context, const std::string& task_name)
+        auto periodic_lambda = [&offset](const std::shared_ptr<smp_mem_task_context>& context, const std::string& task_name)
         { 
             std::printf(" / %s (core 0)\n", task_name.c_str());
 
@@ -2385,12 +2398,16 @@ void test_smp_tasks_memory_pipe()
 
         // 50 ms period
         constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(50); 
-        periodic_mem_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, 4096U, 0 /* core 0 */); 
+        constexpr const std::size_t task0_stack_size = 4096U;
+        constexpr const int core0 = 0;
+        periodic_mem_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, task0_stack_size, core0, tools::base_task::default_priority); 
 
         // sleep 2 sec
-        tools::sleep_for(2000);
+        constexpr const int wait_processing_ms = 2000;
+        constexpr const int wait_join_ms = 250;
+        tools::sleep_for(wait_processing_ms);
         stop.store(true);
-        tools::sleep_for(250);
+        tools::sleep_for(wait_join_ms);
     }
 }
 
@@ -2402,7 +2419,7 @@ void test_tasks_priority()
     LOG_INFO("-- tasks with priority --");
     print_stats();
 
-    auto startup = [](std::shared_ptr<smp_task_context> context, const std::string& task_name)
+    auto startup = [](const std::shared_ptr<smp_task_context>& context, const std::string& task_name)
     {
         (void)context;
         (void)task_name;
@@ -2414,7 +2431,7 @@ void test_tasks_priority()
     constexpr const auto task1_priority = 0; // lo prio 
     worker_task1 task1(startup, context, "worker_task1", task1_stack_size, tools::base_task::run_on_all_cores, task1_priority);
 
-    auto periodic_lambda = [&task1](std::shared_ptr<smp_task_context> context, const std::string& task_name)
+    auto periodic_lambda = [&task1](const std::shared_ptr<smp_task_context>& context, const std::string& task_name)
     {
         (void)context;
         static int count = 0;
@@ -2422,7 +2439,7 @@ void test_tasks_priority()
         ++count;
 
         // delegate work on lower priority task
-        task1.delegate([](auto context, const auto& task_name)
+        task1.delegate([](const auto& context, const auto& task_name)
         {
             (void)context;
             std::printf("%s (lo prio): work\n", task_name.c_str());
@@ -2478,13 +2495,13 @@ static bool timer_isr_handler(gptimer_handle_t timer, const gptimer_alarm_event_
     return false; /* YIELD_FROM_ISR already handled in submit data call */
 }
 
-static void task_isr_startup(std::shared_ptr<isr_context> context, const std::string& task_name)
+static void task_isr_startup(const std::shared_ptr<isr_context>& context, const std::string& task_name)
 {
     (void)context;
     std::printf("starting %s\n", task_name.c_str());
 }
 
-static void task_isr_processing(std::shared_ptr<isr_context> context, const std::uint32_t& data, const std::string& task_name)
+static void task_isr_processing(const std::shared_ptr<isr_context>& context, const std::uint32_t& data, const std::string& task_name)
 {
     static auto prev_timepoint = std::chrono::high_resolution_clock::now();
     auto current_timepoint = std::chrono::high_resolution_clock::now();

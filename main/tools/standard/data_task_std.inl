@@ -44,7 +44,7 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
     requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
 #endif
-    class data_task : public base_task
+    class data_task : public base_task // NOLINT base_task is non copyable and non movable
     {
         static_assert(std::is_standard_layout<DataType>::value, "DataType has to provide standard layout");
         static_assert(std::is_trivial<DataType>::value, "DataType has to be trivial type");
@@ -52,13 +52,13 @@ namespace tools
     public:
         data_task() = delete;
 
-        using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
-        using data_call_back
-            = std::function<void(std::shared_ptr<Context>, const DataType& data, const std::string& task_name)>;
+        using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
+        using data_call_back = std::function<void(
+            const std::shared_ptr<Context>& context, const DataType& data, const std::string& task_name)>;
 
-        data_task(call_back&& startup_routine, data_call_back&& process_routine, std::shared_ptr<Context> context,
-            std::size_t data_queue_depth, const std::string& task_name, std::size_t stack_size,
-            int cpu_affinity = base_task::run_on_all_cores, int priority = base_task::default_priority)
+        data_task(call_back&& startup_routine, data_call_back&& process_routine,
+            const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
+            std::size_t stack_size, int cpu_affinity, int priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_process_routine(std::move(process_routine))
@@ -74,6 +74,14 @@ namespace tools
                 });
         }
 
+        data_task(call_back&& startup_routine, data_call_back&& process_routine,
+            const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
+            std::size_t stack_size)
+            : data_task(std::move(startup_routine), std::move(process_routine), context, data_queue_depth, task_name,
+                stack_size, base_task::run_on_all_cores, base_task::default_priority)
+        {
+        }
+
         ~data_task()
         {
             m_stop_task.store(true);
@@ -82,7 +90,7 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
-        virtual void* native_handle() override
+        void* native_handle() override
         {
             return reinterpret_cast<void*>(m_task->native_handle());
         }

@@ -63,7 +63,7 @@ namespace tools
     using loose_coupled_handler = std::function<void(const Topic&, const Evt&, const std::string&)>;
 
     template <typename Topic, typename Evt>
-    class sync_subject
+    class sync_subject : public non_copyable
     {
     public:
         using sync_observer_shared_ptr = std::shared_ptr<sync_observer<Topic, Evt>>;

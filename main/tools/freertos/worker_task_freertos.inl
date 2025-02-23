@@ -41,23 +41,29 @@
 namespace tools
 {
     template <typename Context>
-    class worker_task : public base_task
+    class worker_task : public base_task // NOLINT base_task is non copyable and non movable
     {
 
     public:
         worker_task() = delete;
 
-        using call_back = std::function<void(std::shared_ptr<Context>, const std::string& task_name)>;
+        using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
 
-        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name,
-            std::size_t stack_size, int cpu_affinity = base_task::run_on_all_cores,
-            int priority = base_task::default_priority)
+        worker_task(call_back&& startup_routine, const std::shared_ptr<Context>& context, const std::string& task_name,
+            std::size_t stack_size, int cpu_affinity, int priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_context(context)
         {
             m_task_created = task_create(&m_task, this->task_name(), run_loop, reinterpret_cast<void*>(this),
                 this->stack_size(), this->cpu_affinity(), this->priority());
+        }
+
+        worker_task(call_back&& startup_routine, const std::shared_ptr<Context>& context, const std::string& task_name,
+            std::size_t stack_size)
+            : worker_task(std::move(startup_routine), context, task_name, stack_size, base_task::run_on_all_cores,
+                base_task::default_priority)
+        {
         }
 
         ~worker_task()
@@ -73,7 +79,7 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
-        virtual void* native_handle() override
+        void* native_handle() override
         {
             return reinterpret_cast<void*>(&m_task);
         }
@@ -143,7 +149,7 @@ namespace tools
 
         std::atomic_bool m_stop_task = false;
 
-        TaskHandle_t m_task;
+        TaskHandle_t m_task = {};
         bool m_task_created = false;
     };
 }
