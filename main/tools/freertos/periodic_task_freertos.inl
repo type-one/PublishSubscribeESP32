@@ -49,24 +49,27 @@ namespace tools
 
         using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
 
-        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, const std::shared_ptr<Context>& context,
-            const std::string& task_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
-            std::size_t stack_size, int cpu_affinity, int priority)
+        periodic_task(call_back&& startup_routine, call_back&& periodic_routine,
+            const std::shared_ptr<Context>& context, const std::string& task_name,
+            const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size, int cpu_affinity,
+            int priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
             , m_context(context)
             , m_period(period)
         {
-            m_task_created = task_create(&m_task, this->task_name(), periodic_call, reinterpret_cast<void*>(this),
+            m_task_created = task_create(&m_task, this->task_name(), periodic_call,
+                reinterpret_cast<void*>(this), // NOLINT only way to pass the instance as a void* to the task
                 this->stack_size(), this->cpu_affinity(), this->priority());
         }
 
-        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, const std::shared_ptr<Context>& context,
-            const std::string& task_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
-            std::size_t stack_size)
-            : periodic_task(std::move(startup_routine), std::move(periodic_routine), context, task_name, period, stack_size, base_task::run_on_all_cores, base_task::default_priority)
-        {            
+        periodic_task(call_back&& startup_routine, call_back&& periodic_routine,
+            const std::shared_ptr<Context>& context, const std::string& task_name,
+            const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size)
+            : periodic_task(std::move(startup_routine), std::move(periodic_routine), context, task_name, period,
+                stack_size, base_task::run_on_all_cores, base_task::default_priority)
+        {
         }
 
         ~periodic_task()
@@ -83,13 +86,15 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() override
         {
-            return reinterpret_cast<void*>(&m_task); // NOLINT native handler wrapping
+            return reinterpret_cast<void*>(&m_task); // NOLINT native handler wrapping as a void*
         }
 
     private:
         static void periodic_call(void* object_instance)
         {
-            periodic_task* instance = reinterpret_cast<periodic_task*>(object_instance);
+            periodic_task* instance = reinterpret_cast<periodic_task*>( // NOLINT only way to convert the passed void*
+                                                                        // to the task to a object instance
+                object_instance);
 
             auto x_last_wake_time = xTaskGetTickCount();
             const auto us = std::chrono::duration_cast<std::chrono::microseconds>(instance->m_period);

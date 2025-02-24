@@ -2449,7 +2449,9 @@ void test_smp_tasks_memory_pipe()
             if (offset < label.size())
             {            
                 const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(10);
-                const auto sent = context->m_to_worker_pipe.send(reinterpret_cast<const std::uint8_t*>(label.data() + offset), to_send, timeout);
+                const auto sent = context->m_to_worker_pipe.send(
+                    reinterpret_cast<const std::uint8_t*>(label.data() + offset), // NOLINT const char* to const std::uint8_t* 
+                    to_send, timeout);
                 offset += sent; // try again on characters left 
             }
         };

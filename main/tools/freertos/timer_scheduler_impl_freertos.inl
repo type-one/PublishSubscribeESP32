@@ -42,7 +42,9 @@ namespace
 {
     void timer_callback(tools::timer_handle x_timer)
     {
-        auto* context = reinterpret_cast<tools::timer_scheduler::timer_context*>(pvTimerGetTimerID(x_timer));
+        auto* context = reinterpret_cast<tools::timer_scheduler::timer_context*>( // NOLINT only way to cast the void*
+                                                                                  // timer param to context instance
+            pvTimerGetTimerID(x_timer));
         if (nullptr != context)
         {
             (context->m_callback)(x_timer);
@@ -72,9 +74,9 @@ namespace tools
         }
     }
 
-    timer_handle timer_scheduler::add_tick(const std::string& timer_name,  // NOLINT keep common platform interface
-        const TickType_t period,                                           // NOLINT keep common platform interface
-        std::function<void(timer_handle)>&& handler, timer_type type)      // NOLINT keep common platform interface
+    timer_handle timer_scheduler::add_tick(const std::string& timer_name, // NOLINT keep common platform interface
+        const TickType_t period,                                          // NOLINT keep common platform interface
+        std::function<void(timer_handle)>&& handler, timer_type type)     // NOLINT keep common platform interface
     {
         auto context = std::make_unique<timer_context>();
         context->m_callback = std::move(handler); // NOLINT keep common platform interface
@@ -85,7 +87,7 @@ namespace tools
         // https://mcuoneclipse.com/2018/05/27/tutorial-understanding-and-using-freertos-software-timers/
         // https://freertos.org/Documentation/02-Kernel/04-API-references/11-Software-timers/01-xTimerCreate
         // https://stackoverflow.com/questions/71199868/c-use-a-class-non-static-method-as-a-function-pointer-callback-in-freertos-xti
-        timer_handle hnd = nullptr;        
+        timer_handle hnd = nullptr;
 
         if (auto_reload)
         {

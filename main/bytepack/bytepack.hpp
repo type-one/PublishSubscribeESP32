@@ -518,7 +518,7 @@ namespace bytepack
                 // The `NetworkSerializableBasic` concept ensures 'T' is a non-class, fundamental type, making
                 // it trivially copyable and ensuring a consistent, predictable memory layout across systems.
                 std::ranges::reverse(
-                    reinterpret_cast<std::uint8_t*>(&value), reinterpret_cast<std::uint8_t*>(&value) + sizeof(T));
+                    reinterpret_cast<std::uint8_t*>(&value), reinterpret_cast<std::uint8_t*>(&value) + sizeof(T)); // NOLINT
             }
 
             read_index_ += sizeof(T);
@@ -552,8 +552,8 @@ namespace bytepack
                 for (size_t i = 0; i < numElements; ++i)
                 {
                     std::memcpy(&value[i], buffer_.as<std::uint8_t>() + read_index_, elementSize);
-                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&value[i]),
-                        reinterpret_cast<std::uint8_t*>(&value[i]) + elementSize);
+                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&value[i]), // NOLINT
+                        reinterpret_cast<std::uint8_t*>(&value[i]) + elementSize);   // NOLINT
                     read_index_ += elementSize;
                 }
             }
@@ -584,8 +584,8 @@ namespace bytepack
                 for (size_t i = 0; i < N; ++i)
                 {
                     std::memcpy(&array[i], buffer_.as<std::uint8_t>() + read_index_, sizeof(T));
-                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&array[i]),
-                        reinterpret_cast<std::uint8_t*>(&array[i]) + sizeof(T));
+                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&array[i]), // NOLINT
+                        reinterpret_cast<std::uint8_t*>(&array[i]) + sizeof(T));     // NOLINT
                     read_index_ += sizeof(T);
                 }
             }
@@ -626,8 +626,8 @@ namespace bytepack
                 for (std::size_t i = 0; i < size; ++i)
                 {
                     std::memcpy(&vector[i], buffer_.as<std::uint8_t>() + read_index_, sizeof(T));
-                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&vector[i]),
-                        reinterpret_cast<std::uint8_t*>(&vector[i]) + sizeof(T));
+                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&vector[i]), // NOLINT
+                        reinterpret_cast<std::uint8_t*>(&vector[i]) + sizeof(T));     // NOLINT
                     read_index_ += sizeof(T);
                 }
             }
@@ -658,8 +658,8 @@ namespace bytepack
                 for (std::size_t i = 0; i < N; ++i)
                 {
                     std::memcpy(&vector[i], buffer_.as<std::uint8_t>() + read_index_, sizeof(T));
-                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&vector[i]),
-                        reinterpret_cast<std::uint8_t*>(&vector[i]) + sizeof(T));
+                    std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&vector[i]), // NOLINT
+                        reinterpret_cast<std::uint8_t*>(&vector[i]) + sizeof(T));     // NOLINT
                     read_index_ += sizeof(T);
                 }
             }
@@ -681,8 +681,8 @@ namespace bytepack
             // Handle endianness for the string length
             if constexpr (BufferEndian != std::endian::native && sizeof(SizeType) > 1)
             {
-                std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&str_length),
-                    reinterpret_cast<std::uint8_t*>(&str_length) + sizeof(SizeType));
+                std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&str_length),    // NOLINT
+                    reinterpret_cast<std::uint8_t*>(&str_length) + sizeof(SizeType)); // NOLINT
             }
 
             // String length cannot be negative, so it's treated as an error. Zero length is well-defined for dynamic

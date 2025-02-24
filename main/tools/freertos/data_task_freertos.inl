@@ -72,7 +72,8 @@ namespace tools
                 LOG_ERROR("FATAL error: xQueueCreate() failed for task %s", this->task_name().c_str());
             }
 
-            m_task_created = task_create(&m_task, this->task_name(), run_loop, reinterpret_cast<void*>(this),
+            m_task_created = task_create(&m_task, this->task_name(), run_loop,
+                reinterpret_cast<void*>(this), // NOLINT only way to pass the instance as a void* to the task
                 this->stack_size(), this->cpu_affinity(), this->priority());
         }
 
@@ -104,7 +105,7 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() override
         {
-            return reinterpret_cast<void*>(&m_task); // NOLINT native handler wrapping
+            return reinterpret_cast<void*>(&m_task); // NOLINT native handler wrapping as a void*
         }
 
         void submit(const DataType& data)
@@ -129,7 +130,9 @@ namespace tools
     private:
         static void run_loop(void* object_instance)
         {
-            data_task* instance = reinterpret_cast<data_task*>(object_instance);
+            data_task* instance = reinterpret_cast<data_task*>( // NOLINT only way to convert the passed void* to the
+                                                                // task to a object instance
+                object_instance);
 
             const std::string task_name = instance->task_name();
             constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */

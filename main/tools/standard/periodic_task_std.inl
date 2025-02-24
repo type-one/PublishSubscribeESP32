@@ -84,7 +84,7 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() override
         {
-            return reinterpret_cast<void*>(m_task->native_handle()); // NOLINT native handler wrapping
+            return reinterpret_cast<void*>(m_task->native_handle()); // NOLINT native handler wrapping as a void*
         }
 
     private:

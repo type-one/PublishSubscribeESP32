@@ -100,22 +100,32 @@ namespace tools
             constexpr const std::uint32_t lo_byte_mask = 0xff;
 
             // little endian CRC32
-            gzip_packed.at(gzip_header_sz + packed_size + 0U) = crc32 & lo_byte_mask; // NOLINT little endian transformation
-            gzip_packed.at(gzip_header_sz + packed_size + 1U) = (crc32 >> 8) & lo_byte_mask; // NOLINT little endian transformation
-            gzip_packed.at(gzip_header_sz + packed_size + 2U) = (crc32 >> 16) & lo_byte_mask; // NOLINT little endian transformation
-            gzip_packed.at(gzip_header_sz + packed_size + 3U) = (crc32 >> 24) & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 0U) // NOLINT gzip footer little endian transformation
+                = crc32 & lo_byte_mask;                       // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 1U) // NOLINT gzip footer little endian transformation
+                = (crc32 >> 8) & lo_byte_mask;                // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 2U) // NOLINT gzip footer little endian transformation
+                = (crc32 >> 16) & lo_byte_mask;               // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 3U) // NOLINT gzip footer little endian transformation
+                = (crc32 >> 24) & lo_byte_mask;               // NOLINT little endian transformation
 
             // little endian source length
-            gzip_packed.at(gzip_header_sz + packed_size + 4U) = unpacked_input.size() & lo_byte_mask; // NOLINT little endian transformation
-            gzip_packed.at(gzip_header_sz + packed_size + 5U) = (unpacked_input.size() >> 8) & lo_byte_mask; // NOLINT little endian transformation
-            gzip_packed.at(gzip_header_sz + packed_size + 6U) = (unpacked_input.size() >> 16) & lo_byte_mask; // NOLINT little endian transformation
-            gzip_packed.at(gzip_header_sz + packed_size + 7U) = (unpacked_input.size() >> 24) & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 4U)   // NOLINT gzip footer little endian transformation
+                = unpacked_input.size() & lo_byte_mask;         // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 5U)   // NOLINT gzip footer little endian transformation
+                = (unpacked_input.size() >> 8) & lo_byte_mask;  // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 6U)   // NOLINT gzip footer little endian transformation
+                = (unpacked_input.size() >> 16) & lo_byte_mask; // NOLINT little endian transformation
+            gzip_packed.at(gzip_header_sz + packed_size + 7U)   // NOLINT gzip footer little endian transformation
+                = (unpacked_input.size() >> 24) & lo_byte_mask; // NOLINT little endian transformation
+
         } // (nullptr != m_hash_table)
 
         return gzip_packed;
     }
 
-    std::vector<std::uint8_t> gzip_wrapper::unpack(const std::vector<std::uint8_t>& packed_input) // NOLINT cognitive complexity
+    std::vector<std::uint8_t> gzip_wrapper::unpack(
+        const std::vector<std::uint8_t>& packed_input) // NOLINT cognitive complexity
     {
         std::vector<std::uint8_t> gzip_unpacked;
 
@@ -127,7 +137,7 @@ namespace tools
         const auto outlen = static_cast<std::size_t>(dlen);
         ++dlen; // reserve one extra byte
 
-        std::uint32_t source_crc32 = packed_input.at(len - 5U); // NOLINT little endian transformation
+        std::uint32_t source_crc32 = packed_input.at(len - 5U);         // NOLINT little endian transformation
         source_crc32 = (source_crc32 << 8) | packed_input.at(len - 6U); // NOLINT little endian transformation
         source_crc32 = (source_crc32 << 8) | packed_input.at(len - 7U); // NOLINT little endian transformation
         source_crc32 = (source_crc32 << 8) | packed_input.at(len - 8U); // NOLINT little endian transformation
@@ -137,8 +147,10 @@ namespace tools
         struct uzlib_uncomp depack_ctxt = {};
         uzlib_uncompress_init(&depack_ctxt, nullptr, 0);
 
-        depack_ctxt.source = reinterpret_cast<const unsigned char*>(packed_input.data());
-        depack_ctxt.source_limit = reinterpret_cast<const unsigned char*>(packed_input.data() + len - 4U); // NOLINT space for length
+        depack_ctxt.source
+            = reinterpret_cast<const unsigned char*>(packed_input.data()); // NOLINT std::uint8_t* to unsigned char*
+        depack_ctxt.source_limit = reinterpret_cast<const unsigned char*>( // NOLINT std::uint8_t* to unsigned char*
+            packed_input.data() + len - 4U); // NOLINT space for length and uint8_t* to uchar*
         depack_ctxt.source_read_cb = nullptr;
 
         int res = uzlib_gzip_parse_header(&depack_ctxt);
@@ -175,7 +187,8 @@ namespace tools
             return gzip_unpacked;
         }
 
-        const std::size_t depacked_sz = depack_ctxt.dest - reinterpret_cast<unsigned char*>(gzip_unpacked.data());
+        const std::size_t depacked_sz = depack_ctxt.dest
+            - reinterpret_cast<unsigned char*>(gzip_unpacked.data()); // NOLINT std::uint8_t* to unsigned char*
 
         if (depacked_sz != outlen)
         {
