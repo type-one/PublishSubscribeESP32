@@ -41,7 +41,7 @@ namespace tools
 {
 
     template <typename Topic, typename Evt>
-    class async_observer : public sync_observer<Topic, Evt>
+    class async_observer : public sync_observer<Topic, Evt> // NOLINT inherits from non copyable and non movable class
     {
     public:
         async_observer() = default;

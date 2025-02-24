@@ -61,17 +61,17 @@ namespace tools
             return m_task_name;
         }
 
-        std::size_t stack_size() const
+        [[nodiscard]] std::size_t stack_size() const
         {
             return m_stack_size;
         }
 
-        int cpu_affinity() const
+        [[nodiscard]] int cpu_affinity() const
         {
             return m_cpu_affinity;
         }
 
-        int priority() const
+        [[nodiscard]] int priority() const
         {
             return m_priority;
         }

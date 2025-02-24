@@ -47,21 +47,21 @@ namespace tools
         ~ring_buffer() = default;
 
         ring_buffer(const ring_buffer& other)
+            : m_ring_buffer { other.m_ring_buffer }
+            , m_push_index { other.m_push_index }
+            , m_pop_index { other.m_pop_index }
+            , m_last_index { other.m_last_index }
+            , m_size { other.m_size }
         {
-            m_ring_buffer = other.m_ring_buffer;
-            m_push_index = other.m_push_index;
-            m_pop_index = other.m_pop_index;
-            m_last_index = other.m_last_index;
-            m_size = other.m_size;
         }
 
-        ring_buffer(ring_buffer&& other)
+        ring_buffer(ring_buffer&& other) noexcept
+            : m_ring_buffer { std::move(other.m_ring_buffer) }
+            , m_push_index { std::move(other.m_push_index) }
+            , m_pop_index { std::move(other.m_pop_index) }
+            , m_last_index { std::move(other.m_last_index) }
+            , m_size { std::move(other.m_size) }
         {
-            m_ring_buffer = std::move(other.m_ring_buffer);
-            m_push_index = std::move(other.m_push_index);
-            m_pop_index = std::move(other.m_pop_index);
-            m_last_index = std::move(other.m_last_index);
-            m_size = std::move(other.m_size);
         }
 
         ring_buffer& operator=(const ring_buffer& other)
@@ -78,7 +78,7 @@ namespace tools
             return *this;
         }
 
-        ring_buffer& operator=(ring_buffer&& other)
+        ring_buffer& operator=(ring_buffer&& other) noexcept
         {
             if (this != &other)
             {
@@ -94,7 +94,7 @@ namespace tools
 
         void push(const T& elem)
         {
-            m_ring_buffer[m_push_index] = elem;
+            m_ring_buffer.at(m_push_index) = elem;
             m_last_index = m_push_index;
             m_push_index = next_index(m_push_index);
             ++m_size;
@@ -102,7 +102,7 @@ namespace tools
 
         void emplace(T&& elem)
         {
-            m_ring_buffer[m_push_index] = std::move(elem);
+            m_ring_buffer.at(m_push_index) = std::move(elem);
             m_last_index = m_push_index;
             m_push_index = next_index(m_push_index);
             ++m_size;
@@ -114,22 +114,22 @@ namespace tools
             --m_size;
         }
 
-        T front() const
+        [[nodiscard]] T front() const
         {
-            return m_ring_buffer[m_pop_index];
+            return m_ring_buffer.at(m_pop_index);
         }
 
-        T back() const
+        [[nodiscard]] T back() const
         {
-            return m_ring_buffer[m_last_index];
+            return m_ring_buffer.at(m_last_index);
         }
 
-        bool empty() const
+        [[nodiscard]] bool empty() const
         {
             return m_push_index == m_pop_index;
         }
 
-        bool full() const
+        [[nodiscard]] bool full() const
         {
             return next_index(m_push_index) == m_pop_index;
         }
@@ -155,7 +155,7 @@ namespace tools
 
         T& operator[](std::size_t index)
         {
-            return m_ring_buffer[next_step_index(m_pop_index, index)];
+            return m_ring_buffer.at(next_step_index(m_pop_index, index));
         };
 
     private:

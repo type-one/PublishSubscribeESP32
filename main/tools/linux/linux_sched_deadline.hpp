@@ -37,6 +37,7 @@
 #include <linux/types.h>
 #include <linux/unistd.h>
 #include <pthread.h>
+#include <sched.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -89,7 +90,7 @@ namespace tools
 #endif
 #endif
 
-    namespace
+    namespace linux_os
     {
         struct sched_attr
         {
@@ -110,27 +111,29 @@ namespace tools
             __u64 sched_period;
         };
 
-        inline int sched_setattr(pid_t pid, const struct sched_attr* attr, unsigned int flags)
+        inline int sched_setattr(pid_t pid, const struct tools::linux_os::sched_attr* attr, unsigned int flags)
         {
-            return syscall(__NR_sched_setattr, pid, attr, flags);
+            return static_cast<int>(syscall(static_cast<long>(__NR_sched_setattr), pid, attr, flags));
         }
 
-        inline int sched_getattr(pid_t pid, struct sched_attr* attr, unsigned int size, unsigned int flags)
+        inline int sched_getattr(pid_t pid, struct tools::linux_os::sched_attr* attr, unsigned int size, unsigned int flags)
         {
-            return syscall(__NR_sched_getattr, pid, attr, size, flags);
+            return static_cast<int>(syscall(static_cast<long>(__NR_sched_getattr), pid, attr, size, flags));
         }
     }
 
-    static bool set_earliest_deadline_scheduling(
-        std::chrono::high_resolution_clock::time_point start_time, const std::chrono::duration<std::uint64_t, std::micro>& period)
+    static bool set_earliest_deadline_scheduling(std::chrono::high_resolution_clock::time_point start_time,
+        const std::chrono::duration<std::uint64_t, std::micro>& period)
     {
         // Earliest Deadline scheduling if can run as root
 
+        bool result = false;
+
         if (is_running_as_root())
         {
-            const pid_t tid = syscall(SYS_gettid);
+            const auto tid = static_cast<pid_t>(syscall(static_cast<long>(SYS_gettid)));
 
-            sched_attr attr = {};
+            tools::linux_os::sched_attr attr = {};
             const unsigned int flags = 0;
 
             attr.size = sizeof(attr);
@@ -154,24 +157,29 @@ namespace tools
             //     |<----------- Deadline ----------->|
             //     |<-------------- Period ------------------->|
 
-            attr.sched_runtime = static_cast<std::uint64_t>(std::max(0ULL, remaining_time.count() * 1000ULL));
-            attr.sched_deadline = static_cast<std::uint64_t>(period.count() * 1000ULL);
+            constexpr const std::uint64_t nano_sec_coeff = 1000ULL;
+            constexpr const std::uint64_t floor_value = 0ULL;
+            attr.sched_runtime = static_cast<std::uint64_t>(
+                std::max(floor_value, static_cast<std::uint64_t>(remaining_time.count()) * nano_sec_coeff));
+            attr.sched_deadline = static_cast<std::uint64_t>(period.count()) * nano_sec_coeff;
             attr.sched_period = attr.sched_deadline;
-            const int ret = sched_setattr(tid, &attr, flags);
+            const int ret = sched_setattr(tid, &attr, flags); // NOLINT initialized by sched_setattr returned value
 
-            return (ret >= 0); // success if true
+            result = (ret >= 0); // success if true
         }
         else
         {
-            return false;
+            result = false;
         }
+
+        return result;
     }
 }
 
 #else // end if #defined __linux__
 
-static bool set_earliest_deadline_scheduling(
-    std::chrono::high_resolution_clock::time_point start_time, const std::chrono::duration<std::uint64_t, std::micro>& period)
+static bool set_earliest_deadline_scheduling(std::chrono::high_resolution_clock::time_point start_time,
+    const std::chrono::duration<std::uint64_t, std::micro>& period)
 {
     (void)start_time;
     (void)period;

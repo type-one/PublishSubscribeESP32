@@ -18,6 +18,8 @@
  * rigid standardizations. It supports both internally allocated buffers and user-supplied buffers.
  */
 
+// modified to pass clang-tidy checks
+
 #ifndef BYTEPACK_BYTEPACK_HPP
 #define BYTEPACK_BYTEPACK_HPP
 
@@ -36,8 +38,7 @@ namespace bytepack
 {
 
     template <typename T>
-    concept SerializableBuffer = std::is_fundamental_v<T> && std::is_pointer_v<T>
-    == false && std::is_reference_v<T> == false;
+    concept SerializableBuffer = std::is_fundamental_v<T> && !std::is_pointer_v<T> && !std::is_reference_v<T>;
 
     template <typename T>
     concept ValidBufferAccessType = sizeof(T) == 1 || std::is_void_v<T>;
@@ -62,7 +63,7 @@ namespace bytepack
          */
         template <typename T, std::size_t N>
         requires SerializableBuffer<T>
-        explicit constexpr buffer_view(T (&array)[N]) noexcept
+        explicit constexpr buffer_view(T (&array)[N]) noexcept // NOLINT keep original implementation
             : data_ { static_cast<void*>(array) }
             , size_ { N * sizeof(T) }
             , ssize_ { to_ssize(N * sizeof(T)) }
@@ -154,8 +155,8 @@ namespace bytepack
     };
 
     template <typename T>
-    concept NetworkSerializableBasic = (std::is_fundamental_v<T> || std::is_enum_v<T>)&&std::is_pointer_v<T> == false
-        && std::is_reference_v<T> == false;
+    concept NetworkSerializableBasic
+        = (std::is_fundamental_v<T> || std::is_enum_v<T>)&&!std::is_pointer_v<T> && !std::is_reference_v<T>;
 
     template <typename T>
     concept NetworkSerializableBasicArray = std::is_array_v<T> && NetworkSerializableBasic<std::remove_extent_t<T>>;
@@ -202,7 +203,7 @@ namespace bytepack
     {
     public:
         explicit binary_stream(const std::size_t buffer_size) noexcept
-            : buffer_ { new std::uint8_t[buffer_size] {}, buffer_size }
+            : buffer_ { new std::uint8_t[buffer_size] {}, buffer_size } // NOLINT keep original implementation
             , owns_buffer_ { true }
             , write_index_ { 0 }
             , read_index_ { 0 }
@@ -221,7 +222,7 @@ namespace bytepack
         {
             if (owns_buffer_)
             {
-                delete[] buffer_.as<std::uint8_t>();
+                delete[] buffer_.as<std::uint8_t>(); // NOLINT keep original implementation
             }
         }
 
@@ -354,7 +355,7 @@ namespace bytepack
             }
 
             // Write vector size field first (before the vector data)
-            if (write(size_custom) == false)
+            if (!write(size_custom))
             {
                 return false;
             }
@@ -428,7 +429,7 @@ namespace bytepack
             }
 
             // Write string length field first (before the string data)
-            if (write(str_length) == false)
+            if (!write(str_length))
             {
                 return false;
             }
@@ -517,8 +518,8 @@ namespace bytepack
                 // Using reinterpret_cast to treat 'value' as an array of bytes is safe here because:
                 // The `NetworkSerializableBasic` concept ensures 'T' is a non-class, fundamental type, making
                 // it trivially copyable and ensuring a consistent, predictable memory layout across systems.
-                std::ranges::reverse(
-                    reinterpret_cast<std::uint8_t*>(&value), reinterpret_cast<std::uint8_t*>(&value) + sizeof(T)); // NOLINT
+                std::ranges::reverse(reinterpret_cast<std::uint8_t*>(&value), // NOLINT keep original implementation
+                    reinterpret_cast<std::uint8_t*>(&value) + sizeof(T));     // NOLINT keep original implementation
             }
 
             read_index_ += sizeof(T);
@@ -600,7 +601,7 @@ namespace bytepack
             SizeType size_custom {};
             // vector size cannot be negative, so it's treated as an error. Zero size is well-defined for dynamic
             // containers if they are not serialized with a given fixed size because it indicates an empty container.
-            if (read(size_custom) == false || size_custom < 0)
+            if (!read(size_custom) || size_custom < 0)
             {
                 return false;
             }

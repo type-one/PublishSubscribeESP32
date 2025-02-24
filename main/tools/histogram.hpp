@@ -87,12 +87,12 @@ namespace tools
             return m_top_value;
         }
 
-        constexpr int total_count() const
+        [[nodiscard]] constexpr int total_count() const
         {
             return m_total_count;
         }
 
-        constexpr int top_occurence() const
+        [[nodiscard]] constexpr int top_occurence() const
         {
             return m_top_occurence;
         }
@@ -102,12 +102,12 @@ namespace tools
             double avg = 0.0;
             double total = 0.0;
 
-            for (auto it = m_occurences.cbegin(); it != m_occurences.cend(); ++it)
+            for (auto itr = m_occurences.cbegin(); itr != m_occurences.cend(); ++itr)
             {
-                if (it->second > 0) // occurence
+                if (itr->second > 0) // occurence
                 {
-                    avg += static_cast<double>(it->second * it->first);
-                    total += static_cast<double>(it->second);
+                    avg += static_cast<double>(itr->second * itr->first);
+                    total += static_cast<double>(itr->second);
                 }
             }
 
@@ -124,8 +124,8 @@ namespace tools
             {
                 if (itr->second > 0) // occurence
                 {
-                    const auto v = static_cast<double>(itr->first);
-                    vari += itr->second * v * v;
+                    const auto dva = static_cast<double>(itr->first);
+                    vari += itr->second * dva * dva;
                     total += static_cast<double>(itr->second);
                 }
             }
@@ -157,7 +157,7 @@ namespace tools
             return to_sort[to_sort.size() >> 1];
         }
 
-        double gaussian_probability(const T& value, const T& average, const T& variance) const
+        double gaussian_probability(const T& value, const T& average, const T& variance) const // NOLINT keep it
         {
             // https://fr.wikipedia.org/wiki/Loi_normale
             double result = 0.0;

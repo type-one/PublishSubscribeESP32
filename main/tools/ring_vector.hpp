@@ -54,23 +54,23 @@ namespace tools
         }
 
         ring_vector(const ring_vector& other)
+            : m_ring_vector { other.m_ring_vector }
+            , m_push_index { other.m_push_index }
+            , m_pop_index { other.m_pop_index }
+            , m_last_index { other.m_last_index }
+            , m_size { other.m_size }
+            , m_capacity { other.m_capacity }
         {
-            m_ring_vector = other.m_ring_vector;
-            m_push_index = other.m_push_index;
-            m_pop_index = other.m_pop_index;
-            m_last_index = other.m_last_index;
-            m_size = other.m_size;
-            m_capacity = other.m_capacity;
         }
 
-        ring_vector(ring_vector&& other)
+        ring_vector(ring_vector&& other) noexcept
+            : m_ring_vector { std::move(other.m_ring_vector) }
+            , m_push_index { std::move(other.m_push_index) }
+            , m_pop_index { std::move(other.m_pop_index) }
+            , m_last_index { std::move(other.m_last_index) }
+            , m_size { std::move(other.m_size) }
+            , m_capacity { std::move(other.m_capacity) }
         {
-            m_ring_vector = std::move(other.m_ring_vector);
-            m_push_index = std::move(other.m_push_index);
-            m_pop_index = std::move(other.m_pop_index);
-            m_last_index = std::move(other.m_last_index);
-            m_size = std::move(other.m_size);
-            m_capacity = std::move(other.m_capacity);
         }
 
         ring_vector& operator=(const ring_vector& other)
@@ -88,7 +88,7 @@ namespace tools
             return *this;
         }
 
-        ring_vector& operator=(ring_vector&& other)
+        ring_vector& operator=(ring_vector&& other) noexcept
         {
             if (this != &other)
             {
@@ -125,22 +125,22 @@ namespace tools
             --m_size;
         }
 
-        T front() const
+        [[nodiscard]] T front() const
         {
             return m_ring_vector[m_pop_index];
         }
 
-        T back() const
+        [[nodiscard]] T back() const
         {
             return m_ring_vector[m_last_index];
         }
 
-        bool empty() const
+        [[nodiscard]] bool empty() const
         {
             return m_push_index == m_pop_index;
         }
 
-        bool full() const
+        [[nodiscard]] bool full() const
         {
             return next_index(m_push_index) == m_pop_index;
         }
@@ -175,11 +175,11 @@ namespace tools
             std::vector<T> tmp(std::max(new_capacity, m_size));
 
             // vector filled from first to last pushed
-            std::size_t k = m_pop_index;
+            std::size_t idx = m_pop_index;
             for (std::size_t i = 0; i < m_size; ++i)
             {
-                tmp[i] = std::move(m_ring_vector[k]);
-                k = next_index(k);
+                tmp[i] = std::move(m_ring_vector[idx]);
+                idx = next_index(idx);
             }
 
             m_ring_vector.clear();
@@ -221,11 +221,12 @@ namespace tools
         }
 
     private:
-        std::size_t next_index(std::size_t index) const
+        [[nodiscard]] std::size_t next_index(std::size_t index) const
         {
             return ((index + 1U) % m_capacity);
         }
-        std::size_t next_step_index(std::size_t index, std::size_t step) const
+
+        [[nodiscard]] std::size_t next_step_index(std::size_t index, std::size_t step) const
         {
             return ((index + step) % m_capacity);
         }

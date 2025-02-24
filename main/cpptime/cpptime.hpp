@@ -135,7 +135,7 @@ namespace CppTime
             bool valid = false;
 
             Event() = default;
-            
+
             template <typename Func>
             Event(timer_id tid_, timestamp start, duration period, Func&& handler)
                 : tid(tid_)
@@ -186,8 +186,13 @@ namespace CppTime
 
     public:
         Timer();
-
         ~Timer();
+
+        // non copyable and not movable
+        Timer(const Timer&) = delete;
+        Timer(Timer&&) noexcept = delete;
+        Timer& operator=(const Timer&) = delete;
+        Timer& operator=(Timer&&) noexcept = delete;
 
         /**
          * Add a new timer.

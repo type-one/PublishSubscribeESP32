@@ -19,11 +19,11 @@
 #if defined(CJSONPP_NO_EXCEPTION)
 #include "tools/logger.hpp"
 #include "CException/CException.h"
-#define CJSONPP_THROW(msg, value) do { LOG_ERROR("%s (%d)", msg, static_cast<int>(value)); \
-                                       Throw(0); } while (false)
+#define CJSONPP_THROW(msg, value) do { LOG_ERROR("%s (%d)", msg, static_cast<int>(value)); /* NOLINT keep it */ \
+                                       Throw(0); } while (false)                           /* NOLINT keep it*/
 #else
 #include <exception>
-#define CJSONPP_THROW(msg, value) throw std::runtime_error(msg + " (" + std::to_string(value) + ")")
+#define CJSONPP_THROW(msg, value) throw std::runtime_error(msg + " (" + std::to_string(value) + ")") /* NOLINT keep it */
 #endif
 // clang-format on
 
@@ -59,12 +59,18 @@ namespace cjsonpp
 
             // no assignment operator
             Holder& operator=(const Holder&) = delete;
+
+            // no move constructor
+            explicit Holder(Holder&&) noexcept = delete;
+
+            // no move operator
+            Holder& operator=(Holder&&) noexcept = delete;
         };
 
-        typedef std::shared_ptr<Holder> HolderPtr;
+        using HolderPtr = std::shared_ptr<Holder>;
 
-        typedef std::set<JSONObject> ObjectSet;
-        typedef std::shared_ptr<ObjectSet> ObjectSetPtr;
+        using ObjectSet = std::set<JSONObject>;
+        using ObjectSetPtr = std::shared_ptr<ObjectSet>;
 
         // get value (specialized below)
         template <typename T>
@@ -81,10 +87,17 @@ namespace cjsonpp
         //   across threads.
         ObjectSetPtr refs_;
 
-    public:
-        cJSON* obj() const;
+        static constexpr const int byte_mask = 0xff;
 
-        std::string print(bool formatted = true) const;
+    public:
+        [[nodiscard]] cJSON* obj() const;
+
+        [[nodiscard]] std::string print(bool formatted) const;
+
+        [[nodiscard]] std::string print() const
+        {
+            return print(true);
+        }
 
         // necessary for holding references in the set
         bool operator<(const JSONObject& other) const;
@@ -125,9 +138,9 @@ namespace cjsonpp
             : obj_(new Holder(cJSON_CreateArray(), true))
             , refs_(new ObjectSet)
         {
-            for (typename ContT<T, std::allocator<T>>::const_iterator it = elems.begin(); it != elems.end(); it++)
+            for (auto itr = elems.begin(); itr != elems.end(); ++itr)
             {
-                add(*it);
+                add(*itr);
             }
         }
 
@@ -136,9 +149,9 @@ namespace cjsonpp
             : obj_(new Holder(cJSON_CreateArray(), true))
             , refs_(new ObjectSet)
         {
-            for (auto& it : elems)
+            for (auto& itr : elems)
             {
-                add(it);
+                add(itr);
             }
         }
 
@@ -148,9 +161,9 @@ namespace cjsonpp
             : obj_(new Holder(cJSON_CreateArray(), true))
             , refs_(new ObjectSet)
         {
-            for (typename ContT<T>::const_iterator it = elems.begin(); it != elems.end(); it++)
+            for (auto itr = elems.begin(); itr != elems.end(); ++itr)
             {
-                add(*it);
+                add(*itr);
             }
         }
 
@@ -160,8 +173,12 @@ namespace cjsonpp
         // copy operator
         JSONObject& operator=(const JSONObject& other);
 
+        // non movable
+        JSONObject(JSONObject&&) noexcept = delete;
+        JSONObject& operator=(JSONObject&&) noexcept = delete;
+
         // get object type
-        JSONType type() const;
+        [[nodiscard]] JSONType type() const;
 
         // get value from this object
         template <typename T>
@@ -174,9 +191,9 @@ namespace cjsonpp
         template <typename T = JSONObject, template <typename X, typename A> class ContT = std::vector>
         inline ContT<T, std::allocator<T>> asArray() const
         {
-            if (((*obj_)->type & 0xff) != cJSON_Array)
+            if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & 0xff);
+                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask);
             }
 
             ContT<T, std::allocator<T>> retval;
@@ -192,9 +209,9 @@ namespace cjsonpp
         template <typename T, template <typename X> class ContT>
         inline ContT<T> asArray() const
         {
-            if (((*obj_)->type & 0xff) != cJSON_Array)
+            if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & 0xff);
+                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask);
             }
 
             ContT<T> retval;
@@ -208,11 +225,11 @@ namespace cjsonpp
 
         // get object by name
         template <typename T = JSONObject>
-        inline T get(const char* name) const
+        [[nodiscard]] inline T get(const char* name) const
         {
-            if (((*obj_)->type & 0xff) != cJSON_Object)
+            if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
-                CJSONPP_THROW("Not an object", (*obj_)->type & 0xff);
+                CJSONPP_THROW("Not an object", (*obj_)->type & byte_mask);
             }
 
             cJSON* item = cJSON_GetObjectItem(obj_->o, name);
@@ -225,22 +242,22 @@ namespace cjsonpp
         }
 
         template <typename T = JSONObject>
-        inline JSONObject get(const std::string& value) const
+        [[nodiscard]] inline JSONObject get(const std::string& value) const
         {
             return get<T>(value.c_str());
         }
 
         bool has(const char* name) const;
 
-        bool has(const std::string& name) const;
+        [[nodiscard]] bool has(const std::string& name) const;
 
         // get value from array
         template <typename T = JSONObject>
         inline T get(int index) const
         {
-            if (((*obj_)->type & 0xff) != cJSON_Array)
+            if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & 0xff);
+                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask);
             }
 
             cJSON* item = cJSON_GetArrayItem(obj_->o, index);
@@ -256,26 +273,26 @@ namespace cjsonpp
         template <typename T>
         inline void add(const T& value)
         {
-            if (((*obj_)->type & 0xff) != cJSON_Array)
+            if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & 0xff);
+                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask);
             }
-            JSONObject o(value);
-            cJSON_AddItemReferenceToArray(obj_->o, o.obj_->o);
-            refs_->insert(o);
+            JSONObject output(value);
+            cJSON_AddItemReferenceToArray(obj_->o, output.obj_->o);
+            refs_->insert(output);
         }
 
         // set value in object
         template <typename T>
         inline void set(const char* name, const T& value)
         {
-            if (((*obj_)->type & 0xff) != cJSON_Object)
+            if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
-                CJSONPP_THROW("Not an object type", (*obj_)->type & 0xff);
+                CJSONPP_THROW("Not an object type", (*obj_)->type & byte_mask);
             }
-            JSONObject o(value);
-            cJSON_AddItemReferenceToObject(obj_->o, name, o.obj_->o);
-            refs_->insert(o);
+            JSONObject output(value);
+            cJSON_AddItemReferenceToObject(obj_->o, name, output.obj_->o);
+            refs_->insert(output);
         }
 
         // set value in object
@@ -313,9 +330,9 @@ namespace cjsonpp
     template <>
     inline int JSONObject::as<int>(cJSON* obj) const
     {
-        if ((obj->type & 0xff) != cJSON_Number)
+        if ((obj->type & byte_mask) != cJSON_Number)
         {
-            CJSONPP_THROW("Bad value type", obj->type & 0xff);
+            CJSONPP_THROW("Bad value type", obj->type & byte_mask);
         }
         return obj->valueint;
     }
@@ -323,9 +340,9 @@ namespace cjsonpp
     template <>
     inline int64_t JSONObject::as<int64_t>(cJSON* obj) const
     {
-        if ((obj->type & 0xff) != cJSON_Number)
+        if ((obj->type & byte_mask) != cJSON_Number)
         {
-            CJSONPP_THROW("Not a number type", obj->type & 0xff);
+            CJSONPP_THROW("Not a number type", obj->type & byte_mask);
         }
         return static_cast<int64_t>(obj->valuedouble);
     }
@@ -333,9 +350,9 @@ namespace cjsonpp
     template <>
     inline std::string JSONObject::as<std::string>(cJSON* obj) const
     {
-        if ((obj->type & 0xff) != cJSON_String)
+        if ((obj->type & byte_mask) != cJSON_String)
         {
-            CJSONPP_THROW("Not a string type", obj->type & 0xff);
+            CJSONPP_THROW("Not a string type", obj->type & byte_mask);
         }
         return obj->valuestring;
     }
@@ -343,9 +360,9 @@ namespace cjsonpp
     template <>
     inline double JSONObject::as<double>(cJSON* obj) const
     {
-        if ((obj->type & 0xff) != cJSON_Number)
+        if ((obj->type & byte_mask) != cJSON_Number)
         {
-            CJSONPP_THROW("Not a number type", obj->type & 0xff);
+            CJSONPP_THROW("Not a number type", obj->type & byte_mask);
         }
         return obj->valuedouble;
     }
@@ -353,26 +370,27 @@ namespace cjsonpp
     template <>
     inline bool JSONObject::as<bool>(cJSON* obj) const
     {
-        if ((obj->type & 0xff) == cJSON_True)
+        bool result = false;
+        if ((obj->type & byte_mask) == cJSON_True)
         {
-            return true;
+            result = true;
         }
-        else if ((obj->type & 0xff) == cJSON_False)
+        else if ((obj->type & byte_mask) == cJSON_False)
         {
-            return false;
+            result = false;
         }
         else
         {
-            CJSONPP_THROW("Not a boolean type", obj->type & 0xff);
+            CJSONPP_THROW("Not a boolean type", obj->type & byte_mask);
         }
 
-        return false;
+        return result;
     }
 
     template <>
     inline JSONObject JSONObject::as<JSONObject>(cJSON* obj) const
     {
-        return JSONObject(*this, obj, false);
+        return { *this, obj, false };
     }
 
     // Ex: asArray<JSONObject>(jsonArrayObject, std::back_inserter(vectorToFill));

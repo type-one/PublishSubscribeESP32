@@ -79,7 +79,7 @@ namespace tools
 
             m_writing.store(true);
             const std::size_t write_idx = m_push_index.fetch_add(1U);
-            m_ring_buffer[write_idx & ring_buffer_mask].store(elem);
+            m_ring_buffer.at(write_idx & ring_buffer_mask).store(elem);
             m_writing.store(false);
 
             return true;
@@ -106,7 +106,7 @@ namespace tools
 
             m_reading.store(true);
             const std::size_t read_idx = m_pop_index.fetch_add(1U);
-            elem = m_ring_buffer[read_idx & ring_buffer_mask].load();
+            elem = m_ring_buffer.at(read_idx & ring_buffer_mask).load();
             m_reading.store(false);
 
             return true;

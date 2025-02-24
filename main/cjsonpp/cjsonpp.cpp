@@ -62,7 +62,7 @@ namespace cjsonpp
         , refs_(new ObjectSet)
     {
     }
- 
+
     // wrap existing cJSON object
     JSONObject::JSONObject(cJSON* obj, bool own)
         : obj_(new Holder(obj, own))
@@ -210,7 +210,7 @@ namespace cjsonpp
         {
             CJSONPP_THROW("Parse error", 0);
         }
-        return {cjson, true};
+        return { cjson, true };
     }
 
     // parse from std::string
@@ -222,13 +222,13 @@ namespace cjsonpp
     // create null object
     JSONObject nullObject()
     {
-        return {cJSON_CreateNull(), true};
+        return { cJSON_CreateNull(), true };
     }
 
     // create empty array object
     JSONObject arrayObject()
     {
-        return {cJSON_CreateArray(), true};
+        return { cJSON_CreateArray(), true };
     }
 
 } // namespace cjsonpp
