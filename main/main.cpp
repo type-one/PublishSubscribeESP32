@@ -1196,15 +1196,16 @@ struct manufacturing_info
     std::string vendor_name;
     std::string serial_number;
     std::string manufacturing_date;
+    std::array<char, 2> tag;
 
     void serialize(bytepack::binary_stream<>& stream) const
     {
-        stream.write(vendor_name, serial_number, manufacturing_date);
+        stream.write(vendor_name, serial_number, manufacturing_date, tag);
     }
 
     bool deserialize(bytepack::binary_stream<>& stream)
     {
-        stream.read(vendor_name, serial_number, manufacturing_date);
+        stream.read(vendor_name, serial_number, manufacturing_date, tag);
         return true; // pretend success
     }
 };
@@ -1236,7 +1237,7 @@ void test_queued_bytepack_data()
     // tools::sync_queue<std::vector<std::uint8_t>> data_queue;
 
     free_text message1 = { "jojo rabbit" };
-    manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" } };
+    manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" }, { 'A', 'Z' } };
     temperature_sensor message3 = { 45.2, 51.72, 21.5 }; // NOLINT tests values
 
     constexpr const std::size_t buffer_size = 1024U;
@@ -1247,7 +1248,7 @@ void test_queued_bytepack_data()
     binary_stream.write(message_type::freetext);
     message1.serialize(binary_stream);
     auto buffer1 = binary_stream.data();
-    std::vector<std::uint8_t> encoded1;
+    std::vector<std::uint8_t> encoded1 = {};
     encoded1.resize(buffer1.size());
     std::memcpy(encoded1.data(), buffer1.as<void>(), buffer1.size());
     data_queue.emplace(std::move(encoded1));
@@ -1256,7 +1257,7 @@ void test_queued_bytepack_data()
     binary_stream.write(message_type::manufacturing);
     message2.serialize(binary_stream);
     auto buffer2 = binary_stream.data();
-    std::vector<std::uint8_t> encoded2;
+    std::vector<std::uint8_t> encoded2 = {};
     encoded2.resize(buffer2.size());
     std::memcpy(encoded2.data(), buffer2.as<void>(), buffer2.size());
     data_queue.emplace(std::move(encoded2));
@@ -1265,7 +1266,7 @@ void test_queued_bytepack_data()
     binary_stream.write(message_type::temperature);
     message3.serialize(binary_stream);
     auto buffer3 = binary_stream.data();
-    std::vector<std::uint8_t> encoded3;
+    std::vector<std::uint8_t> encoded3 = {};
     encoded3.resize(buffer3.size());
     std::memcpy(encoded3.data(), buffer3.as<void>(), buffer3.size());
     data_queue.emplace(std::move(encoded3));
@@ -1293,8 +1294,8 @@ void test_queued_bytepack_data()
             {
                 manufacturing_info info = {};
                 info.deserialize(stream);
-                std::printf("%s\n%s\n%s\n", info.vendor_name.c_str(), info.serial_number.c_str(),
-                    info.manufacturing_date.c_str());
+                std::printf("%s\n%s\n%s\n%c %c\n", info.vendor_name.c_str(), info.serial_number.c_str(),
+                    info.manufacturing_date.c_str(), info.tag[0], info.tag[1]);
             }
             break;
 
@@ -1381,8 +1382,8 @@ void test_aggregated_bytepack_data()
     aggregated_info aggr = {};
     aggr.m_dictionary
         = { { "sensor1", { 45.2, 51.72, 21.5 } }, { "sensor2", { 17.2, 34.7, 18.3 } } }; // NOLINT test values
-    aggr.m_list
-        = { { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" } }, { { "AMD" }, { "HTX-7788-22-5" }, { "12/05/07" } } };
+    aggr.m_list = { { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" }, { 'A', 'Z' } },
+        { { "AMD" }, { "HTX-7788-22-5" }, { "12/05/07" }, { 'B', 'Z' } } };
     aggr.m_status = false;
     aggr.m_values = { 0.7, 1.5, 2.1, -0.5 }; // NOLINT test values
 
@@ -1418,8 +1419,9 @@ void test_aggregated_bytepack_data()
         auto sensor = aggr_dup.m_dictionary.find("sensor2");
         std::printf("%f %f %f \n", sensor->second.cpu_temperature, sensor->second.gpu_temperature,
             sensor->second.room_temperature);
-        std::printf("%s %s %s\n", aggr_dup.m_list[1].manufacturing_date.c_str(),
-            aggr_dup.m_list[1].serial_number.c_str(), aggr_dup.m_list[1].vendor_name.c_str());
+        std::printf("%s %s %s %c %c \n", aggr_dup.m_list[1].manufacturing_date.c_str(),
+            aggr_dup.m_list[1].serial_number.c_str(), aggr_dup.m_list[1].vendor_name.c_str(), aggr_dup.m_list[1].tag[0],
+            aggr_dup.m_list[1].tag[1]);
         std::printf("%f %f %f\n", aggr_dup.m_values[0], aggr_dup.m_values[1], aggr_dup.m_values[2]);
     }
 }
@@ -1470,8 +1472,8 @@ namespace
             {
                 manufacturing_info info = {};
                 info.deserialize(stream);
-                std::printf("%s\n%s\n%s\n", info.vendor_name.c_str(), info.serial_number.c_str(),
-                    info.manufacturing_date.c_str());
+                std::printf("%s\n%s\n%s\n%c %c\n", info.vendor_name.c_str(), info.serial_number.c_str(),
+                    info.manufacturing_date.c_str(), info.tag[0], info.tag[1]);
             }
             break;
 
@@ -1511,7 +1513,7 @@ void test_bytepack_data_task()
         std::printf("periodic %s\n", task_name.c_str());
 
         temperature_sensor message1 = { 45.2, 51.72, 21.5 }; // NOLINT test values
-        manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" } };
+        manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" }, { 'A', 'Z' } };
         free_text message3 = { "jojo rabbit" };
 
         bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer) };
