@@ -48,7 +48,7 @@ namespace tools
         ~gzip_wrapper() = default;
 
         std::vector<std::uint8_t> pack(const std::vector<std::uint8_t>& unpacked_input); // use the hash table instance
-        static std::vector<std::uint8_t> unpack(const std::vector<std::uint8_t>& packed_input); // doesn't use the hash table
+        std::vector<std::uint8_t> unpack(const std::vector<std::uint8_t>& packed_input); // doesn't use the hash table
 
     private:
         using hash_table = std::array<uzlib_hash_entry_t, gzip_hash_nb_entries>;

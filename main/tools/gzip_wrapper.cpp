@@ -124,7 +124,8 @@ namespace tools
         return gzip_packed;
     }
 
-    std::vector<std::uint8_t> gzip_wrapper::unpack(
+    std::vector<std::uint8_t>
+    gzip_wrapper::unpack( // NOLINT doesn't use the hash table but keep pack/unpack IF symmetric
         const std::vector<std::uint8_t>& packed_input) // NOLINT cognitive complexity
     {
         std::vector<std::uint8_t> gzip_unpacked;
