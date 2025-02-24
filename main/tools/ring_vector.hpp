@@ -155,12 +155,12 @@ namespace tools
             m_ring_vector.resize(m_capacity);
         }
 
-        std::size_t size() const
+        [[nodiscard]] std::size_t size() const
         {
             return m_size;
         }
 
-        std::size_t capacity() const
+        [[nodiscard]] std::size_t capacity() const
         {
             return m_capacity;
         }
@@ -230,7 +230,7 @@ namespace tools
             return ((index + step) % m_capacity);
         }
 
-        std::vector<T> m_ring_vector;
+        std::vector<T> m_ring_vector = {};
         std::size_t m_push_index = 0U;
         std::size_t m_pop_index = 0U;
         std::size_t m_last_index = 0U;

@@ -143,12 +143,12 @@ namespace tools
             m_ring_buffer = {};
         }
 
-        std::size_t size() const
+        [[nodiscard]] std::size_t size() const
         {
             return m_size;
         }
 
-        constexpr std::size_t capacity() const
+        [[nodiscard]] constexpr std::size_t capacity() const
         {
             return Capacity;
         }
@@ -168,7 +168,7 @@ namespace tools
             return ((index + step) % Capacity);
         }
 
-        std::array<T, Capacity> m_ring_buffer;
+        std::array<T, Capacity> m_ring_buffer = {};
         std::size_t m_push_index = 0U;
         std::size_t m_pop_index = 0U;
         std::size_t m_last_index = 0U;

@@ -65,17 +65,19 @@ namespace tools
         std::lock_guard guard(m_mutex);
         for (auto hnd : m_active_timers)
         {
-            xTimerStop(hnd, static_cast<TickType_t>(100));
+            constexpr const int timeout_ticks = 100;
+            xTimerStop(hnd, static_cast<TickType_t>(timeout_ticks));
             tools::sleep_for(1);
-            xTimerDelete(hnd, static_cast<TickType_t>(100));
+            xTimerDelete(hnd, static_cast<TickType_t>(timeout_ticks));
         }
     }
 
-    timer_handle timer_scheduler::add_tick(const std::string& timer_name, const TickType_t period,
-        std::function<void(timer_handle)>&& handler, timer_type type)
+    timer_handle timer_scheduler::add_tick(const std::string& timer_name,  // NOLINT keep common platform interface
+        const TickType_t period,                                           // NOLINT keep common platform interface
+        std::function<void(timer_handle)>&& handler, timer_type type)      // NOLINT keep common platform interface
     {
         auto context = std::make_unique<timer_context>();
-        context->m_callback = std::move(handler);
+        context->m_callback = std::move(handler); // NOLINT keep common platform interface
         context->m_auto_release = !auto_reload;
         context->m_this = this;
 
@@ -109,7 +111,8 @@ namespace tools
                 }
             }
 
-            while (xTimerStart(hnd, static_cast<TickType_t>(100)) != pdPASS)
+            constexpr const int start_timeout_ticks = 100;
+            while (xTimerStart(hnd, static_cast<TickType_t>(start_timeout_ticks)) != pdPASS)
             {
             }
         }
@@ -133,18 +136,19 @@ namespace tools
 
     bool timer_scheduler::remove(timer_handle hnd)
     {
-        while (xTimerStop(hnd, static_cast<TickType_t>(100)) != pdPASS)
+        constexpr const int stop_timeout_ticks = 100;
+        while (xTimerStop(hnd, static_cast<TickType_t>(stop_timeout_ticks)) != pdPASS)
         {
         }
 
         {
             std::lock_guard guard(m_mutex);
-            auto it = std::find_if(m_contexts.begin(), m_contexts.end(),
+            auto itr = std::find_if(m_contexts.begin(), m_contexts.end(),
                 [&hnd](const auto& context) -> bool { return (context->m_timer_handle == hnd); });
 
-            if (it != m_contexts.end())
+            if (itr != m_contexts.end())
             {
-                m_contexts.erase(it);
+                m_contexts.erase(itr);
             }
         }
 
@@ -158,16 +162,17 @@ namespace tools
         {
             std::lock_guard guard(m_mutex);
 
-            auto it = std::find_if(m_active_timers.begin(), m_active_timers.end(),
+            auto itr = std::find_if(m_active_timers.begin(), m_active_timers.end(),
                 [&hnd](const auto* active_hnd) -> bool { return (active_hnd == hnd); });
 
-            if (it != m_active_timers.end())
+            if (itr != m_active_timers.end())
             {
-                m_active_timers.erase(it);
+                m_active_timers.erase(itr);
             }
         }
 
-        xTimerDelete(hnd, static_cast<TickType_t>(100));
+        constexpr const int delete_timeout_ticks = 100;
+        xTimerDelete(hnd, static_cast<TickType_t>(delete_timeout_ticks));
     }
 
 }

@@ -30,7 +30,7 @@
 
 namespace tools
 {
-    class non_copyable
+    class non_copyable // NOLINT defines a non copyable and non movable class
     {
     public:
         non_copyable() = default;

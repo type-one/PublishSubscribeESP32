@@ -40,7 +40,7 @@
 namespace tools
 {
     template <typename K, typename T>
-    class sync_dictionary : public non_copyable
+    class sync_dictionary : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         sync_dictionary() = default;
@@ -91,10 +91,10 @@ namespace tools
         {
             std::optional<T> result;
             std::lock_guard guard(m_mutex);
-            const auto& it = m_dictionary.find(key);
-            if (m_dictionary.cend() != it)
+            const auto& itr = m_dictionary.find(key);
+            if (m_dictionary.cend() != itr)
             {
-                result = it->second;
+                result = itr->second;
             }
             return result;
         }

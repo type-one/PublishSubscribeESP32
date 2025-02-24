@@ -42,7 +42,7 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
     requires std::is_standard_layout_v<T> && std::is_trivial_v<T> &&(std::is_scalar_v<T> || std::is_pointer_v<T>)
 #endif
-        class lock_free_ring_buffer : public non_copyable
+        class lock_free_ring_buffer : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         static_assert(std::is_standard_layout<T>::value, "T has to provide standard layout");
@@ -112,7 +112,7 @@ namespace tools
             return true;
         }
 
-        constexpr std::size_t capacity() const
+        [[nodiscard]] constexpr std::size_t capacity() const
         {
             return 1U << Pow2;
         }

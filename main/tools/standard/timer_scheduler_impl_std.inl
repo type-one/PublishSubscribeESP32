@@ -44,8 +44,9 @@ namespace tools
         // auto-reload true:  start immediately and then repeat every period
         // auto-reload false: start once after period
         const bool auto_reload = (timer_type::periodic == type);
+        constexpr const std::uint64_t micro_sec_coeff = 1000U;
         return m_timer_scheduler.add(
-            auto_reload ? 0U : (period * 1000U), std::move(handler), auto_reload ? (period * 1000U) : 0U);
+            auto_reload ? 0U : (period * micro_sec_coeff), std::move(handler), auto_reload ? (period * micro_sec_coeff) : 0U);
     }
 
     timer_handle timer_scheduler::add(const std::string& timer_name,

@@ -42,7 +42,7 @@
 namespace tools
 {
     template <typename T>
-    class histogram : public non_copyable
+    class histogram : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         histogram() = default;
@@ -111,7 +111,8 @@ namespace tools
                 }
             }
 
-            return (total > 0.0) ? static_cast<T>((avg / total) + 0.5) : static_cast<T>(0);
+            constexpr const double round_bias = 0.5; 
+            return (total > 0.0) ? static_cast<T>((avg / total) + round_bias) : static_cast<T>(0);
         }
 
         T variance(const T& average) const
@@ -119,17 +120,18 @@ namespace tools
             double vari = 0.0;
             double total = 0.0;
 
-            for (auto it = m_occurences.cbegin(); it != m_occurences.cend(); ++it)
+            for (auto itr = m_occurences.cbegin(); itr != m_occurences.cend(); ++itr)
             {
-                if (it->second > 0) // occurence
+                if (itr->second > 0) // occurence
                 {
-                    const double v = static_cast<double>(it->first);
-                    vari += it->second * v * v;
-                    total += static_cast<double>(it->second);
+                    const auto v = static_cast<double>(itr->first);
+                    vari += itr->second * v * v;
+                    total += static_cast<double>(itr->second);
                 }
             }
 
-            return (total > 0.0) ? static_cast<T>((vari / total) - static_cast<double>(average * average) + 0.5)
+            constexpr const double round_bias = 0.5;  
+            return (total > 0.0) ? static_cast<T>((vari / total) - static_cast<double>(average * average) + round_bias)
                                  : static_cast<T>(0);
         }
 
@@ -137,11 +139,11 @@ namespace tools
         {
             std::vector<T> to_sort;
 
-            for (auto it = m_occurences.cbegin(); it != m_occurences.cend(); ++it)
+            for (auto itr = m_occurences.cbegin(); itr != m_occurences.cend(); ++itr)
             {
-                for (int i = 0; i < it->second; ++i) // occurence
+                for (int i = 0; i < itr->second; ++i) // occurence
                 {
-                    to_sort.emplace_back(it->first);
+                    to_sort.emplace_back(itr->first);
                 }
             }
 
@@ -158,16 +160,15 @@ namespace tools
         double gaussian_probability(const T& value, const T& average, const T& variance) const
         {
             // https://fr.wikipedia.org/wiki/Loi_normale
+            double result = 0.0;
             if (variance > static_cast<T>(0))
             {
                 const double sigma = std::sqrt(static_cast<double>(variance));
-                const double e = static_cast<double>(value - average) / sigma;
-                return std::exp(-0.5 * e * e) / (sigma * std::sqrt(M_TWO_PI));
+                const double epsilon = static_cast<double>(value - average) / sigma;
+                result = std::exp(-0.5 * epsilon * epsilon) / (sigma * std::sqrt(M_TWO_PI)); // NOLINT math formula
             }
-            else
-            {
-                return 0.0;
-            }
+
+            return result;
         }
 
     private:

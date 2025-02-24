@@ -82,7 +82,7 @@ namespace tools
         {
         }
 
-        ~data_task()
+        ~data_task() override
         {
             m_stop_task.store(true);
             m_data_sync.signal();
@@ -92,7 +92,7 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() override
         {
-            return reinterpret_cast<void*>(m_task->native_handle());
+            return reinterpret_cast<void*>(m_task->native_handle()); // NOLINT native handler wrapping
         }
 
         void submit(const DataType& data)

@@ -53,14 +53,14 @@ namespace tools
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_context(context)
-        {
-            m_task = std::make_unique<std::thread>(
-                [this]()
-                {
-                    set_current_thread_params(this->task_name(), this->cpu_affinity(), this->priority());
+            , m_task(std::make_unique<std::thread>(
+                  [this]()
+                  {
+                      set_current_thread_params(this->task_name(), this->cpu_affinity(), this->priority());
 
-                    run_loop();
-                });
+                      run_loop();
+                  }))
+        {
         }
 
         worker_task(call_back&& startup_routine, const std::shared_ptr<Context>& context, const std::string& task_name,
@@ -70,7 +70,7 @@ namespace tools
         {
         }
 
-        ~worker_task()
+        ~worker_task() override
         {
             m_stop_task.store(true);
             m_work_sync.signal();
@@ -80,7 +80,7 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() override
         {
-            return reinterpret_cast<void*>(m_task->native_handle());
+            return reinterpret_cast<void*>(m_task->native_handle()); // NOLINT native handler wrapping
         }
 
         void delegate(call_back&& work)

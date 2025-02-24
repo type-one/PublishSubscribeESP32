@@ -45,9 +45,7 @@ namespace tools
     {
     public:
         async_observer() = default;
-        virtual ~async_observer()
-        {
-        }
+        ~async_observer() override = default;
 
         void inform(const Topic& topic, const Evt& event, const std::string& origin) override
         {

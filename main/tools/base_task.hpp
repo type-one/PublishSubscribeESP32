@@ -34,16 +34,16 @@
 
 namespace tools
 {
-    class base_task : public non_copyable
+    class base_task : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
 
     public:
         static constexpr const int run_on_all_cores = -1;
         static constexpr const int default_priority = -1;
 
-        base_task() = default;
+        base_task() = delete;
 
-        base_task(const std::string& task_name, std::size_t stack_size, int cpu_affinity, int priority)
+        base_task(const std::string& task_name, std::size_t stack_size, int cpu_affinity, int priority) // NOLINT keep interface
             : m_task_name(task_name)
             , m_stack_size(stack_size)
             , m_cpu_affinity(cpu_affinity)
@@ -51,14 +51,12 @@ namespace tools
         {
         }
 
-        virtual ~base_task()
-        {
-        }
+        virtual ~base_task() = default;
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         virtual void* native_handle() = 0;
 
-        const std::string& task_name() const
+        [[nodiscard]] const std::string& task_name() const
         {
             return m_task_name;
         }

@@ -38,7 +38,7 @@
 namespace tools
 {
     template <typename T>
-    class sync_ring_vector : public non_copyable
+    class sync_ring_vector : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         struct thread_safe
@@ -102,7 +102,7 @@ namespace tools
             return m_ring_vector.size();
         }
 
-        std::size_t capacity() const
+        [[nodiscard]] std::size_t capacity() const
         {
             return m_ring_vector.capacity();
         }

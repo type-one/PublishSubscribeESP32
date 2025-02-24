@@ -38,7 +38,7 @@
 namespace tools
 {
     template <typename T, std::size_t Capacity>
-    class sync_ring_buffer : public non_copyable
+    class sync_ring_buffer : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         struct thread_safe
@@ -97,7 +97,7 @@ namespace tools
             return m_ring_buffer.size();
         }
 
-        constexpr std::size_t capacity() const
+        [[nodiscard]] constexpr std::size_t capacity() const
         {
             return m_ring_buffer.capacity();
         }

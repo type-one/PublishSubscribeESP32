@@ -104,14 +104,14 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() override
         {
-            return reinterpret_cast<void*>(&m_task);
+            return reinterpret_cast<void*>(&m_task); // NOLINT native handler wrapping
         }
 
         void submit(const DataType& data)
         {
             if (nullptr != m_data_queue)
             {
-                constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
+                constexpr const TickType_t x_block_time = portMAX_DELAY; /* NOLINT init to Block indefinitely. */
                 xQueueSend(m_data_queue, &data, x_block_time);
             }
         }
@@ -120,7 +120,7 @@ namespace tools
         {
             if (nullptr != m_data_queue)
             {
-                BaseType_t px_higher_priority_task_woken = pdFALSE;
+                BaseType_t px_higher_priority_task_woken = pdFALSE; // NOLINT initialized with pdFALSE
                 xQueueSendFromISR(m_data_queue, &data, &px_higher_priority_task_woken);
                 portYIELD_FROM_ISR(px_higher_priority_task_woken);
             }

@@ -75,7 +75,7 @@ namespace tools
         {
         }
 
-        ~periodic_task()
+        ~periodic_task() override
         {
             m_stop_task.store(true);
             m_task->join();
@@ -84,7 +84,7 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() override
         {
-            return reinterpret_cast<void*>(m_task->native_handle());
+            return reinterpret_cast<void*>(m_task->native_handle()); // NOLINT native handler wrapping
         }
 
     private:
@@ -125,7 +125,7 @@ namespace tools
 
                     // sleep until we are close to the deadline
                     const auto sleep_time = std::chrono::duration<std::uint64_t, std::micro>(
-                        static_cast<int>(ratio * remaining_time.count()));
+                        static_cast<int>(ratio * static_cast<double>(remaining_time.count())));
                     std::this_thread::sleep_for(sleep_time);
 
                 } // end if wait period needed

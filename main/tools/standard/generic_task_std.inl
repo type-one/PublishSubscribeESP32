@@ -68,7 +68,7 @@ namespace tools
         {
         }
 
-        ~generic_task()
+        ~generic_task() override
         {
             m_task->join();
         }
@@ -76,7 +76,7 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         void* native_handle() override
         {
-            return reinterpret_cast<void*>(m_task->native_handle());
+            return reinterpret_cast<void*>(m_task->native_handle()); // NOLINT native handler wrapping
         }
 
     private:

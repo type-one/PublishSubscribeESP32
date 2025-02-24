@@ -45,13 +45,11 @@ namespace tools
     // http://www.codeproject.com/Articles/328365/Understanding-and-Implementing-Observer-Pattern
 
     template <typename Topic, typename Evt>
-    class sync_observer : public non_copyable
+    class sync_observer : public non_copyable // NOLINT inherits from non copyable/non movable class
     {
     public:
         sync_observer() = default;
-        virtual ~sync_observer()
-        {
-        }
+        virtual ~sync_observer() = default;
 
         virtual void inform(const Topic& topic, const Evt& event, const std::string& origin) = 0;
     };
@@ -63,23 +61,21 @@ namespace tools
     using loose_coupled_handler = std::function<void(const Topic&, const Evt&, const std::string&)>;
 
     template <typename Topic, typename Evt>
-    class sync_subject : public non_copyable
+    class sync_subject : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         using sync_observer_shared_ptr = std::shared_ptr<sync_observer<Topic, Evt>>;
         using handler = loose_coupled_handler<Topic, Evt>;
 
         sync_subject() = delete;
-        sync_subject(const std::string& name)
-            : m_name { name }
+        sync_subject(std::string name)
+            : m_name { std::move(name) }
         {
         }
 
-        virtual ~sync_subject()
-        {
-        }
+        virtual ~sync_subject() = default;
 
-        std::string name() const
+        [[nodiscard]] std::string name() const
         {
             return m_name;
         }
