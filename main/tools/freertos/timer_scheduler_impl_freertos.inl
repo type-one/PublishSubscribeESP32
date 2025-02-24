@@ -78,15 +78,14 @@ namespace tools
     {
         auto context = std::make_unique<timer_context>();
         context->m_callback = std::move(handler); // NOLINT keep common platform interface
-        context->m_auto_release = !auto_reload;
+        const bool auto_reload = (timer_type::periodic == type);
+        context->m_auto_release = (timer_type::one_shot == type);
         context->m_this = this;
 
         // https://mcuoneclipse.com/2018/05/27/tutorial-understanding-and-using-freertos-software-timers/
         // https://freertos.org/Documentation/02-Kernel/04-API-references/11-Software-timers/01-xTimerCreate
         // https://stackoverflow.com/questions/71199868/c-use-a-class-non-static-method-as-a-function-pointer-callback-in-freertos-xti
-        timer_handle hnd = nullptr;
-
-        const bool auto_reload = (timer_type::periodic == type);
+        timer_handle hnd = nullptr;        
 
         if (auto_reload)
         {
