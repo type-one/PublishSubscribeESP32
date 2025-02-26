@@ -1,13 +1,13 @@
 /**
  * @file ring_buffer.hpp
- * @brief A header file defining a ring buffer class template with a fixed capacity.
- * 
+ * @brief A header file defining a thread-unsafe ring buffer class template with a fixed capacity.
+ *
  * This file contains the definition of the ring_buffer class template, which provides
  * a circular buffer implementation with a fixed capacity. The ring buffer supports
  * operations such as push, pop, front, back, and various utility functions.
- * 
+ *
  * @author Laurent Lardinois
- * 
+ *
  * @date January 2025
  */
 
@@ -215,6 +215,7 @@ namespace tools
          * @brief Checks if the ring buffer is empty.
          *
          * This method returns true if the ring buffer has no elements
+         * i.e. the push index is equal to the pop index.
          *
          * @return true if the ring buffer is empty, false otherwise.
          */

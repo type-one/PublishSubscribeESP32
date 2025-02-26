@@ -1,3 +1,15 @@
+/**
+ * @file ring_vector.hpp
+ * @brief A thread-unsafe ring buffer implementation using a vector.
+ * 
+ * This file contains the definition of the ring_vector class template, which provides
+ * a ring buffer (circular buffer) implementation using a vector. It supports basic
+ * operations such as push, pop, front, back, and resizing.
+ * 
+ * @author Laurent Lardinois
+ * @date February 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -35,6 +47,15 @@
 
 namespace tools
 {
+
+    /**
+     * @brief A thread-unsafe ring buffer implementation using a vector.
+     *
+     * This class provides a ring buffer (circular buffer) implementation using a vector.
+     * It supports basic operations such as push, pop, front, back, and resizing.
+     *
+     * @tparam T The type of elements stored in the ring buffer.
+     */
     template <typename T>
     class ring_vector
     {
@@ -47,12 +68,25 @@ namespace tools
         ring_vector() = delete;
         ~ring_vector() = default;
 
+        /**
+         * @brief Constructs a ring_vector with the specified capacity.
+         *
+         * @param capacity The capacity of the ring_vector
+         */
         ring_vector(std::size_t capacity)
             : m_ring_vector(capacity)
             , m_capacity(capacity)
         {
         }
 
+        /**
+         * @brief Copy constructor for the ring_vector class.
+         *
+         * This constructor creates a new ring_vector object by copying the contents
+         * of another ring_vector object.
+         *
+         * @param other The ring_vector object to copy from.
+         */
         ring_vector(const ring_vector& other)
             : m_ring_vector { other.m_ring_vector }
             , m_push_index { other.m_push_index }
@@ -63,6 +97,15 @@ namespace tools
         {
         }
 
+        /**
+         * @brief Move constructor for the ring_vector class.
+         *
+         * This constructor initializes a ring_vector object by transferring ownership
+         * of the data from another ring_vector object. The other ring_vector object
+         * is left in a valid but unspecified state.
+         *
+         * @param other The ring_vector object to move from.
+         */
         ring_vector(ring_vector&& other) noexcept
             : m_ring_vector { std::move(other.m_ring_vector) }
             , m_push_index { std::move(other.m_push_index) }
@@ -73,6 +116,15 @@ namespace tools
         {
         }
 
+        /**
+         * @brief Assignment operator for the ring_vector class.
+         *
+         * This operator assigns the contents of another ring_vector instance to this instance.
+         * It performs a deep copy of the internal state of the ring_vector.
+         *
+         * @param other The ring_vector instance to be copied.
+         * @return A reference to this ring_vector instance.
+         */
         ring_vector& operator=(const ring_vector& other)
         {
             if (this != &other)
@@ -88,6 +140,15 @@ namespace tools
             return *this;
         }
 
+        /**
+         * @brief Move assignment operator for ring_vector.
+         *
+         * This operator moves the contents of another ring_vector into this one.
+         * It transfers ownership of the internal data from the source object to the destination object.
+         *
+         * @param other The ring_vector to move from.
+         * @return A reference to this ring_vector.
+         */
         ring_vector& operator=(ring_vector&& other) noexcept
         {
             if (this != &other)
@@ -103,6 +164,11 @@ namespace tools
             return *this;
         }
 
+        /**
+         * @brief Pushes an element into the ring vector.
+         *
+         * @param elem The element to be pushed into the ring vector.
+         */
         void push(const T& elem)
         {
             m_ring_vector[m_push_index] = elem;
@@ -111,6 +177,11 @@ namespace tools
             ++m_size;
         }
 
+        /**
+         * @brief Inserts an element in place into the ring vector at the current push index.
+         *
+         * @param elem The element to be inserted into the ring vector.
+         */
         void emplace(T&& elem)
         {
             m_ring_vector[m_push_index] = std::move(elem);
@@ -119,32 +190,70 @@ namespace tools
             ++m_size;
         }
 
+        /**
+         * @brief Removes the oldest element from the ring buffer.
+         *
+         */
         void pop()
         {
             m_pop_index = next_index(m_pop_index);
             --m_size;
         }
 
+        /**
+         * @brief Returns the front element of the ring vector.
+         *
+         * This function retrieves the element at the front of the ring vector
+         * without removing it.
+         *
+         * @return T The front element of the ring vector.
+         */
         [[nodiscard]] T front() const
         {
             return m_ring_vector[m_pop_index];
         }
 
+        /**
+         * @brief Returns the last element in the ring vector.
+         *
+         * @return The last element of type T in the ring vector.
+         */
         [[nodiscard]] T back() const
         {
             return m_ring_vector[m_last_index];
         }
 
+        /**
+         * @brief Checks if the ring buffer is empty.
+         *
+         * This function returns true if the ring buffer is empty, i.e.,
+         * the push index is equal to the pop index.
+         *
+         * @return true if the ring buffer is empty, false otherwise.
+         */
         [[nodiscard]] bool empty() const
         {
             return m_push_index == m_pop_index;
         }
 
+        /**
+         * @brief Checks if the ring buffer is full.
+         *
+         * This method determines if the ring buffer has reached its maximum capacity.
+         *
+         * @return true if the ring buffer is full, false otherwise.
+         */
         [[nodiscard]] bool full() const
         {
             return next_index(m_push_index) == m_pop_index;
         }
 
+        /**
+         * @brief Clears the ring vector, resetting all indices and size to zero.
+         *
+         * This function resets the push, pop, and last indices to zero, sets the size to zero,
+         * clears the internal ring vector, and resizes it to its capacity.
+         */
         void clear()
         {
             m_push_index = 0U;
@@ -155,21 +264,46 @@ namespace tools
             m_ring_vector.resize(m_capacity);
         }
 
+        /**
+         * @brief Returns the current size of the ring vector.
+         *
+         * @return std::size_t The number of elements in the ring vector.
+         */
         [[nodiscard]] std::size_t size() const
         {
             return m_size;
         }
 
+        /**
+         * @brief Returns the capacity of the ring vector.
+         *
+         * @return std::size_t The capacity of the ring vector.
+         */
         [[nodiscard]] std::size_t capacity() const
         {
             return m_capacity;
         }
 
+        /**
+         * @brief Accesses the element at the specified index in the ring vector.
+         *
+         * @param index The index of the element to access.
+         * @return T& Reference to the element at the specified index.
+         */
         T& operator[](std::size_t index)
         {
             return m_ring_vector[next_step_index(m_pop_index, index)];
         };
 
+        /**
+         * @brief Resizes the ring vector to the specified new capacity.
+         *
+         * This function resizes the ring vector to the given new capacity. If the new capacity is smaller than the
+         * current size, the oldest elements will be discarded. If the new capacity is larger, the ring vector will be
+         * expanded to accommodate the new capacity.
+         *
+         * @param new_capacity The new capacity for the ring vector.
+         */
         void resize(std::size_t new_capacity)
         {
             std::vector<T> tmp(std::max(new_capacity, m_size));
@@ -221,11 +355,30 @@ namespace tools
         }
 
     private:
+        /**
+         * @brief Calculates the next index in a circular buffer.
+         *
+         * This function computes the next index in a circular buffer based on the current index.
+         * It wraps around to the beginning if the end of the buffer is reached.
+         *
+         * @param index The current index in the buffer.
+         * @return The next index in the buffer.
+         */
         [[nodiscard]] std::size_t next_index(std::size_t index) const
         {
             return ((index + 1U) % m_capacity);
         }
 
+        /**
+         * @brief Calculates the next index in the ring buffer given a current index and a step.
+         *
+         * This function computes the next index in a circular manner by adding the step to the current index
+         * and taking the modulus with the capacity of the ring buffer.
+         *
+         * @param index The current index in the ring buffer.
+         * @param step The number of steps to move forward from the current index.
+         * @return The next index in the ring buffer after moving the specified number of steps.
+         */
         [[nodiscard]] std::size_t next_step_index(std::size_t index, std::size_t step) const
         {
             return ((index + step) % m_capacity);
