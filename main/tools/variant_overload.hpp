@@ -1,3 +1,14 @@
+/**
+ * @file variant_overload.hpp
+ * @brief A header file defining a variadic template struct for creating an overload set from multiple functors.
+ * 
+ * This file contains the definition of the `overload` struct, which is used to create an overload set from multiple functors.
+ * It is typically used with `std::variant` to visit the value held by the variant.
+ * 
+ * @author Laurent Lardinois, adapted from Rainer Grimm C++ blog
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -38,13 +49,37 @@ namespace tools::detail
     // https://www.modernescpp.com/index.php/visiting-a-std-variant-with-the-overload-pattern/
     // https://www.cppstories.com/2023/finite-state-machines-variant-cpp/
 
+
+    /**
+     * @brief A variadic template struct that inherits from multiple functors.
+     * 
+     * This struct is used to create an overload set from multiple functors.
+     * It is typically used with std::variant to visit the value held by the variant.
+     * 
+     * @tparam Ts The types of the functors.
+     */
     template <typename... Ts>
     struct overload : Ts...
     {
+        /**
+         * @brief Inherit the call operators from the functors.
+         */
         using Ts::operator()...;
     };
-    template <class... Ts>
-    overload(Ts...) -> overload<Ts...>;
+
+    /**
+     * @brief Deduction guide for the overload struct.
+     * 
+     * This deduction guide allows the compiler to deduce the template arguments
+     * for the overload struct from the constructor arguments.
+     * 
+     * @tparam Ts The types of the functors.
+     * @param ... The functors to be used in the overload set.
+     */
+
+     template <class... Ts>
+     overload(Ts...) -> overload<Ts...>;
+
 }
 
 #endif //  VARIANT_OVERLOAD_HPP_
