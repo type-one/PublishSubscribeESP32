@@ -1,3 +1,15 @@
+/**
+ * @file platform_helpers_std.inl
+ * @brief Platform-specific helper functions for thread management.
+ * 
+ * This file contains platform-specific helper functions for managing threads,
+ * including setting thread parameters such as name, CPU affinity, and priority,
+ * as well as putting the current thread to sleep for a specified duration.
+ * 
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -41,6 +53,13 @@
 
 namespace tools
 {
+    /**
+     * @brief Puts the current thread to sleep for the specified duration.
+     * 
+     * This function causes the current thread to sleep for the specified number of milliseconds.
+     * 
+     * @param ms The duration in milliseconds for which the thread should sleep.
+     */
     inline void sleep_for(std::uint64_t ms)
     {
         std::this_thread::sleep_for(std::chrono::duration<std::uint64_t, std::milli>(ms));
@@ -48,6 +67,16 @@ namespace tools
 
     // -- specific posix and win32 task helper --
 
+    /**
+     * @brief Sets the current thread's parameters such as name, CPU affinity, and priority.
+     *
+     * This function sets the name, CPU affinity, and priority of the current thread.
+     * It supports both Linux and Windows platforms.
+     *
+     * @param task_name The name to set for the current thread.
+     * @param cpu_affinity The CPU affinity to set for the current thread. If negative, affinity is not set.
+     * @param priority The priority to set for the current thread. If negative, priority is not set.
+     */
     inline void set_current_thread_params(const std::string& task_name, int cpu_affinity, int priority)
     {
 
