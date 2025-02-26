@@ -1,3 +1,14 @@
+/**
+ * @file timer_scheduler_impl_std.inl
+ * @brief Timer scheduler class for managing timers.
+ *
+ * This file contains the implementation of the timer_scheduler class, which provides
+ * functionality to add and remove timers with specified periods and handlers.
+ *
+ * @author Laurent Lardinois
+ * @date February 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //

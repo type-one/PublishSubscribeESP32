@@ -1,3 +1,14 @@
+/**
+ * @file timer_scheduler_std.inl
+ * @brief Timer scheduler class for managing timers.
+ *
+ * This file contains the definition of the timer_scheduler class, which provides
+ * functionality to add and remove timers with specified periods and handlers.
+ *
+ * @author Laurent Lardinois
+ * @date February 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -35,13 +46,26 @@
 
 namespace tools
 {
+    /**
+     * @brief timer types (one shot or periodic)
+     *
+     */
     enum class timer_type
     {
         one_shot,
         periodic
     };
 
+    /**
+     * @brief Alias for a timer handle type.
+     *
+     * This type alias represents a handle for a timer, defined as a std::size_t.
+     */
     using timer_handle = std::size_t;
+
+    /**
+     * @brief A class that manages the scheduling of timers.
+     */
     class timer_scheduler : non_copyable // NOLINT inherits from non copyable/non movable class
     {
     public:
@@ -49,31 +73,38 @@ namespace tools
         ~timer_scheduler() = default;
 
         /**
-         * Add a new timer.
+         * @brief Add a new timer.
          *
-         * \param period The period of the timer in ms
-         * \param handler The callable that is invoked when the timer fires.
-         * \param type If periodic, then the timer will expire repeatedly with a frequency set by the period
+         * @param timer_name The name of the timer.
+         * @param period The period of the timer in ms.
+         * @param handler The callable that is invoked when the timer fires.
+         * @param type If periodic, then the timer will expire repeatedly with a frequency set by the period
          * parameter. If set to one_shot, then the timer will be a one-shot timer.
+         * @return A handle to the added timer.
          */
         timer_handle add(const std::string& timer_name, std::uint64_t period,
             std::function<void(timer_handle)>&& handler, timer_type type);
 
 
         /**
-         * Add a new timer.
+         * @brief Add a new timer.
          *
-         * \param period The period of the timer as std::chrono duration
-         * \param handler The callable that is invoked when the timer fires.
-         * \param type If periodic, then the timer will expire repeatedly with a frequency set by the period
+         * @param timer_name The name of the timer.
+         * @param period The period of the timer as std::chrono duration.
+         * @param handler The callable that is invoked when the timer fires.
+         * @param type If periodic, then the timer will expire repeatedly with a frequency set by the period
          * parameter. If set to one_shot, then the timer will be a one-shot timer.
+         * @return A handle to the added timer.
          */
         timer_handle add(const std::string& timer_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
             std::function<void(timer_handle)>&& handler, timer_type type);
 
 
         /**
-         * Removes the timer with the given id.
+         * @brief Removes the timer with the given id.
+         *
+         * @param hnd The handle of the timer to be removed.
+         * @return True if the timer was successfully removed, false otherwise.
          */
         bool remove(timer_handle hnd);
 
