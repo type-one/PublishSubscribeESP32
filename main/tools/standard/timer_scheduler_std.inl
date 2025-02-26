@@ -52,8 +52,8 @@ namespace tools
      */
     enum class timer_type
     {
-        one_shot,
-        periodic
+        one_shot, ///< one shot timer
+        periodic  ///< periodic timer
     };
 
     /**
