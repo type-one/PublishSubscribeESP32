@@ -1,3 +1,15 @@
+/**
+ * @file gzip_wrapper.cpp
+ * @brief Implementation - A wrapper class for gzip compression and decompression using the uzlib library.
+ *
+ * This file contains the implementation of the gzip_wrapper class, which provides methods to
+ * compress and decompress data using the gzip format. It utilizes the uzlib library for
+ * compression and decompression.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -123,6 +135,7 @@ namespace tools
 
         return gzip_packed;
     }
+
 
     std::vector<std::uint8_t>
     gzip_wrapper::unpack( // NOLINT doesn't use the hash table but keep pack/unpack IF symmetric

@@ -1,6 +1,6 @@
 /**
  * @file base_task.hpp
- * @brief A base class for creating tasks in a publish/subscribe pattern.
+ * @brief An abstract base class for creating tasks in a publish/subscribe pattern.
  *
  * This file contains the definition of the base_task class, which provides
  * a foundation for creating tasks with specific attributes such as name,
