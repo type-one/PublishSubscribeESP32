@@ -1,3 +1,18 @@
+/**
+ * @file cjsonpp.cpp
+ * @brief A thin wrapper over cJSON data type providing a JSON object interface.
+ *
+ * This file contains the implementation of the JSONObject class and related functions.
+ * The JSONObject class provides a convenient interface for working with JSON data
+ * using the cJSON library. It includes methods for creating, parsing, and manipulating
+ * JSON objects, arrays, and values.
+ *
+ * @author Dmitry Pankratov
+ * @date 2015
+ * MIT license
+ * file modified by Laurent Lardinois in January 2025
+ */
+
 #include <array>
 #include <cstdint>
 #include <cstdio>
