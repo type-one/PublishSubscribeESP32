@@ -1,4 +1,15 @@
 
+/**
+ * @file logger.hpp
+ * @brief Logging utility for different platforms (ESP32, others).
+ * 
+ * This header file provides macros for logging messages with different severity levels.
+ * It supports both ESP32 platform using ESP-IDF logging and other platforms using standard C++ I/O functions.
+ * 
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //

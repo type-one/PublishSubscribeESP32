@@ -1,3 +1,13 @@
+/**
+ * @file platform_detection.hpp
+ * @brief Platform detection for Publish/Subscribe Pattern project.
+ *
+ * This header file contains macros to detect the platform on which the code is being compiled.
+ * It supports detection for ESP32 and various STM32 platforms.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
