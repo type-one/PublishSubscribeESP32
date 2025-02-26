@@ -1,3 +1,14 @@
+/**
+ * @file lock_free_ring_buffer.hpp
+ * @brief A lock-free ring buffer implementation for single producer and single consumer.
+ *
+ * This header file contains the implementation of a lock-free ring buffer that supports
+ * single producer and single consumer. It ensures thread-safe operations without using locks.
+ *
+ * @author Laurent Lardinois
+ * @date February 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -38,6 +49,15 @@
 
 namespace tools
 {
+    /**
+     * @brief A lock-free ring buffer implementation.
+     *
+     * This class provides a lock-free ring buffer that supports single producer and single consumer.
+     * It ensures that the operations are thread-safe without using locks.
+     *
+     * @tparam T The type of elements stored in the ring buffer.
+     * @tparam Pow2 The power of 2 that determines the size of the ring buffer.
+     */
     template <typename T, std::size_t Pow2>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
     requires std::is_standard_layout_v<T> && std::is_trivial_v<T> &&(std::is_scalar_v<T> || std::is_pointer_v<T>)
@@ -58,6 +78,16 @@ namespace tools
         lock_free_ring_buffer() = default;
         ~lock_free_ring_buffer() = default;
 
+        /**
+         * @brief Pushes an element into the ring buffer.
+         *
+         * This function attempts to push an element into the ring buffer. If the buffer is full,
+         * the function returns false. It handles potential race conditions by checking the indices
+         * and waiting if necessary.
+         *
+         * @param elem The element to be pushed into the ring buffer.
+         * @return true if the element was successfully pushed into the buffer, false if the buffer is full.
+         */
         bool push(const T& elem)
         {
             const std::size_t snap_write_idx = m_push_index.load();
@@ -85,6 +115,16 @@ namespace tools
             return true;
         }
 
+        /**
+         * @brief Pops an element from the ring buffer.
+         *
+         * This function attempts to pop an element from the ring buffer. If the buffer is empty,
+         * the function returns false. If the buffer is not empty, it retrieves the next element
+         * and updates the read index.
+         *
+         * @param elem Reference to the element where the popped value will be stored.
+         * @return true if an element was successfully popped, false if the buffer is empty.
+         */
         bool pop(T& elem)
         {
             const std::size_t snap_write_idx = m_push_index.load();
@@ -112,6 +152,15 @@ namespace tools
             return true;
         }
 
+        /**
+         * @brief Returns the capacity of the ring buffer.
+         *
+         * This function calculates the capacity of the ring buffer based on the
+         * template parameter Pow2. The capacity is determined as 2 raised to the
+         * power of Pow2.
+         *
+         * @return The capacity of the ring buffer.
+         */
         [[nodiscard]] constexpr std::size_t capacity() const
         {
             return 1U << Pow2;
