@@ -1,3 +1,15 @@
+/**
+ * @file sync_object_impl_std.inl
+ * @brief Implementation of a synchronization object using standard C++ constructs.
+ *
+ * This file contains the implementation of the sync_object class, which provides
+ * a synchronization mechanism using standard C++ constructs such as mutexes and
+ * condition variables.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
