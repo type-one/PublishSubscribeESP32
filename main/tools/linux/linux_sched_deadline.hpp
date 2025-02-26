@@ -1,3 +1,15 @@
+/**
+ * @file linux_sched_deadline.hpp
+ * @brief Header file for setting and retrieving scheduling attributes using the SCHED_DEADLINE policy on Linux.
+ *
+ * This file contains functions and structures for working with the SCHED_DEADLINE scheduling policy on Linux systems.
+ * It includes functionality to check if the process is running as root, set scheduling attributes, and retrieve
+ * scheduling attributes.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -44,6 +56,14 @@
 
 namespace tools
 {
+    /**
+     * @brief Checks if the current process is running with root privileges (Unix).
+     *
+     * This function determines if the current process is running as the root user
+     * by checking the real and effective user IDs.
+     *
+     * @return true if the process is running as root, false otherwise.
+     */
     static inline bool is_running_as_root()
     {
         return (getuid() == 0) || (geteuid() == 0);
@@ -93,6 +113,12 @@ namespace tools
     namespace linux_os
     {
         struct sched_attr
+        /**
+         * @brief Structure representing scheduling parameters for different scheduling policies (Linux specific).
+         *
+         * This structure contains fields for various scheduling parameters such as policy, flags,
+         * nice value, priority, and timing parameters for deadline scheduling.
+         */
         {
             __u32 size;
 
@@ -111,17 +137,52 @@ namespace tools
             __u64 sched_period;
         };
 
+        /**
+         * @brief Sets the scheduling attributes for a specified process (Linux specific).
+         *
+         * This function is a wrapper around the syscall to set the scheduling attributes
+         * for a process identified by its PID.
+         *
+         * @param pid The process ID of the process whose scheduling attributes are to be set.
+         * @param attr A pointer to a sched_attr structure containing the scheduling attributes.
+         * @param flags Flags to modify the behavior of the syscall.
+         * @return int Returns 0 on success, or a negative error code on failure.
+         */
         inline int sched_setattr(pid_t pid, const struct tools::linux_os::sched_attr* attr, unsigned int flags)
         {
             return static_cast<int>(syscall(static_cast<long>(__NR_sched_setattr), pid, attr, flags));
         }
 
-        inline int sched_getattr(pid_t pid, struct tools::linux_os::sched_attr* attr, unsigned int size, unsigned int flags)
+        /**
+         * @brief Retrieves the scheduling attributes of a specified process (Linux specific).
+         *
+         * This function is a wrapper around the syscall to get the scheduling attributes
+         * of a process identified by its PID.
+         *
+         * @param pid The process ID of the target process.
+         * @param attr Pointer to a sched_attr structure where the attributes will be stored.
+         * @param size The size of the sched_attr structure.
+         * @param flags Flags for the syscall (usually set to 0).
+         * @return Returns 0 on success, or a negative error code on failure.
+         */
+        inline int sched_getattr(
+            pid_t pid, struct tools::linux_os::sched_attr* attr, unsigned int size, unsigned int flags)
         {
             return static_cast<int>(syscall(static_cast<long>(__NR_sched_getattr), pid, attr, size, flags));
         }
     }
 
+    /**
+     * @brief Sets the earliest deadline scheduling for the current thread if running as root (Linux specific).
+     *
+     * This function configures the current thread to use the earliest deadline first (EDF) scheduling policy.
+     * It sets the runtime, deadline, and period for the scheduling attributes based on the provided start time and
+     * period.
+     *
+     * @param start_time The start time point for the scheduling.
+     * @param period The period duration for the scheduling in microseconds.
+     * @return true if the scheduling was successfully set, false otherwise.
+     */
     static bool set_earliest_deadline_scheduling(std::chrono::high_resolution_clock::time_point start_time,
         const std::chrono::duration<std::uint64_t, std::micro>& period)
     {
@@ -178,6 +239,17 @@ namespace tools
 
 #else // end if #defined __linux__
 
+/**
+ * @brief Sets the earliest deadline scheduling for a task (dummy implementation on non-Linux).
+ *
+ * This function is intended to set the earliest deadline scheduling for a task
+ * based on the provided start time and period. Currently, it is not implemented
+ * and always returns false.
+ *
+ * @param start_time The start time of the task.
+ * @param period The period of the task in microseconds.
+ * @return true if the scheduling was successfully set, false otherwise.
+ */
 static bool set_earliest_deadline_scheduling(std::chrono::high_resolution_clock::time_point start_time,
     const std::chrono::duration<std::uint64_t, std::micro>& period)
 {
