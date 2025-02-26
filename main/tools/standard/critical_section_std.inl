@@ -1,3 +1,14 @@
+/**
+ * @file critical_section_std.inl
+ * @brief Implementation of critical section and ISR lock guard using standard C++ mutex.
+ *
+ * This file is part of the C++ Publish/Subscribe Pattern project.
+ * It provides a critical section implementation using std::mutex and a lock guard for ISR.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //

@@ -1,3 +1,13 @@
+/**
+ * @file data_task_std.inl
+ * @brief A header file defining the data_task class for handling tasks that process data of a specified type.
+ * 
+ * This file contains the implementation of the data_task class, which is derived from the base_task class.
+ * It provides functionality for handling tasks that process data of a specified type, using a publish/subscribe pattern.
+ * 
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -40,6 +50,15 @@
 
 namespace tools
 {
+    /**
+     * @brief A class representing a data task.
+     * 
+     * This class is derived from the base_task class and provides functionality
+     * for handling tasks that process data of a specified type.
+     * 
+     * @tparam Context The type of the context object.
+     * @tparam DataType The type of the data to be processed.
+     */
     template <typename Context, typename DataType>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
     requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
@@ -52,10 +71,40 @@ namespace tools
     public:
         data_task() = delete;
 
+        /**
+         * @brief Alias for a callback function that is invoked at startup.
+         * 
+         * This callback function is used to initialize data or other parameters within a given context.
+         * 
+         * @param context A shared pointer to the Context object.
+         * @param task_name The name of the task associated with this callback.
+         */
         using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
+
+        /**
+         * @brief Alias for a callback function that processes data.
+         * 
+         * This callback function is used to process data within a given context.
+         * 
+         * @param context A shared pointer to the Context object.
+         * @param data The data to be processed.
+         * @param task_name The name of the task associated with this callback.
+         */
         using data_call_back = std::function<void(
             const std::shared_ptr<Context>& context, const DataType& data, const std::string& task_name)>;
 
+        /**
+         * @brief Constructs a data_task object.
+         * 
+         * @param startup_routine The routine to be called during startup.
+         * @param process_routine The routine to process data.
+         * @param context Shared pointer to the context object.
+         * @param data_queue_depth The depth of the data queue.
+         * @param task_name The name of the task.
+         * @param stack_size The stack size for the task.
+         * @param cpu_affinity The CPU affinity for the task.
+         * @param priority The priority of the task.
+         */
         data_task(call_back&& startup_routine, data_call_back&& process_routine,
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
             std::size_t stack_size, int cpu_affinity, int priority)
@@ -74,6 +123,16 @@ namespace tools
                 });
         }
 
+        /**
+         * @brief Constructs a data_task object with the specified parameters.
+         * 
+         * @param startup_routine The callback function to be executed during startup.
+         * @param process_routine The callback function to process data.
+         * @param context Shared pointer to the Context object.
+         * @param data_queue_depth The depth of the data queue.
+         * @param task_name The name of the task.
+         * @param stack_size The size of the stack for the task.
+         */
         data_task(call_back&& startup_routine, data_call_back&& process_routine,
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
             std::size_t stack_size)
@@ -82,6 +141,12 @@ namespace tools
         {
         }
 
+        /**
+         * @brief Destructor for the data_task class.
+         * 
+         * This destructor sets the m_stop_task flag to true, signals the m_data_sync condition,
+         * and waits for the task thread to complete by calling join on m_task.
+         */
         ~data_task() override
         {
             m_stop_task.store(true);
@@ -90,17 +155,42 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
+        /**
+         * @brief Retrieves the native handle of the task.
+         * 
+         * This function overrides the base class implementation to return the native handle
+         * of the task, wrapped as a void pointer.
+         * 
+         * @return void* The native handle of the task, cast to a void pointer.
+         */
         void* native_handle() override
         {
             return reinterpret_cast<void*>(m_task->native_handle()); // NOLINT native handler wrapping as a void*
         }
 
+        /**
+         * @brief Submits data to the queue and signals the data synchronization.
+         * 
+         * This method pushes the provided data into the data queue and then signals
+         * the data synchronization mechanism to indicate that new data is available.
+         * 
+         * @param data The data to be submitted to the queue.
+         */
         void submit(const DataType& data)
         {
             m_data_queue.push(data);
             m_data_sync.signal();
         }
 
+        /**
+         * @brief Submits data from an ISR context.
+         * 
+         * This function is intended to be called from an Interrupt Service Routine (ISR).
+         * Since standard C++ does not support direct calls from ISRs, this function falls
+         * back to a standard call to submit the data.
+         * 
+         * @param data The data to be submitted.
+         */
         void isr_submit(const DataType& data)
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
@@ -108,6 +198,12 @@ namespace tools
         }
 
     private:
+        /**
+         * @brief Executes the main loop for the task.
+         * 
+         * This function runs the startup routine and then enters a loop where it waits for a signal
+         * to process data from the queue. The loop continues until the stop task flag is set.
+         */
         void run_loop()
         {
             // execute given startup function
