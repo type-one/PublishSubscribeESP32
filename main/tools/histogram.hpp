@@ -1,3 +1,15 @@
+/**
+ * @file histogram.hpp
+ * @brief A class representing a histogram for counting occurrences of values.
+ *
+ * This file contains the definition of the histogram class template, which provides
+ * functionality for adding values, calculating statistical measures such as average,
+ * variance, median, and computing Gaussian probability.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -41,6 +53,11 @@
 
 namespace tools
 {
+    /**
+     * @brief A class representing a histogram for counting occurrences of values.
+     *
+     * @tparam T The type of values stored in the histogram.
+     */
     template <typename T>
     class histogram : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
@@ -52,6 +69,11 @@ namespace tools
             static constexpr bool value = false;
         };
 
+        /**
+         * @brief Adds a value to the histogram and updates the occurrence count.
+         *
+         * @param value The value to be added to the histogram.
+         */
         void add(const T& value)
         {
             if (0 == m_occurences.count(value)) // first time
@@ -82,21 +104,47 @@ namespace tools
             ++m_total_count;
         }
 
+        /**
+         * @brief Returns the top value of the histogram.
+         *
+         * @return The top value of the histogram.
+         */
         constexpr T top() const
         {
             return m_top_value;
         }
 
+        /**
+         * @brief Returns the total count of values present in the histogram.
+         *
+         * @return The total count as an integer.
+         */
         [[nodiscard]] constexpr int total_count() const
         {
             return m_total_count;
         }
 
+        /**
+         * @brief Returns the highest occurrence count in the histogram.
+         *
+         * @return The highest occurrence count as an integer.
+         */
         [[nodiscard]] constexpr int top_occurence() const
         {
             return m_top_occurence;
         }
 
+        /**
+         * @brief Calculates the average value of the histogram.
+         *
+         * This function computes the average value of the histogram by summing up the
+         * products of occurrences and their corresponding values, and then dividing
+         * by the total number of occurrences. A rounding bias is added to the result
+         * before casting it to the template type T.
+         *
+         * @return The average value of the histogram as type T. If there are no
+         * occurrences, it returns 0.
+         */
         T average() const
         {
             double avg = 0.0;
@@ -111,10 +159,24 @@ namespace tools
                 }
             }
 
-            constexpr const double round_bias = 0.5; 
+            constexpr const double round_bias = 0.5;
             return (total > 0.0) ? static_cast<T>((avg / total) + round_bias) : static_cast<T>(0);
         }
 
+        /**
+         * @brief Calculates the variance of the data set.
+         *
+         * This function computes the variance of the data set stored in the histogram.
+         * The variance is calculated using the formula:
+         *
+         *     variance = (sum(x_i^2 * count_i) / total_count) - (average^2) + round_bias
+         *
+         * where x_i is the value, count_i is the occurrence of the value, and total_count
+         * is the sum of all occurrences.
+         *
+         * @param average The average value of the data set.
+         * @return The variance of the data set.
+         */
         T variance(const T& average) const
         {
             double vari = 0.0;
@@ -130,11 +192,19 @@ namespace tools
                 }
             }
 
-            constexpr const double round_bias = 0.5;  
+            constexpr const double round_bias = 0.5;
             return (total > 0.0) ? static_cast<T>((vari / total) - static_cast<double>(average * average) + round_bias)
                                  : static_cast<T>(0);
         }
 
+        /**
+         * @brief Computes the median value of the histogram.
+         *
+         * This function creates a sorted list of all occurrences and returns the median value.
+         * If the histogram is empty, it returns 0.
+         *
+         * @return The median value of the histogram.
+         */
         T median() const
         {
             std::vector<T> to_sort;
@@ -157,6 +227,17 @@ namespace tools
             return to_sort[to_sort.size() >> 1];
         }
 
+        /**
+         * @brief Computes the Gaussian probability of a given value.
+         *
+         * This function calculates the probability of a given value under a Gaussian (normal) distribution
+         * characterized by the specified average and variance.
+         *
+         * @param value The value for which the probability is to be computed.
+         * @param average The mean (average) of the Gaussian distribution.
+         * @param variance The variance of the Gaussian distribution.
+         * @return The probability of the given value under the specified Gaussian distribution.
+         */
         double gaussian_probability(const T& value, const T& average, const T& variance) const // NOLINT keep it
         {
             // https://fr.wikipedia.org/wiki/Loi_normale
