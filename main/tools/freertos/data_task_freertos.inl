@@ -41,6 +41,16 @@
 
 namespace tools
 {
+    /**
+     * @brief Class template for managing FreeRTOS tasks that process data.
+     *
+     * This class template provides a framework for creating and managing FreeRTOS tasks that process data of a
+     * specified type. It ensures that the data type is standard layout and trivial, and provides mechanisms for task
+     * startup, data processing, and task termination.
+     *
+     * @tparam Context The type of the context object shared among tasks.
+     * @tparam DataType The type of data to be processed by the task.
+     */
     template <typename Context, typename DataType>
 #if __cplusplus >= 202002L
     requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
@@ -53,10 +63,40 @@ namespace tools
     public:
         data_task() = delete;
 
+        /**
+         * @brief Type alias for a callback function used in the context of FreeRTOS tasks.
+         *
+         * This callback function takes a shared pointer to a Context object and a task name as parameters.
+         *
+         * @param context A shared pointer to the Context object.
+         * @param task_name The name of the task as a string.
+         */
         using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
+
+        /**
+         * @brief Type alias for a callback function that processes data.
+         *
+         * This callback function is used to process data within a specific context and task.
+         *
+         * @param context A shared pointer to the Context object.
+         * @param data The data to be processed.
+         * @param task_name The name of the task that is processing the data.
+         */
         using data_call_back = std::function<void(
             const std::shared_ptr<Context>& context, const DataType& data, const std::string& task_name)>;
 
+        /**
+         * @brief Constructor for the data_task class.
+         *
+         * @param startup_routine The startup routine callback function.
+         * @param process_routine The process routine callback function.
+         * @param context Shared pointer to the Context object.
+         * @param data_queue_depth The depth of the data queue.
+         * @param task_name The name of the task.
+         * @param stack_size The stack size for the task.
+         * @param cpu_affinity The CPU affinity for the task.
+         * @param priority The priority of the task.
+         */
         data_task(call_back&& startup_routine, data_call_back&& process_routine,
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
             std::size_t stack_size, int cpu_affinity, int priority)
@@ -65,6 +105,7 @@ namespace tools
             , m_process_routine(std::move(process_routine))
             , m_context(context)
         {
+            // FreeRTOS platform
             m_data_queue = xQueueCreate(data_queue_depth, sizeof(DataType));
 
             if (nullptr == m_data_queue)
@@ -77,6 +118,16 @@ namespace tools
                 this->stack_size(), this->cpu_affinity(), this->priority());
         }
 
+        /**
+         * @brief Constructor for the data_task class with default priority and cpu affinity.
+         *
+         * @param startup_routine The startup routine callback function.
+         * @param process_routine The process routine callback function.
+         * @param context Shared pointer to the Context object.
+         * @param data_queue_depth The depth of the data queue.
+         * @param task_name The name of the task.
+         * @param stack_size The stack size for the task.
+         */
         data_task(call_back&& startup_routine, data_call_back&& process_routine,
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
             std::size_t stack_size)
@@ -85,8 +136,17 @@ namespace tools
         {
         }
 
+        /**
+         * @brief Destructor for the data_task class.
+         *
+         * This destructor stops the task by setting the m_stop_task flag to true.
+         * If the data queue is not null, it sends a dummy value to the queue to unblock any waiting operations.
+         * If the task was created, it suspends and deletes the task.
+         */
         ~data_task()
         {
+            // FreeRTOS platform
+
             m_stop_task.store(true);
             if (nullptr != m_data_queue)
             {
@@ -103,13 +163,31 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
+        /**
+         * @brief Retrieves the native handle of the task.
+         *
+         * This function overrides the base class implementation to return the native handle
+         * of the task, which is wrapped as a void pointer.
+         *
+         * @return A void pointer to the native handle of the task.
+         */
         void* native_handle() override
         {
             return reinterpret_cast<void*>(&m_task); // NOLINT native handler wrapping as a void*
         }
 
+        /**
+         * @brief Submits data to the FreeRTOS queue.
+         *
+         * This function sends the provided data to the FreeRTOS queue if the queue is not null.
+         * It blocks indefinitely until the data is successfully sent to the queue.
+         *
+         * @param data The data to be submitted to the queue.
+         */
         void submit(const DataType& data)
         {
+            // FreeRTOS platform
+
             if (nullptr != m_data_queue)
             {
                 constexpr const TickType_t x_block_time = portMAX_DELAY; /* NOLINT init to Block indefinitely. */
@@ -117,8 +195,19 @@ namespace tools
             }
         }
 
+        /**
+         * @brief Submits data to the queue from an ISR context.
+         *
+         * This function is designed to be called from an Interrupt Service Routine (ISR).
+         * It sends the provided data to the FreeRTOS queue and yields if a higher priority
+         * task was woken up by the send operation.
+         *
+         * @param data The data to be sent to the queue.
+         */
         void isr_submit(const DataType& data)
         {
+            // FreeRTOS platform
+
             if (nullptr != m_data_queue)
             {
                 BaseType_t px_higher_priority_task_woken = pdFALSE; // NOLINT initialized with pdFALSE
@@ -128,8 +217,18 @@ namespace tools
         }
 
     private:
+        /**
+         * @brief FreeRTOS task run loop for the data_task class.
+         *
+         * This function serves as the main loop for a FreeRTOS task. It executes a startup routine,
+         * then continuously processes data from a queue until the task is signaled to stop.
+         *
+         * @param object_instance Pointer to the instance of the data_task class.
+         */
         static void run_loop(void* object_instance)
         {
+            // FreeRTOS platform
+
             data_task* instance = reinterpret_cast<data_task*>( // NOLINT only way to convert the passed void* to the
                                                                 // task to a object instance
                 object_instance);
