@@ -1,3 +1,15 @@
+/**
+ * @file data_task_freertos.inl
+ * @brief Class template for managing FreeRTOS tasks that process data.
+ *
+ * This file contains the implementation of a class template for creating and managing FreeRTOS tasks that process data
+ * of a specified type. It ensures that the data type is standard layout and trivial, and provides mechanisms for task
+ * startup, data processing, and task termination.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
