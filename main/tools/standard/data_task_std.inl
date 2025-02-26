@@ -1,10 +1,11 @@
 /**
  * @file data_task_std.inl
  * @brief A header file defining the data_task class for handling tasks that process data of a specified type.
- * 
+ *
  * This file contains the implementation of the data_task class, which is derived from the base_task class.
- * It provides functionality for handling tasks that process data of a specified type, using a publish/subscribe pattern.
- * 
+ * It provides functionality for handling tasks that process data of a specified type, using a publish/subscribe
+ * pattern.
+ *
  * @author Laurent Lardinois
  * @date January 2025
  */
@@ -52,10 +53,10 @@ namespace tools
 {
     /**
      * @brief A class representing a data task.
-     * 
+     *
      * This class is derived from the base_task class and provides functionality
      * for handling tasks that process data of a specified type.
-     * 
+     *
      * @tparam Context The type of the context object.
      * @tparam DataType The type of the data to be processed.
      */
@@ -73,9 +74,9 @@ namespace tools
 
         /**
          * @brief Alias for a callback function that is invoked at startup.
-         * 
+         *
          * This callback function is used to initialize data or other parameters within a given context.
-         * 
+         *
          * @param context A shared pointer to the Context object.
          * @param task_name The name of the task associated with this callback.
          */
@@ -83,9 +84,9 @@ namespace tools
 
         /**
          * @brief Alias for a callback function that processes data.
-         * 
+         *
          * This callback function is used to process data within a given context.
-         * 
+         *
          * @param context A shared pointer to the Context object.
          * @param data The data to be processed.
          * @param task_name The name of the task associated with this callback.
@@ -95,7 +96,7 @@ namespace tools
 
         /**
          * @brief Constructs a data_task object.
-         * 
+         *
          * @param startup_routine The routine to be called during startup.
          * @param process_routine The routine to process data.
          * @param context Shared pointer to the context object.
@@ -124,8 +125,9 @@ namespace tools
         }
 
         /**
-         * @brief Constructs a data_task object with the specified parameters.
-         * 
+         * @brief Constructs a data_task object with the specified parameters, with default priority and default cpu
+         * affinity.
+         *
          * @param startup_routine The callback function to be executed during startup.
          * @param process_routine The callback function to process data.
          * @param context Shared pointer to the Context object.
@@ -143,7 +145,7 @@ namespace tools
 
         /**
          * @brief Destructor for the data_task class.
-         * 
+         *
          * This destructor sets the m_stop_task flag to true, signals the m_data_sync condition,
          * and waits for the task thread to complete by calling join on m_task.
          */
@@ -157,10 +159,10 @@ namespace tools
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
         /**
          * @brief Retrieves the native handle of the task.
-         * 
+         *
          * This function overrides the base class implementation to return the native handle
          * of the task, wrapped as a void pointer.
-         * 
+         *
          * @return void* The native handle of the task, cast to a void pointer.
          */
         void* native_handle() override
@@ -170,10 +172,10 @@ namespace tools
 
         /**
          * @brief Submits data to the queue and signals the data synchronization.
-         * 
+         *
          * This method pushes the provided data into the data queue and then signals
          * the data synchronization mechanism to indicate that new data is available.
-         * 
+         *
          * @param data The data to be submitted to the queue.
          */
         void submit(const DataType& data)
@@ -184,11 +186,11 @@ namespace tools
 
         /**
          * @brief Submits data from an ISR context.
-         * 
+         *
          * This function is intended to be called from an Interrupt Service Routine (ISR).
          * Since standard C++ does not support direct calls from ISRs, this function falls
          * back to a standard call to submit the data.
-         * 
+         *
          * @param data The data to be submitted.
          */
         void isr_submit(const DataType& data)
@@ -200,7 +202,7 @@ namespace tools
     private:
         /**
          * @brief Executes the main loop for the task.
-         * 
+         *
          * This function runs the startup routine and then enters a loop where it waits for a signal
          * to process data from the queue. The loop continues until the stop task flag is set.
          */

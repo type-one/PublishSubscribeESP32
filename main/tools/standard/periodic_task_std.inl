@@ -1,3 +1,14 @@
+/**
+ * @file periodic_task_std.inl
+ * @brief Implementation of a periodic task using the Publish/Subscribe pattern.
+ *
+ * This file contains the implementation of the periodic_task class, which inherits from base_task
+ * and provides functionality to execute a startup routine and a periodic routine at specified intervals.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -39,6 +50,14 @@
 
 namespace tools
 {
+    /**
+     * @brief Class representing a periodic task.
+     *
+     * This class inherits from base_task and provides functionality to execute a startup routine
+     * and a periodic routine at specified intervals.
+     *
+     * @tparam Context The type of the context object associated with the task.
+     */
     template <typename Context>
     class periodic_task : public base_task // NOLINT base_task is non copyable and non movable
     {
@@ -46,8 +65,30 @@ namespace tools
     public:
         periodic_task() = delete;
 
+        /**
+         * @brief Type alias for a callback function used in periodic tasks.
+         *
+         * This callback function is invoked with a shared pointer to a Context object
+         * and the name of the task as a string.
+         *
+         * @param context A shared pointer to the Context object associated with the task.
+         * @param task_name The name of the task as a string.
+         */
         using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
 
+
+        /**
+         * @brief Constructs a periodic_task object.
+         *
+         * @param startup_routine The callback function to be executed at startup.
+         * @param periodic_routine The callback function to be executed periodically.
+         * @param context Shared pointer to the context object.
+         * @param task_name The name of the task.
+         * @param period The period of the task in microseconds.
+         * @param stack_size The stack size for the task.
+         * @param cpu_affinity The CPU affinity for the task.
+         * @param priority The priority of the task.
+         */
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine,
             const std::shared_ptr<Context>& context, const std::string& task_name,
             const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size, int cpu_affinity,
@@ -67,6 +108,16 @@ namespace tools
                 });
         }
 
+        /**
+         * @brief Constructs a periodic_task object with default priority and default cpu affinity.
+         *
+         * @param startup_routine The callback function to be executed at startup.
+         * @param periodic_routine The callback function to be executed periodically.
+         * @param context Shared pointer to the context object.
+         * @param task_name The name of the task.
+         * @param period The period of the task in microseconds.
+         * @param stack_size The stack size for the task.
+         */
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine,
             const std::shared_ptr<Context>& context, const std::string& task_name,
             const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size)
@@ -75,6 +126,11 @@ namespace tools
         {
         }
 
+        /**
+         * @brief Destructor for the periodic_task class.
+         *
+         * This destructor sets the m_stop_task flag to true and waits for the task to finish by calling join on m_task.
+         */
         ~periodic_task() override
         {
             m_stop_task.store(true);
@@ -82,12 +138,31 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
+        /**
+         * @brief Retrieves the native handle of the task.
+         *
+         * This method overrides the base class implementation to return the native handle
+         * of the task, wrapped as a void pointer.
+         *
+         * @return void* The native handle of the task.
+         */
         void* native_handle() override
         {
             return reinterpret_cast<void*>(m_task->native_handle()); // NOLINT native handler wrapping as a void*
         }
 
     private:
+        /**
+         * @brief Executes a periodic task with a specified period.
+         *
+         * This function runs a startup routine once and then repeatedly executes a periodic routine
+         * at intervals defined by `m_period`. It uses high-resolution clock for precise timing and
+         * supports earliest deadline scheduling.
+         *
+         * The function will continue to run until `m_stop_task` is set to true.
+         *
+         * @note The function uses active waiting and sleeping to achieve precise timing.
+         */
         void periodic_call()
         {
             auto start_time = std::chrono::high_resolution_clock::now();

@@ -103,7 +103,7 @@ namespace tools
         }
 
         /**
-         * @brief Constructs a generic_task object.
+         * @brief Constructs a generic_task object with default priority and default cpu affinity.
          *
          * This constructor initializes a generic_task with the given parameters and starts a new thread
          * to execute the provided routine.
