@@ -226,14 +226,16 @@ set(TEST_SOURCES
 )
 
 # Create an executable for running tests
-add_executable(runTests ${TEST_SOURCES})
+add_executable(run_tests ${TEST_SOURCES})
 
 # Link Google Test and pthread library
-target_link_libraries(runTests framework_modules gtest gtest_main pthread)
+target_link_libraries(run_tests framework_modules gtest gtest_main pthread)
 
 # Add a custom target to run the tests
 add_custom_target(
-    runTestsCommand ALL
-    COMMAND runTests
-    DEPENDS runTests
+    run_tests_command ALL
+    COMMAND run_tests
+    DEPENDS run_tests
 )
+
+gtest_discover_tests(run_tests)
