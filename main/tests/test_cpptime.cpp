@@ -38,7 +38,7 @@
 #include <memory>
 #include <thread>
 
-#include "cpptime/cpptime.h"
+#include "cpptime/cpptime.hpp"
 
 using namespace std::chrono;
 
@@ -289,7 +289,7 @@ TEST_F(TimerTest, TestDeleteTimerInCallback)
     id2 = timer->add(milliseconds(40), [](CppTime::timer_id) {});
     std::this_thread::sleep_for(milliseconds(30));
     id3 = timer->add(microseconds(100), [](CppTime::timer_id) {});
-    id4 = t->add(microseconds(100), [](CppTime::timer_id) {});
+    id4 = timer->add(microseconds(100), [](CppTime::timer_id) {});
     EXPECT_EQ(id3, id1);
     EXPECT_NE(id4, id1);
     EXPECT_NE(id4, id2);
@@ -316,8 +316,8 @@ TEST_F(TimerTest, TestTwoIdenticalTimeouts)
     int i = 0;
     int j = 0;
     CppTime::timestamp ts = CppTime::clock::now() + milliseconds(40);
-    t->add(ts, [&](CppTime::timer_id) { i = 42; });
-    t->add(ts, [&](CppTime::timer_id) { j = 43; });
+    timer->add(ts, [&](CppTime::timer_id) { i = 42; });
+    timer->add(ts, [&](CppTime::timer_id) { j = 43; });
     std::this_thread::sleep_for(milliseconds(50));
     EXPECT_EQ(i, 42);
     EXPECT_EQ(j, 43);
@@ -342,8 +342,8 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
     int j = 0;
     CppTime::timestamp ts1 = CppTime::clock::now() - milliseconds(10);
     CppTime::timestamp ts2 = CppTime::clock::now() - milliseconds(20);
-    t->add(ts1, [&](CppTime::timer_id) { i = 42; });
-    t->add(ts2, [&](CppTime::timer_id) { j = 43; });
+    timer->add(ts1, [&](CppTime::timer_id) { i = 42; });
+    timer->add(ts2, [&](CppTime::timer_id) { j = 43; });
     std::this_thread::sleep_for(microseconds(20));
     EXPECT_EQ(i, 42);
     EXPECT_EQ(j, 43);
@@ -351,8 +351,8 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
     i = 0;
     CppTime::timestamp ts3 = CppTime::clock::now() + milliseconds(10);
     CppTime::timestamp ts4 = CppTime::clock::now() + milliseconds(20);
-    t->add(ts3, [&](CppTime::timer_id) { std::this_thread::sleep_for(milliseconds(20)); });
-    t->add(ts4, [&](CppTime::timer_id) { i = 42; });
+    timer->add(ts3, [&](CppTime::timer_id) { std::this_thread::sleep_for(milliseconds(20)); });
+    timer->add(ts4, [&](CppTime::timer_id) { i = 42; });
     std::this_thread::sleep_for(milliseconds(50));
     EXPECT_EQ(i, 42);
 }
@@ -371,10 +371,10 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
 TEST_F(TimerTest, TestOrderOfMultipleTimeouts)
 {
     int i = 0;
-    t->add(10000, [&](CppTime::timer_id) { i = 42; });
-    t->add(20000, [&](CppTime::timer_id) { i = 43; });
-    t->add(30000, [&](CppTime::timer_id) { i = 44; });
-    t->add(40000, [&](CppTime::timer_id) { i = 45; });
+    timer->add(10000, [&](CppTime::timer_id) { i = 42; });
+    timer->add(20000, [&](CppTime::timer_id) { i = 43; });
+    timer->add(30000, [&](CppTime::timer_id) { i = 44; });
+    timer->add(40000, [&](CppTime::timer_id) { i = 45; });
     std::this_thread::sleep_for(milliseconds(50));
     EXPECT_EQ(i, 45);
 }
@@ -439,23 +439,23 @@ TEST_F(TimerTest, TestWithMultipleTimers)
  */
 TEST_F(TimerTest, TestRemoveTimerId)
 {
-    auto id = t->add(milliseconds(20), [](CppTime::timer_id) {});
+    auto id = timer->add(milliseconds(20), [](CppTime::timer_id) {});
     std::this_thread::sleep_for(microseconds(10));
-    auto res = t->remove(id + 1);
+    auto res = timer->remove(id + 1);
     EXPECT_FALSE(res);
 
     auto shared = std::make_shared<int>(10);
     CppTime::handler_t func = [=](CppTime::timer_id) { auto shared2 = shared; };
-    id = t->add(milliseconds(20), std::move(func));
+    id = timer->add(milliseconds(20), std::move(func));
     EXPECT_EQ(shared.use_count(), 2);
     std::this_thread::sleep_for(microseconds(10));
-    res = t->remove(id);
+    res = timer->remove(id);
     EXPECT_TRUE(res);
     EXPECT_EQ(shared.use_count(), 1);
 
     shared = std::make_shared<int>(10);
     func = [=](CppTime::timer_id) { auto shared2 = shared; };
-    t->add(milliseconds(20), std::move(func));
+    timer->add(milliseconds(20), std::move(func));
     EXPECT_EQ(shared.use_count(), 2);
     std::this_thread::sleep_for(milliseconds(30));
     EXPECT_EQ(shared.use_count(), 1);
@@ -479,7 +479,7 @@ TEST_F(TimerTest, PassAnArgumentToAnAction)
 
     int res = 0;
 
-    t->add(milliseconds(20), [&res, push_me](CppTime::timer_id) { res = push_me->i + 1; });
+    timer->add(milliseconds(20), [&res, push_me](CppTime::timer_id) { res = push_me->i + 1; });
 
     EXPECT_EQ(res, 0);
     std::this_thread::sleep_for(milliseconds(30));
