@@ -198,7 +198,48 @@ enable_testing()
 ################################
 # Tests
 ################################
-# Add test cpp file
-#add_executable(${TESTNAME} testgtest.cpp)
-# Link test executable against gtest & gtest_main
-#target_link_libraries(${TESTNAME} gtest gtest_main)
+
+# Add Google Test
+#add_subdirectory(googletest)
+
+# Include Google Test headers
+#include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+
+# Add your test files here
+set(TEST_SOURCES
+    tests/test_async_observer.cpp
+    #tests/test_bytepack.cpp
+    tests/test_cjsonpp.cpp
+    tests/test_cpptime.cpp
+    tests/test_critical_section.cpp
+    tests/test_data_task.cpp
+    tests/test_gzip_wrapper.cpp
+    tests/test_histogram.cpp
+    tests/test_lock_free_ring_buffer.cpp
+    tests/test_memory_pipe.cpp
+    tests/test_periodic_task.cpp
+    tests/test_ring_buffer.cpp
+    tests/test_ring_vector.cpp
+    tests/test_sync_dictionary.cpp
+    tests/test_sync_object.cpp
+    tests/test_sync_observer.cpp
+    tests/test_sync_queue.cpp
+    tests/test_sync_ring_buffer.cpp
+    tests/test_sync_ring_vector.cpp
+    tests/test_timer_scheduler.cpp
+    tests/test_worker_task.cpp
+    # Add more test files as needed
+)
+
+# Create an executable for running tests
+add_executable(runTests ${TEST_SOURCES})
+
+# Link Google Test and pthread library
+target_link_libraries(runTests gtest gtest_main pthread)
+
+# Add a custom target to run the tests
+add_custom_target(
+    runTestsCommand ALL
+    COMMAND runTests
+    DEPENDS runTests
+)

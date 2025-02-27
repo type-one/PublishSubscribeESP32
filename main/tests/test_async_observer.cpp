@@ -331,7 +331,7 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEventsWithTimeout)
     std::thread observer_thread1(
         [&observer1]()
         {
-            observer1.wait_for_events(std::chrono::milliseconds(100));
+            observer1.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
             auto events = observer1.pop_all_events();
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
@@ -348,7 +348,7 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEventsWithTimeout)
     std::thread observer_thread2(
         [&observer2]()
         {
-            observer2.wait_for_events(std::chrono::milliseconds(100));
+            observer2.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
             auto events = observer2.pop_all_events();
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
@@ -535,12 +535,12 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEvents)
     std::thread publisher_thread(
         [&observer1, &observer2]()
         {
-            observer1.inform(1, "event1", "origin1");
-            observer1.inform(3, "event3", "origin3");
-            observer1.inform(5, "event5", "origin5");
-            observer2.inform(2, "event2", "origin2");
-            observer2.inform(4, "event4", "origin4");
-            observer2.inform(6, "event6", "origin6");
+            observer1.inform(1, "event1", "origin1"); // NOLINT test
+            observer1.inform(3, "event3", "origin3"); // NOLINT test
+            observer1.inform(5, "event5", "origin5"); // NOLINT test
+            observer2.inform(2, "event2", "origin2"); // NOLINT test
+            observer2.inform(4, "event4", "origin4"); // NOLINT test
+            observer2.inform(6, "event6", "origin6"); // NOLINT test
         });
 
     observer_thread1.join();
@@ -573,7 +573,7 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEventsWithTimeout)
     std::thread observer_thread1(
         [&observer1]()
         {
-            observer1.wait_for_events(std::chrono::milliseconds(100));
+            observer1.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
             auto events = observer1.pop_all_events();
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
@@ -590,7 +590,7 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEventsWithTimeout)
     std::thread observer_thread2(
         [&observer2]()
         {
-            observer2.wait_for_events(std::chrono::milliseconds(100));
+            observer2.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
             auto events = observer2.pop_all_events();
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 2);
@@ -607,12 +607,12 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEventsWithTimeout)
     std::thread publisher_thread(
         [&observer1, &observer2]()
         {
-            observer1.inform(1, "event1", "origin1");
-            observer1.inform(3, "event3", "origin3");
-            observer1.inform(5, "event5", "origin5");
-            observer2.inform(2, "event2", "origin2");
-            observer2.inform(4, "event4", "origin4");
-            observer2.inform(6, "event6", "origin6");
+            observer1.inform(1, "event1", "origin1"); // NOLINT test
+            observer1.inform(3, "event3", "origin3"); // NOLINT test
+            observer1.inform(5, "event5", "origin5"); // NOLINT test
+            observer2.inform(2, "event2", "origin2"); // NOLINT test
+            observer2.inform(4, "event4", "origin4"); // NOLINT test
+            observer2.inform(6, "event6", "origin6"); // NOLINT test
         });
 
     observer_thread1.join();
