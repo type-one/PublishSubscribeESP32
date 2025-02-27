@@ -1,10 +1,10 @@
 /**
  * @file generic_task_freertos.inl
  * @brief A generic task class template for FreeRTOS tasks.
- * 
+ *
  * This file contains the implementation of a generic task class template for FreeRTOS tasks.
  * It provides a generic implementation for creating and managing FreeRTOS tasks.
- * 
+ *
  * @author Laurent Lardinois
  * @date February 2025
  */
