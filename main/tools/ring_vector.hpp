@@ -1,11 +1,11 @@
 /**
  * @file ring_vector.hpp
  * @brief A thread-unsafe ring buffer implementation using a vector.
- * 
+ *
  * This file contains the definition of the ring_vector class template, which provides
  * a ring buffer (circular buffer) implementation using a vector. It supports basic
  * operations such as push, pop, front, back, and resizing.
- * 
+ *
  * @author Laurent Lardinois
  * @date February 2025
  */

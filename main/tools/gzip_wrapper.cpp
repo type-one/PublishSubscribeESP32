@@ -73,7 +73,7 @@ namespace tools
     {
         std::vector<std::uint8_t> gzip_packed;
 
-        if (nullptr != m_hash_table)
+        if ((nullptr != m_hash_table) && !unpacked_input.empty())
         {
             struct uzlib_comp comp = {};
             comp.dict_size = gzip_dict_size;
@@ -143,84 +143,88 @@ namespace tools
     {
         std::vector<std::uint8_t> gzip_unpacked;
 
-        const auto len = static_cast<unsigned int>(packed_input.size());
-        unsigned int dlen = packed_input.at(len - 1U);  // NOLINT little endian transformation
-        dlen = (dlen << 8) | packed_input.at(len - 2U); // NOLINT little endian transformation
-        dlen = (dlen << 8) | packed_input.at(len - 3U); // NOLINT little endian transformation
-        dlen = (dlen << 8) | packed_input.at(len - 4U); // NOLINT little endian transformation
-        const auto outlen = static_cast<std::size_t>(dlen);
-        ++dlen; // reserve one extra byte
-
-        std::uint32_t source_crc32 = packed_input.at(len - 5U);         // NOLINT little endian transformation
-        source_crc32 = (source_crc32 << 8) | packed_input.at(len - 6U); // NOLINT little endian transformation
-        source_crc32 = (source_crc32 << 8) | packed_input.at(len - 7U); // NOLINT little endian transformation
-        source_crc32 = (source_crc32 << 8) | packed_input.at(len - 8U); // NOLINT little endian transformation
-
-        gzip_unpacked.resize(dlen);
-
-        struct uzlib_uncomp depack_ctxt = {};
-        uzlib_uncompress_init(&depack_ctxt, nullptr, 0);
-
-        depack_ctxt.source
-            = reinterpret_cast<const unsigned char*>(packed_input.data()); // NOLINT std::uint8_t* to unsigned char*
-        depack_ctxt.source_limit = reinterpret_cast<const unsigned char*>( // NOLINT std::uint8_t* to unsigned char*
-            packed_input.data() + len - 4U); // NOLINT space for length and uint8_t* to uchar*
-        depack_ctxt.source_read_cb = nullptr;
-
-        int res = uzlib_gzip_parse_header(&depack_ctxt);
-        if (TINF_OK != res)
+        if (!packed_input.empty())
         {
-            LOG_ERROR("error parsing header: %d", res);
-            gzip_unpacked.clear();
-            return gzip_unpacked;
-        }
 
-        depack_ctxt.dest = gzip_unpacked.data();
-        depack_ctxt.dest_start = gzip_unpacked.data();
+            const auto len = static_cast<unsigned int>(packed_input.size());
+            unsigned int dlen = packed_input.at(len - 1U);  // NOLINT little endian transformation
+            dlen = (dlen << 8) | packed_input.at(len - 2U); // NOLINT little endian transformation
+            dlen = (dlen << 8) | packed_input.at(len - 3U); // NOLINT little endian transformation
+            dlen = (dlen << 8) | packed_input.at(len - 4U); // NOLINT little endian transformation
+            const auto outlen = static_cast<std::size_t>(dlen);
+            ++dlen; // reserve one extra byte
 
-        // produce decompressed output in chunks of this size
-        // default is to decompress byte by byte; can be any other length
-        constexpr const unsigned int out_chunk_size = 1U;
+            std::uint32_t source_crc32 = packed_input.at(len - 5U);         // NOLINT little endian transformation
+            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 6U); // NOLINT little endian transformation
+            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 7U); // NOLINT little endian transformation
+            source_crc32 = (source_crc32 << 8) | packed_input.at(len - 8U); // NOLINT little endian transformation
 
-        while (dlen > 0U)
-        {
-            unsigned int chunk_len = (dlen < out_chunk_size) ? dlen : out_chunk_size;
-            depack_ctxt.dest_limit = depack_ctxt.dest + chunk_len;
-            res = uzlib_uncompress_chksum(&depack_ctxt);
-            dlen -= chunk_len;
-            if (res != TINF_OK)
+            gzip_unpacked.resize(dlen);
+
+            struct uzlib_uncomp depack_ctxt = {};
+            uzlib_uncompress_init(&depack_ctxt, nullptr, 0);
+
+            depack_ctxt.source
+                = reinterpret_cast<const unsigned char*>(packed_input.data()); // NOLINT std::uint8_t* to unsigned char*
+            depack_ctxt.source_limit = reinterpret_cast<const unsigned char*>( // NOLINT std::uint8_t* to unsigned char*
+                packed_input.data() + len - 4U); // NOLINT space for length and uint8_t* to uchar*
+            depack_ctxt.source_read_cb = nullptr;
+
+            int res = uzlib_gzip_parse_header(&depack_ctxt);
+            if (TINF_OK != res)
             {
-                break;
+                LOG_ERROR("error parsing header: %d", res);
+                gzip_unpacked.clear();
+                return gzip_unpacked;
             }
-        }
 
-        if (TINF_DONE != res)
-        {
-            LOG_ERROR("error during decompression: %d", res);
-            gzip_unpacked.clear();
-            return gzip_unpacked;
-        }
+            depack_ctxt.dest = gzip_unpacked.data();
+            depack_ctxt.dest_start = gzip_unpacked.data();
 
-        const std::size_t depacked_sz = depack_ctxt.dest
-            - reinterpret_cast<unsigned char*>(gzip_unpacked.data()); // NOLINT std::uint8_t* to unsigned char*
+            // produce decompressed output in chunks of this size
+            // default is to decompress byte by byte; can be any other length
+            constexpr const unsigned int out_chunk_size = 1U;
 
-        if (depacked_sz != outlen)
-        {
-            LOG_ERROR("invalid decompressed length: %zu vs %zu", depacked_sz, outlen);
-            gzip_unpacked.clear();
-            return gzip_unpacked;
-        }
+            while (dlen > 0U)
+            {
+                unsigned int chunk_len = (dlen < out_chunk_size) ? dlen : out_chunk_size;
+                depack_ctxt.dest_limit = depack_ctxt.dest + chunk_len;
+                res = uzlib_uncompress_chksum(&depack_ctxt);
+                dlen -= chunk_len;
+                if (res != TINF_OK)
+                {
+                    break;
+                }
+            }
 
-        std::uint32_t check_crc32 = ~uzlib_crc32(gzip_unpacked.data(), static_cast<unsigned int>(depacked_sz), ~0);
+            if (TINF_DONE != res)
+            {
+                LOG_ERROR("error during decompression: %d", res);
+                gzip_unpacked.clear();
+                return gzip_unpacked;
+            }
 
-        if (check_crc32 != source_crc32)
-        {
-            LOG_ERROR("invalid decompressed crc32");
-            gzip_unpacked.clear();
-            return gzip_unpacked;
-        }
+            const std::size_t depacked_sz = depack_ctxt.dest
+                - reinterpret_cast<unsigned char*>(gzip_unpacked.data()); // NOLINT std::uint8_t* to unsigned char*
 
-        gzip_unpacked.resize(outlen);
+            if (depacked_sz != outlen)
+            {
+                LOG_ERROR("invalid decompressed length: %zu vs %zu", depacked_sz, outlen);
+                gzip_unpacked.clear();
+                return gzip_unpacked;
+            }
+
+            std::uint32_t check_crc32 = ~uzlib_crc32(gzip_unpacked.data(), static_cast<unsigned int>(depacked_sz), ~0);
+
+            if (check_crc32 != source_crc32)
+            {
+                LOG_ERROR("invalid decompressed crc32");
+                gzip_unpacked.clear();
+                return gzip_unpacked;
+            }
+
+            gzip_unpacked.resize(outlen);
+        } // end if !packed_input.empty()
 
         return gzip_unpacked;
     }
