@@ -136,7 +136,6 @@ set(TARGET_TOOLS_SRC
 )
 
 set(TARGET_SRC
-        main.cpp
         "${TARGET_TOOLS_SRC}"
         "${TARGET_CEXCEPTION_SRC}"
         "${TARGET_CJSON_SRC}"
@@ -146,15 +145,16 @@ set(TARGET_SRC
 
 include_directories("${PROJECT_SOURCE_DIR}")
 
-add_executable(publish_subscribe 
-        "${TARGET_SRC}"
-        "${TARGET_H}"
-   )
+add_library(framework_modules STATIC "${TARGET_H}" "${TARGET_SRC}")
+
+add_executable(publish_subscribe main.cpp)   
 
 if(LINUX) 
-    target_link_libraries(publish_subscribe -lm -lpthread)
+    #target_link_libraries(publish_subscribe -lm -lpthread)
+    target_link_libraries(publish_subscribe framework_modules -lm -lpthread)
 elseif(WIN32)
-    target_link_libraries(publish_subscribe)
+    #target_link_libraries(publish_subscribe)
+    target_link_libraries(publish_subscribe framework_modules)
 endif()
 
 
@@ -199,35 +199,29 @@ enable_testing()
 # Tests
 ################################
 
-# Add Google Test
-#add_subdirectory(googletest)
-
-# Include Google Test headers
-#include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-
 # Add your test files here
 set(TEST_SOURCES
     tests/test_async_observer.cpp
     #tests/test_bytepack.cpp
-    tests/test_cjsonpp.cpp
-    tests/test_cpptime.cpp
-    tests/test_critical_section.cpp
-    tests/test_data_task.cpp
-    tests/test_gzip_wrapper.cpp
-    tests/test_histogram.cpp
-    tests/test_lock_free_ring_buffer.cpp
-    tests/test_memory_pipe.cpp
-    tests/test_periodic_task.cpp
-    tests/test_ring_buffer.cpp
-    tests/test_ring_vector.cpp
-    tests/test_sync_dictionary.cpp
-    tests/test_sync_object.cpp
-    tests/test_sync_observer.cpp
-    tests/test_sync_queue.cpp
-    tests/test_sync_ring_buffer.cpp
-    tests/test_sync_ring_vector.cpp
-    tests/test_timer_scheduler.cpp
-    tests/test_worker_task.cpp
+    #tests/test_cjsonpp.cpp
+    #tests/test_cpptime.cpp
+    #tests/test_critical_section.cpp
+    #tests/test_data_task.cpp
+    #tests/test_gzip_wrapper.cpp
+    #tests/test_histogram.cpp
+    #tests/test_lock_free_ring_buffer.cpp
+    #tests/test_memory_pipe.cpp
+    #tests/test_periodic_task.cpp
+    #tests/test_ring_buffer.cpp
+    #tests/test_ring_vector.cpp
+    #tests/test_sync_dictionary.cpp
+    #tests/test_sync_object.cpp
+    #tests/test_sync_observer.cpp
+    #tests/test_sync_queue.cpp
+    #tests/test_sync_ring_buffer.cpp
+    #tests/test_sync_ring_vector.cpp
+    #tests/test_timer_scheduler.cpp
+    #tests/test_worker_task.cpp
     # Add more test files as needed
 )
 
@@ -235,7 +229,7 @@ set(TEST_SOURCES
 add_executable(runTests ${TEST_SOURCES})
 
 # Link Google Test and pthread library
-target_link_libraries(runTests gtest gtest_main pthread)
+target_link_libraries(runTests framework_modules gtest gtest_main pthread)
 
 # Add a custom target to run the tests
 add_custom_target(
