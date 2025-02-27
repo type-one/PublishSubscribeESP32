@@ -204,24 +204,24 @@ set(TEST_SOURCES
     tests/test_async_observer.cpp
     #tests/test_bytepack.cpp
     #tests/test_cjsonpp.cpp
-    #tests/test_cpptime.cpp
+    tests/test_cpptime.cpp
     #tests/test_critical_section.cpp
     #tests/test_data_task.cpp
-    #tests/test_gzip_wrapper.cpp
+    tests/test_gzip_wrapper.cpp
     #tests/test_histogram.cpp
     #tests/test_lock_free_ring_buffer.cpp
-    #tests/test_memory_pipe.cpp
-    #tests/test_periodic_task.cpp
+    tests/test_memory_pipe.cpp
+    tests/test_periodic_task.cpp
     #tests/test_ring_buffer.cpp
     #tests/test_ring_vector.cpp
     #tests/test_sync_dictionary.cpp
     #tests/test_sync_object.cpp
-    #tests/test_sync_observer.cpp
+    tests/test_sync_observer.cpp
     #tests/test_sync_queue.cpp
     #tests/test_sync_ring_buffer.cpp
     #tests/test_sync_ring_vector.cpp
     #tests/test_timer_scheduler.cpp
-    #tests/test_worker_task.cpp
+    tests/test_worker_task.cpp
     # Add more test files as needed
 )
 
