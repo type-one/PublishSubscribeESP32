@@ -1,3 +1,15 @@
+/**
+ * @file sync_object_impl_freertos.inl
+ * @brief Implementation of the sync_object class using FreeRTOS event groups.
+ *
+ * This file contains the implementation of the sync_object class, which provides
+ * synchronization mechanisms using FreeRTOS event groups. The class allows for
+ * signaling and waiting for events, both from task and ISR contexts.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -23,8 +35,8 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 
@@ -36,6 +48,8 @@ namespace tools
     sync_object::sync_object(bool initial_state)
         : m_event_group(xEventGroupCreate())
     {
+        // FreeRTOS platform
+
         if (nullptr == m_event_group)
         {
             LOG_ERROR("FATAL error: xEventGroupCreate() failed");
@@ -44,6 +58,8 @@ namespace tools
 
     sync_object::~sync_object()
     {
+        // FreeRTOS platform
+
         if (nullptr != m_event_group)
         {
             vEventGroupDelete(m_event_group);
@@ -52,6 +68,8 @@ namespace tools
 
     void sync_object::signal()
     {
+        // FreeRTOS platform
+
         if (nullptr != m_event_group)
         {
             xEventGroupSetBits(m_event_group, BIT0);
@@ -60,6 +78,8 @@ namespace tools
 
     void sync_object::isr_signal()
     {
+        // FreeRTOS platform
+
         if (nullptr != m_event_group)
         {
             BaseType_t px_higher_priority_task_woken = pdFALSE;
@@ -70,6 +90,8 @@ namespace tools
 
     void sync_object::wait_for_signal()
     {
+        // FreeRTOS platform
+
         if (nullptr != m_event_group)
         {
             constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
@@ -80,6 +102,8 @@ namespace tools
 
     void sync_object::wait_for_signal(const std::chrono::duration<std::uint64_t, std::micro>& timeout)
     {
+        // FreeRTOS platform
+
         if (nullptr != m_event_group)
         {
             const TickType_t ticks_to_wait = static_cast<TickType_t>((timeout.count() * portTICK_PERIOD_MS) / 1000);
