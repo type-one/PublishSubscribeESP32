@@ -1,3 +1,15 @@
+/**
+ * @file worker_task_freertos.inl
+ * @brief A worker task class template for FreeRTOS.
+ *
+ * This file contains the implementation of a worker task class template for FreeRTOS.
+ * The worker task class inherits from the base_task class and provides functionality
+ * to initialize, run, and manage a FreeRTOS task.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -40,6 +52,14 @@
 
 namespace tools
 {
+    /**
+     * @brief A worker task class template for FreeRTOS.
+     *
+     * This class represents a worker task that runs on FreeRTOS. It inherits from the base_task class
+     * and provides functionality to initialize, run, and manage a FreeRTOS task.
+     *
+     * @tparam Context The type of the context object used by the worker task.
+     */
     template <typename Context>
     class worker_task : public base_task // NOLINT base_task is non copyable and non movable
     {
@@ -47,19 +67,49 @@ namespace tools
     public:
         worker_task() = delete;
 
+        /**
+         * @brief Type alias for a callback function used in the worker task.
+         *
+         * This callback function is invoked with a shared pointer to a Context object
+         * and the name of the task as a string.
+         *
+         * @param context A shared pointer to the Context object.
+         * @param task_name The name of the task as a string.
+         */
         using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
 
+        /**
+         * @brief Constructs a worker_task object and initializes the FreeRTOS task.
+         *
+         * @param startup_routine The startup routine to be executed by the task.
+         * @param context Shared pointer to the context object.
+         * @param task_name Name of the task.
+         * @param stack_size Size of the stack allocated for the task.
+         * @param cpu_affinity CPU affinity for the task.
+         * @param priority Priority of the task.
+         */
         worker_task(call_back&& startup_routine, const std::shared_ptr<Context>& context, const std::string& task_name,
             std::size_t stack_size, int cpu_affinity, int priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_context(context)
         {
+            // FreeRTOS platform
+
             m_task_created = task_create(&m_task, this->task_name(), run_loop,
                 reinterpret_cast<void*>(this), // NOLINT only way to pass the instance as a void* to the task
                 this->stack_size(), this->cpu_affinity(), this->priority());
         }
 
+        /**
+         * @brief Constructs a worker_task object and initializes the FreeRTOS task with default priority and cpu
+         * affinity.
+         *
+         * @param startup_routine The startup routine to be executed by the task.
+         * @param context Shared pointer to the context object.
+         * @param task_name Name of the task.
+         * @param stack_size Size of the stack allocated for the task.
+         */
         worker_task(call_back&& startup_routine, const std::shared_ptr<Context>& context, const std::string& task_name,
             std::size_t stack_size)
             : worker_task(std::move(startup_routine), context, task_name, stack_size, base_task::run_on_all_cores,
@@ -67,8 +117,16 @@ namespace tools
         {
         }
 
+        /**
+         * @brief Destructor for the worker_task class.
+         *
+         * This destructor stops the FreeRTOS task by setting the stop flag and notifying the task.
+         * If the task was created, it suspends and deletes the task.
+         */
         ~worker_task()
         {
+            // FreeRTOS platform
+
             m_stop_task.store(true);
             xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
 
@@ -80,13 +138,31 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
+        /**
+         * @brief Retrieves the native handle of the task.
+         *
+         * This method overrides the base class implementation to return the native handle
+         * of the FreeRTOS task. The handle is wrapped as a void pointer.
+         *
+         * @return A void pointer to the native handle of the FreeRTOS task.
+         */
         void* native_handle() override
         {
             return reinterpret_cast<void*>(&m_task); // NOLINT native handler wrapping as a void*
         }
 
+        /**
+         * @brief Delegates a task to the worker by adding it to the work queue and notifying the task.
+         *
+         * This function adds the provided work callback to the work queue and notifies the task using FreeRTOS's
+         * xTaskNotify function.
+         *
+         * @param work The callback function to be added to the work queue.
+         */
         void delegate(call_back&& work)
         {
+            // FreeRTOS platform
+
             m_work_queue.emplace(std::move(work));
 
             // Likewise, bits are set using the xTaskNotify() and xTaskNotifyFromISR() API functions (with their eAction
@@ -96,8 +172,20 @@ namespace tools
             xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
         }
 
+        /**
+         * @brief Delegate function to handle ISR (Interrupt Service Routine) work.
+         *
+         * This function is designed to be called from an ISR context. It enqueues the given work
+         * into the work queue and notifies the FreeRTOS task associated with this worker to handle
+         * the work. If the notification results in a higher priority task being woken, a context
+         * switch is requested.
+         *
+         * @param work The work to be enqueued, passed as an rvalue reference to a call_back object.
+         */
         void isr_delegate(call_back&& work)
         {
+            // FreeRTOS platform
+
             m_work_queue.isr_emplace(std::move(work));
 
             BaseType_t x_higher_priority_task_woken = pdFALSE;
@@ -106,8 +194,18 @@ namespace tools
         }
 
     private:
+        /**
+         * @brief The main loop function for the worker task in FreeRTOS.
+         *
+         * This function is executed as the main loop for a worker task. It initializes the task by calling the startup
+         * routine, then enters a loop where it waits for notifications and processes work items from the work queue.
+         *
+         * @param object_instance A pointer to the worker_task instance.
+         */
         static void run_loop(void* object_instance)
         {
+            // FreeRTOS platform
+
             worker_task* instance = reinterpret_cast<worker_task*>( // NOLINT only way to convert the passed void* to
                                                                     // the task to a object instance
                 object_instance);
