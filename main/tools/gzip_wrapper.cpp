@@ -143,8 +143,14 @@ namespace tools
     {
         std::vector<std::uint8_t> gzip_unpacked;
 
-        if (!packed_input.empty())
+        // The smallest file that can be compressed by gzip is 24 bytes of zeros down to 23 bytes. 
+        constexpr const std::size_t minimal_gzip_packed_size = 23U;
+
+        if (packed_input.size() >= minimal_gzip_packed_size)
         {
+            // an empty gzip file has a size of 21 bytes plus the length of the file's name without extension. 
+            // Edit: According to the file format specification, the last four bytes in the file contain the size of
+            // the original data modulo 2^32            
 
             const auto len = static_cast<unsigned int>(packed_input.size());
             unsigned int dlen = packed_input.at(len - 1U);  // NOLINT little endian transformation
