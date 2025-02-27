@@ -1,3 +1,14 @@
+/**
+ * @file timer_scheduler_impl_freertos.inl
+ * @brief Implementation of the timer scheduler using FreeRTOS for the Publish/Subscribe Pattern.
+ * 
+ * This file contains the implementation of the timer scheduler using FreeRTOS timers.
+ * It provides functions to add, remove, and manage timers within the FreeRTOS environment.
+ * 
+ * @author Laurent Lardinois
+ * @date February 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -40,8 +51,18 @@
 
 namespace
 {
+    /**
+     * @brief Callback function for FreeRTOS timer events.
+     *
+     * This function is called when a FreeRTOS timer expires. It retrieves the timer context,
+     * executes the associated callback, and handles auto-release of the timer if specified.
+     *
+     * @param x_timer Handle to the FreeRTOS timer that triggered the callback.
+     */
     void timer_callback(tools::timer_handle x_timer)
     {
+        // FreeRTOS platform
+
         auto* context = reinterpret_cast<tools::timer_scheduler::timer_context*>( // NOLINT only way to cast the void*
                                                                                   // timer param to context instance
             pvTimerGetTimerID(x_timer));
@@ -61,9 +82,10 @@ namespace
 
 namespace tools
 {
-
     timer_scheduler::~timer_scheduler()
     {
+        // FreeRTOS platform
+
         std::lock_guard guard(m_mutex);
         for (auto hnd : m_active_timers)
         {
@@ -78,6 +100,8 @@ namespace tools
         const TickType_t period,                                          // NOLINT keep common platform interface
         std::function<void(timer_handle)>&& handler, timer_type type)     // NOLINT keep common platform interface
     {
+        // FreeRTOS platform
+
         auto context = std::make_unique<timer_context>();
         context->m_callback = std::move(handler); // NOLINT keep common platform interface
         const bool auto_reload = (timer_type::periodic == type);
@@ -134,7 +158,7 @@ namespace tools
         const TickType_t x_period = static_cast<TickType_t>((pdMS_TO_TICKS(period.count()) / 1000U));
         return add_tick(timer_name, x_period, std::move(handler), type);
     }
-
+ 
     bool timer_scheduler::remove(timer_handle hnd)
     {
         constexpr const int stop_timeout_ticks = 100;
@@ -160,6 +184,8 @@ namespace tools
 
     void timer_scheduler::remove_and_delete_timer(timer_handle hnd)
     {
+        // FreeRTOS platform
+
         {
             std::lock_guard guard(m_mutex);
 
