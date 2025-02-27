@@ -1,3 +1,15 @@
+/**
+ * @file periodic_task_freertos.inl
+ * @brief A header file defining a periodic task class for FreeRTOS.
+ *
+ * This file contains the definition of the periodic_task class template, which
+ * inherits from base_task and provides functionality to execute a startup routine
+ * and a periodic routine at specified intervals in a FreeRTOS environment.
+ *
+ * @author Laurent Lardinois
+ * @date January 2025
+ */
+
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
@@ -40,6 +52,15 @@
 
 namespace tools
 {
+    /**
+     * @brief A class representing a periodic task in FreeRTOS.
+     *
+     * This class inherits from base_task and provides functionality to execute
+     * a startup routine and a periodic routine at specified intervals.
+     *
+     * @tparam Context The type of the context object used in the task.
+     */
+
     template <typename Context>
     class periodic_task : public base_task // NOLINT base_task is non copyable and non movable
     {
@@ -47,8 +68,29 @@ namespace tools
     public:
         periodic_task() = delete;
 
+        /**
+         * @brief Type alias for a callback function used in the periodic task.
+         *
+         * This callback function is invoked with a shared pointer to a Context object
+         * and the name of the task as a string.
+         *
+         * @param context A shared pointer to the Context object.
+         * @param task_name The name of the task as a string.
+         */
         using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
 
+        /**
+         * @brief Constructs a periodic_task object.
+         *
+         * @param startup_routine The callback function to be executed at startup.
+         * @param periodic_routine The callback function to be executed periodically.
+         * @param context Shared pointer to the context object.
+         * @param task_name The name of the task.
+         * @param period The period of the task in microseconds.
+         * @param stack_size The stack size of the task.
+         * @param cpu_affinity The CPU affinity of the task.
+         * @param priority The priority of the task.
+         */
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine,
             const std::shared_ptr<Context>& context, const std::string& task_name,
             const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size, int cpu_affinity,
@@ -59,11 +101,23 @@ namespace tools
             , m_context(context)
             , m_period(period)
         {
+            // FreeRTOS platform
+
             m_task_created = task_create(&m_task, this->task_name(), periodic_call,
                 reinterpret_cast<void*>(this), // NOLINT only way to pass the instance as a void* to the task
                 this->stack_size(), this->cpu_affinity(), this->priority());
         }
 
+        /**
+         * @brief Constructs a periodic_task object with default priority and cpu affinity.
+         *
+         * @param startup_routine The callback function to be executed at startup.
+         * @param periodic_routine The callback function to be executed periodically.
+         * @param context Shared pointer to the context object.
+         * @param task_name The name of the task.
+         * @param period The period of the task in microseconds.
+         * @param stack_size The stack size of the task.
+         */
         periodic_task(call_back&& startup_routine, call_back&& periodic_routine,
             const std::shared_ptr<Context>& context, const std::string& task_name,
             const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size)
@@ -72,8 +126,16 @@ namespace tools
         {
         }
 
+        /**
+         * @brief Destructor for the periodic_task class.
+         *
+         * This destructor stops the periodic task by setting the m_stop_task flag to true.
+         * If the task was created, it suspends and deletes the FreeRTOS task.
+         */
         ~periodic_task()
         {
+            // FreeRTOS platform
+
             m_stop_task.store(true);
 
             if (m_task_created)
@@ -84,14 +146,33 @@ namespace tools
         }
 
         // note: native handle allows specific OS calls like setting scheduling policy or setting priority
+        /**
+         * @brief Retrieves the native handle of the task.
+         *
+         * This function overrides the base class implementation to return the native handle
+         * of the task, which is wrapped as a void*.
+         *
+         * @return A void* pointing to the native handle of the task.
+         */
         void* native_handle() override
         {
             return reinterpret_cast<void*>(&m_task); // NOLINT native handler wrapping as a void*
         }
 
     private:
+        /**
+         * @brief Periodic call function for FreeRTOS tasks.
+         *
+         * This function is executed as a FreeRTOS task and periodically calls the
+         * provided periodic routine. It also executes a startup routine before entering
+         * the periodic loop.
+         *
+         * @param object_instance Pointer to the object instance of type periodic_task.
+         */
         static void periodic_call(void* object_instance)
         {
+            // FreeRTOS platform
+
             periodic_task* instance = reinterpret_cast<periodic_task*>( // NOLINT only way to convert the passed void*
                                                                         // to the task to a object instance
                 object_instance);
