@@ -84,7 +84,7 @@ namespace tools
          */
         void add(const K& key, const T& value)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_dictionary[key] = value;
         }
 
@@ -98,7 +98,7 @@ namespace tools
          */
         void remove(const K& key)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_dictionary.erase(key);
         }
 
@@ -113,7 +113,7 @@ namespace tools
          */
         void add_collection(const std::map<K, T> collection)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
             {
                 m_dictionary[key] = value;
@@ -130,7 +130,7 @@ namespace tools
          */
         void add_collection(const std::unordered_map<K, T> collection)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
             {
                 m_dictionary[key] = value;
@@ -147,7 +147,7 @@ namespace tools
          */
         std::map<K, T> get_collection()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             auto snapshot = m_dictionary;
             return snapshot;
         }
@@ -166,7 +166,7 @@ namespace tools
         std::optional<T> find(const K& key)
         {
             std::optional<T> result;
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             const auto& itr = m_dictionary.find(key);
             if (m_dictionary.cend() != itr)
             {
@@ -185,7 +185,7 @@ namespace tools
          */
         bool empty()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_dictionary.empty();
         }
 
@@ -199,7 +199,7 @@ namespace tools
          */
         std::size_t size()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_dictionary.size();
         }
 
@@ -211,7 +211,7 @@ namespace tools
          */
         void clear()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_dictionary.clear();
         }
 

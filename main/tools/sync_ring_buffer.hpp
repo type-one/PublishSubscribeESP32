@@ -81,7 +81,7 @@ namespace tools
          */
         void push(const T& elem)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_buffer.push(elem);
         }
 
@@ -95,7 +95,7 @@ namespace tools
          */
         void emplace(T&& elem)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_buffer.emplace(std::move(elem));
         }
 
@@ -104,7 +104,7 @@ namespace tools
          */
         void pop()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_buffer.pop();
         }
 
@@ -117,7 +117,7 @@ namespace tools
          */
         T front()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.front();
         }
 
@@ -131,7 +131,7 @@ namespace tools
          */
         T back()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.back();
         }
 
@@ -145,7 +145,7 @@ namespace tools
          */
         bool empty()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.empty();
         }
 
@@ -159,7 +159,7 @@ namespace tools
          */
         bool full()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.full();
         }
 
@@ -173,7 +173,7 @@ namespace tools
          */
         std::size_t size()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.size();
         }
 

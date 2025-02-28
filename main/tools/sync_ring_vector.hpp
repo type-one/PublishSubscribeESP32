@@ -91,7 +91,7 @@ namespace tools
          */
         void push(const T& elem)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.push(elem);
         }
 
@@ -105,7 +105,7 @@ namespace tools
          */
         void emplace(T&& elem)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.emplace(std::move(elem));
         }
 
@@ -114,7 +114,7 @@ namespace tools
          */
         void pop()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.pop();
         }
 
@@ -128,7 +128,7 @@ namespace tools
          */
         T front()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.front();
         }
 
@@ -142,7 +142,7 @@ namespace tools
          */
         T back()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.back();
         }
 
@@ -156,7 +156,7 @@ namespace tools
          */
         bool empty()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.empty();
         }
 
@@ -170,7 +170,7 @@ namespace tools
          */
         bool full()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.full();
         }
 
@@ -183,7 +183,7 @@ namespace tools
          */
         std::size_t size()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.size();
         }
 
@@ -207,7 +207,7 @@ namespace tools
          */
         void resize(std::size_t new_size)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.resize(new_size);
         }
 

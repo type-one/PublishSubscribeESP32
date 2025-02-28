@@ -162,7 +162,7 @@ namespace tools
          */
         void subscribe(const Topic& topic, sync_observer_shared_ptr observer)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_subscribers.insert({ topic, observer });
         }
 
@@ -178,7 +178,7 @@ namespace tools
          */
         void subscribe(const Topic& topic, const std::string& handler_name, handler handler)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_handlers.insert({ topic, std::make_pair(handler_name, handler) });
         }
 
@@ -192,7 +192,7 @@ namespace tools
          */
         void unsubscribe(const Topic& topic, sync_observer_shared_ptr observer)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
 
             for (auto [it, range_end] = m_subscribers.equal_range(topic); it != range_end; ++it)
             {
@@ -215,7 +215,7 @@ namespace tools
          */
         void unsubscribe(const Topic& topic, const std::string& handler_name)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
 
             for (auto [it, range_end] = m_handlers.equal_range(topic); it != range_end; ++it)
             {
@@ -242,7 +242,7 @@ namespace tools
             std::vector<handler> to_invoke;
 
             {
-                std::lock_guard guard(m_mutex);
+                std::lock_guard<tools::critical_section> guard(m_mutex);
 
                 for (auto [it, range_end] = m_subscribers.equal_range(topic); it != range_end; ++it)
                 {

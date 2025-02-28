@@ -76,7 +76,7 @@ namespace tools
          */
         void push(const T& elem)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_queue.push(elem);
         }
 
@@ -90,7 +90,7 @@ namespace tools
          */
         void emplace(T&& elem)
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_queue.emplace(elem);
         }
 
@@ -101,7 +101,7 @@ namespace tools
          */
         void pop()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             m_queue.pop();
         }
 
@@ -114,7 +114,7 @@ namespace tools
          */
         T front()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.front();
         }
 
@@ -128,7 +128,7 @@ namespace tools
          */
         T back()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.back();
         }
 
@@ -142,7 +142,7 @@ namespace tools
          */
         bool empty()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.empty();
         }
 
@@ -156,7 +156,7 @@ namespace tools
          */
         std::size_t size()
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.size();
         }
 

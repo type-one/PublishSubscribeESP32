@@ -86,7 +86,7 @@ namespace tools
     {
         // FreeRTOS platform
 
-        std::lock_guard guard(m_mutex);
+        std::lock_guard<tools::critical_section> guard(m_mutex);
         for (auto hnd : m_active_timers)
         {
             constexpr const int timeout_ticks = 100;
@@ -125,7 +125,7 @@ namespace tools
         if (nullptr != hnd)
         {
             {
-                std::lock_guard guard(m_mutex);
+                std::lock_guard<tools::critical_section> guard(m_mutex);
 
                 m_active_timers.emplace_back(hnd);
 
@@ -167,7 +167,7 @@ namespace tools
         }
 
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             auto itr = std::find_if(m_contexts.begin(), m_contexts.end(),
                 [&hnd](const auto& context) -> bool { return (context->m_timer_handle == hnd); });
 
@@ -187,7 +187,7 @@ namespace tools
         // FreeRTOS platform
 
         {
-            std::lock_guard guard(m_mutex);
+            std::lock_guard<tools::critical_section> guard(m_mutex);
 
             auto itr = std::find_if(m_active_timers.begin(), m_active_timers.end(),
                 [&hnd](const auto* active_hnd) -> bool { return (active_hnd == hnd); });

@@ -1,16 +1,16 @@
 /**
  * @file test_sync_observer.cpp
  * @brief Unit tests for the synchronization observer pattern using Google Test framework.
- * 
+ *
  * This file contains the implementation of unit tests for the sync_subject and TestObserver classes.
  * The tests cover various scenarios including subscribing, unsubscribing, handling multiple observers,
  * handling multiple topics, and concurrent operations.
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  * @date February 2025
  */
 
- //-----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
 //                                                                             //
@@ -42,6 +42,7 @@
 #include <string>
 #include <thread>
 
+#include "tests/test_helper.hpp"
 #include "tools/sync_observer.hpp"
 
 /**
@@ -69,8 +70,8 @@ class TestObserver : public tools::sync_observer<std::string, int>
 public:
     void inform(const std::string& topic, const int& event, const std::string& origin) override
     {
-        std::cout << "Observer informed: Topic = " << topic << ", Event = " << event << ", Origin = " << origin
-                  << std::endl;
+        // TEST_COUT << "Observer informed: Topic = " << topic << ", Event = " << event << ", Origin = " << origin
+        //           << std::endl;
         last_topic = topic;
         last_event = event;
         last_origin = origin;
