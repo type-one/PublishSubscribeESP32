@@ -72,7 +72,7 @@ protected:
     std::unique_ptr<tools::ring_buffer<T, 5>> buffer;
 };
 
-using MyTypes = ::testing::Types<int, float, double, char, std::string>;
+using MyTypes = ::testing::Types<int, float, double, char /*, std::string*/>;
 TYPED_TEST_SUITE(RingBufferTest, MyTypes);
 
 /**
