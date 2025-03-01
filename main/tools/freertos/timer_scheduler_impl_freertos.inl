@@ -1,10 +1,10 @@
 /**
  * @file timer_scheduler_impl_freertos.inl
  * @brief Implementation of the timer scheduler using FreeRTOS for the Publish/Subscribe Pattern.
- * 
+ *
  * This file contains the implementation of the timer scheduler using FreeRTOS timers.
  * It provides functions to add, remove, and manage timers within the FreeRTOS environment.
- * 
+ *
  * @author Laurent Lardinois
  * @date February 2025
  */
@@ -158,48 +158,58 @@ namespace tools
         const TickType_t x_period = static_cast<TickType_t>((pdMS_TO_TICKS(period.count()) / 1000U));
         return add_tick(timer_name, x_period, std::move(handler), type);
     }
- 
+
     bool timer_scheduler::remove(timer_handle hnd)
     {
-        constexpr const int stop_timeout_ticks = 100;
-        while (xTimerStop(hnd, static_cast<TickType_t>(stop_timeout_ticks)) != pdPASS)
-        {
-        }
+        bool success = false;
 
+        if (nullptr != hnd)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
-            auto itr = std::find_if(m_contexts.begin(), m_contexts.end(),
-                [&hnd](const auto& context) -> bool { return (context->m_timer_handle == hnd); });
-
-            if (itr != m_contexts.end())
+            constexpr const int stop_timeout_ticks = 100;
+            while (xTimerStop(hnd, static_cast<TickType_t>(stop_timeout_ticks)) != pdPASS)
             {
-                m_contexts.erase(itr);
             }
+
+            {
+                std::lock_guard<tools::critical_section> guard(m_mutex);
+                auto itr = std::find_if(m_contexts.begin(), m_contexts.end(),
+                    [&hnd](const auto& context) -> bool { return (context->m_timer_handle == hnd); });
+
+                if (itr != m_contexts.end())
+                {
+                    m_contexts.erase(itr);
+                }
+            }
+
+            remove_and_delete_timer(hnd);
+
+            success = true;
         }
 
-        remove_and_delete_timer(hnd);
-
-        return true;
+        return success;
     }
 
     void timer_scheduler::remove_and_delete_timer(timer_handle hnd)
     {
         // FreeRTOS platform
 
+        if (nullptr != hnd)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
-
-            auto itr = std::find_if(m_active_timers.begin(), m_active_timers.end(),
-                [&hnd](const auto* active_hnd) -> bool { return (active_hnd == hnd); });
-
-            if (itr != m_active_timers.end())
             {
-                m_active_timers.erase(itr);
-            }
-        }
+                std::lock_guard<tools::critical_section> guard(m_mutex);
 
-        constexpr const int delete_timeout_ticks = 100;
-        xTimerDelete(hnd, static_cast<TickType_t>(delete_timeout_ticks));
+                auto itr = std::find_if(m_active_timers.begin(), m_active_timers.end(),
+                    [&hnd](const auto* active_hnd) -> bool { return (active_hnd == hnd); });
+
+                if (itr != m_active_timers.end())
+                {
+                    m_active_timers.erase(itr);
+                }
+            }
+
+            constexpr const int delete_timeout_ticks = 100;
+            xTimerDelete(hnd, static_cast<TickType_t>(delete_timeout_ticks));
+        }
     }
 
 }

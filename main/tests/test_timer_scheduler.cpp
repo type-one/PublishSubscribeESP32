@@ -92,10 +92,17 @@ protected:
  */
 TEST_F(TimerSchedulerTest, AddPeriodicTimer)
 {
-    auto handler = [](tools::timer_handle hnd) { std::cout << "Periodic timer triggered\n"; };
-    auto handle = scheduler->add("test_periodic", 1000, std::move(handler), tools::timer_type::periodic);
-    ASSERT_NE(handle, nullptr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500)); // Wait to check if the timer fires
+    std::atomic<int> fired { 0 };
+
+    auto handler = [&fired](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired.fetch_add(1);
+    };
+    auto handle = scheduler->add("test_periodic", 80, std::move(handler), tools::timer_type::periodic);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Wait to check if the timer fires
+    ASSERT_GT(fired.load(), 1);                                  // invoked more than once
 }
 
 /**
@@ -106,16 +113,23 @@ TEST_F(TimerSchedulerTest, AddPeriodicTimer)
  *
  * @details
  * - A handler is defined to output a message when the timer is triggered.
- * - The timer is added to the scheduler with a duration of 1000 milliseconds.
+ * - The timer is added to the scheduler with a duration of 80 milliseconds.
  * - The test asserts that the timer handle is not null.
- * - The test waits for 1500 milliseconds to ensure the timer has enough time to fire.
+ * - The test waits for 200 milliseconds to ensure the timer has enough time to fire.
  */
 TEST_F(TimerSchedulerTest, AddOneShotTimer)
 {
-    auto handler = [](tools::timer_handle hnd) { std::cout << "One-shot timer triggered\n"; };
-    auto handle = scheduler->add("test_one_shot", 1000, std::move(handler), tools::timer_type::one_shot);
-    ASSERT_NE(handle, nullptr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500)); // Wait to check if the timer fires
+    std::atomic<int> fired { 0 };
+
+    auto handler = [&fired](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired.fetch_add(1);
+    };
+    auto handle = scheduler->add("test_one_shot", 80, std::move(handler), tools::timer_type::one_shot);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Wait to check if the timer fires
+    ASSERT_EQ(fired.load(), 1);                                  // fired only a single time
 }
 
 /**
@@ -132,12 +146,19 @@ TEST_F(TimerSchedulerTest, AddOneShotTimer)
  */
 TEST_F(TimerSchedulerTest, RemoveTimer)
 {
-    auto handler = [](tools::timer_handle hnd) { std::cout << "Timer triggered\n"; };
-    auto handle = scheduler->add("test_remove", 1000, std::move(handler), tools::timer_type::one_shot);
-    ASSERT_NE(handle, nullptr);
+    std::atomic<int> fired { 0 };
+
+    auto handler = [&fired](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired.fetch_add(1);
+    };
+    auto handle = scheduler->add("test_remove", 80, std::move(handler), tools::timer_type::one_shot);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
     bool removed = scheduler->remove(handle);
     ASSERT_TRUE(removed);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500)); // Wait to ensure the timer does not fire
+    std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Wait to ensure the timer does not fire
+    ASSERT_EQ(fired.load(), 0);                                  // no fired at all
 }
 
 /**
@@ -150,20 +171,33 @@ TEST_F(TimerSchedulerTest, RemoveTimer)
  * that the timers have a chance to fire.
  *
  * @test
- * - Adds a one-shot timer with a 500ms interval.
- * - Adds a periodic timer with a 1000ms interval.
+ * - Adds a one-shot timer with a 50ms interval.
+ * - Adds a periodic timer with a 80ms interval.
  * - Asserts that the handles for both timers are not null.
- * - Waits for 1500ms to allow the timers to trigger.
+ * - Waits for 200ms to allow the timers to trigger.
  */
 TEST_F(TimerSchedulerTest, AddMultipleTimers)
 {
-    auto handler1 = [](tools::timer_handle hnd) { std::cout << "Timer 1 triggered\n"; };
-    auto handler2 = [](tools::timer_handle hnd) { std::cout << "Timer 2 triggered\n"; };
-    auto handle1 = scheduler->add("test_timer1", 500, std::move(handler1), tools::timer_type::one_shot);
-    auto handle2 = scheduler->add("test_timer2", 1000, std::move(handler2), tools::timer_type::periodic);
-    ASSERT_NE(handle1, nullptr);
-    ASSERT_NE(handle2, nullptr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500)); // Wait to check if the timers fire
+    std::atomic<int> fired1 { 0 };
+    std::atomic<int> fired2 { 0 };
+
+    auto handler1 = [&fired1](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired1.fetch_add(1);
+    };
+    auto handler2 = [&fired2](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired2.fetch_add(1);
+    };
+    auto handle1 = scheduler->add("test_timer1", 50, std::move(handler1), tools::timer_type::one_shot);
+    auto handle2 = scheduler->add("test_timer2", 80, std::move(handler2), tools::timer_type::periodic);
+    ASSERT_NE(handle1, static_cast<tools::timer_handle>(0));
+    ASSERT_NE(handle2, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Wait to check if the timers fire
+    ASSERT_EQ(fired1.load(), 1);                                 // fired only a single time
+    ASSERT_GT(fired2.load(), 1);                                 // invoked more than once
 }
 
 /**
@@ -180,106 +214,66 @@ TEST_F(TimerSchedulerTest, AddMultipleTimers)
  */
 TEST_F(TimerSchedulerTest, RemoveNonExistentTimer)
 {
-    tools::timer_handle invalid_handle = nullptr;
+    tools::timer_handle invalid_handle = static_cast<tools::timer_handle>(0);
     bool removed = scheduler->remove(invalid_handle);
     ASSERT_FALSE(removed);
 }
 
 /**
- * @brief Test case for verifying that a one-shot timer sets an atomic variable.
- *
- * This test creates a one-shot timer that sets an atomic boolean variable to true
- * when the timer fires. The timer is scheduled to fire after 1000 milliseconds.
- * The test then waits for 1500 milliseconds to ensure the timer has enough time
- * to fire, and checks if the atomic variable has been set to true.
- *
- * @test This test case verifies the following:
- * - A one-shot timer can be created and scheduled.
- * - The timer fires after the specified duration.
- * - The timer's handler correctly sets the atomic variable.
- */
-TEST_F(TimerSchedulerTest, OneShotTimerSetsAtomicVariable)
-{
-    std::atomic<bool> flag { false };
-    auto handler = [&flag](tools::timer_handle hnd) { flag.store(true); };
-    auto handle = scheduler->add("test_one_shot_atomic", 1000, std::move(handler), tools::timer_type::one_shot);
-    ASSERT_NE(handle, nullptr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500)); // Wait to check if the timer fires
-    ASSERT_TRUE(flag.load());
-}
-
-/**
- * @brief Test case to verify that a periodic timer increments an atomic counter.
- *
- * This test creates a periodic timer with a 500ms interval and attaches a handler
- * that increments an atomic counter. It then waits for 1500ms to allow the timer
- * to fire multiple times and checks if the counter has been incremented at least twice.
- *
- * @test
- * - Create an atomic counter initialized to 0.
- * - Define a handler that increments the counter.
- * - Add a periodic timer with a 500ms interval and attach the handler.
- * - Assert that the timer handle is not null.
- * - Wait for 1500ms to allow the timer to fire.
- * - Assert that the counter has been incremented at least twice.
- */
-TEST_F(TimerSchedulerTest, PeriodicTimerIncrementsAtomicCounter)
-{
-    std::atomic<int> counter { 0 };
-    auto handler = [&counter](tools::timer_handle hnd) { counter.fetch_add(1); };
-    auto handle = scheduler->add("test_periodic_atomic", 500, std::move(handler), tools::timer_type::periodic);
-    ASSERT_NE(handle, nullptr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500)); // Wait to check if the timer fires
-    ASSERT_GE(counter.load(), 2);                                 // Should have fired at least twice
-}
-
-/**
  * @brief Test case to verify the removal of a one-shot timer before its timeout.
  *
- * This test case adds a one-shot timer with a timeout of 1000 milliseconds and a handler that sets a flag to true.
- * It then waits for 500 milliseconds (half the timeout period) and removes the timer.
- * The test asserts that the timer was successfully removed and waits for an additional 1000 milliseconds to ensure
+ * This test case adds a one-shot timer with a timeout of 100 milliseconds and a handler that sets a flag to true.
+ * It then waits for 50 milliseconds (half the timeout period) and removes the timer.
+ * The test asserts that the timer was successfully removed and waits for an additional 100 milliseconds to ensure
  * that the timer does not fire. Finally, it checks that the flag remains false, indicating that the timer handler
  * was not executed.
  */
 TEST_F(TimerSchedulerTest, RemoveOneShotTimerBeforeTimeout)
 {
-    std::atomic<bool> flag { false };
-    auto handler = [&flag](tools::timer_handle hnd) { flag.store(true); };
+    std::atomic_bool flag { false };
+    auto handler = [&flag](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        flag.store(true);
+    };
     auto handle
-        = scheduler->add("test_remove_one_shot_before_timeout", 1000, std::move(handler), tools::timer_type::one_shot);
-    ASSERT_NE(handle, nullptr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Wait for half the timeout period
+        = scheduler->add("test_remove_one_shot_before_timeout", 100, std::move(handler), tools::timer_type::one_shot);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Wait for half the timeout period
     bool removed = scheduler->remove(handle);
     ASSERT_TRUE(removed);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Wait to ensure the timer does not fire
+    std::this_thread::sleep_for(std::chrono::milliseconds(150)); // Wait to ensure the timer does not fire
     ASSERT_FALSE(flag.load());
 }
 
 /**
  * @brief Test case to verify the removal of a periodic timer before its timeout.
  *
- * This test case adds a periodic timer with a timeout of 500 milliseconds and a handler that increments a counter.
- * It then waits for 300 milliseconds (less than the timeout period) and removes the timer.
+ * This test case adds a periodic timer with a timeout of 80 milliseconds and a handler that increments a counter.
+ * It then waits for 30 milliseconds (less than the timeout period) and removes the timer.
  * The test ensures that the timer is successfully removed and does not fire after removal.
  *
  * @test
- * - Add a periodic timer with a 500ms timeout.
- * - Wait for 300ms.
+ * - Add a periodic timer with a 80ms timeout.
+ * - Wait for 30ms.
  * - Remove the timer.
- * - Wait for 1000ms to ensure the timer does not fire.
+ * - Wait for 150ms to ensure the timer does not fire.
  * - Verify that the counter has not been incremented.
  */
 TEST_F(TimerSchedulerTest, RemovePeriodicTimerBeforeTimeout)
 {
     std::atomic<int> counter { 0 };
-    auto handler = [&counter](tools::timer_handle hnd) { counter.fetch_add(1); };
+    auto handler = [&counter](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        counter.fetch_add(1);
+    };
     auto handle
-        = scheduler->add("test_remove_periodic_before_timeout", 500, std::move(handler), tools::timer_type::periodic);
-    ASSERT_NE(handle, nullptr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Wait for less than the timeout period
+        = scheduler->add("test_remove_periodic_before_timeout", 80, std::move(handler), tools::timer_type::periodic);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(30)); // Wait for less than the timeout period
     bool removed = scheduler->remove(handle);
     ASSERT_TRUE(removed);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Wait to ensure the timer does not fire
+    std::this_thread::sleep_for(std::chrono::milliseconds(150)); // Wait to ensure the timer does not fire
     ASSERT_EQ(counter.load(), 0);
 }

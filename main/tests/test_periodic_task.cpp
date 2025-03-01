@@ -47,6 +47,7 @@
 #include <string>
 #include <thread>
 
+#include "tests/test_helper.hpp"
 #include "tools/periodic_task.hpp"
 
 class TestContext
@@ -60,6 +61,10 @@ public:
     {
         return m_value.load();
     }
+    void inc_value()
+    {
+        m_value.fetch_add(1);
+    }
 
 private:
     std::atomic<int> m_value { 0 };
@@ -67,14 +72,18 @@ private:
 
 void startup_routine(const std::shared_ptr<TestContext>& context, const std::string& task_name)
 {
-    std::cout << "Startup routine for task: " << task_name << std::endl;
+    (void)context;
+    (void)task_name;
+    //TEST_COUT << "Startup routine for task: " << task_name << std::endl;
     context->set_value(1);
 }
 
 void periodic_routine(const std::shared_ptr<TestContext>& context, const std::string& task_name)
 {
-    std::cout << "Periodic routine for task: " << task_name << std::endl;
-    context->set_value(context->get_value() + 1);
+    (void)context;
+    (void)task_name;
+    //TEST_COUT << "Periodic routine for task: " << task_name << std::endl;
+    context->inc_value();
 }
 
 /**
@@ -156,11 +165,11 @@ protected:
 TEST_F(PeriodicTaskTest, ContextValueIncreases)
 {
     // Allow some time for the task to run
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
     // Check if the context value has been updated correctly
     ASSERT_GT(context->get_value(), 1);
-    std::cout << "Test passed. Context value: " << context->get_value() << std::endl;
+    TEST_COUT << "Test passed. Context value: " << context->get_value() << '\n';
 }
 
 /**
@@ -170,7 +179,7 @@ TEST_F(PeriodicTaskTest, ContextValueIncreases)
  * and then checks if the context value has been updated correctly.
  *
  * @details
- * - The test sleeps for 2 seconds to allow the periodic task to run.
+ * - The test sleeps for 500 milliseconds to allow the periodic task to run.
  * - It then asserts that the context value is greater than 2.
  * - If the assertion passes, it prints the context value.
  *
@@ -179,30 +188,30 @@ TEST_F(PeriodicTaskTest, ContextValueIncreases)
 TEST_F(PeriodicTaskTest, ContextValueAfterMultiplePeriods)
 {
     // Allow more time for the task to run
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // Check if the context value has been updated correctly
     ASSERT_GT(context->get_value(), 2);
-    std::cout << "Test passed. Context value: " << context->get_value() << std::endl;
+    TEST_COUT << "Test passed. Context value: " << context->get_value() << '\n';
 }
 
 /**
  * @brief Test to verify the context value after a short run of the periodic task.
  *
- * This test allows the periodic task to run for a short duration (500 milliseconds)
+ * This test allows the periodic task to run for a short duration (100 milliseconds)
  * and then checks if the context value has been updated correctly.
  *
  * @test
- * - Sleep for 500 milliseconds to allow the task to run.
+ * - Sleep for 100 milliseconds to allow the task to run.
  * - Assert that the context value is greater than 0.
  * - Output the context value to the console.
  */
 TEST_F(PeriodicTaskTest, ContextValueAfterShortRun)
 {
     // Allow less time for the task to run
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Check if the context value has been updated correctly
     ASSERT_GT(context->get_value(), 0);
-    std::cout << "Test passed. Context value: " << context->get_value() << std::endl;
+    TEST_COUT << "Test passed. Context value: " << context->get_value() << '\n';
 }

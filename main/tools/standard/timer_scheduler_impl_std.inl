@@ -52,12 +52,13 @@ namespace tools
     {
         (void)timer_name;
         // inputs are in us
-        // auto-reload true:  start immediately and then repeat every period
+        // auto-reload true:  start after period and then repeat every period
         // auto-reload false: start once after period
         const bool auto_reload = (timer_type::periodic == type);
         constexpr const std::uint64_t micro_sec_coeff = 1000U;
-        return m_timer_scheduler.add(auto_reload ? 0U : (period * micro_sec_coeff), std::move(handler),
+        auto hnd = m_timer_scheduler.add(period * micro_sec_coeff, std::move(handler),
             auto_reload ? (period * micro_sec_coeff) : 0U);
+        return hnd + 1U; // valid handle is non zero
     }
 
     timer_handle timer_scheduler::add(const std::string& timer_name,
@@ -66,12 +67,12 @@ namespace tools
     {
         (void)timer_name;
         const bool auto_reload = (timer_type::periodic == type);
-        return m_timer_scheduler.add(
-            auto_reload ? 0U : period.count(), std::move(handler), auto_reload ? period.count() : 0U);
+        auto hnd = m_timer_scheduler.add(period.count(), std::move(handler), auto_reload ? period.count() : 0U);
+        return hnd + 1U; // valid handle is non zero
     }
 
     bool timer_scheduler::remove(timer_handle hnd)
     {
-        return m_timer_scheduler.remove(hnd);
+        return m_timer_scheduler.remove(hnd - 1U); // valid handle minus 1 for the cpptime api
     }
 }

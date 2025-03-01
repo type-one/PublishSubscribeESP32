@@ -128,6 +128,7 @@ namespace
 {
     void free_function_work(const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
     {
+        (void)task_name;
         ctx->do_something();
         ctx->computation_result = 42;
     }
@@ -152,6 +153,7 @@ TEST_F(WorkerTaskTest, DestructorTest)
         tools::worker_task<TestContext> task(
             [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
             {
+                (void)task_name;
                 startup_called.store(true);
                 ctx->do_something();
                 ctx->computation_result = 42;
@@ -161,6 +163,7 @@ TEST_F(WorkerTaskTest, DestructorTest)
         task.delegate(
             [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
             {
+                (void)task_name;
                 work_called.store(true);
                 ctx->do_something();
                 ctx->computation_result = 42;
@@ -198,6 +201,7 @@ TEST_F(WorkerTaskTest, FreeFunctionWorkTest)
         tools::worker_task<TestContext> task(
             [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
             {
+                (void)task_name;
                 startup_called.store(true);
                 ctx->do_something();
                 ctx->computation_result = 42;
@@ -233,6 +237,7 @@ class WorkerClass
 public:
     void class_method_work(const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
     {
+        (void)task_name;
         ctx->do_something();
         ctx->computation_result = 42;
     }
@@ -256,6 +261,7 @@ TEST_F(WorkerTaskTest, ClassMethodWorkTest)
         tools::worker_task<TestContext> task(
             [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
             {
+                (void)task_name;
                 startup_called.store(true);
                 ctx->do_something();
                 ctx->computation_result = 42;
@@ -297,6 +303,7 @@ TEST_F(WorkerTaskTest, LambdaWorkTest)
         tools::worker_task<TestContext> task(
             [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
             {
+                (void)task_name;
                 startup_called.store(true);
                 ctx->do_something();
                 ctx->computation_result = 42;
@@ -306,6 +313,7 @@ TEST_F(WorkerTaskTest, LambdaWorkTest)
         task.delegate(
             [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
             {
+                (void)task_name;
                 work_called.store(true);
                 ctx->do_something();
                 ctx->computation_result = 42;
