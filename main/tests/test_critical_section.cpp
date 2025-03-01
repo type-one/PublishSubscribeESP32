@@ -1,15 +1,16 @@
 /**
  * @file test_critical_section.cpp
  * @brief Unit tests for critical section functionality.
- * 
+ *
  * This file contains unit tests for the critical section functionality using the Google Test framework.
- * It includes tests for locking, unlocking, try_lock, std::lock_guard, ISR lock guard, std::scoped_lock, and deadlock avoidance.
- * 
+ * It includes tests for locking, unlocking, try_lock, std::lock_guard, ISR lock guard, std::scoped_lock, and deadlock
+ * avoidance.
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  * @date February 2025
  */
 
- //-----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
 //                                                                             //
@@ -143,14 +144,64 @@ TEST_F(CriticalSectionTest, LockGuard)
  */
 TEST_F(CriticalSectionTest, ISRLockGuard)
 {
+    // note: not really invoked from an ISR in GTest as isr_lock fallback to standard lock in C++
+    // standard implementation
+
+    class fake_isr_mutex
     {
-        tools::isr_lock_guard<tools::critical_section> lock(cs);
-        EXPECT_FALSE(cs.isr_try_lock()); // should fail to lock while lock_guard is holding the lock
+    private:
+        bool locked = false;
+
+    public:
+        fake_isr_mutex() = default;
+        ~fake_isr_mutex() = default;
+
+        void lock()
+        {
+            locked = true;
+        }
+
+        void unlock()
+        {
+            locked = false;
+        }
+
+        bool try_lock()
+        {
+            if (!locked)
+            {
+                locked = true;
+                return true;
+            }
+            return false;
+        }
+
+        void isr_lock()
+        {
+            lock();
+        }
+
+        void isr_unlock()
+        {
+            unlock();
+        }
+
+        bool isr_try_lock()
+        {
+            return try_lock();
+        }
+    };
+
+    fake_isr_mutex fake_cs;
+
+    {
+        tools::isr_lock_guard<fake_isr_mutex> lock(fake_cs);
+        EXPECT_FALSE(fake_cs.isr_try_lock()); // should fail to lock while lock_guard is holding the lock
     }
-    EXPECT_TRUE(cs.isr_try_lock()); // should succeed to lock after lock_guard is destroyed
-    if (cs.isr_try_lock())
+    EXPECT_TRUE(fake_cs.isr_try_lock()); // should succeed to lock after lock_guard is destroyed
+    if (fake_cs.isr_try_lock())
     {
-        cs.isr_unlock();
+        fake_cs.isr_unlock();
     }
 }
 

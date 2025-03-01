@@ -205,7 +205,7 @@ set(TEST_SOURCES
     ##tests/test_bytepack.cpp
     ##tests/test_cjsonpp.cpp
     #tests/test_cpptime.cpp
-    ##tests/test_critical_section.cpp
+    tests/test_critical_section.cpp
     ##tests/test_data_task.cpp
     #tests/test_gzip_wrapper.cpp
     ##tests/test_histogram.cpp
