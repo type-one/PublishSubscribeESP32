@@ -217,9 +217,9 @@ set(TEST_SOURCES
     ##tests/test_sync_dictionary.cpp
     ##tests/test_sync_object.cpp
     tests/test_sync_observer.cpp
-    ##tests/test_sync_queue.cpp
-    ##tests/test_sync_ring_buffer.cpp
-    ##tests/test_sync_ring_vector.cpp
+    tests/test_sync_queue.cpp
+    tests/test_sync_ring_buffer.cpp
+    tests/test_sync_ring_vector.cpp
     tests/test_timer_scheduler.cpp
     tests/test_worker_task.cpp
     # Add more test files as needed

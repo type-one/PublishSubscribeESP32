@@ -236,7 +236,7 @@ namespace tools
         void isr_emplace(T&& elem)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_vector.emplace(elem);
+            m_ring_vector.emplace(std::move(elem));
         }
 
         /**

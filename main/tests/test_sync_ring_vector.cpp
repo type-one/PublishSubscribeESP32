@@ -1,12 +1,12 @@
 /**
  * @file test_sync_ring_vector.cpp
  * @brief Unit tests for the SyncRingVector class template.
- * 
+ *
  * This file contains a series of unit tests for the SyncRingVector class template.
  * The tests cover various functionalities such as pushing, popping, resizing,
  * and checking the state of the SyncRingVector. The tests are implemented using
  * the Google Test framework.
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  * @date February 2025
  */
@@ -38,6 +38,7 @@
 
 #include <gtest/gtest.h>
 
+#include <complex>
 #include <memory>
 #include <string>
 #include <thread>
@@ -73,7 +74,7 @@ protected:
     std::unique_ptr<tools::sync_ring_vector<T>> vec;
 };
 
-using TestTypes = ::testing::Types<int, float, double, char, std::string>;
+using TestTypes = ::testing::Types<int, float, double, char, std::complex<double>>;
 TYPED_TEST_SUITE(SyncRingVectorTest, TestTypes);
 
 /**

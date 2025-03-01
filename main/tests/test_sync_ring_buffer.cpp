@@ -41,6 +41,7 @@
 
 #include <gtest/gtest.h>
 
+#include <complex>
 #include <memory>
 #include <string>
 #include <thread>
@@ -74,7 +75,7 @@ protected:
     std::unique_ptr<tools::sync_ring_buffer<T, 5>> buffer;
 };
 
-using TestTypes = ::testing::Types<int, float, double, char, std::string>;
+using TestTypes = ::testing::Types<int, float, double, char, std::complex<double>>;
 TYPED_TEST_SUITE(SyncRingBufferTest, TestTypes);
 
 /**

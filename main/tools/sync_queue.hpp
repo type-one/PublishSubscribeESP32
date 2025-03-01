@@ -91,7 +91,7 @@ namespace tools
         void emplace(T&& elem)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_queue.emplace(elem);
+            m_queue.emplace(std::move(elem));
         }
 
         /**
@@ -185,7 +185,7 @@ namespace tools
         void isr_emplace(T&& elem)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
-            m_queue.emplace(elem);
+            m_queue.emplace(std::move(elem));
         }
 
         /**

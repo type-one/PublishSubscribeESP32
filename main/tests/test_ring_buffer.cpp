@@ -41,6 +41,7 @@
 
 #include <gtest/gtest.h>
 
+#include <complex>
 #include <memory>
 #include <string>
 
@@ -72,7 +73,7 @@ protected:
     std::unique_ptr<tools::ring_buffer<T, 5>> buffer;
 };
 
-using MyTypes = ::testing::Types<int, float, double, char /*, std::string*/>;
+using MyTypes = ::testing::Types<int, float, double, char , std::complex<double>>;
 TYPED_TEST_SUITE(RingBufferTest, MyTypes);
 
 /**

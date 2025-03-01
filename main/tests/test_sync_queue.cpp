@@ -1,29 +1,29 @@
 /**
  * @file test_sync_queue.cpp
  * @brief Unit tests for the SyncQueue class template.
- * 
+ *
  * This file contains a series of unit tests for the SyncQueue class template,
  * which provides a thread-safe queue implementation. The tests cover various
  * operations such as pushing, popping, checking the front and back elements,
  * and handling multiple producers and consumers.
- * 
+ *
  * The tests are implemented using the Google Test framework and are organized
  * into a test fixture class template, SyncQueueTest, which is parameterized
  * by the type of elements stored in the queue.
- * 
+ *
  * The test cases verify the correct behavior of the SyncQueue class template
  * for different types of elements, including int, float, double, char, and
- * std::string.
- * 
+ * std::complex.
+ *
  * The tests also include scenarios for handling operations from an ISR context
  * and concurrent access by multiple threads.
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
- * 
+ *
  * @date February 2025
  */
 
- //-----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
 //                                                                             //
@@ -50,6 +50,7 @@
 
 #include <gtest/gtest.h>
 
+#include <complex>
 #include <memory>
 #include <string>
 #include <thread>
@@ -87,7 +88,7 @@ protected:
     std::unique_ptr<tools::sync_queue<T>> queue;
 };
 
-using TestTypes = ::testing::Types<int, float, double, char, std::string>;
+using TestTypes = ::testing::Types<int, float, double, char, std::complex<double>>;
 TYPED_TEST_SUITE(SyncQueueTest, TestTypes);
 
 /**
@@ -206,6 +207,7 @@ TYPED_TEST(SyncQueueTest, Emplace)
  */
 TYPED_TEST(SyncQueueTest, IsrPushAndSize)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push() and size()
     this->queue->isr_push(static_cast<TypeParam>(4));
     EXPECT_EQ(this->queue->isr_size(), 1);
     this->queue->isr_push(static_cast<TypeParam>(5));
@@ -228,6 +230,7 @@ TYPED_TEST(SyncQueueTest, IsrPushAndSize)
  */
 TYPED_TEST(SyncQueueTest, IsrEmplace)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to emplace() and size()
     this->queue->isr_emplace(static_cast<TypeParam>(6));
     EXPECT_EQ(this->queue->isr_size(), 1);
     EXPECT_EQ(this->queue->back(), static_cast<TypeParam>(6));
@@ -255,6 +258,8 @@ TYPED_TEST(SyncQueueTest, IsrEmplace)
  */
 TYPED_TEST(SyncQueueTest, MultipleOperations)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
     this->queue->push(static_cast<TypeParam>(1));
     this->queue->push(static_cast<TypeParam>(2));
     this->queue->emplace(static_cast<TypeParam>(3));
@@ -288,11 +293,11 @@ TYPED_TEST(SyncQueueTest, MultipleOperations)
  */
 TYPED_TEST(SyncQueueTest, MultipleProducersMultipleConsumers)
 {
-    const int num_producers = 4;
-    const int num_consumers = 4;
-    const int num_elements = 100;
+    constexpr const int num_producers = 4;
+    constexpr const int num_consumers = 4;
+    constexpr const int num_elements = 100;
 
-    auto producer = [this, num_elements]()
+    auto producer = [this]()
     {
         for (int i = 0; i < num_elements; ++i)
         {
@@ -300,7 +305,7 @@ TYPED_TEST(SyncQueueTest, MultipleProducersMultipleConsumers)
         }
     };
 
-    auto consumer = [this, num_elements]()
+    auto consumer = [this]()
     {
         for (int i = 0; i < num_elements; ++i)
         {
@@ -356,10 +361,10 @@ TYPED_TEST(SyncQueueTest, MultipleProducersMultipleConsumers)
  */
 TYPED_TEST(SyncQueueTest, SingleProducerMultipleConsumers)
 {
-    const int num_consumers = 4;
-    const int num_elements = 100;
+    constexpr const int num_consumers = 4;
+    constexpr const int num_elements = 100;
 
-    auto producer = [this, num_elements]()
+    auto producer = [this]()
     {
         for (int i = 0; i < num_elements; ++i)
         {
@@ -367,7 +372,7 @@ TYPED_TEST(SyncQueueTest, SingleProducerMultipleConsumers)
         }
     };
 
-    auto consumer = [this, num_elements]()
+    auto consumer = [this]()
     {
         for (int i = 0; i < num_elements / num_consumers; ++i)
         {
@@ -414,10 +419,10 @@ TYPED_TEST(SyncQueueTest, SingleProducerMultipleConsumers)
  */
 TYPED_TEST(SyncQueueTest, MultipleProducersSingleConsumer)
 {
-    const int num_producers = 4;
-    const int num_elements = 100;
+    constexpr const int num_producers = 4;
+    constexpr const int num_elements = 100;
 
-    auto producer = [this, num_elements]()
+    auto producer = [this]()
     {
         for (int i = 0; i < num_elements; ++i)
         {
@@ -425,7 +430,7 @@ TYPED_TEST(SyncQueueTest, MultipleProducersSingleConsumer)
         }
     };
 
-    auto consumer = [this, num_producers, num_elements]()
+    auto consumer = [this]()
     {
         for (int i = 0; i < num_producers * num_elements; ++i)
         {
