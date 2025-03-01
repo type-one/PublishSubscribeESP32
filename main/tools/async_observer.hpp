@@ -37,6 +37,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <string>
 #include <tuple>
 #include <vector>
 

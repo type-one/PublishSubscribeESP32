@@ -46,6 +46,7 @@
 #include <mutex>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "tools/critical_section.hpp"
 #include "tools/non_copyable.hpp"

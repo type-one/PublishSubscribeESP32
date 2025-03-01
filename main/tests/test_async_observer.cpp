@@ -37,9 +37,11 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include <tuple>
+#include <vector>
 
 #include "tools/async_observer.hpp"
 
@@ -81,6 +83,7 @@ protected:
 TEST_F(TestAsyncObserver, SingleObserverSingleEvent)
 {
     tools::async_observer<int, std::string> observer;
+
     std::thread observer_thread(
         [&observer]()
         {
@@ -111,11 +114,19 @@ TEST_F(TestAsyncObserver, SingleObserverSingleEvent)
 TEST_F(TestAsyncObserver, SingleObserverMultipleEvents)
 {
     tools::async_observer<int, std::string> observer;
+
     std::thread observer_thread(
         [&observer]()
         {
-            observer.wait_for_events();
-            auto events = observer.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer.wait_for_events();
+                auto current_events = observer.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -131,6 +142,7 @@ TEST_F(TestAsyncObserver, SingleObserverMultipleEvents)
     observer.inform(1, "event1", "origin1");
     observer.inform(2, "event2", "origin2");
     observer.inform(3, "event3", "origin3");
+
     observer_thread.join();
 }
 
@@ -209,8 +221,15 @@ TEST_F(TestAsyncObserver, MultipleObserversMultipleEvents)
     std::thread observer_thread1(
         [&observer1]()
         {
-            observer1.wait_for_events();
-            auto events = observer1.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 2) && (events.size() < 2); ++i)
+            {
+                observer1.wait_for_events();
+                auto current_events = observer1.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 2);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -223,8 +242,15 @@ TEST_F(TestAsyncObserver, MultipleObserversMultipleEvents)
     std::thread observer_thread2(
         [&observer2]()
         {
-            observer2.wait_for_events();
-            auto events = observer2.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 2) && (events.size() < 2); ++i)
+            {
+                observer2.wait_for_events();
+                auto current_events = observer2.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 2);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -264,8 +290,15 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEvents)
     std::thread observer_thread1(
         [&observer1]()
         {
-            observer1.wait_for_events();
-            auto events = observer1.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer1.wait_for_events();
+                auto current_events = observer1.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -281,8 +314,15 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEvents)
     std::thread observer_thread2(
         [&observer2]()
         {
-            observer2.wait_for_events();
-            auto events = observer2.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer2.wait_for_events();
+                auto current_events = observer2.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -331,8 +371,18 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEventsWithTimeout)
     std::thread observer_thread1(
         [&observer1]()
         {
-            observer1.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-            auto events = observer1.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer1.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer1.pop_all_events();
+                if (!current_events.empty())
+                {
+                    events.insert(events.end(), current_events.begin(), current_events.end());
+                }
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -348,8 +398,18 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEventsWithTimeout)
     std::thread observer_thread2(
         [&observer2]()
         {
-            observer2.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-            auto events = observer2.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer2.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer2.pop_all_events();
+                if (!current_events.empty())
+                {
+                    events.insert(events.end(), current_events.begin(), current_events.end());
+                }
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -447,8 +507,15 @@ TEST_F(TestAsyncObserver, DifferentSubjectsMultipleEvents)
     std::thread observer_thread1(
         [&observer1]()
         {
-            observer1.wait_for_events();
-            auto events = observer1.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 2) && (events.size() < 2); ++i)
+            {
+                observer1.wait_for_events();
+                auto current_events = observer1.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 2);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -461,8 +528,15 @@ TEST_F(TestAsyncObserver, DifferentSubjectsMultipleEvents)
     std::thread observer_thread2(
         [&observer2]()
         {
-            observer2.wait_for_events();
-            auto events = observer2.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 2) && (events.size() < 2); ++i)
+            {
+                observer2.wait_for_events();
+                auto current_events = observer2.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 2);
             ASSERT_EQ(std::get<0>(events[0]), 2);
             ASSERT_EQ(std::get<1>(events[0]), "event2");
@@ -501,8 +575,15 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEvents)
     std::thread observer_thread1(
         [&observer1]()
         {
-            observer1.wait_for_events();
-            auto events = observer1.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer1.wait_for_events();
+                auto current_events = observer1.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -518,8 +599,15 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEvents)
     std::thread observer_thread2(
         [&observer2]()
         {
-            observer2.wait_for_events();
-            auto events = observer2.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer2.wait_for_events();
+                auto current_events = observer2.pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 2);
             ASSERT_EQ(std::get<1>(events[0]), "event2");
@@ -573,8 +661,18 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEventsWithTimeout)
     std::thread observer_thread1(
         [&observer1]()
         {
-            observer1.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-            auto events = observer1.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer1.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer1.pop_all_events();
+                if (!current_events.empty())
+                {
+                    events.insert(events.end(), current_events.begin(), current_events.end());
+                }
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 1);
             ASSERT_EQ(std::get<1>(events[0]), "event1");
@@ -590,8 +688,18 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEventsWithTimeout)
     std::thread observer_thread2(
         [&observer2]()
         {
-            observer2.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-            auto events = observer2.pop_all_events();
+            std::vector<std::tuple<int, std::string, std::string>> events;
+
+            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer2.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer2.pop_all_events();
+                if (!current_events.empty())
+                {
+                    events.insert(events.end(), current_events.begin(), current_events.end());
+                }
+            }
+
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), 2);
             ASSERT_EQ(std::get<1>(events[0]), "event2");
