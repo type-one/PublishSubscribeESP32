@@ -162,7 +162,7 @@ namespace tools
         {
             m_ring_buffer.at(m_push_index) = elem;
             m_last_index = m_push_index;
-            m_push_index = next_index(m_push_index);            
+            m_push_index = next_index(m_push_index);
             ++m_size;
             if (m_size > Capacity)
             {

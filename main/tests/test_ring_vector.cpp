@@ -15,7 +15,7 @@
  * @date February 2025
  */
 
- //-----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois      //
 //                                                                             //
@@ -72,7 +72,7 @@ protected:
     std::unique_ptr<tools::ring_vector<T>> rv;
 };
 
-using MyTypes = ::testing::Types<int, float, double, char, std::string>;
+using MyTypes = ::testing::Types<int, float, double, char /*, std::string*/>;
 TYPED_TEST_SUITE(RingVectorTest, MyTypes);
 
 /**

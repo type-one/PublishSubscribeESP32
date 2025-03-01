@@ -175,6 +175,11 @@ namespace tools
             m_last_index = m_push_index;
             m_push_index = next_index(m_push_index);
             ++m_size;
+            if (m_size > m_capacity)
+            {
+                // first entry is overwritten
+                m_pop_index = next_index(m_pop_index);
+            }
         }
 
         /**
@@ -188,6 +193,11 @@ namespace tools
             m_last_index = m_push_index;
             m_push_index = next_index(m_push_index);
             ++m_size;
+            if (m_size > m_capacity)
+            {
+                // first entry is overwritten
+                m_pop_index = next_index(m_pop_index);
+            }
         }
 
         /**
@@ -196,8 +206,11 @@ namespace tools
          */
         void pop()
         {
-            m_pop_index = next_index(m_pop_index);
-            --m_size;
+            if (!empty())
+            {
+                m_pop_index = next_index(m_pop_index);
+                --m_size;
+            }
         }
 
         /**
@@ -233,7 +246,7 @@ namespace tools
          */
         [[nodiscard]] bool empty() const
         {
-            return m_push_index == m_pop_index;
+            return 0U == m_size;
         }
 
         /**
@@ -245,7 +258,7 @@ namespace tools
          */
         [[nodiscard]] bool full() const
         {
-            return next_index(m_push_index) == m_pop_index;
+            return m_capacity <= m_size;
         }
 
         /**
