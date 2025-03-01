@@ -46,24 +46,31 @@
 #include "tools/async_observer.hpp"
 
 /**
- * @class TestAsyncObserver
+ * @class AsyncObserverTest
  * @brief Test fixture for async_observer tests.
  *
  * This class sets up the necessary environment for testing the async_observer class.
  */
 
-class TestAsyncObserver : public ::testing::Test
+class AsyncObserverTest : public ::testing::Test
 {
 protected:
     void SetUp() override
     {
         // Setup code here
+        subject1 = std::make_unique<tools::sync_subject<std::string, std::string>>("TestSubject1");
+        subject2 = std::make_unique<tools::sync_subject<std::string, std::string>>("TestSubject2");
     }
 
     void TearDown() override
     {
         // Cleanup code here
+        subject1.reset();
+        subject2.reset();
     }
+
+    std::unique_ptr<tools::sync_subject<std::string, std::string>> subject1;
+    std::unique_ptr<tools::sync_subject<std::string, std::string>> subject2;
 };
 
 /**
@@ -80,22 +87,32 @@ protected:
  * - The observer correctly receives the event.
  * - The event data matches the expected values.
  */
-TEST_F(TestAsyncObserver, SingleObserverSingleEvent)
+TEST_F(AsyncObserverTest, SingleObserverSingleEvent)
 {
-    tools::async_observer<int, std::string> observer;
+    auto observer = std::make_shared<tools::async_observer<std::string, std::string>>();
+    std::atomic_bool subscribed { false };
 
     std::thread observer_thread(
-        [&observer]()
+        [this, &observer, &subscribed]()
         {
-            observer.wait_for_events();
-            auto events = observer.pop_all_events();
+            subject1->subscribe("topic_1", observer);
+            subscribed.store(true);
+
+            observer->wait_for_events();
+            auto events = observer->pop_all_events();
             ASSERT_EQ(events.size(), 1);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
         });
 
-    observer.inform(1, "event1", "origin1");
+    while (!subscribed.load())
+    {
+        std::this_thread::yield();
+    }
+
+    subject1->publish("topic_1", "event1");
+
     observer_thread.join();
 }
 
@@ -107,41 +124,109 @@ TEST_F(TestAsyncObserver, SingleObserverSingleEvent)
  * and processes all three events.
  *
  * @test Verifies that the observer receives exactly three events.
- * @test Verifies that the first event has the correct values (1, "event1", "origin1").
- * @test Verifies that the second event has the correct values (2, "event2", "origin2").
- * @test Verifies that the third event has the correct values (3, "event3", "origin3").
+ * @test Verifies that the first event has the correct values ("topic_1", "event1", "TestSubject1").
+ * @test Verifies that the second event has the correct values ("topic_2", "event2", "TestSubject1").
+ * @test Verifies that the third event has the correct values ("topic_3", "event3", "TestSubject1").
  */
-TEST_F(TestAsyncObserver, SingleObserverMultipleEvents)
+TEST_F(AsyncObserverTest, SingleObserverMultipleEvents)
 {
-    tools::async_observer<int, std::string> observer;
+    auto observer = std::make_shared<tools::async_observer<std::string, std::string>>();
+    std::atomic_bool subscribed { false };
 
     std::thread observer_thread(
-        [&observer]()
+        [this, &observer, &subscribed]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer);
+            subject1->subscribe("topic_2", observer);
+            subject1->subscribe("topic_3", observer);
+            subscribed.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer.wait_for_events();
-                auto current_events = observer.pop_all_events();
+                observer->wait_for_events();
+                auto current_events = observer->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 2);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_2");
             ASSERT_EQ(std::get<1>(events[1]), "event2");
-            ASSERT_EQ(std::get<2>(events[1]), "origin2");
-            ASSERT_EQ(std::get<0>(events[2]), 3);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_3");
             ASSERT_EQ(std::get<1>(events[2]), "event3");
-            ASSERT_EQ(std::get<2>(events[2]), "origin3");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject1");
         });
 
-    observer.inform(1, "event1", "origin1");
-    observer.inform(2, "event2", "origin2");
-    observer.inform(3, "event3", "origin3");
+    while (!subscribed.load())
+    {
+        std::this_thread::yield();
+    }
+
+    subject1->publish("topic_1", "event1");
+    subject1->publish("topic_2", "event2");
+    subject1->publish("topic_3", "event3");
+
+    observer_thread.join();
+}
+
+/**
+ * @brief Test case for verifying the behavior of a single observer handling multiple events belonging to 
+ * a same topic.
+ *
+ * This test creates an instance of `tools::async_observer` and starts a thread to wait for events.
+ * It then informs the observer of three events and verifies that the observer correctly receives
+ * and processes all three events.
+ *
+ * @test Verifies that the observer receives exactly three events.
+ * @test Verifies that the first event has the correct values ("topic_1", "event1", "TestSubject1").
+ * @test Verifies that the second event has the correct values ("topic_1", "event2", "TestSubject1").
+ * @test Verifies that the third event has the correct values ("topic_1", "event3", "TestSubject1").
+ */
+TEST_F(AsyncObserverTest, SingleObserverMultipleEventsSameTopic)
+{
+    auto observer = std::make_shared<tools::async_observer<std::string, std::string>>();
+    std::atomic_bool subscribed { false };
+
+    std::thread observer_thread(
+        [this, &observer, &subscribed]()
+        {
+            subject1->subscribe("topic_1", observer);
+            subscribed.store(true);
+
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer->wait_for_events();
+                auto current_events = observer->pop_all_events();
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+
+            ASSERT_EQ(events.size(), 3);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
+            ASSERT_EQ(std::get<1>(events[0]), "event1");
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_1");
+            ASSERT_EQ(std::get<1>(events[1]), "event2");
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_1");
+            ASSERT_EQ(std::get<1>(events[2]), "event3");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject1");
+        });
+
+    while (!subscribed.load())
+    {
+        std::this_thread::yield();
+    }
+
+    subject1->publish("topic_1", "event1");
+    subject1->publish("topic_1", "event2");
+    subject1->publish("topic_1", "event3");
 
     observer_thread.join();
 }
@@ -161,37 +246,50 @@ TEST_F(TestAsyncObserver, SingleObserverMultipleEvents)
  *
  * @test
  * - observer1 and observer2 should each receive one event.
- * - The event should have the values: (1, "event1", "origin1").
+ * - The event should have the values: ("topic_1", "event1", "TestSubject1").
  */
-TEST_F(TestAsyncObserver, MultipleObserversSingleEvent)
+TEST_F(AsyncObserverTest, MultipleObserversSingleEvent)
 {
-    tools::async_observer<int, std::string> observer1;
-    tools::async_observer<int, std::string> observer2;
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
 
     std::thread observer_thread1(
-        [&observer1]()
+        [this, &observer1, &subscribed1]()
         {
-            observer1.wait_for_events();
-            auto events = observer1.pop_all_events();
+            subject1->subscribe("topic_1", observer1);
+            subscribed1.store(true);
+
+            observer1->wait_for_events();
+            auto events = observer1->pop_all_events();
             ASSERT_EQ(events.size(), 1);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
         });
 
     std::thread observer_thread2(
-        [&observer2]()
+        [this, &observer2, &subscribed2]()
         {
-            observer2.wait_for_events();
-            auto events = observer2.pop_all_events();
+            subject1->subscribe("topic_1", observer2);
+            subscribed2.store(true);
+
+            observer2->wait_for_events();
+            auto events = observer2->pop_all_events();
             ASSERT_EQ(events.size(), 1);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
         });
 
-    observer1.inform(1, "event1", "origin1");
-    observer2.inform(1, "event1", "origin1");
+    while (!subscribed1.load() || !subscribed2.load())
+    {
+        std::this_thread::yield();
+    }
+
+    subject1->publish("topic_1", "event1");
 
     observer_thread1.join();
     observer_thread2.join();
@@ -213,57 +311,71 @@ TEST_F(TestAsyncObserver, MultipleObserversSingleEvent)
  * - The observers are informed of the events before the threads are joined.
  * - The test checks that each observer receives exactly two events with the correct data.
  */
-TEST_F(TestAsyncObserver, MultipleObserversMultipleEvents)
+TEST_F(AsyncObserverTest, MultipleObserversMultipleEvents)
 {
-    tools::async_observer<int, std::string> observer1;
-    tools::async_observer<int, std::string> observer2;
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
 
     std::thread observer_thread1(
-        [&observer1]()
+        [this, &observer1, &subscribed1]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer1);
+            subject1->subscribe("topic_2", observer1);
+            subscribed1.store(true);
 
-            for(int i = 0; (i < 2) && (events.size() < 2); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 2) && (events.size() < 2); ++i)
             {
-                observer1.wait_for_events();
-                auto current_events = observer1.pop_all_events();
+                observer1->wait_for_events();
+                auto current_events = observer1->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 2);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 2);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_2");
             ASSERT_EQ(std::get<1>(events[1]), "event2");
-            ASSERT_EQ(std::get<2>(events[1]), "origin2");
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
         });
 
     std::thread observer_thread2(
-        [&observer2]()
+        [this, &observer2, &subscribed2]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer2);
+            subject1->subscribe("topic_2", observer2);
+            subscribed2.store(true);
 
-            for(int i = 0; (i < 2) && (events.size() < 2); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 2) && (events.size() < 2); ++i)
             {
-                observer2.wait_for_events();
-                auto current_events = observer2.pop_all_events();
+                observer2->wait_for_events();
+                auto current_events = observer2->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 2);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 2);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_2");
             ASSERT_EQ(std::get<1>(events[1]), "event2");
-            ASSERT_EQ(std::get<2>(events[1]), "origin2");
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
         });
 
-    observer1.inform(1, "event1", "origin1");
-    observer1.inform(2, "event2", "origin2");
-    observer2.inform(1, "event1", "origin1");
-    observer2.inform(2, "event2", "origin2");
+    while (!subscribed1.load() || !subscribed2.load())
+    {
+        std::this_thread::yield();
+    }
+
+    subject1->publish("topic_1", "event1");
+    subject1->publish("topic_2", "event2");
 
     observer_thread1.join();
     observer_thread2.join();
@@ -282,68 +394,83 @@ TEST_F(TestAsyncObserver, MultipleObserversMultipleEvents)
  *
  * @note The test uses threads to simulate concurrent event handling.
  */
-TEST_F(TestAsyncObserver, MultipleObserversConcurrentEvents)
+TEST_F(AsyncObserverTest, MultipleObserversConcurrentEvents)
 {
-    tools::async_observer<int, std::string> observer1;
-    tools::async_observer<int, std::string> observer2;
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
 
     std::thread observer_thread1(
-        [&observer1]()
+        [this, &observer1, &subscribed1]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer1);
+            subject1->subscribe("topic_2", observer1);
+            subject1->subscribe("topic_3", observer1);
+            subscribed1.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer1.wait_for_events();
-                auto current_events = observer1.pop_all_events();
+                observer1->wait_for_events();
+                auto current_events = observer1->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 2);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_2");
             ASSERT_EQ(std::get<1>(events[1]), "event2");
-            ASSERT_EQ(std::get<2>(events[1]), "origin2");
-            ASSERT_EQ(std::get<0>(events[2]), 3);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_3");
             ASSERT_EQ(std::get<1>(events[2]), "event3");
-            ASSERT_EQ(std::get<2>(events[2]), "origin3");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject1");
         });
 
     std::thread observer_thread2(
-        [&observer2]()
+        [this, &observer2, &subscribed2]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer2);
+            subject1->subscribe("topic_2", observer2);
+            subject1->subscribe("topic_3", observer2);
+            subscribed2.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer2.wait_for_events();
-                auto current_events = observer2.pop_all_events();
+                observer2->wait_for_events();
+                auto current_events = observer2->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 2);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_2");
             ASSERT_EQ(std::get<1>(events[1]), "event2");
-            ASSERT_EQ(std::get<2>(events[1]), "origin2");
-            ASSERT_EQ(std::get<0>(events[2]), 3);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_3");
             ASSERT_EQ(std::get<1>(events[2]), "event3");
-            ASSERT_EQ(std::get<2>(events[2]), "origin3");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject1");
         });
 
     std::thread publisher_thread(
-        [&observer1, &observer2]()
+        [this, &subscribed1, &subscribed2]()
         {
-            observer1.inform(1, "event1", "origin1");
-            observer1.inform(2, "event2", "origin2");
-            observer1.inform(3, "event3", "origin3");
-            observer2.inform(1, "event1", "origin1");
-            observer2.inform(2, "event2", "origin2");
-            observer2.inform(3, "event3", "origin3");
+            while (!subscribed1.load() || !subscribed2.load())
+            {
+                std::this_thread::yield();
+            }
+
+            subject1->publish("topic_1", "event1");
+            subject1->publish("topic_2", "event2");
+            subject1->publish("topic_3", "event3");
         });
 
     observer_thread1.join();
@@ -363,20 +490,28 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEvents)
  * - Each observer receives exactly three events.
  * - The events received by each observer have the correct values.
  */
-TEST_F(TestAsyncObserver, MultipleObserversConcurrentEventsWithTimeout)
+TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeout)
 {
-    tools::async_observer<int, std::string> observer1;
-    tools::async_observer<int, std::string> observer2;
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
 
     std::thread observer_thread1(
-        [&observer1]()
+        [this, &observer1, &subscribed1]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer1);
+            subject1->subscribe("topic_2", observer1);
+            subject1->subscribe("topic_3", observer1);
+            subscribed1.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer1.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer1.pop_all_events();
+                observer1->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer1->pop_all_events();
                 if (!current_events.empty())
                 {
                     events.insert(events.end(), current_events.begin(), current_events.end());
@@ -384,26 +519,31 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEventsWithTimeout)
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 2);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_2");
             ASSERT_EQ(std::get<1>(events[1]), "event2");
-            ASSERT_EQ(std::get<2>(events[1]), "origin2");
-            ASSERT_EQ(std::get<0>(events[2]), 3);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_3");
             ASSERT_EQ(std::get<1>(events[2]), "event3");
-            ASSERT_EQ(std::get<2>(events[2]), "origin3");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject1");
         });
 
     std::thread observer_thread2(
-        [&observer2]()
+        [this, &observer2, &subscribed2]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer2);
+            subject1->subscribe("topic_2", observer2);
+            subject1->subscribe("topic_3", observer2);
+            subscribed2.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer2.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer2.pop_all_events();
+                observer2->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer2->pop_all_events();
                 if (!current_events.empty())
                 {
                     events.insert(events.end(), current_events.begin(), current_events.end());
@@ -411,26 +551,215 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEventsWithTimeout)
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 2);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_2");
             ASSERT_EQ(std::get<1>(events[1]), "event2");
-            ASSERT_EQ(std::get<2>(events[1]), "origin2");
-            ASSERT_EQ(std::get<0>(events[2]), 3);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_3");
             ASSERT_EQ(std::get<1>(events[2]), "event3");
-            ASSERT_EQ(std::get<2>(events[2]), "origin3");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject1");
         });
 
     std::thread publisher_thread(
-        [&observer1, &observer2]()
+        [this, &subscribed1, &subscribed2]()
         {
-            observer1.inform(1, "event1", "origin1");
-            observer1.inform(2, "event2", "origin2");
-            observer1.inform(3, "event3", "origin3");
-            observer2.inform(1, "event1", "origin1");
-            observer2.inform(2, "event2", "origin2");
-            observer2.inform(3, "event3", "origin3");
+            while (!subscribed1.load() || !subscribed2.load())
+            {
+                std::this_thread::yield();
+            }
+
+            subject1->publish("topic_1", "event1");
+            subject1->publish("topic_2", "event2");
+            subject1->publish("topic_3", "event3");
+        });
+
+    observer_thread1.join();
+    observer_thread2.join();
+    publisher_thread.join();
+}
+
+/**
+ * @brief Test case for multiple observers handling concurrent events with an expiring timeout.
+ *
+ * This test creates two async observers and a publisher thread. The publisher thread
+ * informs both observers of three events each but too late. The observer threads wait for events
+ * with a timeout of 100 milliseconds, then try to pop all events and verify that it didn't receive
+ * anything because it was too early.
+ *
+ * @test This test verifies that:
+ * - Each observer receives nothing.
+ */
+TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutExpired)
+{
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
+
+    std::thread observer_thread1(
+        [this, &observer1, &subscribed1]()
+        {
+            subject1->subscribe("topic_1", observer1);
+            subject1->subscribe("topic_2", observer1);
+            subject1->subscribe("topic_3", observer1);
+            subscribed1.store(true);
+
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer1->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer1->pop_all_events();
+                if (!current_events.empty())
+                {
+                    events.insert(events.end(), current_events.begin(), current_events.end());
+                }
+            }
+
+            ASSERT_EQ(events.size(), 0); // nothing received
+        });
+
+    std::thread observer_thread2(
+        [this, &observer2, &subscribed2]()
+        {
+            subject1->subscribe("topic_1", observer2);
+            subject1->subscribe("topic_2", observer2);
+            subject1->subscribe("topic_3", observer2);
+            subscribed2.store(true);
+
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer2->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer2->pop_all_events();
+                if (!current_events.empty())
+                {
+                    events.insert(events.end(), current_events.begin(), current_events.end());
+                }
+            }
+
+            ASSERT_EQ(events.size(), 0); // nothing received
+        });
+
+    std::thread publisher_thread(
+        [this, &subscribed1, &subscribed2]()
+        {
+            while (!subscribed1.load() || !subscribed2.load())
+            {
+                std::this_thread::yield();
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(325)); // NOLINT test
+
+            subject1->publish("topic_1", "event1");
+            subject1->publish("topic_2", "event2");
+            subject1->publish("topic_3", "event3");
+        });
+
+    observer_thread1.join();
+    observer_thread2.join();
+    publisher_thread.join();
+}
+
+/**
+ * @brief Test case for multiple observers handling concurrent events with a timeout
+ * and unsubscribe one of the topic.
+ *
+ * This test creates two async observers and a publisher thread. The publisher thread
+ * informs both observers of three events each. The observer threads subscribe then 
+ * unsubscribe one of the topic and wait for events with a timeout of 100 milliseconds, 
+ * then pop all events and verify the received events correspond to the active subscriptions.
+ *
+ * @test This test verifies that:
+ * - Each observer receives only received events for their active subscription.
+ */
+TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutAndUnsubscribe)
+{
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
+
+    std::thread observer_thread1(
+        [this, &observer1, &subscribed1]()
+        {
+            subject1->subscribe("topic_1", observer1);
+            subject1->subscribe("topic_2", observer1);
+            subject1->subscribe("topic_3", observer1);
+
+            subject1->unsubscribe("topic_2", observer1);
+
+            subscribed1.store(true);
+
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer1->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer1->pop_all_events();
+                if (!current_events.empty())
+                {
+                    events.insert(events.end(), current_events.begin(), current_events.end());
+                }
+            }
+
+            ASSERT_EQ(events.size(), 2); // only two
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
+            ASSERT_EQ(std::get<1>(events[0]), "event1");
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_3");
+            ASSERT_EQ(std::get<1>(events[1]), "event3");
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+        });
+
+    std::thread observer_thread2(
+        [this, &observer2, &subscribed2]()
+        {
+            subject1->subscribe("topic_1", observer2);
+            subject1->subscribe("topic_2", observer2);
+            subject1->subscribe("topic_3", observer2);
+
+            subject1->unsubscribe("topic_1", observer2);
+
+            subscribed2.store(true);
+
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
+            {
+                observer2->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer2->pop_all_events();
+                if (!current_events.empty())
+                {
+                    events.insert(events.end(), current_events.begin(), current_events.end());
+                }
+            }
+
+            ASSERT_EQ(events.size(), 2); // only two
+            ASSERT_EQ(std::get<0>(events[0]), "topic_2");
+            ASSERT_EQ(std::get<1>(events[0]), "event2");
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_3");
+            ASSERT_EQ(std::get<1>(events[1]), "event3");
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+        });
+
+    std::thread publisher_thread(
+        [this, &subscribed1, &subscribed2]()
+        {
+            while (!subscribed1.load() || !subscribed2.load())
+            {
+                std::this_thread::yield();
+            }
+
+            subject1->publish("topic_1", "event1");
+            subject1->publish("topic_2", "event2");
+            subject1->publish("topic_3", "event3");
         });
 
     observer_thread1.join();
@@ -447,38 +776,52 @@ TEST_F(TestAsyncObserver, MultipleObserversConcurrentEventsWithTimeout)
  *
  * @test This test case verifies that:
  * - Each observer receives exactly one event.
- * - The event received by observer1 has the values (1, "event1", "origin1").
- * - The event received by observer2 has the values (2, "event2", "origin2").
+ * - The event received by observer1 has the values ("topic_1", "event1", "TestSubject1").
+ * - The event received by observer2 has the values ("topic_2", "event2", "TestSubject2").
  */
-TEST_F(TestAsyncObserver, DifferentSubjectsSingleEvent)
+TEST_F(AsyncObserverTest, DifferentSubjectsSingleEvent)
 {
-    tools::async_observer<int, std::string> observer1;
-    tools::async_observer<int, std::string> observer2;
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
 
     std::thread observer_thread1(
-        [&observer1]()
+        [this, &observer1, &subscribed1]()
         {
-            observer1.wait_for_events();
-            auto events = observer1.pop_all_events();
+            subject1->subscribe("topic_1", observer1);
+            subscribed1.store(true);
+
+            observer1->wait_for_events();
+            auto events = observer1->pop_all_events();
             ASSERT_EQ(events.size(), 1);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
         });
 
     std::thread observer_thread2(
-        [&observer2]()
+        [this, &observer2, &subscribed2]()
         {
-            observer2.wait_for_events();
-            auto events = observer2.pop_all_events();
+            subject2->subscribe("topic_2", observer2);
+            subscribed2.store(true);
+
+            observer2->wait_for_events();
+            auto events = observer2->pop_all_events();
             ASSERT_EQ(events.size(), 1);
-            ASSERT_EQ(std::get<0>(events[0]), 2);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_2");
             ASSERT_EQ(std::get<1>(events[0]), "event2");
-            ASSERT_EQ(std::get<2>(events[0]), "origin2");
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject2");
         });
 
-    observer1.inform(1, "event1", "origin1");
-    observer2.inform(2, "event2", "origin2");
+    while (!subscribed1.load() || !subscribed2.load())
+    {
+        std::this_thread::yield();
+    }
+
+    subject1->publish("topic_1", "event1");
+    subject2->publish("topic_2", "event2");
 
     observer_thread1.join();
     observer_thread2.join();
@@ -494,62 +837,78 @@ TEST_F(TestAsyncObserver, DifferentSubjectsSingleEvent)
  * @test
  * - Creates two async_observer instances (observer1 and observer2).
  * - Starts two threads to wait for events on each observer.
- * - Informs observer1 with events (1, "event1", "origin1") and (3, "event3", "origin3").
- * - Informs observer2 with events (2, "event2", "origin2") and (4, "event4", "origin4").
+ * - Informs observer1 with events ("topic_1", "event1", "TestSubject1") and ("topic_3", "event3", "TestSubject2").
+ * - Informs observer2 with events ("topic_2", "event2", "TestSubject2") and ("topic_4", "event4", "TestSubject1").
  * - Verifies that observer1 receives the correct events.
  * - Verifies that observer2 receives the correct events.
  */
-TEST_F(TestAsyncObserver, DifferentSubjectsMultipleEvents)
+TEST_F(AsyncObserverTest, DifferentSubjectsMultipleEvents)
 {
-    tools::async_observer<int, std::string> observer1;
-    tools::async_observer<int, std::string> observer2;
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
 
     std::thread observer_thread1(
-        [&observer1]()
+        [this, &observer1, &subscribed1]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer1);
+            subject2->subscribe("topic_3", observer1);
+            subscribed1.store(true);
 
-            for(int i = 0; (i < 2) && (events.size() < 2); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 2) && (events.size() < 2); ++i)
             {
-                observer1.wait_for_events();
-                auto current_events = observer1.pop_all_events();
+                observer1->wait_for_events();
+                auto current_events = observer1->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 2);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 3);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_3");
             ASSERT_EQ(std::get<1>(events[1]), "event3");
-            ASSERT_EQ(std::get<2>(events[1]), "origin3");
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject2");
         });
 
     std::thread observer_thread2(
-        [&observer2]()
+        [this, &observer2, &subscribed2]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject2->subscribe("topic_2", observer2);
+            subject1->subscribe("topic_4", observer2);
+            subscribed2.store(true);
 
-            for(int i = 0; (i < 2) && (events.size() < 2); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 2) && (events.size() < 2); ++i)
             {
-                observer2.wait_for_events();
-                auto current_events = observer2.pop_all_events();
+                observer2->wait_for_events();
+                auto current_events = observer2->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 2);
-            ASSERT_EQ(std::get<0>(events[0]), 2);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_2");
             ASSERT_EQ(std::get<1>(events[0]), "event2");
-            ASSERT_EQ(std::get<2>(events[0]), "origin2");
-            ASSERT_EQ(std::get<0>(events[1]), 4);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject2");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_4");
             ASSERT_EQ(std::get<1>(events[1]), "event4");
-            ASSERT_EQ(std::get<2>(events[1]), "origin4");
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
         });
 
-    observer1.inform(1, "event1", "origin1");
-    observer1.inform(3, "event3", "origin3");
-    observer2.inform(2, "event2", "origin2");
-    observer2.inform(4, "event4", "origin4");
+    while (!subscribed1.load() || !subscribed2.load())
+    {
+        std::this_thread::yield();
+    }
+
+    subject1->publish("topic_1", "event1");
+    subject2->publish("topic_3", "event3");
+    subject2->publish("topic_2", "event2");
+    subject1->publish("topic_4", "event4");
 
     observer_thread1.join();
     observer_thread2.join();
@@ -567,68 +926,86 @@ TEST_F(TestAsyncObserver, DifferentSubjectsMultipleEvents)
  * - Observer1 receives 3 events with the correct values and origins.
  * - Observer2 receives 3 events with the correct values and origins.
  */
-TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEvents)
+TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEvents)
 {
-    tools::async_observer<int, std::string> observer1;
-    tools::async_observer<int, std::string> observer2;
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
 
     std::thread observer_thread1(
-        [&observer1]()
+        [this, &observer1, &subscribed1]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer1);
+            subject2->subscribe("topic_3", observer1);
+            subject1->subscribe("topic_5", observer1);
+            subscribed1.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer1.wait_for_events();
-                auto current_events = observer1.pop_all_events();
+                observer1->wait_for_events();
+                auto current_events = observer1->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 3);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_3");
             ASSERT_EQ(std::get<1>(events[1]), "event3");
-            ASSERT_EQ(std::get<2>(events[1]), "origin3");
-            ASSERT_EQ(std::get<0>(events[2]), 5);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject2");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_5");
             ASSERT_EQ(std::get<1>(events[2]), "event5");
-            ASSERT_EQ(std::get<2>(events[2]), "origin5");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject1");
         });
 
     std::thread observer_thread2(
-        [&observer2]()
+        [this, &observer2, &subscribed2]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject2->subscribe("topic_2", observer2);
+            subject1->subscribe("topic_4", observer2);
+            subject2->subscribe("topic_6", observer2);
+            subscribed2.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer2.wait_for_events();
-                auto current_events = observer2.pop_all_events();
+                observer2->wait_for_events();
+                auto current_events = observer2->pop_all_events();
                 events.insert(events.end(), current_events.begin(), current_events.end());
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 2);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_2");
             ASSERT_EQ(std::get<1>(events[0]), "event2");
-            ASSERT_EQ(std::get<2>(events[0]), "origin2");
-            ASSERT_EQ(std::get<0>(events[1]), 4);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject2");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_4");
             ASSERT_EQ(std::get<1>(events[1]), "event4");
-            ASSERT_EQ(std::get<2>(events[1]), "origin4");
-            ASSERT_EQ(std::get<0>(events[2]), 6);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_6");
             ASSERT_EQ(std::get<1>(events[2]), "event6");
-            ASSERT_EQ(std::get<2>(events[2]), "origin6");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject2");
         });
 
     std::thread publisher_thread(
-        [&observer1, &observer2]()
+        [this, &subscribed1, &subscribed2]()
         {
-            observer1.inform(1, "event1", "origin1"); // NOLINT test
-            observer1.inform(3, "event3", "origin3"); // NOLINT test
-            observer1.inform(5, "event5", "origin5"); // NOLINT test
-            observer2.inform(2, "event2", "origin2"); // NOLINT test
-            observer2.inform(4, "event4", "origin4"); // NOLINT test
-            observer2.inform(6, "event6", "origin6"); // NOLINT test
+            while (!subscribed1.load() || !subscribed2.load())
+            {
+                std::this_thread::yield();
+            }
+
+            subject1->publish("topic_1", "event1"); // NOLINT test
+            subject2->publish("topic_3", "event3"); // NOLINT test
+            subject1->publish("topic_5", "event5"); // NOLINT test
+            subject2->publish("topic_2", "event2"); // NOLINT test
+            subject1->publish("topic_4", "event4"); // NOLINT test
+            subject2->publish("topic_6", "event6"); // NOLINT test
         });
 
     observer_thread1.join();
@@ -645,28 +1022,36 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEvents)
  *
  * @test
  * - Observer1 should receive three events with the following values:
- *   - (1, "event1", "origin1")
- *   - (3, "event3", "origin3")
- *   - (5, "event5", "origin5")
+ *   - ("topic_1", "event1", "TestSubject1")
+ *   - ("topic_3", "event3", "TestSubject2")
+ *   - ("topic_5", "event5", "TestSubject1")
  * - Observer2 should receive three events with the following values:
- *   - (2, "event2", "origin2")
- *   - (4, "event4", "origin4")
- *   - (6, "event6", "origin6")
+ *   - ("topic_2", "event2", "TestSubject2")
+ *   - ("topic_4", "event4", "TestSubject1")
+ *   - ("topic_6", "event6", "TestSubject2")
  */
-TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEventsWithTimeout)
+TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEventsWithTimeout)
 {
-    tools::async_observer<int, std::string> observer1;
-    tools::async_observer<int, std::string> observer2;
+    auto observer1 = std::make_shared<tools::async_observer<std::string, std::string>>();
+    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string>>();
+
+    std::atomic_bool subscribed1 { false };
+    std::atomic_bool subscribed2 { false };
 
     std::thread observer_thread1(
-        [&observer1]()
+        [this, &observer1, &subscribed1]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject1->subscribe("topic_1", observer1);
+            subject2->subscribe("topic_3", observer1);
+            subject1->subscribe("topic_5", observer1);
+            subscribed1.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer1.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer1.pop_all_events();
+                observer1->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer1->pop_all_events();
                 if (!current_events.empty())
                 {
                     events.insert(events.end(), current_events.begin(), current_events.end());
@@ -674,26 +1059,31 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEventsWithTimeout)
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 1);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_1");
             ASSERT_EQ(std::get<1>(events[0]), "event1");
-            ASSERT_EQ(std::get<2>(events[0]), "origin1");
-            ASSERT_EQ(std::get<0>(events[1]), 3);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_3");
             ASSERT_EQ(std::get<1>(events[1]), "event3");
-            ASSERT_EQ(std::get<2>(events[1]), "origin3");
-            ASSERT_EQ(std::get<0>(events[2]), 5);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject2");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_5");
             ASSERT_EQ(std::get<1>(events[2]), "event5");
-            ASSERT_EQ(std::get<2>(events[2]), "origin5");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject1");
         });
 
     std::thread observer_thread2(
-        [&observer2]()
+        [this, &observer2, &subscribed2]()
         {
-            std::vector<std::tuple<int, std::string, std::string>> events;
+            subject2->subscribe("topic_2", observer2);
+            subject1->subscribe("topic_4", observer2);
+            subject2->subscribe("topic_6", observer2);
+            subscribed2.store(true);
 
-            for(int i = 0; (i < 3) && (events.size() < 3); ++i)
+            std::vector<std::tuple<std::string, std::string, std::string>> events;
+
+            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
             {
-                observer2.wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer2.pop_all_events();
+                observer2->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+                auto current_events = observer2->pop_all_events();
                 if (!current_events.empty())
                 {
                     events.insert(events.end(), current_events.begin(), current_events.end());
@@ -701,26 +1091,31 @@ TEST_F(TestAsyncObserver, DifferentSubjectsConcurrentEventsWithTimeout)
             }
 
             ASSERT_EQ(events.size(), 3);
-            ASSERT_EQ(std::get<0>(events[0]), 2);
+            ASSERT_EQ(std::get<0>(events[0]), "topic_2");
             ASSERT_EQ(std::get<1>(events[0]), "event2");
-            ASSERT_EQ(std::get<2>(events[0]), "origin2");
-            ASSERT_EQ(std::get<0>(events[1]), 4);
+            ASSERT_EQ(std::get<2>(events[0]), "TestSubject2");
+            ASSERT_EQ(std::get<0>(events[1]), "topic_4");
             ASSERT_EQ(std::get<1>(events[1]), "event4");
-            ASSERT_EQ(std::get<2>(events[1]), "origin4");
-            ASSERT_EQ(std::get<0>(events[2]), 6);
+            ASSERT_EQ(std::get<2>(events[1]), "TestSubject1");
+            ASSERT_EQ(std::get<0>(events[2]), "topic_6");
             ASSERT_EQ(std::get<1>(events[2]), "event6");
-            ASSERT_EQ(std::get<2>(events[2]), "origin6");
+            ASSERT_EQ(std::get<2>(events[2]), "TestSubject2");
         });
 
     std::thread publisher_thread(
-        [&observer1, &observer2]()
+        [this, &subscribed1, &subscribed2]()
         {
-            observer1.inform(1, "event1", "origin1"); // NOLINT test
-            observer1.inform(3, "event3", "origin3"); // NOLINT test
-            observer1.inform(5, "event5", "origin5"); // NOLINT test
-            observer2.inform(2, "event2", "origin2"); // NOLINT test
-            observer2.inform(4, "event4", "origin4"); // NOLINT test
-            observer2.inform(6, "event6", "origin6"); // NOLINT test
+            while (!subscribed1.load() || !subscribed2.load())
+            {
+                std::this_thread::yield();
+            }
+
+            subject1->publish("topic_1", "event1"); // NOLINT test
+            subject2->publish("topic_3", "event3"); // NOLINT test
+            subject1->publish("topic_5", "event5"); // NOLINT test
+            subject2->publish("topic_2", "event2"); // NOLINT test
+            subject1->publish("topic_4", "event4"); // NOLINT test
+            subject2->publish("topic_6", "event6"); // NOLINT test
         });
 
     observer_thread1.join();
