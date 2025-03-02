@@ -54,6 +54,13 @@ namespace tools
         {
             LOG_ERROR("FATAL error: xEventGroupCreate() failed");
         }
+        else
+        {
+            if (initial_state)
+            {
+                xEventGroupSetBits(m_event_group, BIT0);
+            }
+        }
     }
 
     sync_object::~sync_object()
@@ -108,7 +115,7 @@ namespace tools
         {
             constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
             xEventGroupWaitBits(
-                m_event_group, BIT0, pdTRUE /* clear on exit */, pdFALSE /* wait for all bits */, x_block_time);
+                m_event_group, BIT0, pdTRUE /* clear on exit */, pdFALSE /* wait for any bits */, x_block_time);
         }
     }
 
@@ -119,7 +126,8 @@ namespace tools
         if (nullptr != m_event_group)
         {
             const TickType_t ticks_to_wait = static_cast<TickType_t>((timeout.count() * portTICK_PERIOD_MS) / 1000);
-            xEventGroupWaitBits(m_event_group, BIT0, pdTRUE, pdFALSE, ticks_to_wait);
+            xEventGroupWaitBits(
+                m_event_group, BIT0, pdTRUE /* clear on exit */, pdFALSE /* wait for any bits */, ticks_to_wait);
         }
     }
 

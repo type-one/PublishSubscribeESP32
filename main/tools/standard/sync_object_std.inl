@@ -82,7 +82,7 @@ namespace tools
          *
          * @return true if the sync_object is signaled, false otherwise.
          */
-        bool is_signaled() const;
+        [[nodiscard]] bool is_signaled() const;
 
         /**
          * @brief Waits for the signal to be set.

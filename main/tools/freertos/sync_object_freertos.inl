@@ -99,7 +99,7 @@ namespace tools
          *
          * @return true if the event group is signaled, false otherwise.
          */
-        bool is_signaled() const;
+        [[nodiscard]] bool is_signaled() const;
 
         /**
          * @brief Signals the event group from an ISR context.
