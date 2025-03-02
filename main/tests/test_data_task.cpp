@@ -92,7 +92,7 @@ protected:
     {
         context = std::make_shared<MockContext>();
         task = std::make_unique<tools::data_task<MockContext, int>>(
-            startup_routine, process_routine, context, 10, "TestTask", 1024);
+            startup_routine, process_routine, context, 10, "TestTask", 2048);
     }
 
     /**
@@ -163,7 +163,7 @@ TEST_F(DataTaskTest, ProcessDataTest)
     };
 
     task = std::make_unique<tools::data_task<MockContext, int>>(
-        startup_routine, process_routine, context, 10, "TestTask", 1024);
+        startup_routine, process_routine, context, 10, "TestTask", 2048);
 
     task->submit(42);
 
@@ -200,10 +200,10 @@ protected:
             std::placeholders::_2, std::placeholders::_3);
 
         task1 = std::make_unique<tools::data_task<MockContext, int>>(
-            std::move(startup_routine), std::move(process1), context, 10, "Task1", 1024);
+            std::move(startup_routine), std::move(process1), context, 10, "Task1", 2048);
 
         task2 = std::make_unique<tools::data_task<MockContext, int>>(
-            std::move(startup_routine), std::move(process2), context, 10, "Task2", 1024);
+            std::move(startup_routine), std::move(process2), context, 10, "Task2", 2048);
     }
 
     /**
@@ -314,10 +314,10 @@ protected:
             std::placeholders::_2, std::placeholders::_3);
 
         task1 = std::make_unique<tools::data_task<MockContext, msg>>(
-            std::move(startup_routine), std::move(process_ping_bind), context, 10, "PingTask", 1024);
+            std::move(startup_routine), std::move(process_ping_bind), context, 10, "PingTask", 2048);
 
         task2 = std::make_unique<tools::data_task<MockContext, msg>>(
-            std::move(startup_routine), std::move(process_pong_bind), context, 10, "PongTask", 1024);
+            std::move(startup_routine), std::move(process_pong_bind), context, 10, "PongTask", 2048);
     }
     /**
      * @brief Cleans up the test environment by resetting the data tasks.

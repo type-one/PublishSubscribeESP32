@@ -110,7 +110,7 @@ protected:
         context = std::make_shared<TestContext>();
         task_name = "TestTask";
         period = std::chrono::milliseconds(100);
-        stack_size = 1024;
+        stack_size = 2048;
         task = std::make_unique<tools::periodic_task<TestContext>>(
             startup_routine, periodic_routine, context, task_name, period, stack_size);
     }
