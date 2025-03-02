@@ -210,7 +210,7 @@ set(TEST_SOURCES
     #tests/test_gzip_wrapper.cpp
     ##tests/test_histogram.cpp
     ##tests/test_lock_free_ring_buffer.cpp
-    #tests/test_memory_pipe.cpp
+    tests/test_memory_pipe.cpp
     tests/test_periodic_task.cpp
     tests/test_ring_buffer.cpp
     tests/test_ring_vector.cpp

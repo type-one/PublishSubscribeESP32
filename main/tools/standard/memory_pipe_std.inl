@@ -1,10 +1,10 @@
 /**
  * @file memory_pipe_std.inl
  * @brief A memory pipe implementation for inter-thread communication.
- * 
+ *
  * This file contains the implementation of a lock-free ring buffer for sending and receiving data between threads.
  * It supports both standard and ISR (Interrupt Service Routine) contexts.
- * 
+ *
  * @author Laurent Lardinois
  * @date February 2025
  */
@@ -132,7 +132,7 @@ namespace tools
             auto start_time = std::chrono::high_resolution_clock::now();
             auto deadline = start_time + timeout;
 
-            for (; sent <= send_bytes;)
+            for (; sent < send_bytes;)
             {
                 bool success = push(data[sent]);
 
@@ -203,7 +203,7 @@ namespace tools
             auto start_time = std::chrono::high_resolution_clock::now();
             auto deadline = start_time + timeout;
 
-            for (; received <= rcv_bytes;)
+            for (; received < rcv_bytes;)
             {
                 bool success = pop(data[received]);
 
