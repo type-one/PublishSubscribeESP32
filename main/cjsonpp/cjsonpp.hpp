@@ -40,7 +40,7 @@
                                        Throw(0); } while (false)                           /* NOLINT keep it*/
 #else
 #include <exception>
-#define CJSONPP_THROW(msg, value) throw std::runtime_error(msg + " (" + std::to_string(value) + ")") /* NOLINT keep it */
+#define CJSONPP_THROW(msg, value) throw std::runtime_error(std::string{msg} + " (" + std::to_string(value) + ")") /* NOLINT keep it */
 #endif
 // clang-format on
 
@@ -55,7 +55,9 @@ namespace cjsonpp
         String,
         Number,
         Array,
-        Object
+        Object,
+        Raw,
+        Invalid
     };
 
 
@@ -350,7 +352,7 @@ namespace cjsonpp
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask);
+                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask); // NOLINT keep it
             }
 
             ContT<T, std::allocator<T>> retval;

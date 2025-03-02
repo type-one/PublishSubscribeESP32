@@ -142,10 +142,49 @@ namespace cjsonpp
     // get object type
     JSONType JSONObject::type() const
     {
-        constexpr const std::size_t nb_json_types = 7U;
-        static std::array<JSONType, nb_json_types> vmap = { Bool, Bool, Null, Number, String, Array, Object };
         constexpr const int mask = 0xff;
-        return vmap.at((*obj_)->type & mask);
+        const auto idx = (*obj_)->type & mask;
+
+        JSONType ret = JSONType::Null;
+
+        switch (idx)
+        {
+            case cJSON_False:
+            case cJSON_True:
+                ret = JSONType::Bool;
+                break;
+
+            case cJSON_NULL:
+                ret = JSONType::Null;
+                break;
+
+            case cJSON_Number:
+                ret = JSONType::Number;
+                break;
+
+            case cJSON_String:
+                ret = JSONType::String;
+                break;
+
+            case cJSON_Array:
+                ret = JSONType::Array;
+                break;
+
+            case cJSON_Object:
+                ret = JSONType::Object;
+                break;
+
+            case cJSON_Raw:
+                ret = JSONType::Raw;
+                break;
+
+            case cJSON_Invalid:
+            default:
+                ret = JSONType::Invalid;
+                break;
+        }
+
+        return ret;
     }
 
     bool JSONObject::has(const char* name) const
