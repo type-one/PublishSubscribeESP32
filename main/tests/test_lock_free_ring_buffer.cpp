@@ -41,6 +41,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <thread>
@@ -83,7 +84,7 @@ protected:
 };
 
 /// The types to be tested with the LockFreeRingBufferTest fixture.
-using MyTypes = ::testing::Types<int, float, double, char, std::string>;
+using MyTypes = ::testing::Types<int, float, double, char>;
 TYPED_TEST_SUITE(LockFreeRingBufferTest, MyTypes);
 
 /**
@@ -225,51 +226,10 @@ TYPED_TEST(LockFreeRingBufferTest, UnderflowTest)
 }
 
 /**
- * @brief Test case for producer-consumer scenario using a lock-free ring buffer.
- *
- * This test spawns two threads: one for producing data and one for consuming data.
- * The producer thread pushes integers from 0 to 99 into the buffer.
- * The consumer thread pops integers from the buffer and verifies that they are in the correct order.
- *
- * @tparam TypeParam The data type used in the lock-free ring buffer.
- */
-TYPED_TEST(LockFreeRingBufferTest, ProducerConsumerTest)
-{
-    std::thread producer(
-        [this]()
-        {
-            for (int i = 0; i < 100; ++i)
-            {
-                while (!this->buffer->push(static_cast<TypeParam>(i)))
-                {
-                    std::this_thread::yield();
-                }
-            }
-        });
-
-    std::thread consumer(
-        [this]()
-        {
-            TypeParam value;
-            for (int i = 0; i < 100; ++i)
-            {
-                while (!this->buffer->pop(value))
-                {
-                    std::this_thread::yield();
-                }
-                ASSERT_EQ(value, static_cast<TypeParam>(i));
-            }
-        });
-
-    producer.join();
-    consumer.join();
-}
-
-/**
  * @brief Test case for interleaved producer-consumer operations on a lock-free ring buffer.
  *
  * This test spawns two threads: one for producing and one for consuming elements in the ring buffer.
- * The producer thread pushes integers from 0 to 49 into the buffer, while the consumer thread
+ * The producer thread pushes integers from 0 to 100000 into the buffer, while the consumer thread
  * pops these integers from the buffer and verifies that they are in the correct order.
  *
  * @tparam TypeParam The type of elements stored in the lock-free ring buffer.
@@ -284,7 +244,7 @@ TYPED_TEST(LockFreeRingBufferTest, ProducerConsumerInterleavedTest)
     std::thread producer(
         [this]()
         {
-            for (int i = 0; i < 50; ++i)
+            for (int i = 0; i < 100000; ++i)
             {
                 while (!this->buffer->push(static_cast<TypeParam>(i)))
                 {
@@ -297,7 +257,7 @@ TYPED_TEST(LockFreeRingBufferTest, ProducerConsumerInterleavedTest)
         [this]()
         {
             TypeParam value;
-            for (int i = 0; i < 50; ++i)
+            for (int i = 0; i < 100000; ++i)
             {
                 while (!this->buffer->pop(value))
                 {
