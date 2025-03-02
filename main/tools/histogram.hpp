@@ -139,8 +139,7 @@ namespace tools
          *
          * This function computes the average value of the histogram by summing up the
          * products of occurrences and their corresponding values, and then dividing
-         * by the total number of occurrences. A rounding bias is added to the result
-         * before casting it to the template type T.
+         * by the total number of occurrences.
          *
          * @return The average value of the histogram as type T. If there are no
          * occurrences, it returns 0.
@@ -148,31 +147,23 @@ namespace tools
         T average() const
         {
             double avg = 0.0;
-            double total = 0.0;
+            const auto total = static_cast<double>(m_total_count);
 
             for (auto itr = m_occurences.cbegin(); itr != m_occurences.cend(); ++itr)
             {
                 if (itr->second > 0) // occurence
                 {
                     avg += static_cast<double>(itr->second * itr->first);
-                    total += static_cast<double>(itr->second);
                 }
             }
 
-            constexpr const double round_bias = 0.5;
-            return (total > 0.0) ? static_cast<T>((avg / total) + round_bias) : static_cast<T>(0);
+            return (total > 0.0) ? static_cast<T>(avg / total) : static_cast<T>(0);
         }
 
         /**
          * @brief Calculates the variance of the data set.
          *
          * This function computes the variance of the data set stored in the histogram.
-         * The variance is calculated using the formula:
-         *
-         *     variance = (sum(x_i^2 * count_i) / total_count) - (average^2) + round_bias
-         *
-         * where x_i is the value, count_i is the occurrence of the value, and total_count
-         * is the sum of all occurrences.
          *
          * @param average The average value of the data set.
          * @return The variance of the data set.
@@ -180,21 +171,32 @@ namespace tools
         T variance(const T& average) const
         {
             double vari = 0.0;
-            double total = 0.0;
+            const auto total = static_cast<double>(m_total_count);
 
             for (auto itr = m_occurences.cbegin(); itr != m_occurences.cend(); ++itr)
             {
                 if (itr->second > 0) // occurence
                 {
-                    const auto dva = static_cast<double>(itr->first);
-                    vari += itr->second * dva * dva;
-                    total += static_cast<double>(itr->second);
+                    // https://www.calculatorsoup.com/calculators/statistics/standard-deviation-calculator.php
+                    const auto dva = static_cast<double>(itr->first) - static_cast<double>(average);
+                    vari += itr->second * (dva * dva);
                 }
             }
 
-            constexpr const double round_bias = 0.5;
-            return (total > 0.0) ? static_cast<T>((vari / total) - static_cast<double>(average * average) + round_bias)
-                                 : static_cast<T>(0);
+            return (total > 0.0) ? static_cast<T>((vari / total)) : static_cast<T>(0);
+        }
+
+        /**
+         * @brief Calculates the standard deviation of the data set.
+         *
+         * This function computes the standard deviation of the data set stored in the histogram.
+         *
+         * @param variance The variance value of the data set.
+         * @return The standard deviation of the data set.
+         */
+        T standard_deviation(const T& variance) const
+        {
+            return static_cast<T>(std::sqrt(static_cast<double>(variance)));
         }
 
         /**
@@ -224,7 +226,23 @@ namespace tools
 
             std::sort(to_sort.begin(), to_sort.end());
 
-            return to_sort[to_sort.size() >> 1];
+            // https://www.calculator.net/mean-median-mode-range-calculator.html
+
+            const auto idx = to_sort.size() >> 1;
+            T value = static_cast<T>(0);
+
+            if (to_sort.size() & 1U)
+            {
+                // odd case
+                value = static_cast<T>(to_sort[idx]);
+            }
+            else 
+            {
+                // even case                
+                value = static_cast<T>(0.5 * (to_sort[idx] + to_sort[idx - 1])); // NOLINT math formula
+            } 
+            
+            return value;
         }
 
         /**

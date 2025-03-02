@@ -1,17 +1,17 @@
 /**
-* @file test_histogram.cpp
-* @brief Unit tests for the histogram class using Google Test framework.
-* 
-* This file contains a series of test cases for the histogram class, 
-* verifying its functionality including adding elements, calculating 
-* statistical measures (average, variance, median), and Gaussian probability.
-* 
-* The tests are implemented using Google Test framework and cover various 
-* scenarios to ensure the correctness of the histogram class.
-*
-* @author Laurent Lardinois and Copilot GPT-4o
-* @date February 2025
-*/
+ * @file test_histogram.cpp
+ * @brief Unit tests for the histogram class using Google Test framework.
+ *
+ * This file contains a series of test cases for the histogram class,
+ * verifying its functionality including adding elements, calculating
+ * statistical measures (average, variance, median), and Gaussian probability.
+ *
+ * The tests are implemented using Google Test framework and cover various
+ * scenarios to ensure the correctness of the histogram class.
+ *
+ * @author Laurent Lardinois and Copilot GPT-4o
+ * @date February 2025
+ */
 
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
@@ -43,6 +43,7 @@
 #include <cmath>
 #include <memory>
 
+#include "tests/test_helper.hpp"
 #include "tools/histogram.hpp"
 
 /**
@@ -59,7 +60,7 @@ class HistogramTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        hist = std::make_unique<tools::histogram<TypeParam>>();
+        hist = std::make_unique<tools::histogram<T>>();
     }
 
     void TearDown() override
@@ -67,7 +68,7 @@ protected:
         hist.reset();
     }
 
-    std::unique_ptr<tools::histogram<TypeParam>> hist;
+    std::unique_ptr<tools::histogram<T>> hist;
 };
 
 
@@ -116,7 +117,7 @@ TYPED_TEST(HistogramTest, AddAndTop)
  * 4. Add the value 7 to the histogram.
  * 5. Add the value 7 to the histogram.
  * 6. Add the value 7 to the histogram.
- * 7. Check if the average of the histogram values is 6.
+ * 7. Check if the average of the histogram values is 5.6666666666667.
  */
 TYPED_TEST(HistogramTest, Average)
 {
@@ -126,7 +127,8 @@ TYPED_TEST(HistogramTest, Average)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
-    EXPECT_FLOAT_EQ(this->hist->average(), static_cast<TypeParam>(6));
+    // https://www.calculator.net/average-calculator.html
+    EXPECT_FLOAT_EQ(this->hist->average(), static_cast<TypeParam>(5.6666666666667));
 }
 
 /**
@@ -142,7 +144,9 @@ TYPED_TEST(HistogramTest, Average)
  * 1. Adds the values 5, 3, 5, 7, 7, and 7 to the histogram.
  * 2. Calculates the average of the histogram values.
  * 3. Asserts that the variance of the histogram, given the calculated average,
- *    is equal to 2.
+ *    is equal to 2.2222222222222.
+ * 4. Asserts that the standard deviation of the histogram, given the calculated variance,
+ *    is equal to 1.4907119849999.
  */
 TYPED_TEST(HistogramTest, Variance)
 {
@@ -153,13 +157,16 @@ TYPED_TEST(HistogramTest, Variance)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     TypeParam avg = this->hist->average();
-    EXPECT_FLOAT_EQ(this->hist->variance(avg), static_cast<TypeParam>(2));
+    TypeParam variance = this->hist->variance(avg);
+    // https://www.calculator.net/standard-deviation-calculator.html
+    EXPECT_FLOAT_EQ(variance, static_cast<TypeParam>(2.2222222222222));
+    EXPECT_FLOAT_EQ(this->hist->standard_deviation(variance), static_cast<TypeParam>(1.4907119849999));
 }
 
 /**
- * @brief Test case for checking the median calculation in the Histogram class.
+ * @brief Test case for checking the median calculation in the Histogram class for an even number of items.
  *
- * This test adds a series of values to the histogram and verifies that the median
+ * This test adds a series of values (even number) to the histogram and verifies that the median
  * is calculated correctly.
  *
  * @tparam TypeParam The data type used for the histogram values.
@@ -171,9 +178,9 @@ TYPED_TEST(HistogramTest, Variance)
  * - Add the value 7 to the histogram.
  * - Add the value 7 to the histogram.
  * - Add the value 7 to the histogram.
- * - Verify that the median of the histogram is 5.
+ * - Verify that the median of the histogram is 6.
  */
-TYPED_TEST(HistogramTest, Median)
+TYPED_TEST(HistogramTest, MedianEven)
 {
     this->hist->add(static_cast<TypeParam>(5));
     this->hist->add(static_cast<TypeParam>(3));
@@ -181,8 +188,41 @@ TYPED_TEST(HistogramTest, Median)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
-    EXPECT_FLOAT_EQ(this->hist->median(), static_cast<TypeParam>(5));
+    // https://www.calculator.net/mean-median-mode-range-calculator.html
+    EXPECT_FLOAT_EQ(this->hist->median(), static_cast<TypeParam>(6));
 }
+
+/**
+ * @brief Test case for checking the median calculation in the Histogram class for an odd number of items.
+ *
+ * This test adds a series of values (odd number) to the histogram and verifies that the median
+ * is calculated correctly.
+ *
+ * @tparam TypeParam The data type used for the histogram values.
+ *
+ * Test steps:
+ * - Add the value 5 to the histogram.
+ * - Add the value 3 to the histogram.
+ * - Add the value 5 to the histogram.
+ * - Add the value 7 to the histogram.
+ * - Add the value 7 to the histogram.
+ * - Add the value 7 to the histogram.
+ * - Add the value 8 to the histogram.
+ * - Verify that the median of the histogram is 7.
+ */
+TYPED_TEST(HistogramTest, MedianOdd)
+{
+    this->hist->add(static_cast<TypeParam>(5));
+    this->hist->add(static_cast<TypeParam>(3));
+    this->hist->add(static_cast<TypeParam>(5));
+    this->hist->add(static_cast<TypeParam>(7));
+    this->hist->add(static_cast<TypeParam>(7));
+    this->hist->add(static_cast<TypeParam>(7));
+    this->hist->add(static_cast<TypeParam>(8));
+    // https://www.calculator.net/mean-median-mode-range-calculator.html
+    EXPECT_FLOAT_EQ(this->hist->median(), static_cast<TypeParam>(7));
+}
+
 
 /**
  * @brief Test case for Gaussian probability calculation in Histogram.
