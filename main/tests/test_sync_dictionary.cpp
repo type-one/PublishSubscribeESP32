@@ -658,7 +658,7 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndEmptyIntKey)
     std::thread t2(
         [this, &count]()
         {
-            while (count.load() <= 100)
+            while (count.load() < 100)
             {
                 std::this_thread::yield();
             }
