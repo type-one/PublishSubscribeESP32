@@ -78,6 +78,13 @@ namespace tools
         void signal();
 
         /**
+         * @brief Checks if the sync_object is signaled.
+         *
+         * @return true if the sync_object is signaled, false otherwise.
+         */
+        bool is_signaled() const;
+
+        /**
          * @brief Waits for the signal to be set.
          *
          * This function will block until the signal is set. It uses a condition variable

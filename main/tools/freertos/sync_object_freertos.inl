@@ -93,6 +93,15 @@ namespace tools
         void signal();
 
         /**
+         * @brief Checks if the event group is signaled.
+         *
+         * This function checks if the specified bit (BIT0) in the event group is set.
+         *
+         * @return true if the event group is signaled, false otherwise.
+         */
+        bool is_signaled() const;
+
+        /**
          * @brief Signals the event group from an ISR context.
          *
          * This function sets a bit in the event group to signal that an event has occurred.

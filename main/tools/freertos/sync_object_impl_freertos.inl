@@ -76,6 +76,18 @@ namespace tools
         }
     }
 
+    bool sync_object::is_signaled() const
+    {
+        // FreeRTOS platform
+
+        if (nullptr != m_event_group)
+        {
+            return (xEventGroupGetBits(m_event_group) & BIT0) != 0;
+        }
+
+        return false;
+    }
+
     void sync_object::isr_signal()
     {
         // FreeRTOS platform

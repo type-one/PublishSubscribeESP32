@@ -71,6 +71,11 @@ namespace tools
         m_cond.notify_one();
     }
 
+    bool sync_object::is_signaled() const
+    {
+        return m_signaled;
+    }
+
     void sync_object::isr_signal()
     {
         // no calls from ISRs in standard C++ platform, fallback to standard call
