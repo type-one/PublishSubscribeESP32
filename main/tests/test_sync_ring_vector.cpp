@@ -249,6 +249,8 @@ TYPED_TEST(SyncRingVectorTest, IsrResize)
  */
 TYPED_TEST(SyncRingVectorTest, MultipleProducersMultipleConsumers)
 {
+    std::atomic_bool producers_done { false };
+
     auto producer = [this](int start, int end)
     {
         for (int i = start; i < end; ++i)
@@ -257,11 +259,19 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersMultipleConsumers)
         }
     };
 
-    auto consumer = [this](int count)
+    auto consumer = [this, &producers_done](int count)
     {
         for (int i = 0; i < count; ++i)
         {
-            this->vec->pop();
+            while (this->vec->empty() && !producers_done.load())
+            {
+                std::this_thread::yield();
+            }
+
+            if (!this->vec->empty())
+            {
+                this->vec->pop();
+            }
         }
     };
 
@@ -272,6 +282,9 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersMultipleConsumers)
 
     producer1.join();
     producer2.join();
+
+    producers_done.store(true);
+
     consumer1.join();
     consumer2.join();
 
@@ -292,6 +305,8 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersMultipleConsumers)
  */
 TYPED_TEST(SyncRingVectorTest, SingleProducerMultipleConsumers)
 {
+    std::atomic_bool producers_done { false };
+
     auto producer = [this]()
     {
         for (int i = 0; i < 10; ++i)
@@ -300,11 +315,19 @@ TYPED_TEST(SyncRingVectorTest, SingleProducerMultipleConsumers)
         }
     };
 
-    auto consumer = [this](int count)
+    auto consumer = [this, &producers_done](int count)
     {
         for (int i = 0; i < count; ++i)
         {
-            this->vec->pop();
+            while (this->vec->empty() && !producers_done.load())
+            {
+                std::this_thread::yield();
+            }
+
+            if (!this->vec->empty())
+            {
+                this->vec->pop();
+            }
         }
     };
 
@@ -313,6 +336,9 @@ TYPED_TEST(SyncRingVectorTest, SingleProducerMultipleConsumers)
     std::thread consumer2(consumer, 5);
 
     producerThread.join();
+
+    producers_done.store(true);
+
     consumer1.join();
     consumer2.join();
 
@@ -332,6 +358,8 @@ TYPED_TEST(SyncRingVectorTest, SingleProducerMultipleConsumers)
  */
 TYPED_TEST(SyncRingVectorTest, MultipleProducersSingleConsumer)
 {
+    std::atomic_bool producers_done { false };
+
     auto producer = [this](int start, int end)
     {
         for (int i = start; i < end; ++i)
@@ -340,11 +368,19 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersSingleConsumer)
         }
     };
 
-    auto consumer = [this](int count)
+    auto consumer = [this, &producers_done](int count)
     {
         for (int i = 0; i < count; ++i)
         {
-            this->vec->pop();
+            while (this->vec->empty() && !producers_done.load())
+            {
+                std::this_thread::yield();
+            }
+
+            if (!this->vec->empty())
+            {
+                this->vec->pop();
+            }
         }
     };
 
@@ -354,6 +390,9 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersSingleConsumer)
 
     producer1.join();
     producer2.join();
+
+    producers_done.store(true);
+
     consumerThread.join();
 
     EXPECT_TRUE(this->vec->empty());

@@ -1,13 +1,13 @@
 /**
  * @file test_data_task.cpp
  * @brief Unit tests for data_task functionality using Google Test framework.
- * 
+ *
  * This file contains unit tests for the data_task class, including tests for stopping the task,
  * verifying data processing, dual task communication, and ping-pong interaction between tasks.
- * 
+ *
  * The tests use a mock context and various routines to simulate task processing and verify the
  * correct behavior of the data_task class.
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  * @date February 2025
  */
@@ -41,6 +41,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <string>
 #include <thread>
@@ -51,14 +52,22 @@ class MockContext
 {
 };
 
-void startup_routine(const std::shared_ptr<MockContext>& context, const std::string& task_name)
+namespace
 {
-    // Mock startup routine
-}
+    void startup_routine(const std::shared_ptr<MockContext>& context, const std::string& task_name)
+    {
+        // Mock startup routine
+        (void)context;
+        (void)task_name;
+    }
 
-void process_routine(const std::shared_ptr<MockContext>& context, const int& data, const std::string& task_name)
-{
-    // Mock process routine
+    void process_routine(const std::shared_ptr<MockContext>& context, const int& data, const std::string& task_name)
+    {
+        // Mock process routine
+        (void)context;
+        (void)task_name;
+        (void)data;
+    }
 }
 
 /**
@@ -144,8 +153,14 @@ TEST_F(DataTaskTest, StopTaskTest)
 TEST_F(DataTaskTest, ProcessDataTest)
 {
     bool processed = false;
-    auto process_routine = [&processed](const std::shared_ptr<MockContext>& context, const int& data,
-                               const std::string& task_name) { processed = true; };
+    auto process_routine
+        = [&processed](const std::shared_ptr<MockContext>& context, const int& data, const std::string& task_name)
+    {
+        (void)context;
+        (void)data;
+        (void)task_name;
+        processed = true;
+    };
 
     task = std::make_unique<tools::data_task<MockContext, int>>(
         startup_routine, process_routine, context, 10, "TestTask", 1024);
@@ -165,7 +180,7 @@ TEST_F(DataTaskTest, ProcessDataTest)
  * This class sets up two data tasks and provides routines to process data for each task.
  * It uses a mock context and atomic flags to track the processing status of each task.
  */
-class DualDataTaskTest : public ::testing::Test
+class DataTaskDualTest : public ::testing::Test
 {
 protected:
     /**
@@ -178,11 +193,17 @@ protected:
     {
         context = std::make_shared<MockContext>();
 
+        auto process1 = std::bind(&DataTaskDualTest::process_routine1, this, std::placeholders::_1,
+            std::placeholders::_2, std::placeholders::_3);
+
+        auto process2 = std::bind(&DataTaskDualTest::process_routine2, this, std::placeholders::_1,
+            std::placeholders::_2, std::placeholders::_3);
+
         task1 = std::make_unique<tools::data_task<MockContext, int>>(
-            startup_routine, process_routine1, context, 10, "Task1", 1024);
+            std::move(startup_routine), std::move(process1), context, 10, "Task1", 1024);
 
         task2 = std::make_unique<tools::data_task<MockContext, int>>(
-            startup_routine, process_routine2, context, 10, "Task2", 1024);
+            std::move(startup_routine), std::move(process2), context, 10, "Task2", 1024);
     }
 
     /**
@@ -215,6 +236,8 @@ protected:
      */
     void process_routine1(const std::shared_ptr<MockContext>& context, const int& data, const std::string& task_name)
     {
+        (void)context;
+        (void)task_name;
         task1_processed = true;
         task2->submit(data + 1);
     }
@@ -230,6 +253,9 @@ protected:
      */
     void process_routine2(const std::shared_ptr<MockContext>& context, const int& data, const std::string& task_name)
     {
+        (void)context;
+        (void)data;
+        (void)task_name;
         task2_processed = true;
     }
 };
@@ -247,7 +273,7 @@ protected:
  *
  * @note This test uses the Google Test framework.
  */
-TEST_F(DualDataTaskTest, DualTaskCommunicationTest)
+TEST_F(DataTaskDualTest, DualTaskCommunicationTest)
 {
     task1->submit(42);
 
@@ -265,9 +291,15 @@ TEST_F(DualDataTaskTest, DualTaskCommunicationTest)
  * increment counters each time they process a "ping" or "pong" message.
  */
 
-class PingPongDataTaskTest : public ::testing::Test
+class DataTaskPingPongTest : public ::testing::Test
 {
 protected:
+    enum class msg
+    {
+        ping,
+        pong
+    };
+
     /**
      * @brief Sets up the test environment by initializing the context and creating two data tasks.
      */
@@ -275,11 +307,17 @@ protected:
     {
         context = std::make_shared<MockContext>();
 
-        task1 = std::make_unique<tools::data_task<MockContext, std::string>>(
-            startup_routine, process_routine1, context, 10, "PingTask", 1024);
+        auto process_pong_bind = std::bind(&DataTaskPingPongTest::process_pong, this, std::placeholders::_1,
+            std::placeholders::_2, std::placeholders::_3);
 
-        task2 = std::make_unique<tools::data_task<MockContext, std::string>>(
-            startup_routine, process_routine2, context, 10, "PongTask", 1024);
+        auto process_ping_bind = std::bind(&DataTaskPingPongTest::process_ping, this, std::placeholders::_1,
+            std::placeholders::_2, std::placeholders::_3);
+
+        task1 = std::make_unique<tools::data_task<MockContext, msg>>(
+            std::move(startup_routine), std::move(process_ping_bind), context, 10, "PingTask", 1024);
+
+        task2 = std::make_unique<tools::data_task<MockContext, msg>>(
+            std::move(startup_routine), std::move(process_pong_bind), context, 10, "PongTask", 1024);
     }
     /**
      * @brief Cleans up the test environment by resetting the data tasks.
@@ -298,12 +336,12 @@ protected:
     /**
      * @brief Unique pointer to the first data task (PingTask).
      */
-    std::unique_ptr<tools::data_task<MockContext, std::string>> task1;
+    std::unique_ptr<tools::data_task<MockContext, msg>> task1;
 
     /**
      * @brief Unique pointer to the second data task (PongTask).
      */
-    std::unique_ptr<tools::data_task<MockContext, std::string>> task2;
+    std::unique_ptr<tools::data_task<MockContext, msg>> task2;
 
     /**
      * @brief Atomic counter for the number of "ping" messages processed.
@@ -319,15 +357,17 @@ protected:
      * @brief Processes the "pong" message, increments the pong counter, and submits a "ping" message if the counter is
      * less than 10.
      */
-    void process_routine1(
-        const std::shared_ptr<MockContext>& context, const std::string& data, const std::string& task_name)
+    void process_pong(const std::shared_ptr<MockContext>& context, const msg& data, const std::string& task_name)
     {
-        if (data == "pong")
+        (void)context;
+        (void)task_name;
+
+        if (data == msg::pong)
         {
-            pong_count++;
-            if (pong_count < 10)
+            pong_count.fetch_add(1);
+            if (pong_count.load() < 10)
             {
-                task1->submit("ping");
+                task1->submit(msg::ping);
             }
         }
     }
@@ -335,13 +375,15 @@ protected:
     /**
      * @brief Processes the "ping" message, increments the ping counter, and submits a "pong" message.
      */
-    void process_routine2(
-        const std::shared_ptr<MockContext>& context, const std::string& data, const std::string& task_name)
+    void process_ping(const std::shared_ptr<MockContext>& context, const msg& data, const std::string& task_name)
     {
-        if (data == "ping")
+        (void)context;
+        (void)task_name;
+
+        if (data == msg::ping)
         {
-            ping_count++;
-            task2->submit("pong");
+            ping_count.fetch_add(1);
+            task2->submit(msg::pong);
         }
     }
 };
@@ -359,9 +401,9 @@ protected:
  * - Expects the ping_count to be 10.
  * - Expects the pong_count to be 10.
  */
-TEST_F(PingPongDataTaskTest, PingPongCommunicationTest)
+TEST_F(DataTaskPingPongTest, PingPongCommunicationTest)
 {
-    task1->submit("ping");
+    task1->submit(msg::ping);
 
     // Allow some time for the tasks to process
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));

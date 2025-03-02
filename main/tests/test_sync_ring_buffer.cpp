@@ -41,6 +41,8 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
+#include <chrono>
 #include <complex>
 #include <memory>
 #include <string>
@@ -242,13 +244,14 @@ TYPED_TEST(SyncRingBufferTest, Capacity)
  *
  * This test creates two producer threads and two consumer threads. Each producer thread pushes
  * 10 elements into the buffer, and each consumer thread pops 10 elements from the buffer.
- * The test ensures that the buffer is either empty or has at most 10 elements left after all
- * threads have finished execution.
+ * The test ensures that the buffer is empty at the end.
  *
  * @tparam TypeParam The type of elements stored in the buffer.
  */
 TYPED_TEST(SyncRingBufferTest, MultipleProducersMultipleConsumers)
 {
+    std::atomic_bool producers_done { false };
+
     auto producer = [this](int id)
     {
         for (int i = 0; i < 10; ++i)
@@ -257,10 +260,15 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersMultipleConsumers)
         }
     };
 
-    auto consumer = [this]()
+    auto consumer = [this, &producers_done]()
     {
         for (int i = 0; i < 10; ++i)
         {
+            while (this->buffer->empty() && !producers_done.load())
+            {
+                std::this_thread::yield();
+            }
+
             if (!this->buffer->empty())
             {
                 this->buffer->pop();
@@ -275,10 +283,13 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersMultipleConsumers)
 
     producer1.join();
     producer2.join();
+
+    producers_done.store(true);
+
     consumer1.join();
     consumer2.join();
 
-    ASSERT_TRUE(this->buffer->empty() || this->buffer->size() <= 10);
+    ASSERT_TRUE(this->buffer->empty());
 }
 
 /**
@@ -298,6 +309,8 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersMultipleConsumers)
  */
 TYPED_TEST(SyncRingBufferTest, SingleProducerMultipleConsumers)
 {
+    std::atomic_bool producer_done { false };
+
     auto producer = [this]()
     {
         for (int i = 0; i < 20; ++i)
@@ -306,10 +319,15 @@ TYPED_TEST(SyncRingBufferTest, SingleProducerMultipleConsumers)
         }
     };
 
-    auto consumer = [this]()
+    auto consumer = [this, &producer_done]()
     {
         for (int i = 0; i < 10; ++i)
         {
+            while (this->buffer->empty() && !producer_done.load())
+            {
+                std::this_thread::yield();
+            }
+
             if (!this->buffer->empty())
             {
                 this->buffer->pop();
@@ -322,6 +340,9 @@ TYPED_TEST(SyncRingBufferTest, SingleProducerMultipleConsumers)
     std::thread consumer2(consumer);
 
     producerThread.join();
+
+    producer_done.store(true);
+
     consumer1.join();
     consumer2.join();
 
@@ -339,6 +360,8 @@ TYPED_TEST(SyncRingBufferTest, SingleProducerMultipleConsumers)
  */
 TYPED_TEST(SyncRingBufferTest, MultipleProducersSingleConsumer)
 {
+    std::atomic_bool producers_done { false };
+
     auto producer = [this](int id)
     {
         for (int i = 0; i < 10; ++i)
@@ -347,10 +370,15 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersSingleConsumer)
         }
     };
 
-    auto consumer = [this]()
+    auto consumer = [this, &producers_done]()
     {
         for (int i = 0; i < 20; ++i)
         {
+            while (this->buffer->empty() && !producers_done.load())
+            {
+                std::this_thread::yield();
+            }
+
             if (!this->buffer->empty())
             {
                 this->buffer->pop();
@@ -364,6 +392,9 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersSingleConsumer)
 
     producer1.join();
     producer2.join();
+
+    producers_done.store(true);
+
     consumerThread.join();
 
     ASSERT_TRUE(this->buffer->empty());
