@@ -1,14 +1,14 @@
 /**
  * @file test_sync_dictionary.cpp
  * @brief Unit tests for the tools::sync_dictionary class template.
- * 
+ *
  * This file contains a series of unit tests for the tools::sync_dictionary class template.
  * The tests cover various functionalities including adding, finding, removing, and clearing
  * elements in the dictionary with both integer and string keys. Additionally, the tests
  * verify the thread-safety of the dictionary by performing concurrent operations.
- * 
+ *
  * The tests are implemented using the Google Test framework.
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  * @date February 2025
  */
@@ -40,6 +40,9 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
+#include <chrono>
+#include <complex>
 #include <map>
 #include <memory>
 #include <string>
@@ -84,7 +87,7 @@ protected:
     }
 };
 
-using MyTypes = ::testing::Types<int, float, double, char, std::string>;
+using MyTypes = ::testing::Types<int, float, double, char, std::complex<double>>;
 TYPED_TEST_SUITE(SyncDictionaryTest, MyTypes);
 
 /**
@@ -444,20 +447,27 @@ TYPED_TEST(SyncDictionaryTest, AddUnorderedCollectionStringKey)
  */
 TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndFindIntKey)
 {
+    std::atomic<int> count { 0 };
+
     std::thread t1(
-        [this]()
+        [this, &count]()
         {
             for (int i = 0; i < 100; ++i)
             {
                 this->dict_int_key->add(i, static_cast<TypeParam>(i));
+                count.fetch_add(1);
             }
         });
 
     std::thread t2(
-        [this]()
+        [this, &count]()
         {
             for (int i = 0; i < 100; ++i)
             {
+                while (count.load() <= i)
+                {
+                    std::this_thread::yield();
+                }
                 EXPECT_TRUE(this->dict_int_key->find(i).has_value());
             }
         });
@@ -477,20 +487,27 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndFindIntKey)
  */
 TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndRemoveIntKey)
 {
+    std::atomic<int> count { 0 };
+
     std::thread t1(
-        [this]()
+        [this, &count]()
         {
             for (int i = 0; i < 100; ++i)
             {
                 this->dict_int_key->add(i, static_cast<TypeParam>(i));
+                count.fetch_add(1);
             }
         });
 
     std::thread t2(
-        [this]()
+        [this, &count]()
         {
             for (int i = 0; i < 100; ++i)
             {
+                while (count.load() <= i)
+                {
+                    std::this_thread::yield();
+                }
                 this->dict_int_key->remove(i);
             }
         });
@@ -512,16 +529,27 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndRemoveIntKey)
  */
 TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndClearIntKey)
 {
+    std::atomic<int> count { 0 };
+
     std::thread t1(
-        [this]()
+        [this, &count]()
         {
             for (int i = 0; i < 100; ++i)
             {
                 this->dict_int_key->add(i, static_cast<TypeParam>(i));
+                count.fetch_add(1);
             }
         });
 
-    std::thread t2([this]() { this->dict_int_key->clear(); });
+    std::thread t2(
+        [this, &count]()
+        {
+            while (count.load() < 100)
+            {
+                std::this_thread::yield();
+            }
+            this->dict_int_key->clear();
+        });
 
     t1.join();
     t2.join();
@@ -540,18 +568,25 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndClearIntKey)
  */
 TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndGetCollectionIntKey)
 {
+    std::atomic<int> count { 0 };
+
     std::thread t1(
-        [this]()
+        [this, &count]()
         {
             for (int i = 0; i < 100; ++i)
             {
                 this->dict_int_key->add(i, static_cast<TypeParam>(i));
+                count.fetch_add(1);
             }
         });
 
     std::thread t2(
-        [this]()
+        [this, &count]()
         {
+            while (count.load() < 100)
+            {
+                std::this_thread::yield();
+            }
             auto collection = this->dict_int_key->get_collection();
             EXPECT_EQ(collection.size(), 100);
         });
@@ -571,16 +606,27 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndGetCollectionIntKey)
  */
 TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndSizeIntKey)
 {
+    std::atomic<int> count { 0 };
+
     std::thread t1(
-        [this]()
+        [this, &count]()
         {
             for (int i = 0; i < 100; ++i)
             {
                 this->dict_int_key->add(i, static_cast<TypeParam>(i));
+                count.fetch_add(1);
             }
         });
 
-    std::thread t2([this]() { EXPECT_EQ(this->dict_int_key->size(), 100); });
+    std::thread t2(
+        [this, &count]()
+        {
+            while (count.load() < 100)
+            {
+                std::this_thread::yield();
+            }
+            EXPECT_EQ(this->dict_int_key->size(), 100);
+        });
 
     t1.join();
     t2.join();
@@ -597,16 +643,27 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndSizeIntKey)
  */
 TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndEmptyIntKey)
 {
+    std::atomic<int> count { 0 };
+
     std::thread t1(
-        [this]()
+        [this, &count]()
         {
             for (int i = 0; i < 100; ++i)
             {
                 this->dict_int_key->add(i, static_cast<TypeParam>(i));
+                count.fetch_add(1);
             }
         });
 
-    std::thread t2([this]() { EXPECT_FALSE(this->dict_int_key->empty()); });
+    std::thread t2(
+        [this, &count]()
+        {
+            while (count.load() <= 100)
+            {
+                std::this_thread::yield();
+            }
+            EXPECT_FALSE(this->dict_int_key->empty());
+        });
 
     t1.join();
     t2.join();
@@ -628,17 +685,29 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndEmptyIntKey)
  */
 TYPED_TEST(SyncDictionaryTest, ConcurrentAddCollectionAndFindIntKey)
 {
+    std::atomic<int> count { 0 };
+
     std::map<int, TypeParam> collection;
     for (int i = 0; i < 100; ++i)
     {
         collection[i] = static_cast<TypeParam>(i);
     }
 
-    std::thread t1([this, &collection]() { this->dict_int_key->add_collection(collection); });
+    std::thread t1(
+        [this, &collection, &count]()
+        {
+            this->dict_int_key->add_collection(collection);
+            count.fetch_add(1);
+        });
 
     std::thread t2(
-        [this]()
+        [this, &count]()
         {
+            while (count.load() < 1)
+            {
+                std::this_thread::yield();
+            }
+
             for (int i = 0; i < 100; ++i)
             {
                 EXPECT_TRUE(this->dict_int_key->find(i).has_value());
@@ -666,17 +735,29 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddCollectionAndFindIntKey)
  */
 TYPED_TEST(SyncDictionaryTest, ConcurrentAddUnorderedCollectionAndFindIntKey)
 {
+    std::atomic<int> count { 0 };
+
     std::unordered_map<int, TypeParam> collection;
     for (int i = 0; i < 100; ++i)
     {
         collection[i] = static_cast<TypeParam>(i);
     }
 
-    std::thread t1([this, &collection]() { this->dict_int_key->add_collection(collection); });
+    std::thread t1(
+        [this, &collection, &count]()
+        {
+            this->dict_int_key->add_collection(collection);
+            count.fetch_add(1);
+        });
 
     std::thread t2(
-        [this]()
+        [this, &count]()
         {
+            while (count.load() < 1)
+            {
+                std::this_thread::yield();
+            }
+
             for (int i = 0; i < 100; ++i)
             {
                 EXPECT_TRUE(this->dict_int_key->find(i).has_value());

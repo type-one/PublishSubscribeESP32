@@ -214,7 +214,7 @@ set(TEST_SOURCES
     tests/test_periodic_task.cpp
     tests/test_ring_buffer.cpp
     tests/test_ring_vector.cpp
-    ##tests/test_sync_dictionary.cpp
+    tests/test_sync_dictionary.cpp
     ##tests/test_sync_object.cpp
     tests/test_sync_observer.cpp
     tests/test_sync_queue.cpp
