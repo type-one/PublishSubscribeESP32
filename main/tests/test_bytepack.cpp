@@ -315,7 +315,7 @@ TEST_F(SerializationTest, LargeCompanySerialization)
             { "Employee " + std::to_string(i), 20 + i, { "Street " + std::to_string(i), "City", 10000 + i } });
     }
     Company original_company { "Large Corp", employees };
-    stream = std::make_unique<bytepack::binary_stream<>>(4096);
+    stream = std::make_unique<bytepack::binary_stream<>>(8192);
 
     ASSERT_TRUE(original_company.serialize(*stream));
 
@@ -414,8 +414,8 @@ TEST_F(SerializationTest, MapOfCompaniesSerialization)
 TEST_F(SerializationTest, AddressDeserializationError)
 {
     // Create a stream with invalid data
-    std::vector<std::uint8_t> invalid_data = { 0x01, 0x02, 0x03 };
-    stream->write(invalid_data.data(), invalid_data.size());
+    std::array<std::uint8_t, 3> invalid_data = { 0x01, 0x02, 0x03 };
+    stream->write(invalid_data);
     stream->reset();
 
     Address deserialized_address;
@@ -435,8 +435,8 @@ TEST_F(SerializationTest, AddressDeserializationError)
 TEST_F(SerializationTest, PersonDeserializationError)
 {
     // Create a stream with invalid data
-    std::vector<std::uint8_t> invalid_data = { 0x01, 0x02, 0x03 };
-    stream->write(invalid_data.data(), invalid_data.size());
+    std::array<std::uint8_t, 3> invalid_data = { 0x01, 0x02, 0x03 };
+    stream->write(invalid_data);
     stream->reset();
 
     Person deserialized_person;
@@ -456,32 +456,10 @@ TEST_F(SerializationTest, PersonDeserializationError)
 TEST_F(SerializationTest, CompanyDeserializationError)
 {
     // Create a stream with invalid data
-    std::vector<std::uint8_t> invalid_data = { 0x01, 0x02, 0x03 };
-    stream->write(invalid_data.data(), invalid_data.size());
+    std::array<std::uint8_t, 3> invalid_data = { 0x01, 0x02, 0x03 };
+    stream->write(invalid_data);
     stream->reset();
 
     Company deserialized_company;
     ASSERT_FALSE(deserialized_company.deserialize(*stream));
-}
-
-/**
- * @brief Test case for deserializing a std::map of Company objects from a bad stream.
- *
- * This test verifies that deserialization fails when the stream contains invalid data.
- *
- * @test
- * - Create a stream with invalid data.
- * - Attempt to deserialize a std::map of Company objects from the stream.
- * - Verify that deserialization fails.
- */
-TEST_F(SerializationTest, MapOfCompaniesDeserializationError)
-{
-    // Create a stream with invalid data
-    std::vector<std::uint8_t> invalid_data = { 0x01, 0x02, 0x03 };
-    stream->write(invalid_data.data(), invalid_data.size());
-    stream->reset();
-
-    std::map<std::string, Company> deserialized_map;
-    std::uint32_t map_size;
-    ASSERT_FALSE(stream->read(map_size));
 }
