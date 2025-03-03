@@ -34,6 +34,7 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -62,7 +63,7 @@ protected:
      * @brief A flag to check if timer has been triggered
      *
      */
-    bool called = false;
+    std::atomic_bool called{false};
 
     /**
      * @brief Sets up the test environment by creating a new CppTime::Timer instance.
@@ -97,80 +98,81 @@ TEST_F(TimerTest, TestStartAndStop)
  * @test TimerTest.AddOneshotTimer
  * @brief Tests adding a one-shot timer.
  *
- * This test adds a one-shot timer that triggers after 1 second and sets the `called` flag to true. The test then waits
- * for 2 seconds and checks if the `called` flag is true.
+ * This test adds a one-shot timer that triggers after 30 milliseconds and sets the `called` flag to true. The test then waits
+ * for 100 milliseconds and checks if the `called` flag is true.
  */
 
 TEST_F(TimerTest, AddOneshotTimer)
 {
-    auto id0 = timer->add(std::chrono::seconds(1), [this](CppTime::timer_id) { called = true; });
+    timer->add(std::chrono::milliseconds(30), [this](CppTime::timer_id) { called.store(true); });
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    ASSERT_TRUE(called);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    ASSERT_TRUE(called.load());
 }
 
 /**
  * @test TimerTest.AddPeriodicTimer
  * @brief Tests adding a periodic timer.
  *
- * This test adds a periodic timer that triggers every 500 milliseconds and increments a counter. The test waits for 2
- * seconds, removes the timer, and checks if the `called` flag is true and the counter is at least 3.
+ * This test adds a periodic timer that triggers every 50 milliseconds and increments a counter. The test waits for 200
+ * milliseconds, removes the timer, and checks if the `called` flag is true and the counter is at least 3.
  */
 
 TEST_F(TimerTest, AddPeriodicTimer)
 {
-    int call_count = 0;
+    std::atomic<int> call_count{0};
     auto id0 = timer->add(
-        std::chrono::milliseconds(500),
+        std::chrono::milliseconds(50),
         [this, &call_count](CppTime::timer_id)
         {
-            called = true;
-            call_count++;
+            called.store(true);
+            call_count.fetch_add(1);
         },
-        std::chrono::milliseconds(500));
+        std::chrono::milliseconds(50));
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     timer->remove(id0);
-    ASSERT_TRUE(called);
-    ASSERT_GE(call_count, 3);
+    ASSERT_TRUE(called.load());
+    ASSERT_GE(call_count.load(), 3);
 }
 
 /*
  * @test TimerTest.RemoveTimer
  * @brief Tests removing a timer.
  *
- * This test adds a one-shot timer that triggers after 1 second and sets the `called` flag to true. The test then
- * removes the timer before it triggers and waits for 2 seconds. It checks if the `called` flag is false.
+ * This test adds a one-shot timer that triggers after 60 milliseconds and sets the `called` flag to true. The test then
+ * removes the timer before it triggers and waits for 120 milliseconds. It checks if the `called` flag is false.
  */
 
 TEST_F(TimerTest, RemoveTimer)
 {
-    auto id0 = timer->add(std::chrono::seconds(1), [this](CppTime::timer_id) { called = true; });
+    auto id0 = timer->add(std::chrono::milliseconds(60), [this](CppTime::timer_id) { called.store(true); });
 
     timer->remove(id0);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    ASSERT_FALSE(called);
+    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    ASSERT_FALSE(called.load());
 }
 
 /**
  * @test TimerTest.AddMultipleTimers
  * @brief Tests adding multiple timers.
  *
- * This test adds two one-shot timers that trigger after 1 second and 2 seconds, respectively. Each timer sets a
- * separate boolean flag to true. The test waits for 3 seconds and checks if both flags are true.
+ * This test adds two one-shot timers that trigger after 100 millisecond and 200 milliseconds, respectively. Each timer sets a
+ * separate boolean flag to true. The test waits for 300 milliseconds and checks if both flags are true.
  */
 
 TEST_F(TimerTest, AddMultipleTimers)
 {
-    bool called1 = false, called2 = false;
+    std::atomic_bool called1{false};
+    std::atomic_bool called2{false};
 
-    auto id1 = timer->add(std::chrono::seconds(1), [&called1](CppTime::timer_id) { called1 = true; });
+    timer->add(std::chrono::milliseconds(100), [&called1](CppTime::timer_id) { called1.store(true); });
 
-    auto id2 = timer->add(std::chrono::seconds(2), [&called2](CppTime::timer_id) { called2 = true; });
+    timer->add(std::chrono::milliseconds(200), [&called2](CppTime::timer_id) { called2.store(true); });
 
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-    ASSERT_TRUE(called1);
-    ASSERT_TRUE(called2);
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    ASSERT_TRUE(called1.load());
+    ASSERT_TRUE(called2.load());
 }
 
 
@@ -184,24 +186,24 @@ TEST_F(TimerTest, TestTwoArgumentAdd)
 {
     // Test case 1: Adding a timer with a duration of 100000 microseconds
     // and verifying the callback sets the value of i to 42.
-    int i = 0;
-    timer->add(100000, [&](CppTime::timer_id) { i = 42; });
+    std::atomic_int i{0};
+    timer->add(100000, [&](CppTime::timer_id) { i.store(42); });
     std::this_thread::sleep_for(milliseconds(120));
-    EXPECT_EQ(i, 42);
+    EXPECT_EQ(i.load(), 42);
 
     // Test case 2: Adding a timer with a duration of 100 milliseconds
     // and verifying the callback sets the value of i to 43.
-    i = 0;
-    timer->add(milliseconds(100), [&](CppTime::timer_id) { i = 43; });
+    i.store(0);
+    timer->add(milliseconds(100), [&](CppTime::timer_id) { i.store(43); });
     std::this_thread::sleep_for(milliseconds(120));
-    EXPECT_EQ(i, 43);
+    EXPECT_EQ(i.load(), 43);
 
     // Test case 3: Adding a timer with a specific time point
     // and verifying the callback sets the value of i to 44.
-    i = 0;
-    timer->add(CppTime::clock::now() + milliseconds(100), [&](CppTime::timer_id) { i = 44; });
+    i.store(0);
+    timer->add(CppTime::clock::now() + milliseconds(100), [&](CppTime::timer_id) { i.store(44); });
     std::this_thread::sleep_for(milliseconds(120));
-    EXPECT_EQ(i, 44);
+    EXPECT_EQ(i.load(), 44);
 }
 
 /**
@@ -228,20 +230,20 @@ TEST_F(TimerTest, TestTwoArgumentAdd)
  */
 TEST_F(TimerTest, TestThreeArgumentAdd)
 {
-    size_t count = 0;
+    std::atomic<std::size_t> count{0};
 
     auto id = timer->add(
-        100000, [&](CppTime::timer_id) { ++count; }, 10000);
+        100000, [&](CppTime::timer_id) { count.fetch_add(1U); }, 10000);
     std::this_thread::sleep_for(milliseconds(125));
     timer->remove(id);
-    EXPECT_EQ(count, 3);
+    EXPECT_EQ(count.load(), 3U);
 
-    count = 0;
+    count.store(0U);
     id = timer->add(
-        milliseconds(100), [&](CppTime::timer_id) { ++count; }, microseconds(10000));
+        milliseconds(100), [&](CppTime::timer_id) { count.fetch_add(1U); }, microseconds(10000));
     std::this_thread::sleep_for(milliseconds(135));
     timer->remove(id);
-    EXPECT_EQ(count, 4);
+    EXPECT_EQ(count.load(), 4U);
 }
 
 /**
@@ -262,18 +264,18 @@ TEST_F(TimerTest, TestThreeArgumentAdd)
  */
 TEST_F(TimerTest, TestDeleteTimerInCallback)
 {
-    size_t count = 0;
+    std::atomic<std::size_t> count{0U};
 
     timer->add(
         milliseconds(10),
         [&](CppTime::timer_id id)
         {
-            ++count;
+            count.fetch_add(1U);
             timer->remove(id);
         },
         milliseconds(10));
     std::this_thread::sleep_for(milliseconds(50));
-    EXPECT_EQ(count, 1);
+    EXPECT_EQ(count.load(), 1U);
 
     auto id1 = timer->add(milliseconds(40), [](CppTime::timer_id) {});
     auto id2 = timer->add(milliseconds(10), [&](CppTime::timer_id id) { timer->remove(id); });
@@ -313,14 +315,14 @@ TEST_F(TimerTest, TestDeleteTimerInCallback)
  */
 TEST_F(TimerTest, TestTwoIdenticalTimeouts)
 {
-    int i = 0;
-    int j = 0;
+    std::atomic<int> i{0};
+    std::atomic<int> j{0};
     CppTime::timestamp ts = CppTime::clock::now() + milliseconds(40);
-    timer->add(ts, [&](CppTime::timer_id) { i = 42; });
-    timer->add(ts, [&](CppTime::timer_id) { j = 43; });
+    timer->add(ts, [&](CppTime::timer_id) { i.store(42); });
+    timer->add(ts, [&](CppTime::timer_id) { j.store(43); });
     std::this_thread::sleep_for(milliseconds(50));
-    EXPECT_EQ(i, 42);
-    EXPECT_EQ(j, 43);
+    EXPECT_EQ(i.load(), 42);
+    EXPECT_EQ(j.load(), 43);
 }
 
 /**
@@ -338,23 +340,23 @@ TEST_F(TimerTest, TestTwoIdenticalTimeouts)
  */
 TEST_F(TimerTest, TestTimeoutsFromThePast)
 {
-    int i = 0;
-    int j = 0;
+    std::atomic<int> i{0};
+    std::atomic<int> j{0};
     CppTime::timestamp ts1 = CppTime::clock::now() - milliseconds(10);
     CppTime::timestamp ts2 = CppTime::clock::now() - milliseconds(20);
-    timer->add(ts1, [&](CppTime::timer_id) { i = 42; });
-    timer->add(ts2, [&](CppTime::timer_id) { j = 43; });
+    timer->add(ts1, [&](CppTime::timer_id) { i.store(42); });
+    timer->add(ts2, [&](CppTime::timer_id) { j.store(43); });
     std::this_thread::sleep_for(microseconds(20));
-    EXPECT_EQ(i, 42);
-    EXPECT_EQ(j, 43);
+    EXPECT_EQ(i.load(), 42);
+    EXPECT_EQ(j.load(), 43);
 
-    i = 0;
+    i.store(0);
     CppTime::timestamp ts3 = CppTime::clock::now() + milliseconds(10);
     CppTime::timestamp ts4 = CppTime::clock::now() + milliseconds(20);
     timer->add(ts3, [&](CppTime::timer_id) { std::this_thread::sleep_for(milliseconds(20)); });
-    timer->add(ts4, [&](CppTime::timer_id) { i = 42; });
+    timer->add(ts4, [&](CppTime::timer_id) { i.store(42); });
     std::this_thread::sleep_for(milliseconds(50));
-    EXPECT_EQ(i, 42);
+    EXPECT_EQ(i.load(), 42);
 }
 
 /**
@@ -370,13 +372,13 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
  */
 TEST_F(TimerTest, TestOrderOfMultipleTimeouts)
 {
-    int i = 0;
-    timer->add(10000, [&](CppTime::timer_id) { i = 42; });
-    timer->add(20000, [&](CppTime::timer_id) { i = 43; });
-    timer->add(30000, [&](CppTime::timer_id) { i = 44; });
-    timer->add(40000, [&](CppTime::timer_id) { i = 45; });
+    std::atomic<int> i{0};
+    timer->add(10000, [&](CppTime::timer_id) { i.store(42); });
+    timer->add(20000, [&](CppTime::timer_id) { i.store(43); });
+    timer->add(30000, [&](CppTime::timer_id) { i.store(44); });
+    timer->add(40000, [&](CppTime::timer_id) { i.store(45); });
     std::this_thread::sleep_for(milliseconds(50));
-    EXPECT_EQ(i, 45);
+    EXPECT_EQ(i.load(), 45);
 }
 
 /**
@@ -387,34 +389,35 @@ TEST_F(TimerTest, TestOrderOfMultipleTimeouts)
  *
  * @test
  * - Creates two unique pointers to CppTime::Timer objects.
- * - Adds two timers to the first timer object with intervals of 20ms and 40ms.
- * - Verifies that the first timer triggers after 20ms and sets the value of `i` to 42.
- * - Verifies that the second timer triggers after 40ms and sets the value of `i` to 43.
- * - Adds another timer to the first timer object with an interval of 20ms and removes it after 10ms.
+ * - Adds two timers to the first timer object with intervals of 40ms and 80ms.
+ * - Verifies that the first timer triggers after 40ms and sets the value of `i` to 42.
+ * - Verifies that the second timer triggers after 80ms and sets the value of `i` to 43.
+ * - Adds another timer to the first timer object with an interval of 40ms and removes it after 20ms.
  * - Verifies that the timer was removed before it could trigger and the value of `i` remains unchanged.
- * - Verifies that the second timer triggers after 40ms and sets the value of `i` to 43.
+ * - Verifies that the second timer triggers after 80ms and sets the value of `i` to 43.
  */
 TEST_F(TimerTest, TestWithMultipleTimers)
 {
-    int i = 0;
+    std::atomic<int> i{0};
     std::unique_ptr<CppTime::Timer> t1 = std::make_unique<CppTime::Timer>();
     std::unique_ptr<CppTime::Timer> t2 = std::make_unique<CppTime::Timer>();
 
-    t1->add(milliseconds(20), [&](CppTime::timer_id) { i = 42; });
-    t1->add(milliseconds(40), [&](CppTime::timer_id) { i = 43; });
-    std::this_thread::sleep_for(milliseconds(30));
-    EXPECT_EQ(i, 42);
-    std::this_thread::sleep_for(milliseconds(20));
-    EXPECT_EQ(i, 43);
+    t1->add(milliseconds(40), [&](CppTime::timer_id) { i.store(42); });
+    t1->add(milliseconds(80), [&](CppTime::timer_id) { i.store(43); });
+    std::this_thread::sleep_for(milliseconds(60));
+    EXPECT_EQ(i.load(), 42);
+    std::this_thread::sleep_for(milliseconds(40));
+    EXPECT_EQ(i.load(), 43);
 
-    auto id1 = t1->add(milliseconds(20), [&](CppTime::timer_id) { i = 42; });
-    t1->add(milliseconds(40), [&](CppTime::timer_id) { i = 43; });
-    std::this_thread::sleep_for(milliseconds(10));
+    i.store(0);
+    auto id1 = t1->add(milliseconds(40), [&](CppTime::timer_id) { i.store(42); });
+    t1->add(milliseconds(80), [&](CppTime::timer_id) { i.store(43); });
+    std::this_thread::sleep_for(milliseconds(20));
     t1->remove(id1);
-    std::this_thread::sleep_for(milliseconds(20));
-    EXPECT_EQ(i, 0);
-    std::this_thread::sleep_for(milliseconds(20));
-    EXPECT_EQ(i, 43);
+    std::this_thread::sleep_for(milliseconds(40));
+    EXPECT_EQ(i.load(), 0);
+    std::this_thread::sleep_for(milliseconds(40));
+    EXPECT_EQ(i.load(), 43);
 }
 
 /**
@@ -472,14 +475,14 @@ TEST_F(TimerTest, PassAnArgumentToAnAction)
 {
     struct PushMe
     {
-        int i { 0 };
+        std::atomic<int> i { 0 };
     };
     auto push_me = std::make_shared<PushMe>();
-    push_me->i = 41;
+    push_me->i.store(41);
 
     int res = 0;
 
-    timer->add(milliseconds(20), [&res, push_me](CppTime::timer_id) { res = push_me->i + 1; });
+    timer->add(milliseconds(20), [&res, push_me](CppTime::timer_id) { res = push_me->i.load() + 1; });
 
     EXPECT_EQ(res, 0);
     std::this_thread::sleep_for(milliseconds(30));
