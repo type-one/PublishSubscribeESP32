@@ -42,6 +42,7 @@
 
 #include <mutex>
 #include <queue>
+#include <utility>
 
 #include "tools/critical_section.hpp"
 #include "tools/non_copyable.hpp"

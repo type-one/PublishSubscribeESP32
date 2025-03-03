@@ -42,6 +42,7 @@
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <utility>
 
 #include "tools/base_task.hpp"
 #include "tools/platform_detection.hpp"

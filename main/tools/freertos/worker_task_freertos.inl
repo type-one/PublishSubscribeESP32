@@ -42,6 +42,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
