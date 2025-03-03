@@ -43,7 +43,6 @@
 #include <gtest/gtest.h>
 
 #include <exception>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -61,17 +60,10 @@ class JSONObjectTest : public ::testing::Test
 {
 protected:
     /**
-     * @brief A unique pointer to a cjsonpp::JSONObject instance used in the tests.
-     *
-     */
-    std::unique_ptr<cjsonpp::JSONObject> obj;
-
-    /**
      * @brief Sets up the test environment by creating a new cjsonpp::JSONObject instance.
      */
     void SetUp() override
     {
-        obj = std::make_unique<cjsonpp::JSONObject>();
     }
 
     /**
@@ -79,7 +71,6 @@ protected:
      */
     void TearDown() override
     {
-        obj.reset();
     }
 };
 
@@ -90,7 +81,8 @@ protected:
  */
 TEST_F(JSONObjectTest, CreateEmptyObject)
 {
-    const auto type = obj->type();
+    auto obj = cjsonpp::JSONObject();
+    const auto type = obj.type();
     EXPECT_EQ(type, cjsonpp::Object);
 }
 
@@ -101,12 +93,16 @@ TEST_F(JSONObjectTest, CreateEmptyObject)
  */
 TEST_F(JSONObjectTest, CreateBooleanObject)
 {
-    obj = std::make_unique<cjsonpp::JSONObject>(true);
-    auto type = obj->type();
-    EXPECT_EQ(type, cjsonpp::Bool);
-    obj = std::make_unique<cjsonpp::JSONObject>(false);
-    type = obj->type();
-    EXPECT_EQ(type, cjsonpp::Bool);
+    {
+        auto obj = cjsonpp::JSONObject(true);
+        auto type = obj.type();
+        EXPECT_EQ(type, cjsonpp::Bool);
+    }
+    {
+        auto obj = cjsonpp::JSONObject(false);
+        auto type = obj.type();
+        EXPECT_EQ(type, cjsonpp::Bool);
+    }
 }
 
 /**
@@ -121,10 +117,15 @@ TEST_F(JSONObjectTest, CreateBooleanObject)
  */
 TEST_F(JSONObjectTest, CreateNumberObject)
 {
-    obj = std::make_unique<cjsonpp::JSONObject>(42);
-    EXPECT_EQ(obj->type(), cjsonpp::Number);
-    obj = std::make_unique<cjsonpp::JSONObject>(3.14);
-    EXPECT_EQ(obj->type(), cjsonpp::Number);
+    {
+        auto obj = cjsonpp::JSONObject(42);
+        EXPECT_EQ(obj.type(), cjsonpp::Number);
+    }
+
+    {
+        auto obj = cjsonpp::JSONObject(3.14);
+        EXPECT_EQ(obj.type(), cjsonpp::Number);
+    }
 }
 
 /**
@@ -134,8 +135,8 @@ TEST_F(JSONObjectTest, CreateNumberObject)
  */
 TEST_F(JSONObjectTest, CreateStringObject)
 {
-    obj = std::make_unique<cjsonpp::JSONObject>("Hello, World!");
-    EXPECT_EQ(obj->type(), cjsonpp::String);
+    auto obj = cjsonpp::JSONObject("Hello, World!");
+    EXPECT_EQ(obj.type(), cjsonpp::String);
 }
 
 /**
@@ -173,11 +174,12 @@ TEST_F(JSONObjectTest, ParseJSONString)
  */
 TEST_F(JSONObjectTest, SetAndRemoveObjectItem)
 {
+    auto obj = cjsonpp::JSONObject();
     cjsonpp::JSONObject value("test");
-    obj->set("key", value);
-    EXPECT_TRUE(obj->has("key"));
-    obj->remove("key");
-    EXPECT_FALSE(obj->has("key"));
+    obj.set("key", value);
+    EXPECT_TRUE(obj.has("key"));
+    obj.remove("key");
+    EXPECT_FALSE(obj.has("key"));
 }
 
 /**
@@ -218,9 +220,9 @@ TEST_F(JSONObjectTest, AddArrayItem)
  */
 TEST_F(JSONObjectTest, SerializeAndDeserializeBoolean)
 {
-    obj = std::make_unique<cjsonpp::JSONObject>(true);
-    std::string serialized = obj->print();
-    auto de_obj= cjsonpp::parse(serialized);
+    auto obj = cjsonpp::JSONObject(true);
+    std::string serialized = obj.print();
+    auto de_obj = cjsonpp::parse(serialized);
     EXPECT_EQ(de_obj.type(), cjsonpp::Bool);
     EXPECT_TRUE(de_obj.obj()->valueint);
 }
@@ -241,8 +243,8 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeBoolean)
  */
 TEST_F(JSONObjectTest, SerializeAndDeserializeNumber)
 {
-    obj = std::make_unique<cjsonpp::JSONObject>(123.456);
-    std::string serialized = obj->print();
+    auto obj = cjsonpp::JSONObject(123.456);
+    std::string serialized = obj.print();
     auto de_obj = cjsonpp::parse(serialized);
     EXPECT_EQ(de_obj.type(), cjsonpp::Number);
     EXPECT_DOUBLE_EQ(de_obj.obj()->valuedouble, 123.456);
@@ -264,8 +266,8 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeNumber)
  */
 TEST_F(JSONObjectTest, SerializeAndDeserializeString)
 {
-    obj = std::make_unique<cjsonpp::JSONObject>("Test String");
-    std::string serialized = obj->print();
+    auto obj = cjsonpp::JSONObject("Test String");
+    std::string serialized = obj.print();
     auto de_obj = cjsonpp::parse(serialized);
     EXPECT_EQ(de_obj.type(), cjsonpp::String);
     EXPECT_STREQ(de_obj.obj()->valuestring, "Test String");
@@ -346,9 +348,9 @@ TEST_F(JSONObjectTest, ParseAndCheckArrayInJSON)
 
     auto arr = array.asArray<int>();
     EXPECT_EQ(arr.size(), 5);
-  
+
     int i = 0;
-    for (auto item: arr)
+    for (auto item : arr)
     {
         EXPECT_EQ(item, i + 1);
         ++i;
@@ -375,9 +377,10 @@ TEST_F(JSONObjectTest, SetAndGetNestedObject)
     cjsonpp::JSONObject inner("inner_value");
     cjsonpp::JSONObject outer(cjsonpp::Object);
     outer.set("inner_key", inner);
-    obj->set("outer_key", outer);
-    EXPECT_TRUE(obj->has("outer_key"));
-    cjsonpp::JSONObject retrievedOuter = obj->get("outer_key");
+    auto obj = cjsonpp::JSONObject();
+    obj.set("outer_key", outer);
+    EXPECT_TRUE(obj.has("outer_key"));
+    cjsonpp::JSONObject retrievedOuter = obj.get("outer_key");
     EXPECT_TRUE(retrievedOuter.has("inner_key"));
     cjsonpp::JSONObject retrievedInner = retrievedOuter.get("inner_key");
     EXPECT_EQ(retrievedInner.type(), cjsonpp::String);
@@ -406,8 +409,9 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeNestedObject)
     cjsonpp::JSONObject inner("inner_value");
     cjsonpp::JSONObject outer(cjsonpp::Object);
     outer.set("inner_key", inner);
-    obj->set("outer_key", outer);
-    std::string serialized = obj->print();
+    auto obj = cjsonpp::JSONObject();
+    obj.set("outer_key", outer);
+    std::string serialized = obj.print();
     auto de_obj = cjsonpp::parse(serialized);
     EXPECT_TRUE(de_obj.has("outer_key"));
     cjsonpp::JSONObject retrievedOuter = de_obj.get("outer_key");
@@ -462,7 +466,8 @@ TEST_F(JSONObjectTest, RemoveNonExistentObjectItem)
         {
             try
             {
-                obj->remove("nonexistent");
+                auto obj = cjsonpp::JSONObject();
+                obj.remove("nonexistent");
             }
             catch (const std::exception& e)
             {
@@ -484,11 +489,11 @@ TEST_F(JSONObjectTest, RemoveNonExistentObjectItem)
  */
 TEST_F(JSONObjectTest, RemoveNonExistentArrayItem)
 {
-    auto obj = cjsonpp::arrayObject();
     EXPECT_THROW(
         {
             try
             {
+                auto obj = cjsonpp::arrayObject();
                 obj.remove(0);
             }
             catch (const std::exception& e)
@@ -516,12 +521,12 @@ TEST_F(JSONObjectTest, RemoveNonExistentArrayItem)
  */
 TEST_F(JSONObjectTest, SetInvalidTypeInObject)
 {
-    auto obj = cjsonpp::arrayObject();
-    cjsonpp::JSONObject value("test");
     EXPECT_THROW(
         {
             try
             {
+                auto obj = cjsonpp::arrayObject();
+                cjsonpp::JSONObject value("test");
                 obj.set("key", value);
             }
             catch (const std::exception& e)
@@ -549,12 +554,12 @@ TEST_F(JSONObjectTest, SetInvalidTypeInObject)
  */
 TEST_F(JSONObjectTest, SetInvalidTypeInArray)
 {
-    auto obj = cjsonpp::JSONObject();
-    cjsonpp::JSONObject value("test");
     EXPECT_THROW(
         {
             try
             {
+                auto obj = cjsonpp::JSONObject();
+                cjsonpp::JSONObject value("test");
                 obj.set(0, value);
             }
             catch (const std::exception& e)
