@@ -203,6 +203,7 @@ enable_testing()
 set(TEST_SOURCES
     tests/test_async_observer.cpp
     tests/test_bytepack.cpp
+    tests/test_cexception.cpp
     tests/test_cjsonpp.cpp
     tests/test_cpptime.cpp
     tests/test_critical_section.cpp
