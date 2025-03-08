@@ -138,7 +138,7 @@ namespace tools
          *
          * @param name The name of the sync_subject.
          */
-        sync_subject(std::string name)
+        explicit sync_subject(std::string name)
             : m_name { std::move(name) }
         {
         }

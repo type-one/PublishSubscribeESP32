@@ -74,7 +74,7 @@ namespace tools
          *
          * @param capacity The capacity of the ring_vector
          */
-        ring_vector(std::size_t capacity)
+        explicit ring_vector(std::size_t capacity)
             : m_ring_vector(capacity)
             , m_capacity(capacity)
         {

@@ -78,7 +78,7 @@ namespace tools
          *
          * @param capacity The maximum number of elements the ring vector can hold.
          */
-        sync_ring_vector(std::size_t capacity)
+        explicit sync_ring_vector(std::size_t capacity)
             : m_ring_vector(capacity)
         {
         }
