@@ -42,6 +42,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <random>
 #include <unordered_map>
 #include <vector>
 
@@ -236,29 +237,30 @@ namespace tools
                 // odd case
                 value = static_cast<double>(to_sort[idx]);
             }
-            else 
+            else
             {
-                // even case                
+                // even case
                 value = static_cast<double>(0.5 * (to_sort[idx] + to_sort[idx - 1])); // NOLINT math formula
-            } 
-            
+            }
+
             return value;
         }
 
         /**
-         * @brief Density - Computes the Gaussian probability of a given value.
+         * @brief Computes the Gaussian density of a given value.
          *
-         * This function calculates the probability of a given value under a Gaussian (normal) distribution
+         * This function calculates the density of a given value under a Gaussian (normal) distribution
          * characterized by the specified average and variance.
          *
-         * @param value The value for which the probability is to be computed.
+         * @param value The value for which the density is to be computed.
          * @param average The mean (average) of the Gaussian distribution.
          * @param standard_deviation The standard deviation (sigma) of the Gaussian distribution.
-         * @return The probability of the given value under the specified Gaussian distribution.
+         * @return The density of the given value under the specified Gaussian distribution.
          */
         double gaussian_density(T value, double average, double standard_deviation) const // NOLINT keep it
         {
             // https://fr.wikipedia.org/wiki/Loi_normale
+            // https://www.savarese.org/math/gaussianintegral.html
             double result = 0.0;
             if (standard_deviation > 0.0)
             {
@@ -266,6 +268,60 @@ namespace tools
                 const double sigma = standard_deviation;
                 const double epsilon = (static_cast<double>(value) - average) / sigma;
                 result = std::exp(-0.5 * epsilon * epsilon) / (sigma * sqrt_two_pi); // NOLINT math formula
+            }
+
+            return result;
+        }
+
+        /**
+         * @brief Calculates the Gaussian probability over a specified range using Monte Carlo integration.
+         *
+         * This function estimates the probability that a value falls within a specified range
+         * for a Gaussian distribution with a given average and standard deviation. The estimation
+         * is performed using Monte Carlo integration with a specified number of samples.
+         *
+         * @tparam T The type of the range values.
+         * @param range_from The lower bound of the range.
+         * @param range_to The upper bound of the range.
+         * @param average The mean (average) of the Gaussian distribution.
+         * @param standard_deviation The standard deviation of the Gaussian distribution.
+         * @param montecarlo_samples The number of Monte Carlo samples to use for the estimation.
+         * @return The estimated probability that a value falls within the specified range.
+         */
+        double gaussian_probability(
+            T range_from, T range_to, double average, double standard_deviation, int montecarlo_samples) const
+        {
+            // https://cameron-mcelfresh.medium.com/monte-carlo-integration-313b37157852
+            // https://www.savarese.org/math/gaussianintegral.html
+            // https://en.wikipedia.org/wiki/Gaussian_integral
+            // https://stackoverflow.com/questions/288739/generate-random-numbers-uniformly-over-an-entire-range
+            double result = 0.0;
+            if ((standard_deviation > 0.0) && (montecarlo_samples > 0))
+            {
+                std::random_device rand_dev;
+                std::mt19937 generator(rand_dev());
+
+                if constexpr (std::is_integral<T>::value)
+                {
+                    std::uniform_int_distribution<T> distr(range_from, range_to);
+                    for (int i = 0; i < montecarlo_samples; ++i)
+                    {
+                        const T value = distr(generator);
+                        result += gaussian_density(value, average, standard_deviation);
+                    }
+                }
+                else
+                {
+                    std::uniform_real_distribution<T> distr(range_from, range_to);
+                    for (int i = 0; i < montecarlo_samples; ++i)
+                    {
+                        const T value = distr(generator);
+                        result += gaussian_density(value, average, standard_deviation);
+                    }
+                }
+
+                result = (result * static_cast<double>(range_to - range_from))
+                    / static_cast<double>(montecarlo_samples - 1);
             }
 
             return result;

@@ -72,7 +72,7 @@ protected:
 };
 
 
-using MyTypes = ::testing::Types<float, double>;
+using MyTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_SUITE(HistogramTest, MyTypes);
 
 /**
@@ -128,7 +128,7 @@ TYPED_TEST(HistogramTest, Average)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     // https://www.calculator.net/average-calculator.html
-    EXPECT_FLOAT_EQ(this->hist->average(), static_cast<TypeParam>(5.6666666666667));
+    EXPECT_FLOAT_EQ(this->hist->average(), 5.6666666666667);
 }
 
 /**
@@ -156,11 +156,11 @@ TYPED_TEST(HistogramTest, Variance)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
-    TypeParam avg = this->hist->average();
-    TypeParam variance = this->hist->variance(avg);
+    const auto avg = this->hist->average();
+    const auto variance = this->hist->variance(avg);
     // https://www.calculator.net/standard-deviation-calculator.html
-    EXPECT_FLOAT_EQ(variance, static_cast<TypeParam>(2.2222222222222));
-    EXPECT_FLOAT_EQ(this->hist->standard_deviation(variance), static_cast<TypeParam>(1.4907119849999));
+    EXPECT_FLOAT_EQ(variance, 2.2222222222222);
+    EXPECT_FLOAT_EQ(this->hist->standard_deviation(variance), 1.4907119849999);
 }
 
 /**
@@ -189,7 +189,7 @@ TYPED_TEST(HistogramTest, MedianEven)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     // https://www.calculator.net/mean-median-mode-range-calculator.html
-    EXPECT_FLOAT_EQ(this->hist->median(), static_cast<TypeParam>(6));
+    EXPECT_FLOAT_EQ(this->hist->median(), 6.0);
 }
 
 /**
@@ -220,7 +220,7 @@ TYPED_TEST(HistogramTest, MedianOdd)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(8));
     // https://www.calculator.net/mean-median-mode-range-calculator.html
-    EXPECT_FLOAT_EQ(this->hist->median(), static_cast<TypeParam>(7));
+    EXPECT_FLOAT_EQ(this->hist->median(), 7.0);
 }
 
 
@@ -229,7 +229,7 @@ TYPED_TEST(HistogramTest, MedianOdd)
  *
  * This test adds several values to the histogram and calculates the Gaussian
  * density of a specific value given the average and variance of the histogram.
- * It ensures that the calculated probability is greater than zero.
+ * It ensures that the calculated density is greater than zero.
  *
  * @tparam TypeParam The data type used in the histogram (e.g., int, float).
  */
@@ -241,11 +241,36 @@ TYPED_TEST(HistogramTest, GaussianDensity)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
-    TypeParam avg = this->hist->average();
-    TypeParam variance = this->hist->variance(avg);
-    TypeParam prob = this->hist->gaussian_density(static_cast<TypeParam>(5), avg, this->hist->standard_deviation(variance));
-    EXPECT_GT(prob, static_cast<TypeParam>(0.0));
+    const auto avg = this->hist->average();
+    const auto variance = this->hist->variance(avg);
+    const auto density = this->hist->gaussian_density(5.0, avg, this->hist->standard_deviation(variance));
+    EXPECT_GT(density, 0.0);
 }
+
+
+/**
+ * @brief Test case for Gaussian probability calculation in Histogram.
+ *
+ * This test adds several values to the histogram and calculates the Gaussian
+ * probability of a specific range of values given the average and variance of the histogram.
+ * It ensures that the calculated probability is greater than zero.
+ *
+ * @tparam TypeParam The data type used in the histogram (e.g., int, float).
+ */
+TYPED_TEST(HistogramTest, GaussianProbability)
+{
+    this->hist->add(static_cast<TypeParam>(5));
+    this->hist->add(static_cast<TypeParam>(3));
+    this->hist->add(static_cast<TypeParam>(5));
+    this->hist->add(static_cast<TypeParam>(7));
+    this->hist->add(static_cast<TypeParam>(7));
+    this->hist->add(static_cast<TypeParam>(7));
+    const auto avg = this->hist->average();
+    const auto variance = this->hist->variance(avg);
+    const auto prob = this->hist->gaussian_probability(3.0, 5.0, avg, this->hist->standard_deviation(variance), 100);
+    EXPECT_GT(prob, 0.0);
+}
+
 
 /**
  * @brief Test case for an empty histogram.
@@ -264,7 +289,7 @@ TYPED_TEST(HistogramTest, EmptyHistogram)
 {
     EXPECT_EQ(this->hist->total_count(), 0);
     EXPECT_EQ(this->hist->top_occurence(), 0);
-    EXPECT_FLOAT_EQ(this->hist->average(), static_cast<TypeParam>(0));
-    EXPECT_FLOAT_EQ(this->hist->variance(static_cast<TypeParam>(0)), static_cast<TypeParam>(0));
-    EXPECT_FLOAT_EQ(this->hist->median(), static_cast<TypeParam>(0));
+    EXPECT_FLOAT_EQ(this->hist->average(), 0.0);
+    EXPECT_FLOAT_EQ(this->hist->variance(0.0), 0.0);
+    EXPECT_FLOAT_EQ(this->hist->median(), 0.0);
 }

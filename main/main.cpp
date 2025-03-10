@@ -990,8 +990,9 @@ public:
         std::printf("variance is %f\n", variance);
         auto std_deviation = m_histogram.standard_deviation(variance);
         std::printf("standard deviation is %f\n", std_deviation);
-        std::printf(
-            "gaussian density of %f is %f\n", top, m_histogram.gaussian_density(top, avg, std_deviation));
+        std::printf("gaussian density of %f is %f\n", top, m_histogram.gaussian_density(top, avg, std_deviation));
+        std::printf("gaussian probability of [%f, %f] is %f\n", 0.5 * top, top,         // NOLINT test value
+            m_histogram.gaussian_probability(0.5 * top, top, avg, std_deviation, 100)); // NOLINT test value
     }
 
 private:
