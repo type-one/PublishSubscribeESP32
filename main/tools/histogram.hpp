@@ -144,7 +144,7 @@ namespace tools
          * @return The average value of the histogram as type T. If there are no
          * occurrences, it returns 0.
          */
-        double average() const
+        [[nodiscard]] double average() const
         {
             double avg = 0.0;
             const auto total = static_cast<double>(m_total_count);
@@ -168,7 +168,7 @@ namespace tools
          * @param average The average value of the data set.
          * @return The variance of the data set.
          */
-        double variance(double average) const
+        [[nodiscard]] double variance(double average) const
         {
             double vari = 0.0;
             const auto total = static_cast<double>(m_total_count);
@@ -194,7 +194,7 @@ namespace tools
          * @param variance The variance value of the data set.
          * @return The standard deviation of the data set.
          */
-        double standard_deviation(double variance) const
+        [[nodiscard]] double standard_deviation(double variance) const
         {
             return std::sqrt(variance);
         }
@@ -207,7 +207,7 @@ namespace tools
          *
          * @return The median value of the histogram.
          */
-        double median() const
+        [[nodiscard]] double median() const
         {
             std::vector<T> to_sort;
 
