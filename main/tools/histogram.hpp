@@ -74,7 +74,7 @@ namespace tools
          *
          * @param value The value to be added to the histogram.
          */
-        void add(const T& value)
+        void add(T value)
         {
             if (0 == m_occurences.count(value)) // first time
             {
@@ -144,7 +144,7 @@ namespace tools
          * @return The average value of the histogram as type T. If there are no
          * occurrences, it returns 0.
          */
-        T average() const
+        double average() const
         {
             double avg = 0.0;
             const auto total = static_cast<double>(m_total_count);
@@ -157,7 +157,7 @@ namespace tools
                 }
             }
 
-            return (total > 0.0) ? static_cast<T>(avg / total) : static_cast<T>(0);
+            return (total > 0.0) ? (avg / total) : 0.0;
         }
 
         /**
@@ -168,7 +168,7 @@ namespace tools
          * @param average The average value of the data set.
          * @return The variance of the data set.
          */
-        T variance(const T& average) const
+        double variance(double average) const
         {
             double vari = 0.0;
             const auto total = static_cast<double>(m_total_count);
@@ -183,7 +183,7 @@ namespace tools
                 }
             }
 
-            return (total > 0.0) ? static_cast<T>((vari / total)) : static_cast<T>(0);
+            return (total > 0.0) ? (vari / total) : 0.0;
         }
 
         /**
@@ -194,9 +194,9 @@ namespace tools
          * @param variance The variance value of the data set.
          * @return The standard deviation of the data set.
          */
-        T standard_deviation(const T& variance) const
+        double standard_deviation(double variance) const
         {
-            return static_cast<T>(std::sqrt(static_cast<double>(variance)));
+            return std::sqrt(variance);
         }
 
         /**
@@ -207,7 +207,7 @@ namespace tools
          *
          * @return The median value of the histogram.
          */
-        T median() const
+        double median() const
         {
             std::vector<T> to_sort;
 
@@ -221,7 +221,7 @@ namespace tools
 
             if (to_sort.empty())
             {
-                return static_cast<T>(0);
+                return 0.0;
             }
 
             std::sort(to_sort.begin(), to_sort.end());
@@ -229,42 +229,43 @@ namespace tools
             // https://www.calculator.net/mean-median-mode-range-calculator.html
 
             const auto idx = to_sort.size() >> 1;
-            T value = static_cast<T>(0);
+            double value = 0.0;
 
             if (to_sort.size() & 1U)
             {
                 // odd case
-                value = static_cast<T>(to_sort[idx]);
+                value = static_cast<double>(to_sort[idx]);
             }
             else 
             {
                 // even case                
-                value = static_cast<T>(0.5 * (to_sort[idx] + to_sort[idx - 1])); // NOLINT math formula
+                value = static_cast<double>(0.5 * (to_sort[idx] + to_sort[idx - 1])); // NOLINT math formula
             } 
             
             return value;
         }
 
         /**
-         * @brief Computes the Gaussian probability of a given value.
+         * @brief Density - Computes the Gaussian probability of a given value.
          *
          * This function calculates the probability of a given value under a Gaussian (normal) distribution
          * characterized by the specified average and variance.
          *
          * @param value The value for which the probability is to be computed.
          * @param average The mean (average) of the Gaussian distribution.
-         * @param variance The variance of the Gaussian distribution.
+         * @param standard_deviation The standard deviation (sigma) of the Gaussian distribution.
          * @return The probability of the given value under the specified Gaussian distribution.
          */
-        double gaussian_probability(const T& value, const T& average, const T& variance) const // NOLINT keep it
+        double gaussian_density(T value, double average, double standard_deviation) const // NOLINT keep it
         {
             // https://fr.wikipedia.org/wiki/Loi_normale
             double result = 0.0;
-            if (variance > static_cast<T>(0))
+            if (standard_deviation > 0.0)
             {
-                const double sigma = std::sqrt(static_cast<double>(variance));
-                const double epsilon = static_cast<double>(value - average) / sigma;
-                result = std::exp(-0.5 * epsilon * epsilon) / (sigma * std::sqrt(M_TWO_PI)); // NOLINT math formula
+                static const double sqrt_two_pi = std::sqrt(M_TWO_PI);
+                const double sigma = standard_deviation;
+                const double epsilon = (static_cast<double>(value) - average) / sigma;
+                result = std::exp(-0.5 * epsilon * epsilon) / (sigma * sqrt_two_pi); // NOLINT math formula
             }
 
             return result;

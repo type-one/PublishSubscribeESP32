@@ -225,15 +225,15 @@ TYPED_TEST(HistogramTest, MedianOdd)
 
 
 /**
- * @brief Test case for Gaussian probability calculation in Histogram.
+ * @brief Test case for Gaussian density calculation in Histogram.
  *
  * This test adds several values to the histogram and calculates the Gaussian
- * probability of a specific value given the average and variance of the histogram.
+ * density of a specific value given the average and variance of the histogram.
  * It ensures that the calculated probability is greater than zero.
  *
  * @tparam TypeParam The data type used in the histogram (e.g., int, float).
  */
-TYPED_TEST(HistogramTest, GaussianProbability)
+TYPED_TEST(HistogramTest, GaussianDensity)
 {
     this->hist->add(static_cast<TypeParam>(5));
     this->hist->add(static_cast<TypeParam>(3));
@@ -242,7 +242,8 @@ TYPED_TEST(HistogramTest, GaussianProbability)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     TypeParam avg = this->hist->average();
-    TypeParam prob = this->hist->gaussian_probability(static_cast<TypeParam>(5), avg, this->hist->variance(avg));
+    TypeParam variance = this->hist->variance(avg);
+    TypeParam prob = this->hist->gaussian_density(static_cast<TypeParam>(5), avg, this->hist->standard_deviation(variance));
     EXPECT_GT(prob, static_cast<TypeParam>(0.0));
 }
 

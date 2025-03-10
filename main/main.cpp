@@ -988,8 +988,10 @@ public:
         std::printf("median value is %f\n", m_histogram.median());
         auto variance = m_histogram.variance(avg);
         std::printf("variance is %f\n", variance);
+        auto std_deviation = m_histogram.standard_deviation(variance);
+        std::printf("standard deviation is %f\n", std_deviation);
         std::printf(
-            "gaussian probability of %f occuring is %f\n", top, m_histogram.gaussian_probability(top, avg, variance));
+            "gaussian density of %f is %f\n", top, m_histogram.gaussian_density(top, avg, std_deviation));
     }
 
 private:
