@@ -43,6 +43,7 @@
 
 #include <cstddef>
 #include <mutex>
+#include <optional>
 #include <utility>
 
 #include "tools/critical_section.hpp"
@@ -106,7 +107,10 @@ namespace tools
         void pop()
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_buffer.pop();
+            if (!m_ring_buffer.empty())
+            {
+                m_ring_buffer.pop();
+            }
         }
 
         /**
@@ -114,12 +118,17 @@ namespace tools
          *
          * This method locks the mutex to ensure thread safety and then returns the front element of the ring buffer.
          *
-         * @return The front element of the ring buffer.
+         * @return The front element of the ring buffer, or none if the buffer is empty.
          */
-        T front()
+        std::optional<T> front()
         {
+            std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            return m_ring_buffer.front();
+            if (!m_ring_buffer.empty())
+            {
+                item = m_ring_buffer.front();
+            }
+            return item;
         }
 
         /**
@@ -128,12 +137,17 @@ namespace tools
          * This function locks the mutex to ensure thread safety and then returns
          * the last element in the ring buffer.
          *
-         * @return The last element of type T in the ring buffer.
+         * @return The last element of type T in the ring buffer, or none if the buffer is empty.
          */
-        T back()
+        std::optional<T> back()
         {
+            std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            return m_ring_buffer.back();
+            if (!m_ring_buffer.empty())
+            {
+                item = m_ring_buffer.back();
+            }
+            return item;
         }
 
         /**

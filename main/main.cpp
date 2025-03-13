@@ -627,9 +627,11 @@ void test_sync_ring_buffer()
 
     auto item = str_queue.front();
 
-    std::printf("%s\n", item.c_str());
-
-    str_queue.pop();
+    if (item.has_value())
+    {
+        std::printf("%s\n", item->c_str());
+        str_queue.pop();
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -646,9 +648,11 @@ void test_sync_ring_vector()
 
     auto item = str_queue.front();
 
-    std::printf("%s\n", item.c_str());
-
-    str_queue.pop();
+    if (item.has_value())
+    {
+        std::printf("%s\n", item->c_str());
+        str_queue.pop();
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -664,9 +668,11 @@ void test_sync_queue()
 
     auto item = str_queue.front();
 
-    std::printf("%s\n", item.c_str());
-
-    str_queue.pop();
+    if (item.has_value())
+    {
+        std::printf("%s\n", item->c_str());
+        str_queue.pop();
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -955,11 +961,16 @@ void test_periodic_task()
     while (!context->time_points.empty())
     {
         const auto measured_timepoint = context->time_points.front();
-        context->time_points.pop();
-        const auto elapsed
-            = std::chrono::duration_cast<std::chrono::microseconds>(measured_timepoint - previous_timepoint);
-        std::printf("timepoint: %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
-        previous_timepoint = measured_timepoint;
+
+        if (measured_timepoint.has_value())
+        {
+            context->time_points.pop();
+
+            const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                measured_timepoint.value() - previous_timepoint);
+            std::printf("timepoint: %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
+            previous_timepoint = measured_timepoint.value();
+        }
     }
 }
 
@@ -1062,8 +1073,11 @@ void test_queued_commands()
     while (!commands_queue.empty())
     {
         auto call = commands_queue.front();
-        call();
-        commands_queue.pop();
+        if (call.has_value())
+        {
+            call.value()();
+            commands_queue.pop();
+        }
     }
 }
 
@@ -1084,8 +1098,11 @@ void test_ring_buffer_commands()
     while (!commands_queue.empty())
     {
         auto call = commands_queue.front();
-        call();
-        commands_queue.pop();
+        if (call.has_value())
+        {
+            call.value()();
+            commands_queue.pop();
+        }
     }
 }
 
@@ -1158,11 +1175,16 @@ void test_worker_tasks()
     while (!context->time_points.empty())
     {
         const auto measured_timepoint = context->time_points.front();
-        context->time_points.pop();
-        const auto elapsed
-            = std::chrono::duration_cast<std::chrono::microseconds>(measured_timepoint - previous_timepoint);
-        std::printf("timepoint: %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
-        previous_timepoint = measured_timepoint;
+
+        if (measured_timepoint.has_value())
+        {
+            context->time_points.pop();
+
+            const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                measured_timepoint.value() - previous_timepoint);
+            std::printf("timepoint: %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
+            previous_timepoint = measured_timepoint.value();
+        }
     }
 }
 
@@ -1277,8 +1299,12 @@ void test_queued_bytepack_data()
     while (!data_queue.empty())
     {
         auto data_packed = data_queue.front();
+        if (!data_packed.has_value())
+        {
+            break;
+        }
 
-        bytepack::binary_stream stream(bytepack::buffer_view(data_packed.data(), data_packed.size()));
+        bytepack::binary_stream stream(bytepack::buffer_view(data_packed->data(), data_packed->size()));
 
         message_type discriminant = {};
         stream.read(discriminant);
@@ -1636,7 +1662,12 @@ void test_queued_json_data()
     while (!data_queue->empty())
     {
         auto data = data_queue->front();
-        cjsonpp::JSONObject json = cjsonpp::parse(data);
+        if (!data.has_value())
+        {
+            break;
+        }
+
+        cjsonpp::JSONObject json = cjsonpp::parse(data.value());
 
         const auto discriminant = json.get<std::string>("msg_type");
 

@@ -92,8 +92,12 @@ namespace tools
 
             while (!m_evt_queue.empty())
             {
-                events.emplace_back(m_evt_queue.front());
-                m_evt_queue.pop();
+                auto tmp = m_evt_queue.front();
+                if (tmp.has_value())
+                {
+                    events.emplace_back(tmp.value());
+                    m_evt_queue.pop();
+                }                
             }
 
             return events;
@@ -112,8 +116,12 @@ namespace tools
 
             if (!m_evt_queue.empty())
             {
-                entry = m_evt_queue.front();
-                m_evt_queue.pop();
+                auto tmp = m_evt_queue.front();
+                if (tmp.has_value())
+                {
+                    entry = tmp;
+                    m_evt_queue.pop();
+                }
             }
 
             return entry;
@@ -132,11 +140,16 @@ namespace tools
 
             if (!m_evt_queue.empty())
             {
-                entry = m_evt_queue.back();
+                auto tmp = m_evt_queue.back();
 
-                while (!m_evt_queue.empty())
+                if (tmp.has_value())
                 {
-                    m_evt_queue.pop();
+                    entry = tmp;
+
+                    while (!m_evt_queue.empty())
+                    {
+                        m_evt_queue.pop();
+                    }
                 }
             }
 

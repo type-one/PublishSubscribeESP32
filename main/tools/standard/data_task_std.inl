@@ -219,9 +219,13 @@ namespace tools
                 while (!m_data_queue.empty())
                 {
                     auto data = m_data_queue.front();
-                    m_data_queue.pop();
 
-                    m_process_routine(m_context, data, this->task_name());
+                    if (data.has_value())
+                    {
+                        m_data_queue.pop();
+
+                        m_process_routine(m_context, data.value(), this->task_name());
+                    }
                 }
             } // run loop
         }

@@ -44,6 +44,7 @@
 
 #include <cstddef>
 #include <mutex>
+#include <optional>
 #include <utility>
 
 #include "tools/critical_section.hpp"
@@ -116,7 +117,10 @@ namespace tools
         void pop()
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_vector.pop();
+            if (!m_ring_vector.empty())
+            {
+                m_ring_vector.pop();
+            }
         }
 
         /**
@@ -125,12 +129,17 @@ namespace tools
          * This method locks the mutex to ensure thread safety and returns the first element
          * from the ring vector.
          *
-         * @return The first element of type T from the ring vector.
+         * @return The first element of type T from the ring vector, or none if the vector is empty.
          */
-        T front()
+        std::optional<T> front()
         {
+            std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            return m_ring_vector.front();
+            if (!m_ring_vector.empty())
+            {
+                item = m_ring_vector.front();
+            }
+            return item;
         }
 
         /**
@@ -139,12 +148,17 @@ namespace tools
          * This method locks the mutex to ensure thread safety and returns the last element
          * in the ring vector.
          *
-         * @return The last element of type T in the ring vector.
+         * @return The last element of type T in the ring vector, or none if the vector is empty.
          */
-        T back()
+        std::optional<T> back()
         {
+            std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            return m_ring_vector.back();
+            if (!m_ring_vector.empty())
+            {
+                item = m_ring_vector.back();
+            }
+            return item;
         }
 
         /**

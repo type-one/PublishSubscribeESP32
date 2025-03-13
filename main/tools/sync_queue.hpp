@@ -41,6 +41,7 @@
 #define SYNC_QUEUE_HPP_
 
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <utility>
 
@@ -103,7 +104,10 @@ namespace tools
         void pop()
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_queue.pop();
+            if (!m_queue.empty())
+            {
+                m_queue.pop();
+            }
         }
 
         /**
@@ -111,12 +115,17 @@ namespace tools
          *
          * This method returns the front element of the queue in a thread-safe manner.
          *
-         * @return The front element of the queue.
+         * @return The front element of the queue, or none if the queue is empty.
          */
-        T front()
+        std::optional<T> front()
         {
+            std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            return m_queue.front();
+            if (!m_queue.empty())
+            {
+                item = m_queue.front();
+            }
+            return item;
         }
 
         /**
@@ -125,12 +134,17 @@ namespace tools
          * This method returns the last element in the queue. It uses a lock guard to ensure
          * thread safety while accessing the queue.
          *
-         * @return The last element in the queue.
+         * @return The last element in the queue, or none if the queue is empty.
          */
-        T back()
+        std::optional<T> back()
         {
+            std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            return m_queue.back();
+            if (!m_queue.empty())
+            {
+                item = m_queue.back();
+            }
+            return item;
         }
 
         /**
