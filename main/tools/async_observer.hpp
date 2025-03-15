@@ -92,11 +92,10 @@ namespace tools
 
             while (!m_evt_queue.empty())
             {
-                auto tmp = m_evt_queue.front();
+                auto tmp = m_evt_queue.front_pop();
                 if (tmp.has_value())
                 {
                     events.emplace_back(tmp.value());
-                    m_evt_queue.pop();
                 }                
             }
 
@@ -116,11 +115,10 @@ namespace tools
 
             if (!m_evt_queue.empty())
             {
-                auto tmp = m_evt_queue.front();
+                auto tmp = m_evt_queue.front_pop();
                 if (tmp.has_value())
                 {
                     entry = tmp;
-                    m_evt_queue.pop();
                 }
             }
 

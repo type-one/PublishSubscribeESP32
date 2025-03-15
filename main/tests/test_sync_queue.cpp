@@ -142,6 +142,9 @@ TYPED_TEST(SyncQueueTest, FrontAndBack)
  * 2. Pops one element from the queue.
  * 3. Checks that the size of the queue is 1.
  * 4. Verifies that the front element of the queue is 2.
+ * 5. Checks that the size of the queue is still 1.
+ * 6. Get front element (value is 2) and pops the front element from the queue.
+ * 7. Verifies that the front element of the queue is 1 now
  *
  * @tparam TypeParam The type of elements stored in the SyncQueue.
  */
@@ -152,6 +155,9 @@ TYPED_TEST(SyncQueueTest, Pop)
     this->queue->pop();
     EXPECT_EQ(this->queue->size(), 1);
     EXPECT_EQ(this->queue->front(), static_cast<TypeParam>(2));
+    EXPECT_EQ(this->queue->size(), 1);
+    EXPECT_EQ(this->queue->front_pop(), static_cast<TypeParam>(2));
+    EXPECT_EQ(this->queue->size(), 0);
 }
 
 /**

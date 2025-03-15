@@ -233,7 +233,7 @@ TYPED_TEST(SyncDictionaryTest, GetCollectionIntKey)
     this->dict_int_key->add(1, static_cast<TypeParam>(1));
     this->dict_int_key->add(2, static_cast<TypeParam>(2));
 
-    auto collection = this->dict_int_key->get_collection();
+    auto collection = this->dict_int_key->snapshot();
     EXPECT_EQ(collection.size(), 2);
     EXPECT_EQ(collection[1], static_cast<TypeParam>(1));
     EXPECT_EQ(collection[2], static_cast<TypeParam>(2));
@@ -260,7 +260,7 @@ TYPED_TEST(SyncDictionaryTest, GetCollectionStringKey)
     this->dict_string_key->add("one", static_cast<TypeParam>(1));
     this->dict_string_key->add("two", static_cast<TypeParam>(2));
 
-    auto collection = this->dict_string_key->get_collection();
+    auto collection = this->dict_string_key->snapshot();
     EXPECT_EQ(collection.size(), 2);
     EXPECT_EQ(collection["one"], static_cast<TypeParam>(1));
     EXPECT_EQ(collection["two"], static_cast<TypeParam>(2));
@@ -587,7 +587,7 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddAndGetCollectionIntKey)
             {
                 std::this_thread::yield();
             }
-            auto collection = this->dict_int_key->get_collection();
+            auto collection = this->dict_int_key->snapshot();
             EXPECT_EQ(collection.size(), 100);
         });
 

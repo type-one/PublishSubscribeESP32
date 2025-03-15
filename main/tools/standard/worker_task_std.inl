@@ -187,12 +187,10 @@ namespace tools
 
                 while (!m_work_queue.empty())
                 {
-                    auto work = m_work_queue.front();
+                    auto work = m_work_queue.front_pop();
 
                     if (work.has_value())
                     {
-                        m_work_queue.pop();
-
                         work.value()(m_context, this->task_name());
                     }
                 }

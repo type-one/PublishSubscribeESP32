@@ -143,6 +143,26 @@ namespace tools
         }
 
         /**
+         * @brief Retrieves and removes the first element from the ring vector.
+         *
+         * This method locks the mutex to ensure thread safety and returns and removes the first element
+         * from the ring vector.
+         *
+         * @return The first element of type T from the ring vector, or none if the vector is empty.
+         */
+        std::optional<T> front_pop()
+        {
+            std::optional<T> item;
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            if (!m_ring_vector.empty())
+            {
+                item = m_ring_vector.front();
+                m_ring_vector.pop();
+            }
+            return item;
+        }
+
+        /**
          * @brief Retrieves the last element from the ring vector.
          *
          * This method locks the mutex to ensure thread safety and returns the last element
@@ -159,6 +179,20 @@ namespace tools
                 item = m_ring_vector.back();
             }
             return item;
+        }
+
+        /**
+         * @brief Retrieves a copy of the internal ring vector.
+         *
+         * This method locks the mutex to ensure thread safety and returns a copy
+         * of the internal ring vector.
+         *
+         * @return A copy of the internal ring vector.
+         */
+        tools::ring_vector<T> snapshot()
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            return m_ring_vector;
         }
 
         /**

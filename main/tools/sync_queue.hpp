@@ -129,6 +129,25 @@ namespace tools
         }
 
         /**
+         * @brief Retrieves and removes the front element of the queue.
+         *
+         * This method returns and removes the front element of the queue in a thread-safe manner.
+         *
+         * @return The front element of the queue, or none if the queue is empty.
+         */
+        std::optional<T> front_pop()
+        {
+            std::optional<T> item;
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            if (!m_queue.empty())
+            {
+                item = m_queue.front();
+                m_queue.pop();
+            }
+            return item;
+        }
+
+        /**
          * @brief Retrieves the last element in the queue.
          *
          * This method returns the last element in the queue. It uses a lock guard to ensure
@@ -145,6 +164,20 @@ namespace tools
                 item = m_queue.back();
             }
             return item;
+        }
+
+        /**
+         * @brief Retrieves a snapshot of the internal queue.
+         *
+         * This method returns a copy of the internal queue. It uses a lock guard to ensure
+         * thread safety while copying the queue.
+         *
+         * @return A copy of the internal queue
+         */
+        std::queue<T> snapshot()
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            return m_queue;
         }
 
         /**

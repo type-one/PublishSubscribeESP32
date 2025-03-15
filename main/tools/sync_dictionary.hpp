@@ -145,11 +145,10 @@ namespace tools
          *
          * @return A copy of the current dictionary.
          */
-        std::map<K, T> get_collection()
+        std::map<K, T> snapshot()
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            auto snapshot = m_dictionary;
-            return snapshot;
+            return m_dictionary;
         }
 
         /**

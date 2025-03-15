@@ -145,6 +145,8 @@ TYPED_TEST(SyncRingBufferTest, EmplaceAndBack)
  * 3. Pops the front element from the buffer.
  * 4. Asserts that the front element of the buffer is now 2.
  * 5. Asserts that the size of the buffer is 1.
+ * 6. Pops and asserts that the front element of the buffer is now 2.
+ * 7. Asserts that the size of the buffer is 0.
  *
  * @tparam TypeParam The type of elements stored in the SyncRingBuffer.
  */
@@ -155,6 +157,8 @@ TYPED_TEST(SyncRingBufferTest, Pop)
     this->buffer->pop();
     ASSERT_EQ(this->buffer->front(), static_cast<TypeParam>(2));
     ASSERT_EQ(this->buffer->size(), 1);
+    ASSERT_EQ(this->buffer->front_pop(), static_cast<TypeParam>(2));
+    ASSERT_EQ(this->buffer->size(), 0);
 }
 
 /**

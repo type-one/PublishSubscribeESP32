@@ -132,6 +132,26 @@ namespace tools
         }
 
         /**
+         * @brief Retrieves and removes the front element of the ring buffer.
+         *
+         * This method locks the mutex to ensure thread safety and then returns and rermoves the front element of 
+         * the ring buffer.
+         *
+         * @return The front element of the ring buffer, or none if the buffer is empty.
+         */
+        std::optional<T> front_pop()
+        {
+            std::optional<T> item;
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            if (!m_ring_buffer.empty())
+            {
+                item = m_ring_buffer.front();
+                m_ring_buffer.pop();
+            }
+            return item;
+        }
+
+        /**
          * @brief Retrieves the last element from the ring buffer.
          *
          * This function locks the mutex to ensure thread safety and then returns
@@ -148,6 +168,20 @@ namespace tools
                 item = m_ring_buffer.back();
             }
             return item;
+        }
+
+        /**
+         * @brief Retrieves a copy of the internal ring buffer.
+         *
+         * This method locks the mutex to ensure thread safety and then returns a copy of 
+         * the internal ring buffer.
+         *
+         * @return A copy of the internal ring buffer.
+         */
+        tools::ring_buffer<T, Capacity> snapshot()
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            return m_ring_buffer;
         }
 
         /**

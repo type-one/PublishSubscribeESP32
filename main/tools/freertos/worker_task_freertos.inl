@@ -235,12 +235,10 @@ namespace tools
 
                 while (!instance->m_work_queue.empty())
                 {
-                    auto work = instance->m_work_queue.front();
+                    auto work = instance->m_work_queue.front_pop();
 
                     if (work.has_value())
                     {
-                        instance->m_work_queue.pop();
-
                         work.value()(instance->m_context, task_name);
                     }
                 }

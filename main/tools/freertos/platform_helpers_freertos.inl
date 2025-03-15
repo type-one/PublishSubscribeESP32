@@ -117,6 +117,8 @@ namespace tools
                 LOG_ERROR("xTaskCreatePinnedToCore() failed for task %s on core %d", task_name.c_str(), cpu_affinity);
             }
         }
+#else
+        (void)cpu_affinity; // potentially unused
 #endif
 
         if (pdPASS != ret)

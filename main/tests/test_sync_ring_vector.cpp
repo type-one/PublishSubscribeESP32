@@ -129,6 +129,9 @@ TYPED_TEST(SyncRingVectorTest, FrontAndBack)
  * - Pops one element from the vector.
  * - Expects the size of the vector to be 2.
  * - Expects the front element of the vector to be 2.
+ * - Expects the size of the vector to be still 2.
+ * - Pops and expects the front element of the vector to be 2.
+ * - Expects the size of the vector to be now 1.
  */
 TYPED_TEST(SyncRingVectorTest, Pop)
 {
@@ -138,6 +141,10 @@ TYPED_TEST(SyncRingVectorTest, Pop)
     this->vec->pop();
     EXPECT_EQ(this->vec->size(), 2);
     EXPECT_EQ(this->vec->front(), static_cast<TypeParam>(2));
+    EXPECT_EQ(this->vec->size(), 2);
+    EXPECT_EQ(this->vec->front_pop(), static_cast<TypeParam>(2));
+    EXPECT_EQ(this->vec->size(), 1);
+
 }
 
 /**
