@@ -4,4 +4,3 @@
 Checks: '-*,clang-diagnostic-*,clang-analyzer-*'
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
-AnalyzeTemporaryDtors: false

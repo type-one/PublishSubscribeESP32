@@ -16,4 +16,3 @@ Checks:          "clang-diagnostic-*,\
                   -readability-function-cognitive-complexity"
 WarningsAsErrors: "*"
 HeaderFilterRegex: '.hpp'
-AnalyzeTemporaryDtors: true
