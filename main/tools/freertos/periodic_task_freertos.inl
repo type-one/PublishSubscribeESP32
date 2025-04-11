@@ -123,7 +123,7 @@ namespace tools
             const std::shared_ptr<Context>& context, const std::string& task_name,
             const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size)
             : periodic_task(std::move(startup_routine), std::move(periodic_routine), context, task_name, period,
-                stack_size, base_task::run_on_all_cores, base_task::default_priority)
+                  stack_size, base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 
@@ -189,7 +189,17 @@ namespace tools
 
             while (!instance->m_stop_task.load())
             {
-                vTaskDelayUntil(&x_last_wake_time, x_period);
+                const auto current_tick_time = xTaskGetTickCount();
+                if ((current_tick_time - x_last_wake_time) > x_period)
+                {
+                    // deadline missed
+                    x_last_wake_time += x_period;
+                }
+                else
+                {
+                    // wait for the next period
+                    vTaskDelayUntil(&x_last_wake_time, x_period);
+                }
 
                 // execute given periodic function
                 instance->m_periodic_routine(instance->m_context, task_name);

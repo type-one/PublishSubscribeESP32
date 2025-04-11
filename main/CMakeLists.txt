@@ -1,6 +1,13 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
+    message(STATUS "ccache found and enabled")
+endif()
+
 # Local header files here ONLY
 file(GLOB_RECURSE TARGET_H
     *.h
@@ -46,9 +53,3 @@ set(TARGET_SRC
 set(TARGET_INCLUDE_DIR .)
 
 idf_component_register(SRCS "${TARGET_SRC}" "${TARGET_H}" INCLUDE_DIRS "${TARGET_INCLUDE_DIR}")
-
-
-
-
-
-

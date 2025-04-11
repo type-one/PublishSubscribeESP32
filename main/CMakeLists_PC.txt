@@ -81,6 +81,13 @@ if(LINUX)
     set(CMAKE_C_FLAGS_DEBUG "-g -Wall -Wextra -D DEBUG")
     set(CMAKE_C_FLAGS_RELEASE "-O2 -D NDEBUG")
 
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
+        message(STATUS "ccache found and enabled")
+    endif()
+
 elseif(WIN32)
     set(CMAKE_CXX_FLAGS "")
     set(CMAKE_CXX_FLAGS_DEBUG "/D DEBUG")
