@@ -63,6 +63,17 @@ namespace tools
         vTaskDelay(delay);
     }
 
+    /**
+     * @brief Yields the current task to allow other tasks to run.
+     *
+     * This function calls taskYIELD to yield the current task, allowing other
+     * tasks of equal or higher priority to run.
+     */
+    inline void yield()
+    {
+        taskYIELD();
+    }
+
     // -- specific FreeRTOS task helper --
 
     /**

@@ -1,11 +1,11 @@
 /**
  * @file platform_helpers_std.inl
  * @brief Platform-specific helper functions for thread management.
- * 
+ *
  * This file contains platform-specific helper functions for managing threads,
  * including setting thread parameters such as name, CPU affinity, and priority,
  * as well as putting the current thread to sleep for a specified duration.
- * 
+ *
  * @author Laurent Lardinois
  * @date January 2025
  */
@@ -55,14 +55,30 @@ namespace tools
 {
     /**
      * @brief Puts the current thread to sleep for the specified duration.
-     * 
+     *
      * This function causes the current thread to sleep for the specified number of milliseconds.
-     * 
+     *
      * @param ms The duration in milliseconds for which the thread should sleep.
      */
     inline void sleep_for(std::uint64_t ms)
     {
         std::this_thread::sleep_for(std::chrono::duration<std::uint64_t, std::milli>(ms));
+    }
+
+    /**
+     * @brief Yields the execution of the current thread to allow other threads to run.
+     * 
+     * This function is a wrapper around `std::this_thread::yield()` and is used to 
+     * signal to the operating system that the current thread is willing to yield 
+     * its remaining time slice to other threads. This can be useful in multi-threaded 
+     * applications to improve responsiveness or to avoid busy-waiting.
+     * 
+     * @note The behavior of this function depends on the operating system's thread 
+     * scheduler and may vary between platforms.
+     */
+    inline void yield()
+    {
+        std::this_thread::yield();
     }
 
     // -- specific posix and win32 task helper --
