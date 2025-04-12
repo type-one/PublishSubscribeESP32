@@ -48,7 +48,7 @@ namespace cjsonpp
 {
 
     // JSON type wrapper enum
-    enum JSONType
+    enum JSONType : std::uint8_t
     {
         Bool,
         Null,
@@ -205,7 +205,7 @@ namespace cjsonpp
          *
          * @param value 64-bit integer value
          */
-        explicit JSONObject(int64_t value);
+        explicit JSONObject(std::int64_t value);
 
         /**
          * @brief create string object
@@ -330,7 +330,7 @@ namespace cjsonpp
          * @return T type casted value
          */
         template <typename T>
-        inline T as() const
+        T as() const
         {
             return as<T>(obj_->o);
         }
@@ -348,7 +348,7 @@ namespace cjsonpp
          * @throws std::runtime_error (or CException) if the current JSON object is not of array type.
          */
         template <typename T = JSONObject, template <typename X, typename A> class ContT = std::vector>
-        inline ContT<T, std::allocator<T>> asArray() const
+        ContT<T, std::allocator<T>> asArray() const
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
@@ -376,7 +376,7 @@ namespace cjsonpp
          * @throws std::runtime_error (or CException) if the cJSON object is not an array.
          */
         template <typename T, template <typename X> class ContT>
-        inline ContT<T> asArray() const
+        ContT<T> asArray() const
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
@@ -406,7 +406,7 @@ namespace cjsonpp
          * exist.
          */
         template <typename T = JSONObject>
-        [[nodiscard]] inline T get(const char* name) const
+        [[nodiscard]] T get(const char* name) const
         {
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
@@ -432,7 +432,7 @@ namespace cjsonpp
          * @return JSONObject The JSON object associated with the specified key.
          */
         template <typename T = JSONObject>
-        [[nodiscard]] inline JSONObject get(const std::string& value) const
+        [[nodiscard]] JSONObject get(const std::string& value) const
         {
             return get<T>(value.c_str());
         }
@@ -467,7 +467,7 @@ namespace cjsonpp
          * of bounds.
          */
         template <typename T = JSONObject>
-        inline T get(int index) const
+        T get(int index) const
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
@@ -494,7 +494,7 @@ namespace cjsonpp
          * @throws std::runtime_error (or CException) if the current object is not of array type.
          */
         template <typename T>
-        inline void add(const T& value)
+        void add(const T& value)
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
@@ -516,12 +516,13 @@ namespace cjsonpp
          * @throws std::runtime_error (or CException) if the current object is not of JSON object.
          */
         template <typename T>
-        inline void set(const char* name, const T& value)
+        void set(const char* name, const T& value)
         {
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
                 CJSONPP_THROW("Not an object type", (*obj_)->type & byte_mask);
             }
+
             JSONObject output(value);
             cJSON_AddItemReferenceToObject(obj_->o, name, output.obj_->o);
             refs_->insert(output);
@@ -537,7 +538,7 @@ namespace cjsonpp
          * @param value The value to be set in the JSON object.
          */
         template <typename T>
-        inline void set(const std::string& name, const T& value)
+        void set(const std::string& name, const T& value)
         {
             set(name.c_str(), value);
         }
@@ -634,7 +635,7 @@ namespace cjsonpp
      * @throws std::runtime_error (or CException) if the cJSON object is not of type number.
      */
     template <>
-    inline int64_t JSONObject::as<int64_t>(cJSON* obj) const
+    inline std::int64_t JSONObject::as<std::int64_t>(cJSON* obj) const
     {
         if ((obj->type & byte_mask) != cJSON_Number)
         {
@@ -741,7 +742,7 @@ namespace cjsonpp
      * @param output The output iterator where the elements of the array will be stored.
      */
     template <class T, class TOutputIterator>
-    void asArray(const JSONObject& data, TOutputIterator output)
+    inline void asArray(const JSONObject& data, TOutputIterator output)
     {
         cJSON* current = cJSON_GetArrayItem(data.obj(), 0);
         while (current)

@@ -79,7 +79,7 @@ namespace tools
             comp.dict_size = gzip_dict_size;
             comp.hash_bits = gzip_hash_bits;
             comp.hash_table = m_hash_table->data();
-            std::memset(comp.hash_table, 0, gzip_hash_size);
+            std::memset(reinterpret_cast<void*>(comp.hash_table), 0, gzip_hash_size);
 
             zlib_start_block(&comp.out);
             uzlib_compress(&comp, unpacked_input.data(), unpacked_input.size());

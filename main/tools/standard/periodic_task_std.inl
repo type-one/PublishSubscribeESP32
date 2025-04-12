@@ -207,8 +207,12 @@ namespace tools
                 } // end if wait period needed
                 else
                 {
-                    // missed deadline, setup the next deadline in the future and multiple of the period
-                    deadline += (((current_time - deadline) % m_period) + 1) * m_period;
+                    // missed deadline, setup the next deadline in the future and multiple of the period                    
+                    do
+                    {
+                        deadline += m_period;
+                    }
+                    while(deadline < current_time);
                 }
             }     // periodic task loop
         }

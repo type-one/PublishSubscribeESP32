@@ -130,7 +130,7 @@ namespace CppTime
         struct Event // NOLINT move constructor/operator are deleted, copy constructor/operator are defined
         {
             timer_id tid = 0;
-            timestamp start = {};
+            timestamp start;
             duration period = duration::zero();
             handler_t handler = nullptr;
             bool valid = false;
@@ -210,7 +210,7 @@ namespace CppTime
          * \param when The time at which the handler is invoked.
          * \param handler The callable that is invoked when the timer fires.
          */
-        inline timer_id add(const timestamp& when, handler_t&& handler)
+        timer_id add(const timestamp& when, handler_t&& handler)
         {
             return add(when, std::move(handler), duration::zero());
         }
@@ -220,14 +220,14 @@ namespace CppTime
          * `time_point` for the first timeout.
          */
         template <class Rep, class Period>
-        inline timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t&& handler, const duration& period)
+        timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t&& handler, const duration& period)
         {
             return add(
                 clock::now() + std::chrono::duration_cast<std::chrono::microseconds>(when), std::move(handler), period);
         }
 
         template <class Rep, class Period>
-        inline timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t&& handler)
+        timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t&& handler)
         {
             return add<Rep, Period>(when, std::move(handler), duration::zero());
         }
@@ -242,7 +242,7 @@ namespace CppTime
          * Overloaded `add` function (one shot) that uses a uint64_t instead of a `time_point` for
          * the first timeout.
          */
-        inline timer_id add(std::uint64_t when, handler_t&& handler)
+        timer_id add(std::uint64_t when, handler_t&& handler)
         {
             return add(when, std::move(handler), 0U);
         }

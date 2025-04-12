@@ -184,7 +184,7 @@ namespace bytepack
     template <typename T>
     concept IntegralType = std::is_integral_v<T>;
 
-    enum class StringMode
+    enum class StringMode : std::uint8_t
     {
         Default, // String length is serialized as metadata before the string data (default)
         NullTerm // Null terminator is appended to the string data instead of prepending string length metadata

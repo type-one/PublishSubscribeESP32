@@ -7,9 +7,13 @@ Checks:          "clang-diagnostic-*,\
                   fuchsia-*,\
                   cppcoreguidelines-*,\
                   -modernize-use-trailing-return-type,\
+                  -modernize-type-traits,\
+                  -performance-unnecessary-copy-initialization,
+                  -cppcoreguidelines-avoid-do-while,\
                   -cppcoreguidelines-pro-type-vararg,\
                   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,\
                   -cppcoreguidelines-pro-bounds-pointer-arithmetic,\
+                  -cppcoreguidelines-pro-type-reinterpret-cast,\
                   -bugprone-suspicious-include,\
                   -fuchsia-default-arguments-calls,\
                   -fuchsia-overloaded-operator,\

@@ -200,7 +200,7 @@ namespace cjsonpp
     // set value in object (std::string)
     void JSONObject::set(const std::string& name, const JSONObject& value)
     {
-        return set(name.c_str(), value);
+        set(name.c_str(), value);
     }
 
     // remove item from object
@@ -229,7 +229,7 @@ namespace cjsonpp
 
     void JSONObject::remove(const std::string& name)
     {
-        return remove(name.c_str());
+        remove(name.c_str());
     }
 
     // remove item from array

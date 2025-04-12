@@ -179,7 +179,7 @@ namespace tools
                 if (itr->second > 0) // occurence
                 {
                     // https://www.calculatorsoup.com/calculators/statistics/standard-deviation-calculator.php
-                    const auto dva = static_cast<double>(itr->first) - static_cast<double>(average);
+                    const auto dva = static_cast<double>(itr->first) - average;
                     vari += itr->second * (dva * dva);
                 }
             }

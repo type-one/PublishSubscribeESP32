@@ -45,6 +45,10 @@
 #include <variant>
 #include <vector>
 
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <numbers>
+#endif
+
 #if !defined(FREERTOS_PLATFORM)
 #include <exception>
 #endif
@@ -694,7 +698,7 @@ void test_sync_dictionary()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
-enum class my_topic
+enum class my_topic : std::uint8_t
 {
     generic,
     system,
@@ -703,13 +707,13 @@ enum class my_topic
 
 struct my_event
 {
-    enum class type
+    enum class type : std::uint8_t
     {
         notification,
         failure
     } type;
 
-    std::string description = {};
+    std::string description;
 };
 
 using base_observer = tools::sync_observer<my_topic, my_event>;
@@ -982,7 +986,7 @@ public:
         (void)topic;
         (void)origin;
 
-        m_histogram.add(static_cast<double>(std::strtod(event.description.c_str(), nullptr)));
+        m_histogram.add(std::strtod(event.description.c_str(), nullptr));
     }
 
     void display_stats()
@@ -1574,7 +1578,11 @@ void test_json()
         cjsonpp::JSONObject obj3 = {};
         cjsonpp::JSONObject obj4 = {};
 
+        #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        constexpr const double number_pi = std::numbers::pi;
+        #else
         constexpr const double number_pi = 3.141592;
+        #endif
         obj.set("pi", number_pi);                  // add a number that is stored as double
         obj.set("happy", true);                    // add a Boolean that is stored as bool
         obj.set("name", "Niels");                  // add a string that is stored as std::string
@@ -2166,7 +2174,7 @@ void test_calendar_day()
     current_year = current_date.year();
     
     auto elapsed_years = static_cast<int>(current_date.year()) - static_cast<int>(moon_landing.year());
-    std::printf("Elapsed years since moon landing: %d\n", static_cast<int>(elapsed_years));
+    std::printf("Elapsed years since moon landing: %d\n", elapsed_years);
 
 }
 

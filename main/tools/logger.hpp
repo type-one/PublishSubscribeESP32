@@ -40,8 +40,10 @@
 #if !defined(LOGGER_HPP_)
 #define LOGGER_HPP_
 
+#include <cstdint>
 #include <filesystem>
 #include <string>
+#include <utility>
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 #include <experimental/source_location>
@@ -128,7 +130,7 @@ namespace tools
      * @brief logging level
      *
      */
-    enum class log_level
+    enum class log_level : std::uint8_t
     {
         error,
         warning,
@@ -144,7 +146,7 @@ namespace tools
     struct format_with_location
     {
         const char* value = nullptr;
-        source_location loc = {};
+        source_location loc;
 
         format_with_location(const char* format_str,
             const source_location& location = source_location::current()) // NOLINT location at caller level
@@ -183,7 +185,7 @@ namespace tools
 
         std::fprintf(output, "%s %s [%s, line %d] ", lookup.at(level).c_str(),
             std::filesystem::path(fmt.loc.file_name()).filename().c_str(), fmt.loc.function_name(), fmt.loc.line());
-        std::fprintf(output, fmt.value, args...); // NOLINT source_location returns const char*
+        std::fprintf(output, fmt.value, std::forward<Args>(args)...); // NOLINT source_location returns const char*
         std::fprintf(output, "%s\n", end_restore.c_str());
         std::fflush(output);
     }
