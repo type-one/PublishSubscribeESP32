@@ -205,6 +205,11 @@ namespace tools
                     std::this_thread::sleep_for(sleep_time);
 
                 } // end if wait period needed
+                else
+                {
+                    // missed deadline, setup the next deadline in the future and multiple of the period
+                    deadline += (((current_time - deadline) % m_period) + 1) * m_period;
+                }
             }     // periodic task loop
         }
 

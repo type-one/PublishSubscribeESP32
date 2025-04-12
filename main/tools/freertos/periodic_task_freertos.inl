@@ -192,8 +192,8 @@ namespace tools
                 const auto current_tick_time = xTaskGetTickCount();
                 if ((current_tick_time - x_last_wake_time) > x_period)
                 {
-                    // deadline missed
-                    x_last_wake_time += x_period;
+                    // deadline missed, setup the next deadline in the future and multiple of the period
+                    x_last_wake_time += (((current_tick_time - x_last_wake_time) % x_period) + 1) * x_period;
                 }
                 else
                 {
