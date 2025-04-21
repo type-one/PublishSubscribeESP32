@@ -145,7 +145,7 @@ namespace tools
          *
          * @return A copy of the current dictionary.
          */
-        std::map<K, T> snapshot()
+        std::map<K, T> snapshot() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_dictionary;
@@ -162,7 +162,7 @@ namespace tools
          * @return std::optional<T> The value associated with the key if found,
          *         otherwise an empty std::optional.
          */
-        std::optional<T> find(const K& key)
+        std::optional<T> find(const K& key) const
         {
             std::optional<T> result;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -182,7 +182,7 @@ namespace tools
          *
          * @return true if the dictionary is empty, false otherwise.
          */
-        bool empty()
+        bool empty() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_dictionary.empty();
@@ -196,7 +196,7 @@ namespace tools
          *
          * @return The number of elements in the dictionary.
          */
-        std::size_t size()
+        std::size_t size() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_dictionary.size();
@@ -216,7 +216,7 @@ namespace tools
 
     private:
         std::map<K, T> m_dictionary;
-        critical_section m_mutex;
+        mutable critical_section m_mutex;
     };
 }
 

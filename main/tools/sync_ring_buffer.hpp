@@ -120,7 +120,7 @@ namespace tools
          *
          * @return The front element of the ring buffer, or none if the buffer is empty.
          */
-        std::optional<T> front()
+        std::optional<T> front() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -159,7 +159,7 @@ namespace tools
          *
          * @return The last element of type T in the ring buffer, or none if the buffer is empty.
          */
-        std::optional<T> back()
+        std::optional<T> back() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -178,7 +178,7 @@ namespace tools
          *
          * @return A copy of the internal ring buffer.
          */
-        tools::ring_buffer<T, Capacity> snapshot()
+        tools::ring_buffer<T, Capacity> snapshot() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer;
@@ -192,7 +192,7 @@ namespace tools
          *
          * @return true if the ring buffer is empty, false otherwise.
          */
-        bool empty()
+        bool empty() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.empty();
@@ -206,7 +206,7 @@ namespace tools
          *
          * @return true if the ring buffer is full, false otherwise.
          */
-        bool full()
+        bool full() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.full();
@@ -220,7 +220,7 @@ namespace tools
          *
          * @return The number of elements in the ring buffer.
          */
-        std::size_t size()
+        std::size_t size() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.size();
@@ -270,7 +270,7 @@ namespace tools
          *
          * @return true if the ring buffer is full, false otherwise.
          */
-        bool isr_full()
+        bool isr_full() const
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.full();
@@ -284,7 +284,7 @@ namespace tools
          *
          * @return The size of the ring buffer.
          */
-        std::size_t isr_size()
+        std::size_t isr_size() const
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.size();
@@ -292,7 +292,7 @@ namespace tools
 
     private:
         ring_buffer<T, Capacity> m_ring_buffer;
-        critical_section m_mutex;
+        mutable critical_section m_mutex;
     };
 }
 

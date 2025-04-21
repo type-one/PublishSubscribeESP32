@@ -117,7 +117,7 @@ namespace tools
          *
          * @return The front element of the queue, or none if the queue is empty.
          */
-        std::optional<T> front()
+        std::optional<T> front() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -155,7 +155,7 @@ namespace tools
          *
          * @return The last element in the queue, or none if the queue is empty.
          */
-        std::optional<T> back()
+        std::optional<T> back() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -174,7 +174,7 @@ namespace tools
          *
          * @return A copy of the internal queue
          */
-        std::queue<T> snapshot()
+        std::queue<T> snapshot() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue;
@@ -188,7 +188,7 @@ namespace tools
          *
          * @return true if the queue is empty, false otherwise.
          */
-        bool empty()
+        bool empty() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.empty();
@@ -202,7 +202,7 @@ namespace tools
          *
          * @return The number of elements in the queue.
          */
-        std::size_t size()
+        std::size_t size() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.size();
@@ -244,7 +244,7 @@ namespace tools
          *
          * @return The size of the queue.
          */
-        std::size_t isr_size()
+        std::size_t isr_size() const
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.size();
@@ -252,7 +252,7 @@ namespace tools
 
     private:
         std::queue<T> m_queue;
-        critical_section m_mutex;
+        mutable critical_section m_mutex;
     };
 }
 

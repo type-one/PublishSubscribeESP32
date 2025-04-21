@@ -131,7 +131,7 @@ namespace tools
          *
          * @return The first element of type T from the ring vector, or none if the vector is empty.
          */
-        std::optional<T> front()
+        std::optional<T> front() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -170,7 +170,7 @@ namespace tools
          *
          * @return The last element of type T in the ring vector, or none if the vector is empty.
          */
-        std::optional<T> back()
+        std::optional<T> back() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -189,7 +189,7 @@ namespace tools
          *
          * @return A copy of the internal ring vector.
          */
-        tools::ring_vector<T> snapshot()
+        tools::ring_vector<T> snapshot() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector;
@@ -203,7 +203,7 @@ namespace tools
          *
          * @return true if the ring vector is empty, false otherwise.
          */
-        bool empty()
+        bool empty() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.empty();
@@ -217,7 +217,7 @@ namespace tools
          *
          * @return true if the ring vector is full, false otherwise.
          */
-        bool full()
+        bool full() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.full();
@@ -230,7 +230,7 @@ namespace tools
          *
          * @return The number of elements in the ring vector.
          */
-        std::size_t size()
+        std::size_t size() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.size();
@@ -295,7 +295,7 @@ namespace tools
          *
          * @return true if the ring vector is full, false otherwise.
          */
-        bool isr_full()
+        bool isr_full() const
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.full();
@@ -310,7 +310,7 @@ namespace tools
          *
          * @return The size of the ring vector.
          */
-        std::size_t isr_size()
+        std::size_t isr_size() const
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.size();
@@ -332,7 +332,7 @@ namespace tools
 
     private:
         ring_vector<T> m_ring_vector;
-        critical_section m_mutex;
+        mutable critical_section m_mutex;
     };
 }
 
