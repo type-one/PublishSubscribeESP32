@@ -198,7 +198,11 @@ namespace tools
                 else
                 {
                     // wait for the next period
-                    vTaskDelayUntil(&x_last_wake_time, x_period);
+
+                    // note: STM32 ThreadX FreeRTOS compatibility layer is buggy with vTaskDelayUntil and 
+                    // short or passed deadline (blocking the task). Replace in that case with vTaskDelay
+                    // and the remaining time to wait
+                    vTaskDelayUntil(&x_last_wake_time, x_period);                    
                 }
 
                 // execute given periodic function
