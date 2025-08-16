@@ -257,7 +257,10 @@ namespace tools
         void resize(std::size_t new_size)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_vector.resize(new_size);
+            if (new_size != m_ring_vector.size())
+            {
+                m_ring_vector.resize(new_size);
+            }
         }
 
         /**
@@ -327,7 +330,10 @@ namespace tools
         void isr_resize(std::size_t new_size)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_vector.resize(new_size);
+            if (new_size != m_ring_vector.size())
+            {
+                m_ring_vector.resize(new_size);
+            }
         }
 
     private:
