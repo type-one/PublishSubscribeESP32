@@ -320,13 +320,19 @@ namespace tools
          */
         void resize(std::size_t new_capacity)
         {
-            std::vector<T> tmp(std::max(new_capacity, m_size));
+            if (m_size == new_capacity)
+            {
+                return;
+            }
+
+            std::vector<T> tmp;
+            tmp.reserve(m_size);
 
             // vector filled from first to last pushed
             std::size_t idx = m_pop_index;
             for (std::size_t i = 0; i < m_size; ++i)
             {
-                tmp[i] = std::move(m_ring_vector[idx]);
+                tmp.emplace_back(std::move(m_ring_vector[idx]));
                 idx = next_index(idx);
             }
 
