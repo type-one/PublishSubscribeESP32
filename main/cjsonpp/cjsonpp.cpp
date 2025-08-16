@@ -47,14 +47,14 @@ namespace cjsonpp
         }
     }
 
-    JSONObject::Holder::Holder(Holder&& other)
-        : o { std::move(other.o) }
-        , own_ { std::move(other.own_) }
+    JSONObject::Holder::Holder(Holder&& other) noexcept
+        : o { other.o }
+        , own_ { other.own_ }
     {
     }
 
     // move operator
-    JSONObject::Holder& JSONObject::Holder::operator=(Holder&& other)
+    JSONObject::Holder& JSONObject::Holder::operator=(Holder&& other) noexcept
     {
         if (this != &other)
         {
@@ -65,8 +65,8 @@ namespace cjsonpp
                     cJSON_Delete(o);
                 }
             }
-            o = std::move(other.o);
-            own_ = std::move(other.own_);
+            o = other.o;
+            own_ = other.own_;
         }
 
         return *this;
@@ -103,13 +103,13 @@ namespace cjsonpp
     {
     }
 
-    JSONObject::JSONObject(JSONObject&& other)
+    JSONObject::JSONObject(JSONObject&& other) noexcept
         : obj_ { std::move(other.obj_) }
         , refs_ { std::move(other.refs_) }
     {
     }
 
-    JSONObject& JSONObject::operator=(JSONObject&& other)
+    JSONObject& JSONObject::operator=(JSONObject&& other) noexcept
     {
         if (this != &other)
         {

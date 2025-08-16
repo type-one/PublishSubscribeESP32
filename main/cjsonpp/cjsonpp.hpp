@@ -90,10 +90,10 @@ namespace cjsonpp
             Holder& operator=(const Holder&) = delete;
 
             // move constructor
-            explicit Holder(Holder&&) noexcept;
+            explicit Holder(Holder&& other) noexcept;
 
             // move operator
-            Holder& operator=(Holder&&) noexcept;
+            Holder& operator=(Holder&& other) noexcept;
         };
 
         using HolderPtr = std::shared_ptr<Holder>;
@@ -307,14 +307,14 @@ namespace cjsonpp
          *
          * This move constructor allows moving of JSONObject instances.
          */
-        JSONObject(JSONObject&&) noexcept;
+        JSONObject(JSONObject&& other) noexcept;
 
         /**
          * @brief Move assignment operator for JSONObject.
          *
          * This operator allows moving of JSONObject instances.
          */
-        JSONObject& operator=(JSONObject&&) noexcept;
+        JSONObject& operator=(JSONObject&& other) noexcept;
 
         /**
          * @brief Get the type of the JSON object value.
