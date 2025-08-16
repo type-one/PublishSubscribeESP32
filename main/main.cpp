@@ -732,7 +732,7 @@ public:
 private:
 };
 
-using base_async_observer = tools::async_observer<my_topic, my_event>;
+using base_async_observer = tools::async_observer<my_topic, my_event, tools::sync_queue>;
 class my_async_observer : public base_async_observer // NOLINT inherits from non copyable and non movable
 {
 public:

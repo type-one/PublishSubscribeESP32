@@ -36,17 +36,51 @@
 #define ASYNC_OBSERVER_HPP_
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <vector>
 
 #include "tools/sync_object.hpp"
 #include "tools/sync_observer.hpp"
-#include "tools/sync_queue.hpp"
 
 namespace tools
 {
+
+    /**
+     * @brief Checks if a type T has a constructor that takes a single argument of type U.
+     *
+     * @tparam T The type to check.
+     */
+    template <typename T>
+    struct has_ctor_1_args
+    {
+        // https://stackoverflow.com/questions/16137468/sfinae-detect-constructor-with-one-argument
+        /**
+         * @brief A helper struct to detect the presence of a constructor with one argument.
+         *
+         * This struct is used in conjunction with SFINAE to determine if a type T has a constructor
+         * that can be called with a single argument of type U.
+         *
+         * @tparam U The type of the argument to the constructor.
+         */
+        struct any
+        {
+            template <typename U, typename SFINAE = typename std::enable_if<!std::is_same<U, T>::value, U>::type>
+            operator U() const;
+        };
+
+        template <typename U>
+        static std::int32_t SFINAE(decltype(U(any()))*);
+
+        template <typename U>
+        static std::int8_t SFINAE(...);
+
+        static const bool value = sizeof(SFINAE<T>(nullptr)) == sizeof(std::int32_t);
+    };
+
     /**
      * @brief A class that provides asynchronous observation capabilities.
      *
@@ -54,13 +88,28 @@ namespace tools
      *
      * @tparam Topic The type of the topic associated with the events.
      * @tparam Evt The type of the event data.
+     * @tparam Sync_Container The type of the synchronization container used for event queuing.
      */
-    template <typename Topic, typename Evt>
+    template <typename Topic, typename Evt, template<class> class Sync_Container>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        requires Sync_Container<std::tuple<Topic, Evt, std::string>>::thread_safe::value
+#endif
     class async_observer : public sync_observer<Topic, Evt> // NOLINT inherits from non copyable and non movable class
     {
     public:
+        static_assert(Sync_Container<std::tuple<Topic, Evt, std::string>>::thread_safe::value, "Sync_Container has to provide a thread-safe container");
+
         async_observer() = default;
         ~async_observer() override = default;
+
+        async_observer(std::size_t container_capacity)
+            : sync_observer<Topic, Evt>()
+        {
+            if constexpr (has_ctor_1_args<Sync_Container<std::tuple<Topic, Evt, std::string>>>::value)
+            {
+                m_evt_queue = Sync_Container<std::tuple<Topic, Evt, std::string>>(container_capacity);
+            }
+        }
 
         /**
          * @brief Informs the observer of a new event.
@@ -96,7 +145,7 @@ namespace tools
                 if (tmp.has_value())
                 {
                     events.emplace_back(tmp.value());
-                }                
+                }
             }
 
             return events;
@@ -204,7 +253,7 @@ namespace tools
         /**
          * @brief A synchronized queue that holds tuples of Topic, Evt, and std::string.
          */
-        sync_queue<std::tuple<Topic, Evt, std::string>> m_evt_queue;
+        Sync_Container<std::tuple<Topic, Evt, std::string>> m_evt_queue;
     };
 
 }
