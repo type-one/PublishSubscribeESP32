@@ -321,6 +321,17 @@ namespace tools
         }
 
         /**
+         * @brief Returns the capacity of the ring vector in an interrupt-safe manner.
+         *
+         * @return The capacity of the ring vector.
+         */
+        [[nodiscard]] std::size_t isr_capacity() const
+        {
+             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            return m_ring_vector.capacity();
+        }
+
+        /**
          * @brief Resizes the ring vector to the specified new size in an interrupt-safe manner.
          *
          * This function acquires a lock on the critical section to ensure that the resize operation
