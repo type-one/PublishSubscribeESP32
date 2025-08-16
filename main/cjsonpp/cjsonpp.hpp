@@ -641,7 +641,7 @@ namespace cjsonpp
         {
             CJSONPP_THROW("Not a number type", obj->type & byte_mask);
         }
-        return static_cast<int64_t>(obj->valuedouble);
+        return static_cast<std::int64_t>(obj->valuedouble);
     }
 
     /**
