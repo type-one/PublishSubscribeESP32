@@ -47,6 +47,7 @@
 
 #include "tools/async_observer.hpp"
 #include "tools/sync_queue.hpp"
+#include "tools/sync_ring_vector.hpp"
 
 /**
  * @class AsyncObserverTest
@@ -178,7 +179,7 @@ TEST_F(AsyncObserverTest, SingleObserverMultipleEvents)
 }
 
 /**
- * @brief Test case for verifying the behavior of a single observer handling multiple events belonging to 
+ * @brief Test case for verifying the behavior of a single observer handling multiple events belonging to
  * a same topic.
  *
  * This test creates an instance of `tools::async_observer` and starts a thread to wait for events.
@@ -254,7 +255,8 @@ TEST_F(AsyncObserverTest, SingleObserverMultipleEventsSameTopic)
 TEST_F(AsyncObserverTest, MultipleObserversSingleEvent)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -317,7 +319,8 @@ TEST_F(AsyncObserverTest, MultipleObserversSingleEvent)
 TEST_F(AsyncObserverTest, MultipleObserversMultipleEvents)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -400,7 +403,8 @@ TEST_F(AsyncObserverTest, MultipleObserversMultipleEvents)
 TEST_F(AsyncObserverTest, MultipleObserversConcurrentEvents)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -496,7 +500,8 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEvents)
 TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeout)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -597,7 +602,8 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeout)
 TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutExpired)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -673,8 +679,8 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutExpired)
  * and unsubscribe one of the topic.
  *
  * This test creates two async observers and a publisher thread. The publisher thread
- * informs both observers of three events each. The observer threads subscribe then 
- * unsubscribe one of the topic and wait for events with a timeout of 100 milliseconds, 
+ * informs both observers of three events each. The observer threads subscribe then
+ * unsubscribe one of the topic and wait for events with a timeout of 100 milliseconds,
  * then pop all events and verify the received events correspond to the active subscriptions.
  *
  * @test This test verifies that:
@@ -683,7 +689,8 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutExpired)
 TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutAndUnsubscribe)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -785,7 +792,8 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutAndUnsubsc
 TEST_F(AsyncObserverTest, DifferentSubjectsSingleEvent)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -848,7 +856,8 @@ TEST_F(AsyncObserverTest, DifferentSubjectsSingleEvent)
 TEST_F(AsyncObserverTest, DifferentSubjectsMultipleEvents)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -932,7 +941,8 @@ TEST_F(AsyncObserverTest, DifferentSubjectsMultipleEvents)
 TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEvents)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
@@ -1036,7 +1046,8 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEvents)
 TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEventsWithTimeout)
 {
     auto observer1 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
-    auto observer2 = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_queue>>();
+    auto observer2
+        = std::make_shared<tools::async_observer<std::string, std::string, tools::sync_ring_vector>>(256U /* depth */);
 
     std::atomic_bool subscribed1 { false };
     std::atomic_bool subscribed2 { false };
