@@ -243,6 +243,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t capacity() const
         {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.capacity();
         }
 
