@@ -711,7 +711,7 @@ struct my_event
     {
         notification,
         failure
-    } type;
+    } type = {type::notification};
 
     std::string description;
 };
@@ -732,12 +732,16 @@ public:
 private:
 };
 
-using base_async_observer = tools::async_observer<my_topic, my_event, tools::sync_queue>;
+// using base_async_observer = tools::async_observer<my_topic, my_event, tools::sync_queue>;
+using base_async_observer = tools::async_observer<my_topic, my_event, tools::sync_ring_vector>;
+
+static constexpr const std::size_t base_async_observer_queue_depth = 256U;
 class my_async_observer : public base_async_observer // NOLINT inherits from non copyable and non movable
 {
 public:
     my_async_observer()
-        : m_task_loop([this]() { handle_events(); })
+        : base_async_observer(base_async_observer_queue_depth)
+        , m_task_loop([this]() { handle_events(); })
     {
     }
 
@@ -1578,11 +1582,11 @@ void test_json()
         cjsonpp::JSONObject obj3 = {};
         cjsonpp::JSONObject obj4 = {};
 
-        #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
         constexpr const double number_pi = std::numbers::pi;
-        #else
+#else
         constexpr const double number_pi = 3.141592;
-        #endif
+#endif
         obj.set("pi", number_pi);                  // add a number that is stored as double
         obj.set("happy", true);                    // add a Boolean that is stored as bool
         obj.set("name", "Niels");                  // add a string that is stored as std::string

@@ -8,6 +8,7 @@ Checks:          "clang-diagnostic-*,\
                   cppcoreguidelines-*,\
                   -modernize-use-trailing-return-type,\
                   -modernize-type-traits,\
+                  -modernize-use-constraints,\
                   -performance-unnecessary-copy-initialization,
                   -cppcoreguidelines-avoid-do-while,\
                   -cppcoreguidelines-pro-type-vararg,\

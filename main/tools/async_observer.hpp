@@ -90,25 +90,43 @@ namespace tools
      * @tparam Evt The type of the event data.
      * @tparam Sync_Container The type of the synchronization container used for event queuing.
      */
-    template <typename Topic, typename Evt, template<class> class Sync_Container>
+    template <typename Topic, typename Evt, template <class> class Sync_Container>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
         requires Sync_Container<std::tuple<Topic, Evt, std::string>>::thread_safe::value
 #endif
     class async_observer : public sync_observer<Topic, Evt> // NOLINT inherits from non copyable and non movable class
     {
     public:
-        static_assert(Sync_Container<std::tuple<Topic, Evt, std::string>>::thread_safe::value, "Sync_Container has to provide a thread-safe container");
+        static_assert(Sync_Container<std::tuple<Topic, Evt, std::string>>::thread_safe::value,
+            "Sync_Container has to provide a thread-safe container");
 
-        async_observer() = default;
         ~async_observer() override = default;
 
+        /**
+         * @brief Default constructor for async_observer if the underlying container is default constructible.
+         *
+         * This constructor initializes the async_observer with an empty event queue and a wakeable object.
+         */
+        template <typename T = Sync_Container<std::tuple<Topic, Evt, std::string>>,
+            typename = std::enable_if_t<std::is_default_constructible_v<T>>>
+        async_observer()
+            : sync_observer<Topic, Evt>()
+            , m_evt_queue()
+        {
+        }
+
+        /**
+         * @brief Construct a new async observer object with a given container capacity if the underlying container has
+         * a single argument constructor.
+         *
+         * @param container_capacity The capacity of the event queue.
+         */
+        template <typename T = Sync_Container<std::tuple<Topic, Evt, std::string>>,
+            typename = std::enable_if_t<has_ctor_1_args<T>::value>>
         async_observer(std::size_t container_capacity)
             : sync_observer<Topic, Evt>()
+            , m_evt_queue(container_capacity)
         {
-            if constexpr (has_ctor_1_args<Sync_Container<std::tuple<Topic, Evt, std::string>>>::value)
-            {
-                m_evt_queue = Sync_Container<std::tuple<Topic, Evt, std::string>>(container_capacity);
-            }
         }
 
         /**
