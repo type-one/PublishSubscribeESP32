@@ -66,7 +66,7 @@ namespace tools
      */
     template <typename Context, typename DataType>
 #if __cplusplus >= 202002L
-    requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
+        requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
 #endif
     class data_task : public base_task // NOLINT base_task is non copyable and non movable
     {
@@ -109,14 +109,17 @@ namespace tools
          * @param stack_size The stack size for the task.
          * @param cpu_affinity The CPU affinity for the task.
          * @param priority The priority of the task.
+         * @param data_timeout The timeout duration for data waiting in us.
          */
         data_task(call_back&& startup_routine, data_call_back&& process_routine,
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
-            std::size_t stack_size, int cpu_affinity, int priority)
+            std::size_t stack_size, int cpu_affinity, int priority,
+            const std::chrono::duration<std::uint64_t, std::micro>& data_timeout)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_process_routine(std::move(process_routine))
             , m_context(context)
+            , m_data_timeout(data_timeout)
         {
             // FreeRTOS platform
             m_data_queue = xQueueCreate(data_queue_depth, sizeof(DataType));
@@ -145,7 +148,8 @@ namespace tools
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
             std::size_t stack_size)
             : data_task(std::move(startup_routine), std::move(process_routine), context, data_queue_depth, task_name,
-                stack_size, base_task::run_on_all_cores, base_task::default_priority)
+                  stack_size, base_task::run_on_all_cores, base_task::default_priority,
+                  std::chrono::duration<std::uint64_t, std::micro>::max())
         {
         }
 
@@ -247,7 +251,14 @@ namespace tools
                 object_instance);
 
             const std::string task_name = instance->task_name();
-            constexpr const TickType_t x_block_time = portMAX_DELAY; /* Block indefinitely. */
+            constexpr const TickType_t x_infinite_block_time = portMAX_DELAY; /* Block indefinitely. */
+
+            const auto data_timeout = instance->m_data_timeout;
+
+            const auto us = std::chrono::duration_cast<std::chrono::microseconds>(data_timeout);
+            const TickType_t x_block_time = (std::chrono::duration<std::uint64_t, std::micro>::max() == data_timeout)
+                ? x_infinite_block_time
+                : static_cast<TickType_t>((pdMS_TO_TICKS(us.count()) / 1000U));
 
             // execute given startup function
             instance->m_startup_routine(instance->m_context, task_name);
@@ -257,7 +268,7 @@ namespace tools
                 if (nullptr != instance->m_data_queue)
                 {
                     DataType data = {};
-                    while (xQueueReceive(instance->m_data_queue, &data, x_block_time))
+                    if (pdPASS == xQueueReceive(instance->m_data_queue, &data, x_block_time))
                     {
                         instance->m_process_routine(instance->m_context, data, task_name);
                     }
@@ -276,5 +287,7 @@ namespace tools
 
         TaskHandle_t m_task = {};
         bool m_task_created = false;
+
+        const std::chrono::duration<std::uint64_t, std::micro>& m_data_timeout;
     };
 }

@@ -63,7 +63,7 @@ namespace tools
      */
     template <typename Context, typename DataType>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-    requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
+        requires std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>
 #endif
     class data_task : public base_task // NOLINT base_task is non copyable and non movable
     {
@@ -106,15 +106,18 @@ namespace tools
          * @param stack_size The stack size for the task.
          * @param cpu_affinity The CPU affinity for the task.
          * @param priority The priority of the task.
+         * @param data_timeout The timeout duration for data waiting in us.
          */
         data_task(call_back&& startup_routine, data_call_back&& process_routine,
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
-            std::size_t stack_size, int cpu_affinity, int priority)
+            std::size_t stack_size, int cpu_affinity, int priority,
+            const std::chrono::duration<std::uint64_t, std::micro>& data_timeout)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_process_routine(std::move(process_routine))
             , m_data_queue(data_queue_depth)
             , m_context(context)
+            , m_data_timeout(data_timeout)
         {
             m_task = std::make_unique<std::thread>(
                 [this]()
@@ -140,7 +143,8 @@ namespace tools
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
             std::size_t stack_size)
             : data_task(std::move(startup_routine), std::move(process_routine), context, data_queue_depth, task_name,
-                stack_size, base_task::run_on_all_cores, base_task::default_priority)
+                  stack_size, base_task::run_on_all_cores, base_task::default_priority,
+                  std::chrono::duration<std::uint64_t, std::micro>::max())
         {
         }
 
@@ -214,7 +218,16 @@ namespace tools
 
             while (!m_stop_task.load())
             {
-                m_data_sync.wait_for_signal();
+                if (std::chrono::duration<std::uint64_t, std::micro>::max() == m_data_timeout)
+                {
+                    // wait indefinitely for data
+                    m_data_sync.wait_for_signal();
+                }
+                else
+                {
+                    // wait for data with timeout
+                    m_data_sync.wait_for_signal(m_data_timeout);
+                }
 
                 while (!m_data_queue.empty())
                 {
@@ -235,5 +248,6 @@ namespace tools
         std::shared_ptr<Context> m_context;
         std::atomic_bool m_stop_task = false;
         std::unique_ptr<std::thread> m_task;
+        const std::chrono::duration<std::uint64_t, std::micro>& m_data_timeout;
     };
 }
