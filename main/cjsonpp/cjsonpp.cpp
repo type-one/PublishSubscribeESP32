@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <initializer_list>
@@ -46,6 +47,31 @@ namespace cjsonpp
         }
     }
 
+    JSONObject::Holder::Holder(Holder&& other)
+        : o { std::move(other.o) }
+        , own_ { std::move(other.own_) }
+    {
+    }
+
+    // move operator
+    JSONObject::Holder& JSONObject::Holder::operator=(Holder&& other)
+    {
+        if (this != &other)
+        {
+            if (nullptr != o)
+            {
+                if (own_)
+                {
+                    cJSON_Delete(o);
+                }
+            }
+            o = std::move(other.o);
+            own_ = std::move(other.own_);
+        }
+
+        return *this;
+    }
+
     cJSON* JSONObject::Holder::operator->() const
     {
         return o;
@@ -64,7 +90,6 @@ namespace cjsonpp
         return retval;
     }
 
-
     // necessary for holding references in the set
     bool JSONObject::operator<(const JSONObject& other) const
     {
@@ -76,6 +101,22 @@ namespace cjsonpp
         : obj_(new Holder(cJSON_CreateObject(), true))
         , refs_(new ObjectSet)
     {
+    }
+
+    JSONObject::JSONObject(JSONObject&& other)
+        : obj_ { std::move(other.obj_) }
+        , refs_ { std::move(other.refs_) }
+    {
+    }
+
+    JSONObject& JSONObject::operator=(JSONObject&& other)
+    {
+        if (this != &other)
+        {
+            obj_ = std::move(other.obj_);
+            refs_ = std::move(other.refs_);
+        }
+        return *this;
     }
 
     // wrap existing cJSON object
