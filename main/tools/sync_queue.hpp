@@ -1,6 +1,6 @@
 /**
  * @file sync_queue.hpp
- * @brief A thread-safe queue implementation for the Publish/Subscribe Pattern.
+ * @brief A thread-safe queue implementation.
  *
  * This file contains the definition of the sync_queue class, which provides a thread-safe
  * queue with various methods to manipulate the queue. It is part of the Publish/Subscribe

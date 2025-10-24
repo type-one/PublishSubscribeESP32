@@ -1,6 +1,6 @@
 /**
  * @file worker_task_std.inl
- * @brief A worker task class template for the Publish/Subscribe Pattern.
+ * @brief A worker task class template.
  *
  * This file contains the implementation of the worker_task class template, which
  * provides functionality to delegate tasks and manage their execution.
@@ -112,7 +112,7 @@ namespace tools
         worker_task(call_back&& startup_routine, const std::shared_ptr<Context>& context, const std::string& task_name,
             std::size_t stack_size)
             : worker_task(std::move(startup_routine), context, task_name, stack_size, base_task::run_on_all_cores,
-                base_task::default_priority)
+                  base_task::default_priority)
         {
         }
 
