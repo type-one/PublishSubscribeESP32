@@ -42,7 +42,7 @@
 
 namespace tools
 {
-    class non_copyable // NOLINT defines a non copyable and non movable class
+    class non_copyable
     {
     public:
         non_copyable() = default;
@@ -50,7 +50,7 @@ namespace tools
 
         non_copyable(const non_copyable&) = delete;
         non_copyable(non_copyable&&) noexcept = delete;
-        non_copyable& operator=(const non_copyable&&) = delete;
+        non_copyable& operator=(const non_copyable&) = delete;
         non_copyable& operator=(non_copyable&&) noexcept = delete;
     };
 }

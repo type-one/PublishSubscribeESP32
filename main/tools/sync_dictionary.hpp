@@ -1,6 +1,6 @@
 /**
  * @file sync_dictionary.hpp
- * @brief A thread-safe dictionary class for C++ Publish/Subscribe Pattern.
+ * @brief A thread-safe dictionary class.
  *
  * This file contains the definition of the sync_dictionary class, which provides
  * a thread-safe dictionary implementation using a mutex to protect access to the

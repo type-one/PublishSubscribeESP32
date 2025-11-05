@@ -3,8 +3,8 @@
  * @brief A thread-safe ring buffer implementation.
  *
  * This file contains the definition of a thread-safe ring buffer class template.
- * The ring buffer provides basic operations such as push, pop, front, back, and size,
- * and ensures thread safety using a mutex.
+ * The ring buffer provides basic operations such as push, pop, front, front_pop, back,
+ * and size, and ensures thread safety using a mutex.
  *
  * @author Laurent Lardinois
  *
@@ -56,7 +56,7 @@ namespace tools
      * @brief A thread-safe ring buffer implementation.
      *
      * This class provides a thread-safe ring buffer with a fixed capacity.
-     * It supports basic operations such as push, pop, front, back, and size,
+     * It supports basic operations such as push, pop, front, front_pop, back, and size,
      * and ensures thread safety using a mutex.
      *
      * @tparam T The type of elements stored in the ring buffer.
@@ -134,7 +134,7 @@ namespace tools
         /**
          * @brief Retrieves and removes the front element of the ring buffer.
          *
-         * This method locks the mutex to ensure thread safety and then returns and rermoves the front element of 
+         * This method locks the mutex to ensure thread safety and then returns and rermoves the front element of
          * the ring buffer.
          *
          * @return The front element of the ring buffer, or none if the buffer is empty.
@@ -173,7 +173,7 @@ namespace tools
         /**
          * @brief Retrieves a copy of the internal ring buffer.
          *
-         * This method locks the mutex to ensure thread safety and then returns a copy of 
+         * This method locks the mutex to ensure thread safety and then returns a copy of
          * the internal ring buffer.
          *
          * @return A copy of the internal ring buffer.

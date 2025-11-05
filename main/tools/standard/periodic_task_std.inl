@@ -1,6 +1,6 @@
 /**
  * @file periodic_task_std.inl
- * @brief Implementation of a periodic task using the Publish/Subscribe pattern.
+ * @brief Implementation of a periodic task.
  *
  * This file contains the implementation of the periodic_task class, which inherits from base_task
  * and provides functionality to execute a startup routine and a periodic routine at specified intervals.
@@ -123,7 +123,7 @@ namespace tools
             const std::shared_ptr<Context>& context, const std::string& task_name,
             const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size)
             : periodic_task(std::move(startup_routine), std::move(periodic_routine), context, task_name, period,
-                stack_size, base_task::run_on_all_cores, base_task::default_priority)
+                  stack_size, base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 
@@ -207,14 +207,13 @@ namespace tools
                 } // end if wait period needed
                 else
                 {
-                    // missed deadline, setup the next deadline in the future and multiple of the period                    
+                    // missed deadline, setup the next deadline in the future and multiple of the period
                     do
                     {
                         deadline += m_period;
-                    }
-                    while(deadline < current_time);
+                    } while (deadline < current_time);
                 }
-            }     // periodic task loop
+            } // periodic task loop
         }
 
         call_back m_startup_routine;
