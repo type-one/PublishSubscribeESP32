@@ -111,7 +111,7 @@ namespace tools
          *
          * @param collection A map containing the key-value pairs to be added to the dictionary.
          */
-        void add_collection(const std::map<K, T> collection)
+        void add_collection(const std::map<K, T>& collection)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
@@ -128,7 +128,7 @@ namespace tools
          *
          * @param collection The unordered map containing key-value pairs to be added to the dictionary.
          */
-        void add_collection(const std::unordered_map<K, T> collection)
+        void add_collection(const std::unordered_map<K, T>& collection)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
