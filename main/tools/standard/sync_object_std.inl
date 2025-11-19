@@ -49,19 +49,9 @@ namespace tools
     {
     public:
         /**
-         * @brief Constructs a sync_object with an initial state.
-         *
-         * @param initial_state The initial state of the sync_object. If true, the object is signaled.
+         * @brief Constructor for the sync_object class.
          */
-        sync_object(bool initial_state);
-
-        /**
-         * @brief Constructs a default sync_object with the object not signaled.
-         */
-        sync_object()
-            : sync_object(false)
-        {
-        }
+        sync_object() = default;
 
         /**
          * @brief Destructor for the sync_object class.
@@ -111,8 +101,7 @@ namespace tools
         void isr_signal();
 
     private:
-        bool m_signaled;
-        bool m_stop;
+        bool m_signaled = false;
         std::mutex m_mutex;
         std::condition_variable m_cond;
     };

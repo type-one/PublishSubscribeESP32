@@ -45,7 +45,7 @@
 
 namespace tools
 {
-    sync_object::sync_object(bool initial_state)
+    sync_object::sync_object()
         : m_event_group(xEventGroupCreate())
     {
         // FreeRTOS platform
@@ -53,13 +53,6 @@ namespace tools
         if (nullptr == m_event_group)
         {
             LOG_ERROR("FATAL error: xEventGroupCreate() failed");
-        }
-        else
-        {
-            if (initial_state)
-            {
-                xEventGroupSetBits(m_event_group, BIT0);
-            }
         }
     }
 

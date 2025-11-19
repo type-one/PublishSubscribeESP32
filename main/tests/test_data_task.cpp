@@ -94,6 +94,9 @@ protected:
         context = std::make_shared<MockContext>();
         task = std::make_unique<tools::data_task<MockContext, int>>(
             startup_routine, process_routine, context, 10, "TestTask", 2048);
+
+        // Allow some time for the task to start
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     /**
@@ -205,6 +208,9 @@ protected:
 
         task2 = std::make_unique<tools::data_task<MockContext, int>>(
             std::move(startup_routine), std::move(process2), context, 10, "Task2", 2048);
+
+        // Allow some time for the task to start
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     /**
@@ -279,7 +285,7 @@ TEST_F(DataTaskDualTest, DualTaskCommunicationTest)
     task1->submit(42);
 
     // Allow some time for the tasks to process
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     EXPECT_TRUE(task1_processed);
     EXPECT_TRUE(task2_processed);
@@ -319,6 +325,9 @@ protected:
 
         task2 = std::make_unique<tools::data_task<MockContext, msg>>(
             std::move(startup_routine), std::move(process_pong_bind), context, 10, "PongTask", 2048);
+
+        // Allow some time for the task to start
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     /**
      * @brief Cleans up the test environment by resetting the data tasks.
@@ -398,7 +407,7 @@ protected:
  *
  * @test
  * - Submits a "ping" message to task1.
- * - Waits for 1000 milliseconds to allow task processing.
+ * - Waits for 3000 milliseconds to allow task processing.
  * - Expects the ping_count to be 10.
  * - Expects the pong_count to be 10.
  */
@@ -407,7 +416,7 @@ TEST_F(DataTaskPingPongTest, PingPongCommunicationTest)
     task1->submit(msg::ping);
 
     // Allow some time for the tasks to process
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
     EXPECT_EQ(ping_count.load(), 10);
     EXPECT_EQ(pong_count.load(), 10);

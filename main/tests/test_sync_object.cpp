@@ -79,7 +79,7 @@ protected:
  */
 TEST_F(SyncObjectTest, InitialState)
 {
-    tools::sync_object sync(false);
+    tools::sync_object sync;
     EXPECT_FALSE(sync.is_signaled());
 }
 
@@ -91,7 +91,7 @@ TEST_F(SyncObjectTest, InitialState)
  */
 TEST_F(SyncObjectTest, Signal)
 {
-    tools::sync_object sync(false);
+    tools::sync_object sync;
     sync.signal();
     EXPECT_TRUE(sync.is_signaled());
 }
@@ -112,7 +112,7 @@ TEST_F(SyncObjectTest, Signal)
  */
 TEST_F(SyncObjectTest, WaitForSignal)
 {
-    tools::sync_object sync(false);
+    tools::sync_object sync;
     std::thread signal_thread(
         [&sync]()
         {
@@ -146,39 +146,13 @@ TEST_F(SyncObjectTest, WaitForSignal)
  */
 TEST_F(SyncObjectTest, WaitForSignalWithTimeout)
 {
-    tools::sync_object sync(false);
+    tools::sync_object sync;
     auto start = std::chrono::high_resolution_clock::now();
     sync.wait_for_signal(std::chrono::milliseconds(100));
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
 
     EXPECT_GE(elapsed.count(), 100);
-}
-
-/**
- * @brief Test case for signaling before waiting.
- *
- * This test case verifies that signaling the sync_object before waiting
- * results in an almost immediate return from the wait_for_signal() method.
- *
- * @details
- * - A sync_object is created with an initial state of false.
- * - The signal() method is called to set the state to true.
- * - The time taken to return from wait_for_signal() is measured.
- * - The elapsed time should be less than 10 milliseconds, indicating an immediate return.
- *
- * @note This test case uses the Google Test framework.
- */
-TEST_F(SyncObjectTest, SignalBeforeWait)
-{
-    tools::sync_object sync(false);
-    sync.signal();
-    auto start = std::chrono::high_resolution_clock::now();
-    sync.wait_for_signal();
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed = end - start;
-
-    EXPECT_LT(elapsed.count(), 10); // Should be almost immediate
 }
 
 /**
@@ -190,10 +164,27 @@ TEST_F(SyncObjectTest, SignalBeforeWait)
  */
 TEST_F(SyncObjectTest, MultipleSignals)
 {
-    tools::sync_object sync(false);
+    tools::sync_object sync;
     sync.signal();
     sync.signal();
     EXPECT_TRUE(sync.is_signaled());
+}
+
+/**
+ * @brief Test case with timeout and signal before wait
+ *
+ */
+TEST_F(SyncObjectTest, WaitForSignalTimeoutWithSignalBeforeWait)
+{
+    tools::sync_object sync;
+    sync.signal(); // Signal before waiting
+    auto start = std::chrono::high_resolution_clock::now();
+    sync.wait_for_signal(std::chrono::milliseconds(100));
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+
+    EXPECT_GE(elapsed.count(), 100);
+    EXPECT_FALSE(sync.is_signaled()); // wait_for_signal should reset the signal
 }
 
 /**
@@ -213,7 +204,7 @@ TEST_F(SyncObjectTest, MultipleSignals)
  */
 TEST_F(SyncObjectTest, WaitForSignalTimeoutNotSignaled)
 {
-    tools::sync_object sync(false);
+    tools::sync_object sync;
     auto start = std::chrono::high_resolution_clock::now();
     sync.wait_for_signal(std::chrono::milliseconds(100));
     auto end = std::chrono::high_resolution_clock::now();

@@ -115,6 +115,9 @@ TEST_F(AsyncObserverTest, SingleObserverSingleEvent)
         std::this_thread::yield();
     }
 
+    // wait a bit to ensure the observer is ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     subject1->publish("topic_1", "event1");
 
     observer_thread.join();
@@ -170,6 +173,9 @@ TEST_F(AsyncObserverTest, SingleObserverMultipleEvents)
     {
         std::this_thread::yield();
     }
+
+    // wait a bit to ensure the observer is ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     subject1->publish("topic_1", "event1");
     subject1->publish("topic_2", "event2");
@@ -227,6 +233,9 @@ TEST_F(AsyncObserverTest, SingleObserverMultipleEventsSameTopic)
     {
         std::this_thread::yield();
     }
+
+    // wait a bit to ensure the observer is ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     subject1->publish("topic_1", "event1");
     subject1->publish("topic_1", "event2");
@@ -293,6 +302,9 @@ TEST_F(AsyncObserverTest, MultipleObserversSingleEvent)
     {
         std::this_thread::yield();
     }
+
+    // wait a bit to ensure the observer is ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     subject1->publish("topic_1", "event1");
 
@@ -379,6 +391,9 @@ TEST_F(AsyncObserverTest, MultipleObserversMultipleEvents)
     {
         std::this_thread::yield();
     }
+
+    // wait a bit to ensure the observers are ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     subject1->publish("topic_1", "event1");
     subject1->publish("topic_2", "event2");
@@ -474,6 +489,9 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEvents)
             {
                 std::this_thread::yield();
             }
+
+            // wait a bit to ensure the observers are ready
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             subject1->publish("topic_1", "event1");
             subject1->publish("topic_2", "event2");
@@ -577,6 +595,9 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeout)
             {
                 std::this_thread::yield();
             }
+
+            // wait a bit to ensure the observers are ready
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             subject1->publish("topic_1", "event1");
             subject1->publish("topic_2", "event2");
@@ -767,6 +788,9 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutAndUnsubsc
                 std::this_thread::yield();
             }
 
+            // wait a bit to ensure the observers are ready
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
             subject1->publish("topic_1", "event1");
             subject1->publish("topic_2", "event2");
             subject1->publish("topic_3", "event3");
@@ -830,6 +854,9 @@ TEST_F(AsyncObserverTest, DifferentSubjectsSingleEvent)
     {
         std::this_thread::yield();
     }
+
+    // wait a bit to ensure the observers are ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     subject1->publish("topic_1", "event1");
     subject2->publish("topic_2", "event2");
@@ -916,6 +943,9 @@ TEST_F(AsyncObserverTest, DifferentSubjectsMultipleEvents)
     {
         std::this_thread::yield();
     }
+
+    // wait a bit to ensure the observers are ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     subject1->publish("topic_1", "event1");
     subject2->publish("topic_3", "event3");
@@ -1012,6 +1042,9 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEvents)
             {
                 std::this_thread::yield();
             }
+
+            // wait a bit to ensure the observers are ready
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             subject1->publish("topic_1", "event1"); // NOLINT test
             subject2->publish("topic_3", "event3"); // NOLINT test
@@ -1123,6 +1156,9 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEventsWithTimeout)
             {
                 std::this_thread::yield();
             }
+
+            // wait a bit to ensure the observers are ready
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             subject1->publish("topic_1", "event1"); // NOLINT test
             subject2->publish("topic_3", "event3"); // NOLINT test

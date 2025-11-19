@@ -56,25 +56,12 @@ namespace tools
     {
     public:
         /**
-         * @brief Constructor for the sync_object class.
+         * @brief Construct a new sync object object
          *
-         * This constructor initializes the sync_object with an initial state and creates an event group using FreeRTOS.
-         *
-         * @param initial_state The initial state of the sync_object.
-         */
-        sync_object(bool initial_state);
-
-        /**
-         * @brief Constructor for the sync_object class with no signaled object.
-         *
-         * This constructor initializes the sync_object with an initial state as false and creates an event group using
-         * FreeRTOS.
+         * This constructor initializes the FreeRTOS event group used for synchronization.
          *
          */
-        sync_object()
-            : sync_object(false)
-        {
-        }
+        sync_object();
 
         /**
          * @brief Destructor for the sync_object class.
