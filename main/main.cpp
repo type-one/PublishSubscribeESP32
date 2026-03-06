@@ -2680,8 +2680,83 @@ void test_hardware_timer_interrupt()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+    constexpr std::size_t ALLOC_MAX_SIZE = 512;
+    constexpr std::size_t ALLOC_ITERATIONS = 100000;
+
+    struct alloc_data
+    {
+        std::vector<std::uint8_t> data;
+
+        alloc_data(std::size_t size) : data(size)
+        {
+        } 
+    };
+
+    void alloc_dealloc_worker(int wid)
+    {
+        std::printf("-- worker %d\n", wid);
+
+        for (std::size_t i = 0; i < ALLOC_ITERATIONS; ++i)
+        {
+            auto heap_block = std::make_unique<alloc_data>((i % ALLOC_MAX_SIZE) + 1);
+        } // cleanup
+    }
+}
+
+void test_allocator_stress()
+{
+    std::printf("-- allocator stress --\n");
+
+    print_stats();
+
+    auto startup = [](const std::shared_ptr<smp_task_context>& context, const std::string& task_name)
+    {
+        (void)context;
+        (void)task_name;
+    };
+
+    auto context = std::make_shared<smp_task_context>();
+
+    constexpr const std::size_t task_stack_size = 2048U;
+    constexpr const int core1 = 1;
+
+    worker_task1 task1(startup, context, "worker_task1", task_stack_size, core1, tools::base_task::default_priority);
+
+    const auto start = std::chrono::high_resolution_clock::now();
+
+    // delegate work on core 0
+    task1.delegate([](auto context, const auto& task_name)
+    {
+        (void)context;
+        (void)task_name;
+        alloc_dealloc_worker(2);
+    });
+
+    alloc_dealloc_worker(1);
+
+    const auto end = std::chrono::high_resolution_clock::now();
+    const auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::printf("allocation/deallocation total time: %d ms\n", static_cast<int>(millis));
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+#if defined(USE_MEM_POOL_ALLOCATOR)
+// https://www.rastergrid.com/blog/sw-eng/2021/03/custom-memory-allocators/
+extern void init_mem_pool_allocator();
+extern void destroy_mem_pool_allocator();
+#endif
+
 void runner()
 {
+    
+#if defined(USE_MEM_POOL_ALLOCATOR)
+    // prevent memory fragmentation with frequent heap allocations of
+    // small events/messages
+    init_mem_pool_allocator();
+#endif
 
 #if defined(ESP_PLATFORM)
     test_hardware_timer_interrupt();
@@ -2726,6 +2801,12 @@ void runner()
     test_smp_tasks_lock_free_ring_buffer();
     test_smp_tasks_memory_pipe();
     test_tasks_priority();
+    
+    test_allocator_stress();
+
+#if defined(USE_MEM_POOL_ALLOCATOR)
+    destroy_mem_pool_allocator();
+#endif
 
     std::printf("This is The END\n");
 }

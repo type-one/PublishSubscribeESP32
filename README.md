@@ -29,6 +29,7 @@ Goodies:
   Rainer Grimm and Bartlomiej Filipek C++ publications)
 - C++20 calendar day test
 - simple timer helper using 3rdparty (Michael Egli - MIT license) for standard implementation and using FreeRTOS timer for FreeRTOS platform
+- C++20 only: custom pool allocator for global new/new[]/delete/delete[]
 
 [GitHub repository](https://github.com/type-one/PublishSubscribeESP32)
 
@@ -106,6 +107,27 @@ Then
 On Linux, just use `cmake . -B build` and then go to build and run make (or ninja)
 
 On Windows, just use `cmake-gui` to generate a Visual Studio solution
+
+
+## Memory usage
+
+If you build on Linux you can use valgrind to profile the memory usage (with or without custom allocator enabled):
+
+```bash
+valgrind --tool=massif ./publish_subscribe
+
+massif-visualizer ./massif.out.xxxxxx
+```
+
+The purpose of the custom allocator is to pre-allocate tiny blocks and reuse them over the time to prevent memory fragmentation and to minimize the need to allocate new blocks from the heap.
+
+Indeed heavy and high frequency usage of dynamic heap allocation for events/messages can cause memory fragmentation, in particular on platforms with a limited amount of memory available such as the ESP32. 
+
+More info on:
+
+[Valgrind and Massiv](https://gist.github.com/felipeek/f9e4392cfe9a9e65dc52048e91ac58ea)
+[Valgrind manual](https://valgrind.org/docs/manual/ms-manual.html)
+[About custom allocators](https://www.rastergrid.com/blog/sw-eng/2021/03/custom-memory-allocators/)
 
 ## Author
 
