@@ -155,13 +155,22 @@ namespace tools
         }
 
         /**
-         * @brief Pushes an element into the ring buffer.
+         * @brief Pushes an element into the ring buffer with perfect forwarding.
          *
+         * This template method uses perfect forwarding to efficiently handle both
+         * lvalue and rvalue references, eliminating the need for separate push/emplace methods.
+         * In C++20, this method is constrained to only accept constructible types.
+         *
+         * @tparam U The type of the element (deduced, supports both const T& and T&&).
          * @param elem The element to be pushed into the ring buffer.
          */
-        void push(const T& elem)
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        void push(U&& elem)
         {
-            m_ring_buffer.at(m_push_index) = elem;
+            m_ring_buffer.at(m_push_index) = std::forward<U>(elem);
             m_last_index = m_push_index;
             m_push_index = next_index(m_push_index);
             ++m_size;
@@ -173,13 +182,22 @@ namespace tools
         }
 
         /**
-         * @brief Inserts in place an element into the ring buffer at the current push index.
+         * @brief Constructs an element in place in the ring buffer.
          *
-         * @param elem The element to be inserted into the ring buffer.
+         * This method allows flexible construction of elements with multiple arguments
+         * using perfect forwarding.
+         * In C++20, this method is constrained to only accept constructible arguments.
+         *
+         * @tparam Args Parameter types for T's constructor (deduced).
+         * @param args Arguments to forward to T's constructor.
          */
-        void emplace(T&& elem)
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        void emplace(Args&&... args)
         {
-            m_ring_buffer.at(m_push_index) = std::move(elem);
+            m_ring_buffer.at(m_push_index) = T(std::forward<Args>(args)...);
             m_last_index = m_push_index;
             m_push_index = next_index(m_push_index);
             ++m_size;
