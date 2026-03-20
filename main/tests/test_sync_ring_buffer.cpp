@@ -521,8 +521,7 @@ TEST(SyncRingBufferPerfectForwardingTest, IsrPushAndEmplaceForwarding)
  * @brief Verifies forwarding support with move-only payloads.
  *
  * This test ensures sync_ring_buffer accepts std::unique_ptr values through
- * push/emplace. Since front/front_pop currently return by value, this test
- * validates insertion and consumption via size/empty/pop semantics.
+ * push/emplace and can extract them through the move-based front_pop_move API.
  */
 TEST(SyncRingBufferPerfectForwardingTest, SupportsMoveOnlyType)
 {
@@ -533,14 +532,18 @@ TEST(SyncRingBufferPerfectForwardingTest, SupportsMoveOnlyType)
     EXPECT_EQ(ptr, nullptr);
 
     buffer.emplace(std::make_unique<int>(9));
-    ASSERT_EQ(buffer.size(), 2);
 
-    buffer.pop();
-    ASSERT_EQ(buffer.size(), 1);
-    ASSERT_FALSE(buffer.empty());
+    auto first = buffer.front_pop_move();
+    ASSERT_TRUE(first.has_value());
+    ASSERT_NE(*first, nullptr);
+    EXPECT_EQ(**first, 5);
 
-    buffer.pop();
-    ASSERT_TRUE(buffer.empty());
+    auto second = buffer.front_pop_move();
+    ASSERT_TRUE(second.has_value());
+    ASSERT_NE(*second, nullptr);
+    EXPECT_EQ(**second, 9);
+
+    EXPECT_FALSE(buffer.front_pop_move().has_value());
 }
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))

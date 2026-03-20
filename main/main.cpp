@@ -166,8 +166,11 @@ void test_ring_buffer_perfect_forwarding()
 
         while (!ptr_queue.empty())
         {
-            std::printf("move-only element consumed\n");
-            ptr_queue.pop();
+            auto item = ptr_queue.pop_move();
+            if (item.has_value() && item.value())
+            {
+                std::printf("%s\n", item.value()->c_str());
+            }
         }
     }
 }
@@ -696,8 +699,11 @@ void test_sync_ring_buffer()
 
         while (!ptr_queue.empty())
         {
-            std::printf("move-only sync element consumed\n");
-            ptr_queue.pop();
+            auto item = ptr_queue.front_pop_move();
+            if (item.has_value() && item.value())
+            {
+                std::printf("%s\n", item.value()->c_str());
+            }
         }
     }
 }

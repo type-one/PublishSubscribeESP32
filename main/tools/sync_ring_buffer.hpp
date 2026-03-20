@@ -164,6 +164,20 @@ namespace tools
         }
 
         /**
+         * @brief Retrieves and removes the front element using move semantics.
+         *
+         * This method is safe for move-only payload types and forwards extraction
+         * to the underlying ring buffer move-pop API under lock.
+         *
+         * @return The moved front element, or none if the ring buffer is empty.
+         */
+        std::optional<T> front_pop_move()
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            return m_ring_buffer.pop_move();
+        }
+
+        /**
          * @brief Retrieves the last element from the ring buffer.
          *
          * This function locks the mutex to ensure thread safety and then returns

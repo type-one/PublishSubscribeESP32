@@ -433,7 +433,7 @@ TEST(RingBufferPerfectForwardingTest, EmplaceForwardsConstructorArguments)
  * @brief Verifies forwarding support for move-only types.
  *
  * This test uses std::unique_ptr<int> to ensure push/emplace accept move-only
- * payloads and preserve pointed values after insertion.
+ * payloads and preserve pointed values after move-based extraction.
  */
 TEST(RingBufferPerfectForwardingTest, SupportsMoveOnlyType)
 {
@@ -442,12 +442,20 @@ TEST(RingBufferPerfectForwardingTest, SupportsMoveOnlyType)
     auto ptr = std::make_unique<int>(5);
     buffer.push(std::move(ptr));
     EXPECT_EQ(ptr, nullptr);
-    ASSERT_NE(buffer[0], nullptr);
-    EXPECT_EQ(*buffer[0], 5);
 
     buffer.emplace(std::make_unique<int>(9));
-    ASSERT_NE(buffer[1], nullptr);
-    EXPECT_EQ(*buffer[1], 9);
+
+    auto first = buffer.pop_move();
+    ASSERT_TRUE(first.has_value());
+    ASSERT_NE(*first, nullptr);
+    EXPECT_EQ(**first, 5);
+
+    auto second = buffer.pop_move();
+    ASSERT_TRUE(second.has_value());
+    ASSERT_NE(*second, nullptr);
+    EXPECT_EQ(**second, 9);
+
+    EXPECT_FALSE(buffer.pop_move().has_value());
 }
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))

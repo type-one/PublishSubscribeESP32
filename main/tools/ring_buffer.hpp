@@ -44,6 +44,8 @@
 #include <array>
 #include <cstddef>
 #include <iterator>
+#include <optional>
+#include <type_traits>
 #include <utility>
 
 namespace tools
@@ -218,6 +220,26 @@ namespace tools
                 m_pop_index = next_index(m_pop_index);
                 --m_size;
             }
+        }
+
+        /**
+         * @brief Retrieves and removes the oldest element using move semantics.
+         *
+         * This method is suitable for move-only payload types as it returns
+         * the extracted value by move in an optional container.
+         *
+         * @return The moved front element, or none if the ring buffer is empty.
+         */
+        std::optional<T> pop_move()
+        {
+            std::optional<T> item;
+            if (!empty())
+            {
+                item.emplace(std::move(m_ring_buffer.at(m_pop_index)));
+                m_pop_index = next_index(m_pop_index);
+                --m_size;
+            }
+            return item;
         }
 
         /**
