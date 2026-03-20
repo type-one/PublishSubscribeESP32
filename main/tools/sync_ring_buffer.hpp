@@ -76,6 +76,33 @@ namespace tools
         ~sync_ring_buffer() = default;
 
         /**
+         * @brief Pushes a copy of an element into the ring buffer.
+         *
+         * This overload keeps brace-init and exact-T calls unambiguous while
+         * preserving legacy call sites in a thread-safe manner.
+         *
+         * @param elem The element to be copied into the ring buffer.
+         */
+        void push(const T& elem)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_buffer.push(elem);
+        }
+
+        /**
+         * @brief Pushes an rvalue element into the ring buffer.
+         *
+         * This overload preserves brace-init and exact-T call compatibility.
+         *
+         * @param elem The element to be moved into the ring buffer.
+         */
+        void push(T&& elem)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_buffer.push(std::move(elem));
+        }
+
+        /**
          * @brief Pushes an element into the ring buffer using perfect forwarding.
          *
          * This method adds an element to the ring buffer in a thread-safe manner.
@@ -259,6 +286,33 @@ namespace tools
         [[nodiscard]] constexpr std::size_t capacity() const
         {
             return m_ring_buffer.capacity();
+        }
+
+        /**
+         * @brief Pushes a copy of an element into the ring buffer in an ISR-safe manner.
+         *
+         * This overload keeps brace-init and exact-T calls unambiguous while
+         * preserving legacy ISR call sites.
+         *
+         * @param elem The element to be copied into the ring buffer.
+         */
+        void isr_push(const T& elem)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_buffer.push(elem);
+        }
+
+        /**
+         * @brief Pushes an rvalue element into the ring buffer in an ISR-safe manner.
+         *
+         * This overload preserves brace-init and exact-T call compatibility.
+         *
+         * @param elem The element to be moved into the ring buffer.
+         */
+        void isr_push(T&& elem)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_buffer.push(std::move(elem));
         }
 
         /**

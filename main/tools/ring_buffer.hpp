@@ -157,6 +157,47 @@ namespace tools
         }
 
         /**
+         * @brief Pushes a copy of an element into the ring buffer.
+         *
+         * This overload keeps brace-init and exact-T calls unambiguous while
+         * preserving legacy call sites.
+         *
+         * @param elem The element to be copied into the ring buffer.
+         */
+        void push(const T& elem)
+        {
+            m_ring_buffer.at(m_push_index) = elem;
+            m_last_index = m_push_index;
+            m_push_index = next_index(m_push_index);
+            ++m_size;
+            if (m_size > Capacity)
+            {
+                // first entry is overwritten
+                m_pop_index = next_index(m_pop_index);
+            }
+        }
+
+        /**
+         * @brief Pushes an rvalue element into the ring buffer.
+         *
+         * This overload preserves brace-init and exact-T call compatibility.
+         *
+         * @param elem The element to be moved into the ring buffer.
+         */
+        void push(T&& elem)
+        {
+            m_ring_buffer.at(m_push_index) = std::move(elem);
+            m_last_index = m_push_index;
+            m_push_index = next_index(m_push_index);
+            ++m_size;
+            if (m_size > Capacity)
+            {
+                // first entry is overwritten
+                m_pop_index = next_index(m_pop_index);
+            }
+        }
+
+        /**
          * @brief Pushes an element into the ring buffer with perfect forwarding.
          *
          * This template method uses perfect forwarding to efficiently handle both

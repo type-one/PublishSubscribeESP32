@@ -86,6 +86,33 @@ namespace tools
         }
 
         /**
+         * @brief Pushes a copy of an element into the ring vector.
+         *
+         * This overload keeps brace-init and exact-T calls unambiguous while
+         * preserving legacy call sites in a thread-safe manner.
+         *
+         * @param elem The element to be copied into the ring vector.
+         */
+        void push(const T& elem)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_vector.push(elem);
+        }
+
+        /**
+         * @brief Pushes an rvalue element into the ring vector.
+         *
+         * This overload preserves brace-init and exact-T call compatibility.
+         *
+         * @param elem The element to be moved into the ring vector.
+         */
+        void push(T&& elem)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_vector.push(std::move(elem));
+        }
+
+        /**
          * @brief Pushes an element into the ring vector with perfect forwarding.
          *
          * In C++20, this method is constrained to constructible types.
@@ -285,6 +312,33 @@ namespace tools
             {
                 m_ring_vector.resize(new_size);
             }
+        }
+
+        /**
+         * @brief Pushes a copy of an element into the ring vector in an interrupt-safe manner.
+         *
+         * This overload keeps brace-init and exact-T calls unambiguous while
+         * preserving legacy ISR call sites.
+         *
+         * @param elem The element to be copied into the ring vector.
+         */
+        void isr_push(const T& elem)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_vector.push(elem);
+        }
+
+        /**
+         * @brief Pushes an rvalue element into the ring vector in an interrupt-safe manner.
+         *
+         * This overload preserves brace-init and exact-T call compatibility.
+         *
+         * @param elem The element to be moved into the ring vector.
+         */
+        void isr_push(T&& elem)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_vector.push(std::move(elem));
         }
 
         /**
