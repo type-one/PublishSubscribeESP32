@@ -140,12 +140,13 @@ void test_ring_buffer_perfect_forwarding()
 
     {
         constexpr const std::size_t queue_size = 8U;
+        constexpr const std::size_t repeated_char_count = 4U;
         tools::ring_buffer<std::string, queue_size> str_queue;
 
         std::string lvalue = "lvalue-string";
         str_queue.push(lvalue);                       // lvalue path
         str_queue.push(std::string("rvalue-string")); // rvalue path
-        str_queue.emplace(4U, 'x');                   // in-place args forwarding path
+        str_queue.emplace(repeated_char_count, 'x');   // in-place args forwarding path
 
         while (!str_queue.empty())
         {
@@ -211,7 +212,6 @@ void test_ring_vector_resize()
     str_queue->emplace("toto1");
     str_queue->emplace("toto2");
     str_queue->emplace("toto3");
-
     constexpr const std::size_t new_queue_size = 5U;
     str_queue->resize(new_queue_size);
 
@@ -664,16 +664,41 @@ void test_sync_ring_buffer()
     LOG_INFO("-- sync ring buffer --");
     print_stats();
 
-    constexpr const std::size_t queue_size = 64U;
-    tools::sync_ring_buffer<std::string, queue_size> str_queue;
-
-    str_queue.emplace("toto");
-
-    auto item = str_queue.front_pop();
-
-    if (item.has_value())
     {
-        std::printf("%s\n", item->c_str());
+        constexpr const std::size_t queue_size = 64U;
+        constexpr const std::size_t repeated_char_count = 5U;
+        tools::sync_ring_buffer<std::string, queue_size> str_queue;
+
+        std::string lvalue = "sync-lvalue";
+        str_queue.push(lvalue);                     // lvalue forwarding
+        str_queue.push(std::string("sync-rvalue")); // rvalue forwarding
+        str_queue.emplace(repeated_char_count, 'z'); // variadic emplace forwarding
+        str_queue.isr_push(std::string("sync-isr-push"));
+        str_queue.isr_emplace("sync-isr-emplace");
+
+        while (!str_queue.empty())
+        {
+            auto item = str_queue.front_pop();
+            if (item.has_value())
+            {
+                std::printf("%s\n", item->c_str());
+            }
+        }
+    }
+
+    {
+        constexpr const std::size_t queue_size = 8U;
+        tools::sync_ring_buffer<std::unique_ptr<std::string>, queue_size> ptr_queue;
+
+        auto ptr = std::make_unique<std::string>("sync-move-only-push");
+        ptr_queue.push(std::move(ptr));
+        ptr_queue.emplace(std::make_unique<std::string>("sync-move-only-emplace"));
+
+        while (!ptr_queue.empty())
+        {
+            std::printf("move-only sync element consumed\n");
+            ptr_queue.pop();
+        }
     }
 }
 

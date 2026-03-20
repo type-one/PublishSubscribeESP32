@@ -44,6 +44,7 @@
 #include <cstddef>
 #include <mutex>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 #include "tools/critical_section.hpp"
@@ -75,30 +76,41 @@ namespace tools
         ~sync_ring_buffer() = default;
 
         /**
-         * @brief Pushes an element into the ring buffer.
+         * @brief Pushes an element into the ring buffer using perfect forwarding.
          *
          * This method adds an element to the ring buffer in a thread-safe manner.
+         * In C++20, this method is constrained to constructible types.
          *
+         * @tparam U The deduced element type.
          * @param elem The element to be pushed into the ring buffer.
          */
-        void push(const T& elem)
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        void push(U&& elem)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_buffer.push(elem);
+            m_ring_buffer.push(std::forward<U>(elem));
         }
 
         /**
-         * @brief Inserts an element into the ring buffer.
+         * @brief Inserts an element into the ring buffer using perfect forwarding.
          *
          * This function locks the mutex to ensure thread safety and then
-         * inserts the given element into the ring buffer using move semantics.
+         * forwards the arguments into the ring buffer.
          *
-         * @param elem The element to be inserted into the ring buffer.
+         * @tparam Args The deduced constructor argument types.
+         * @param args The arguments to be forwarded for insertion.
          */
-        void emplace(T&& elem)
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        void emplace(Args&&... args)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_buffer.emplace(std::move(elem));
+            m_ring_buffer.emplace(std::forward<Args>(args)...);
         }
 
         /**
@@ -236,31 +248,43 @@ namespace tools
         }
 
         /**
-         * @brief Pushes an element into the ring buffer in an interrupt service routine (ISR) safe manner.
+         * @brief Pushes an element into the ring buffer in an ISR-safe manner using perfect forwarding.
          *
          * This function uses an ISR lock guard to ensure that the push operation is thread-safe
          * and can be safely called from within an ISR.
+         * In C++20, this method is constrained to constructible types.
          *
+         * @tparam U The deduced element type.
          * @param elem The element to be pushed into the ring buffer.
          */
-        void isr_push(const T& elem)
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        void isr_push(U&& elem)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_buffer.push(elem);
+            m_ring_buffer.push(std::forward<U>(elem));
         }
 
         /**
-         * @brief Emplaces an element into the ring buffer in an interrupt service routine (ISR) context.
+         * @brief Emplaces an element into the ring buffer in ISR context using perfect forwarding.
          *
          * This function is designed to be called from an ISR. It locks the critical section
          * to ensure thread safety and then emplaces the given element into the ring buffer.
+         * In C++20, this method is constrained to constructible argument sets.
          *
-         * @param elem The element to be emplaced into the ring buffer.
+         * @tparam Args The deduced constructor argument types.
+         * @param args The arguments to be emplaced into the ring buffer.
          */
-        void isr_emplace(T&& elem)
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        void isr_emplace(Args&&... args)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_buffer.emplace(std::move(elem));
+            m_ring_buffer.emplace(std::forward<Args>(args)...);
         }
 
         /**

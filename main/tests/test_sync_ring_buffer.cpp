@@ -47,6 +47,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "tools/sync_ring_buffer.hpp"
@@ -403,3 +404,170 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersSingleConsumer)
 
     ASSERT_TRUE(this->buffer->empty());
 }
+
+namespace
+{
+    /**
+     * @brief Probe type used to observe copy/move assignment behavior.
+     *
+     * This helper tracks assignment counters to validate that forwarding in
+     * sync_ring_buffer selects copy assignment for lvalues and move assignment
+     * for rvalues.
+     */
+    struct sync_forwarding_probe
+    {
+        sync_forwarding_probe() = default;
+        explicit sync_forwarding_probe(int input)
+            : value(input)
+        {
+        }
+
+        sync_forwarding_probe(const sync_forwarding_probe&) = default;
+        sync_forwarding_probe(sync_forwarding_probe&&) noexcept = default;
+
+        sync_forwarding_probe& operator=(const sync_forwarding_probe& other)
+        {
+            if (this != &other)
+            {
+                value = other.value;
+            }
+            ++copy_assign_count;
+            return *this;
+        }
+
+        sync_forwarding_probe& operator=(sync_forwarding_probe&& other) noexcept
+        {
+            if (this != &other)
+            {
+                value = other.value;
+                other.value = -1;
+            }
+            ++move_assign_count;
+            return *this;
+        }
+
+        static void reset_counters()
+        {
+            copy_assign_count = 0;
+            move_assign_count = 0;
+        }
+
+        int value = 0;
+        static int copy_assign_count;
+        static int move_assign_count;
+    };
+
+    int sync_forwarding_probe::copy_assign_count = 0;
+    int sync_forwarding_probe::move_assign_count = 0;
+}
+
+/**
+ * @brief Verifies perfect forwarding paths for push and emplace.
+ *
+ * This test validates that lvalue push uses copy assignment, rvalue push uses
+ * move assignment, and emplace forwards constructor arguments correctly.
+ */
+TEST(SyncRingBufferPerfectForwardingTest, PushAndEmplaceForwarding)
+{
+    sync_forwarding_probe::reset_counters();
+
+    tools::sync_ring_buffer<sync_forwarding_probe, 4> buffer;
+
+    sync_forwarding_probe lvalue(10);
+    buffer.push(lvalue);
+    buffer.push(sync_forwarding_probe(20));
+    buffer.emplace(30);
+
+    ASSERT_EQ(buffer.size(), 3);
+    EXPECT_EQ(sync_forwarding_probe::copy_assign_count, 1);
+    EXPECT_EQ(sync_forwarding_probe::move_assign_count, 2);
+
+    const auto first = buffer.front_pop();
+    ASSERT_TRUE(first.has_value());
+    EXPECT_EQ(first->value, 10);
+
+    const auto second = buffer.front_pop();
+    ASSERT_TRUE(second.has_value());
+    EXPECT_EQ(second->value, 20);
+
+    const auto third = buffer.front_pop();
+    ASSERT_TRUE(third.has_value());
+    EXPECT_EQ(third->value, 30);
+}
+
+/**
+ * @brief Verifies perfect forwarding paths for ISR insertion APIs.
+ *
+ * This test validates that ISR-safe push/emplace variants preserve forwarding
+ * semantics and insert expected values.
+ */
+TEST(SyncRingBufferPerfectForwardingTest, IsrPushAndEmplaceForwarding)
+{
+    sync_forwarding_probe::reset_counters();
+
+    tools::sync_ring_buffer<sync_forwarding_probe, 4> buffer;
+
+    sync_forwarding_probe lvalue(1);
+    buffer.isr_push(lvalue);
+    buffer.isr_push(sync_forwarding_probe(2));
+    buffer.isr_emplace(3);
+
+    ASSERT_EQ(buffer.isr_size(), 3);
+    EXPECT_EQ(sync_forwarding_probe::copy_assign_count, 1);
+    EXPECT_EQ(sync_forwarding_probe::move_assign_count, 2);
+}
+
+/**
+ * @brief Verifies forwarding support with move-only payloads.
+ *
+ * This test ensures sync_ring_buffer accepts std::unique_ptr values through
+ * push/emplace. Since front/front_pop currently return by value, this test
+ * validates insertion and consumption via size/empty/pop semantics.
+ */
+TEST(SyncRingBufferPerfectForwardingTest, SupportsMoveOnlyType)
+{
+    tools::sync_ring_buffer<std::unique_ptr<int>, 4> buffer;
+
+    auto ptr = std::make_unique<int>(5);
+    buffer.push(std::move(ptr));
+    EXPECT_EQ(ptr, nullptr);
+
+    buffer.emplace(std::make_unique<int>(9));
+    ASSERT_EQ(buffer.size(), 2);
+
+    buffer.pop();
+    ASSERT_EQ(buffer.size(), 1);
+    ASSERT_FALSE(buffer.empty());
+
+    buffer.pop();
+    ASSERT_TRUE(buffer.empty());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+namespace
+{
+    /**
+     * @brief Marker type intentionally not constructible as int.
+     *
+     * Used by C++20-only checks validating requires-based filtering intent.
+     */
+    struct sync_non_constructible_payload
+    {
+    };
+}
+
+/**
+ * @brief C++20-only compile-time checks for forwarding constraints.
+ *
+ * This test validates constructibility assumptions used by C++20 requires
+ * clauses in sync_ring_buffer::push/emplace and ISR variants.
+ */
+TEST(SyncRingBufferPerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    static_assert(std::is_constructible_v<int, int>);
+    static_assert(!std::is_constructible_v<int, sync_non_constructible_payload>);
+    static_assert(!std::is_constructible_v<int, sync_non_constructible_payload&>);
+
+    SUCCEED();
+}
+#endif
