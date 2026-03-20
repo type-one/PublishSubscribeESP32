@@ -20,8 +20,12 @@
 
 // modified to pass clang-tidy checks
 
+#pragma once
+
 #ifndef BYTEPACK_BYTEPACK_HPP
 #define BYTEPACK_BYTEPACK_HPP
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 
 #include <algorithm>
 #include <array>
@@ -782,5 +786,7 @@ namespace bytepack
     };
 
 } // namespace bytepack
+
+#endif // #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 
 #endif // BYTEPACK_BYTEPACK_HPP

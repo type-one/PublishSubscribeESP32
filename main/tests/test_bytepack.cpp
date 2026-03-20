@@ -49,6 +49,8 @@
 
 #include "bytepack/bytepack.hpp"
 
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+
 /**
  * @brief A structure representing an address with street, city, and zip code.
  *
@@ -463,3 +465,5 @@ TEST_F(SerializationTest, CompanyDeserializationError)
     Company deserialized_company;
     ASSERT_FALSE(deserialized_company.deserialize(*stream));
 }
+
+#endif // #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))

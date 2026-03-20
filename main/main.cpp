@@ -1350,6 +1350,7 @@ void test_worker_tasks()
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 
 enum class message_type : std::uint8_t
 {
@@ -1614,6 +1615,8 @@ void test_aggregated_bytepack_data()
     }
 }
 
+#endif // #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+
 //--------------------------------------------------------------------------------------------------------------------------------
 
 struct data_task_context
@@ -1626,6 +1629,7 @@ using binary_msg = std::array<std::uint8_t, binary_msg_size>;
 using my_data_task = tools::data_task<data_task_context, binary_msg>;
 using my_data_periodic_task = tools::periodic_task<data_task_context>;
 
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 namespace
 {
     constexpr const auto task_startup
@@ -1729,6 +1733,7 @@ void test_bytepack_data_task()
     constexpr const std::size_t wait_task_ms = 2500;
     tools::sleep_for(wait_task_ms);
 }
+#endif // #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
@@ -2036,8 +2041,35 @@ private:
     traffic_light_state_v on_event(
         const traffic_light_state::operable_green& state, const traffic_light_event::power_off& event);
 
-    // fallback for undefined transitions
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+    // fallback for undefined transitions (C++20 abbreviated templates)
     traffic_light_state_v on_event(const auto& state, const auto& event);
+#else
+    template <typename State, typename Event>
+    traffic_light_state_v dispatch_event(const State& state, const Event& event)
+    {
+        return dispatch_event_impl(state, event, 0);
+    }
+
+    template <typename State, typename Event>
+    auto dispatch_event_impl(const State& state, const Event& event, int priority)
+        -> decltype(this->on_event(state, event))
+    {
+        (void)priority;
+        return this->on_event(state, event);
+    }
+
+    template <typename State, typename Event>
+    traffic_light_state_v dispatch_event_impl(const State& state, const Event& event, long priority)
+    {
+        (void)priority;
+        (void)event;
+        LOG_ERROR("Unsupported state transition");
+        // don't switch to other state and do not execute entering state callback
+        m_entering_state = false;
+        return state;
+    }
+#endif
 
     // defines callbacks for [state]
     void on_state(const traffic_light_state::off& state);
@@ -2045,9 +2077,35 @@ private:
     void on_state(const traffic_light_state::operable_red& state);
     void on_state(const traffic_light_state::operable_orange& state);
     void on_state(const traffic_light_state::operable_green& state);
-
-    // fallback for undefined state
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+    // fallback for undefined state (C++20 abbreviated templates)
     void on_state(const auto& state);
+#else
+    template <typename State>
+    void dispatch_state(const State& state)
+    {
+        dispatch_state_impl(state, 0);
+    }
+
+    template <typename State>
+    auto dispatch_state_impl(const State& state, int priority) -> decltype(this->on_state(state), void())
+    {
+        (void)priority;
+        this->on_state(state);
+    }
+
+    template <typename State>
+    void dispatch_state_impl(const State& state, long priority)
+    {
+        (void)priority;
+        (void)state;
+        if (m_entering_state)
+        {
+            LOG_ERROR("Unsupported state");
+            m_entering_state = false;
+        }
+    }
+#endif
 };
 
 void traffic_light_fsm::start()
@@ -2065,12 +2123,16 @@ void traffic_light_fsm::handle_event(const traffic_light_event_v& event)
             { 
             [&](const auto& state, const auto& evt)
                 { 
-                return traffic_light_fsm::on_event(state, evt);
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+                return on_event(state, evt);
+#else
+                return dispatch_event(state, evt);
+#endif
                 }
             },
             m_state,
             event);
-    // clang-format on       
+    // clang-format on
 }
 
 // update cycle based on current state
@@ -2081,11 +2143,15 @@ void traffic_light_fsm::update()
         { 
         [&](const auto& state)
             { 
-                traffic_light_fsm::on_state(state);
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+                on_state(state);
+#else
+                dispatch_state(state);
+#endif
             }
         },
         m_state);
-    // clang-format on  
+    // clang-format on
 }
 
 constexpr const int traffic_light_wait_ms = 1000;
@@ -2192,6 +2258,7 @@ traffic_light_state_v traffic_light_fsm::on_event(const traffic_light_state::ope
     return traffic_light_state::off {};
 }
 
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 traffic_light_state_v traffic_light_fsm::on_event(const auto& state, const auto& event)
 {
     (void)event;
@@ -2200,6 +2267,7 @@ traffic_light_state_v traffic_light_fsm::on_event(const auto& state, const auto&
     m_entering_state = false;
     return state;
 }
+#endif
 
 // defines callbacks for [state]
 void traffic_light_fsm::on_state(const traffic_light_state::off& state)
@@ -2252,9 +2320,9 @@ void traffic_light_fsm::on_state(const traffic_light_state::operable_green& stat
     }
 }
 
-// fallback for undefined state
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 void traffic_light_fsm::on_state(const auto& state)
-{    
+{
     (void)state;
     if (m_entering_state)
     {
@@ -2262,7 +2330,7 @@ void traffic_light_fsm::on_state(const auto& state)
         m_entering_state = false;
     }
 }
-
+#endif
 
 void test_variant_fsm()
 {
@@ -2319,6 +2387,7 @@ void test_variant_fsm()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 void test_calendar_day()
 {
     // https://www.modernescpp.com/index.php/c20-query-calendar-dates-and-ordinal-dates/
@@ -2343,6 +2412,7 @@ void test_calendar_day()
     std::printf("Elapsed years since moon landing: %d\n", elapsed_years);
 
 }
+#endif
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
@@ -2949,9 +3019,12 @@ void runner()
     test_ring_buffer_commands();
 
     test_worker_tasks();
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
     test_queued_bytepack_data();
     test_aggregated_bytepack_data();
     test_bytepack_data_task();
+#endif
 
     test_json();
     test_queued_json_data();
@@ -2959,7 +3032,11 @@ void runner()
     test_packing_unpacking_json_data();
 
     test_variant_fsm();
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
     test_calendar_day();
+#endif
+
     test_timer();
 
     test_smp_tasks_cpu_affinity();

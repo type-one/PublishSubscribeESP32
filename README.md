@@ -50,7 +50,8 @@ Publications:
 
 ## What
 
-Small test program written in C++17/C++20 to implement a simple Publish/Subscribe pattern. 
+Test program written in C++17/C++20 to implement a simple Publish/Subscribe pattern.
+
 The code is portable and lightweight.
 
 C++20 is only required for the bytepack test in main.cpp
