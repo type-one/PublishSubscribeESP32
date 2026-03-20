@@ -45,6 +45,7 @@
 #include <cstddef>
 #include <mutex>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 #include "tools/critical_section.hpp"
@@ -85,30 +86,39 @@ namespace tools
         }
 
         /**
-         * @brief Pushes an element into the ring vector.
+         * @brief Pushes an element into the ring vector with perfect forwarding.
          *
-         * This method adds an element to the ring vector in a thread-safe manner.
+         * In C++20, this method is constrained to constructible types.
          *
+         * @tparam U The deduced element type.
          * @param elem The element to be pushed into the ring vector.
          */
-        void push(const T& elem)
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        void push(U&& elem)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_vector.push(elem);
+            m_ring_vector.push(std::forward<U>(elem));
         }
 
         /**
-         * @brief Emplaces an element into the ring vector.
+         * @brief Emplaces an element into the ring vector with perfect forwarding.
          *
-         * This function locks the mutex to ensure thread safety and then
-         * emplaces the given element into the ring vector.
+         * In C++20, this method is constrained to constructible argument sets.
          *
-         * @param elem The element to be emplaced into the ring vector.
+         * @tparam Args The deduced constructor argument types.
+         * @param args The arguments to be emplaced into the ring vector.
          */
-        void emplace(T&& elem)
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        void emplace(Args&&... args)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_vector.emplace(std::move(elem));
+            m_ring_vector.emplace(std::forward<Args>(args)...);
         }
 
         /**
@@ -160,6 +170,19 @@ namespace tools
                 m_ring_vector.pop();
             }
             return item;
+        }
+
+        /**
+         * @brief Retrieves and removes the first element using move semantics.
+         *
+         * This method supports move-only payload extraction.
+         *
+         * @return The moved first element, or none if the vector is empty.
+         */
+        std::optional<T> front_pop_move()
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            return m_ring_vector.pop_move();
         }
 
         /**
@@ -267,29 +290,37 @@ namespace tools
         /**
          * @brief Pushes an element into the ring vector in an interrupt-safe manner.
          *
-         * This function uses an interrupt-safe lock guard to ensure that the element
-         * is safely pushed into the ring vector without being interrupted.
+         * In C++20, this method is constrained to constructible types.
          *
+         * @tparam U The deduced element type.
          * @param elem The element to be pushed into the ring vector.
          */
-        void isr_push(const T& elem)
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        void isr_push(U&& elem)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_vector.push(elem);
+            m_ring_vector.push(std::forward<U>(elem));
         }
 
         /**
          * @brief Inserts an element into the ring vector in an interrupt-safe manner.
          *
-         * This function uses a lock guard to ensure that the insertion operation
-         * is safe to perform within an interrupt service routine (ISR).
+         * In C++20, this method is constrained to constructible argument sets.
          *
-         * @param elem The element to be inserted into the ring vector.
+         * @tparam Args The deduced constructor argument types.
+         * @param args The arguments to be inserted into the ring vector.
          */
-        void isr_emplace(T&& elem)
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        void isr_emplace(Args&&... args)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
-            m_ring_vector.emplace(std::move(elem));
+            m_ring_vector.emplace(std::forward<Args>(args)...);
         }
 
         /**

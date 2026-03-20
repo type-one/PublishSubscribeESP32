@@ -204,6 +204,49 @@ void test_ring_vector()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_ring_vector_perfect_forwarding()
+{
+    LOG_INFO("-- ring vector perfect forwarding --");
+    print_stats();
+
+    {
+        constexpr const std::size_t queue_size = 8U;
+        constexpr const std::size_t repeated_char_count = 4U;
+        tools::ring_vector<std::string> str_queue(queue_size);
+
+        std::string lvalue = "ring-vector-lvalue";
+        str_queue.push(lvalue);
+        str_queue.push(std::string("ring-vector-rvalue"));
+        str_queue.emplace(repeated_char_count, 'v');
+
+        while (!str_queue.empty())
+        {
+            std::printf("%s\n", str_queue.front().c_str());
+            str_queue.pop();
+        }
+    }
+
+    {
+        constexpr const std::size_t queue_size = 4U;
+        tools::ring_vector<std::unique_ptr<std::string>> ptr_queue(queue_size);
+
+        auto val = std::make_unique<std::string>("ring-vector-move-only-push");
+        ptr_queue.push(std::move(val));
+        ptr_queue.emplace(std::make_unique<std::string>("ring-vector-move-only-emplace"));
+
+        while (!ptr_queue.empty())
+        {
+            auto item = ptr_queue.pop_move();
+            if (item.has_value() && item.value())
+            {
+                std::printf("%s\n", item.value()->c_str());
+            }
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 void test_ring_vector_resize()
 {
     LOG_INFO("-- ring vector resize --");
@@ -725,6 +768,54 @@ void test_sync_ring_vector()
     if (item.has_value())
     {
         std::printf("%s\n", item->c_str());
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_sync_ring_vector_perfect_forwarding()
+{
+    LOG_INFO("-- sync ring vector perfect forwarding --");
+    print_stats();
+
+    {
+        constexpr const std::size_t queue_size = 64U;
+        constexpr const std::size_t repeated_char_count = 5U;
+        tools::sync_ring_vector<std::string> str_queue(queue_size);
+
+        std::string lvalue = "sync-ring-vector-lvalue";
+        str_queue.push(lvalue);
+        str_queue.push(std::string("sync-ring-vector-rvalue"));
+        str_queue.emplace(repeated_char_count, 's');
+        str_queue.isr_push(std::string("sync-ring-vector-isr-push"));
+        str_queue.isr_emplace("sync-ring-vector-isr-emplace");
+
+        while (!str_queue.empty())
+        {
+            auto item = str_queue.front_pop();
+            if (item.has_value())
+            {
+                std::printf("%s\n", item->c_str());
+            }
+        }
+    }
+
+    {
+        constexpr const std::size_t queue_size = 8U;
+        tools::sync_ring_vector<std::unique_ptr<std::string>> ptr_queue(queue_size);
+
+        auto ptr = std::make_unique<std::string>("sync-ring-vector-move-only-push");
+        ptr_queue.push(std::move(ptr));
+        ptr_queue.emplace(std::make_unique<std::string>("sync-ring-vector-move-only-emplace"));
+
+        while (!ptr_queue.empty())
+        {
+            auto item = ptr_queue.front_pop_move();
+            if (item.has_value() && item.value())
+            {
+                std::printf("%s\n", item.value()->c_str());
+            }
+        }
     }
 }
 
@@ -2838,12 +2929,14 @@ void runner()
     test_ring_buffer_iteration();
 
     test_ring_vector();
+    test_ring_vector_perfect_forwarding();
     test_ring_vector_resize();
     test_ring_vector_iteration();
 
     test_lock_free_ring_buffer();
     test_sync_ring_buffer();
     test_sync_ring_vector();
+    test_sync_ring_vector_perfect_forwarding();
     test_sync_queue();
     test_sync_dictionary();
 

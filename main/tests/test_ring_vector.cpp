@@ -45,6 +45,8 @@
 #include <complex>
 #include <memory>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 #include "tools/ring_vector.hpp"
 
@@ -230,3 +232,130 @@ TYPED_TEST(RingVectorTest, TestResize)
     this->rv->push(static_cast<TypeParam>(7));
     EXPECT_EQ(this->rv->size(), 5);
 }
+
+namespace
+{
+    /**
+     * @brief Probe type used to observe copy/move assignment behavior.
+     */
+    struct forwarding_probe
+    {
+        forwarding_probe() = default;
+        explicit forwarding_probe(int input)
+            : value(input)
+        {
+        }
+
+        forwarding_probe(const forwarding_probe&) = default;
+        forwarding_probe(forwarding_probe&&) noexcept = default;
+
+        forwarding_probe& operator=(const forwarding_probe& other)
+        {
+            if (this != &other)
+            {
+                value = other.value;
+            }
+            ++copy_assign_count;
+            return *this;
+        }
+
+        forwarding_probe& operator=(forwarding_probe&& other) noexcept
+        {
+            if (this != &other)
+            {
+                value = other.value;
+                other.value = -1;
+            }
+            ++move_assign_count;
+            return *this;
+        }
+
+        static void reset_counters()
+        {
+            copy_assign_count = 0;
+            move_assign_count = 0;
+        }
+
+        int value = 0;
+        static int copy_assign_count;
+        static int move_assign_count;
+    };
+
+    int forwarding_probe::copy_assign_count = 0;
+    int forwarding_probe::move_assign_count = 0;
+}
+
+/**
+ * @brief Verifies perfect forwarding paths for push and emplace.
+ */
+TEST(RingVectorPerfectForwardingTest, PushAndEmplaceForwarding)
+{
+    forwarding_probe::reset_counters();
+
+    tools::ring_vector<forwarding_probe> vec(4);
+
+    forwarding_probe lvalue(10);
+    vec.push(lvalue);
+    vec.push(forwarding_probe(20));
+    vec.emplace(30);
+
+    ASSERT_EQ(vec.size(), 3);
+    EXPECT_EQ(forwarding_probe::copy_assign_count, 1);
+    EXPECT_EQ(forwarding_probe::move_assign_count, 2);
+
+    EXPECT_EQ(vec.front().value, 10);
+    vec.pop();
+    EXPECT_EQ(vec.front().value, 20);
+    vec.pop();
+    EXPECT_EQ(vec.front().value, 30);
+}
+
+/**
+ * @brief Verifies move-only insertion and extraction using pop_move.
+ */
+TEST(RingVectorPerfectForwardingTest, SupportsMoveOnlyType)
+{
+    tools::ring_vector<std::unique_ptr<int>> vec(4);
+
+    auto ptr = std::make_unique<int>(5);
+    vec.push(std::move(ptr));
+    EXPECT_EQ(ptr, nullptr);
+
+    vec.emplace(std::make_unique<int>(9));
+
+    auto first = vec.pop_move();
+    ASSERT_TRUE(first.has_value());
+    ASSERT_NE(*first, nullptr);
+    EXPECT_EQ(**first, 5);
+
+    auto second = vec.pop_move();
+    ASSERT_TRUE(second.has_value());
+    ASSERT_NE(*second, nullptr);
+    EXPECT_EQ(**second, 9);
+
+    EXPECT_FALSE(vec.pop_move().has_value());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+namespace
+{
+    /**
+     * @brief Marker type intentionally not constructible as int.
+     */
+    struct non_constructible_payload
+    {
+    };
+}
+
+/**
+ * @brief C++20-only compile-time checks for forwarding constraints.
+ */
+TEST(RingVectorPerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    static_assert(std::is_constructible_v<int, int>);
+    static_assert(!std::is_constructible_v<int, non_constructible_payload>);
+    static_assert(!std::is_constructible_v<int, non_constructible_payload&>);
+
+    SUCCEED();
+}
+#endif

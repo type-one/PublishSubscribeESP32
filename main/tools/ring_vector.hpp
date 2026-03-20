@@ -43,6 +43,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <optional>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -166,13 +168,20 @@ namespace tools
         }
 
         /**
-         * @brief Pushes an element into the ring vector.
+         * @brief Pushes an element into the ring vector with perfect forwarding.
          *
+         * In C++20, this method is constrained to constructible types.
+         *
+         * @tparam U The deduced element type.
          * @param elem The element to be pushed into the ring vector.
          */
-        void push(const T& elem)
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        void push(U&& elem)
         {
-            m_ring_vector[m_push_index] = elem;
+            m_ring_vector[m_push_index] = std::forward<U>(elem);
             m_last_index = m_push_index;
             m_push_index = next_index(m_push_index);
             ++m_size;
@@ -186,11 +195,18 @@ namespace tools
         /**
          * @brief Inserts an element in place into the ring vector at the current push index.
          *
-         * @param elem The element to be inserted into the ring vector.
+         * In C++20, this method is constrained to constructible argument sets.
+         *
+         * @tparam Args The deduced constructor argument types.
+         * @param args The arguments to be forwarded to T's constructor.
          */
-        void emplace(T&& elem)
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        void emplace(Args&&... args)
         {
-            m_ring_vector[m_push_index] = std::move(elem);
+            m_ring_vector[m_push_index] = T(std::forward<Args>(args)...);
             m_last_index = m_push_index;
             m_push_index = next_index(m_push_index);
             ++m_size;
@@ -212,6 +228,25 @@ namespace tools
                 m_pop_index = next_index(m_pop_index);
                 --m_size;
             }
+        }
+
+        /**
+         * @brief Retrieves and removes the oldest element using move semantics.
+         *
+         * This API supports move-only payload extraction.
+         *
+         * @return The moved front element, or none if the ring vector is empty.
+         */
+        std::optional<T> pop_move()
+        {
+            std::optional<T> item;
+            if (!empty())
+            {
+                item.emplace(std::move(m_ring_vector[m_pop_index]));
+                m_pop_index = next_index(m_pop_index);
+                --m_size;
+            }
+            return item;
         }
 
         /**

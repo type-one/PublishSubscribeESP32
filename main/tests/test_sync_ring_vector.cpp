@@ -42,6 +42,8 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "tools/sync_ring_vector.hpp"
@@ -404,3 +406,143 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersSingleConsumer)
 
     EXPECT_TRUE(this->vec->empty());
 }
+
+namespace
+{
+    /**
+     * @brief Probe type used to observe copy/move assignment behavior.
+     */
+    struct sync_forwarding_probe
+    {
+        sync_forwarding_probe() = default;
+        explicit sync_forwarding_probe(int input)
+            : value(input)
+        {
+        }
+
+        sync_forwarding_probe(const sync_forwarding_probe&) = default;
+        sync_forwarding_probe(sync_forwarding_probe&&) noexcept = default;
+
+        sync_forwarding_probe& operator=(const sync_forwarding_probe& other)
+        {
+            if (this != &other)
+            {
+                value = other.value;
+            }
+            ++copy_assign_count;
+            return *this;
+        }
+
+        sync_forwarding_probe& operator=(sync_forwarding_probe&& other) noexcept
+        {
+            if (this != &other)
+            {
+                value = other.value;
+                other.value = -1;
+            }
+            ++move_assign_count;
+            return *this;
+        }
+
+        static void reset_counters()
+        {
+            copy_assign_count = 0;
+            move_assign_count = 0;
+        }
+
+        int value = 0;
+        static int copy_assign_count;
+        static int move_assign_count;
+    };
+
+    int sync_forwarding_probe::copy_assign_count = 0;
+    int sync_forwarding_probe::move_assign_count = 0;
+}
+
+/**
+ * @brief Verifies perfect forwarding paths for push and emplace.
+ */
+TEST(SyncRingVectorPerfectForwardingTest, PushAndEmplaceForwarding)
+{
+    sync_forwarding_probe::reset_counters();
+
+    tools::sync_ring_vector<sync_forwarding_probe> vec(4);
+
+    sync_forwarding_probe lvalue(10);
+    vec.push(lvalue);
+    vec.push(sync_forwarding_probe(20));
+    vec.emplace(30);
+
+    ASSERT_EQ(vec.size(), 3);
+    EXPECT_EQ(sync_forwarding_probe::copy_assign_count, 1);
+    EXPECT_EQ(sync_forwarding_probe::move_assign_count, 2);
+}
+
+/**
+ * @brief Verifies perfect forwarding paths for ISR insertion APIs.
+ */
+TEST(SyncRingVectorPerfectForwardingTest, IsrPushAndEmplaceForwarding)
+{
+    sync_forwarding_probe::reset_counters();
+
+    tools::sync_ring_vector<sync_forwarding_probe> vec(4);
+
+    sync_forwarding_probe lvalue(1);
+    vec.isr_push(lvalue);
+    vec.isr_push(sync_forwarding_probe(2));
+    vec.isr_emplace(3);
+
+    ASSERT_EQ(vec.isr_size(), 3);
+    EXPECT_EQ(sync_forwarding_probe::copy_assign_count, 1);
+    EXPECT_EQ(sync_forwarding_probe::move_assign_count, 2);
+}
+
+/**
+ * @brief Verifies move-only insertion and extraction using front_pop_move.
+ */
+TEST(SyncRingVectorPerfectForwardingTest, SupportsMoveOnlyType)
+{
+    tools::sync_ring_vector<std::unique_ptr<int>> vec(4);
+
+    auto ptr = std::make_unique<int>(5);
+    vec.push(std::move(ptr));
+    EXPECT_EQ(ptr, nullptr);
+
+    vec.emplace(std::make_unique<int>(9));
+
+    auto first = vec.front_pop_move();
+    ASSERT_TRUE(first.has_value());
+    ASSERT_NE(*first, nullptr);
+    EXPECT_EQ(**first, 5);
+
+    auto second = vec.front_pop_move();
+    ASSERT_TRUE(second.has_value());
+    ASSERT_NE(*second, nullptr);
+    EXPECT_EQ(**second, 9);
+
+    EXPECT_FALSE(vec.front_pop_move().has_value());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+namespace
+{
+    /**
+     * @brief Marker type intentionally not constructible as int.
+     */
+    struct non_constructible_payload
+    {
+    };
+}
+
+/**
+ * @brief C++20-only compile-time checks for forwarding constraints.
+ */
+TEST(SyncRingVectorPerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    static_assert(std::is_constructible_v<int, int>);
+    static_assert(!std::is_constructible_v<int, non_constructible_payload>);
+    static_assert(!std::is_constructible_v<int, non_constructible_payload&>);
+
+    SUCCEED();
+}
+#endif
