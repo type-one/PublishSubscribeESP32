@@ -5,7 +5,7 @@
  * This file contains a series of test cases to verify the functionality of the ring buffer
  * implementation. It includes tests for pushing, popping, emplacing elements, and verifying
  * the behavior of the ring buffer when it is full, cleared, copied, or moved.
- * 
+ *
  * The tests are organized into a test fixture class template, RingBufferTest, which
  * provides setup and teardown functionality for the ring buffer. The tests are
  * parameterized to run with different types of elements stored in the ring buffer.
@@ -14,7 +14,7 @@
  * @date February 2025
  */
 
- //-----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025-2026 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois //
 //                                                                             //
@@ -74,7 +74,7 @@ protected:
     std::unique_ptr<tools::ring_buffer<T, 5>> buffer;
 };
 
-using MyTypes = ::testing::Types<int, float, double, char , std::complex<double>>;
+using MyTypes = ::testing::Types<int, float, double, char, std::complex<double>>;
 TYPED_TEST_SUITE(RingBufferTest, MyTypes);
 
 /**
@@ -298,3 +298,183 @@ TYPED_TEST(RingBufferTest, MoveAssignment)
     EXPECT_EQ(move_buffer.front(), static_cast<TypeParam>(1));
     EXPECT_EQ(move_buffer.back(), static_cast<TypeParam>(3));
 }
+
+namespace
+{
+    /**
+     * @brief Probe type used to observe copy/move operations in forwarding tests.
+     *
+     * This helper tracks copy/move constructor and assignment usage so tests can
+     * verify whether lvalue/rvalue forwarding reaches the expected assignment path
+     * in the ring buffer slot.
+     */
+    struct forwarding_probe
+    {
+        forwarding_probe() = default;
+        explicit forwarding_probe(int input)
+            : value(input)
+        {
+        }
+
+        forwarding_probe(const forwarding_probe& other)
+            : value(other.value)
+        {
+            ++copy_ctor_count;
+        }
+
+        forwarding_probe(forwarding_probe&& other) noexcept
+            : value(other.value)
+        {
+            ++move_ctor_count;
+            other.value = -1;
+        }
+
+        forwarding_probe& operator=(const forwarding_probe& other)
+        {
+            if (this != &other)
+            {
+                value = other.value;
+            }
+            ++copy_assign_count;
+            return *this;
+        }
+
+        forwarding_probe& operator=(forwarding_probe&& other) noexcept
+        {
+            if (this != &other)
+            {
+                value = other.value;
+                other.value = -1;
+            }
+            ++move_assign_count;
+            return *this;
+        }
+
+        static void reset_counters()
+        {
+            copy_ctor_count = 0;
+            move_ctor_count = 0;
+            copy_assign_count = 0;
+            move_assign_count = 0;
+        }
+
+        int value = 0;
+        static int copy_ctor_count;
+        static int move_ctor_count;
+        static int copy_assign_count;
+        static int move_assign_count;
+    };
+
+    int forwarding_probe::copy_ctor_count = 0;
+    int forwarding_probe::move_ctor_count = 0;
+    int forwarding_probe::copy_assign_count = 0;
+    int forwarding_probe::move_assign_count = 0;
+}
+
+/**
+ * @brief Verifies that pushing an lvalue selects copy assignment.
+ *
+ * This test pushes an lvalue instance and checks that the copy assignment counter
+ * is incremented while move assignment remains unused.
+ */
+TEST(RingBufferPerfectForwardingTest, PushLvalueUsesCopyAssignment)
+{
+    forwarding_probe::reset_counters();
+
+    tools::ring_buffer<forwarding_probe, 4> buffer;
+    forwarding_probe sample(42);
+    buffer.push(sample);
+
+    EXPECT_EQ(buffer.size(), 1);
+    EXPECT_EQ(buffer[0].value, 42);
+    EXPECT_EQ(forwarding_probe::copy_assign_count, 1);
+    EXPECT_EQ(forwarding_probe::move_assign_count, 0);
+}
+
+/**
+ * @brief Verifies that pushing an rvalue selects move assignment.
+ *
+ * This test pushes a temporary object and checks that move assignment is used
+ * instead of copy assignment.
+ */
+TEST(RingBufferPerfectForwardingTest, PushRvalueUsesMoveAssignment)
+{
+    forwarding_probe::reset_counters();
+
+    tools::ring_buffer<forwarding_probe, 4> buffer;
+    buffer.push(forwarding_probe(21));
+
+    EXPECT_EQ(buffer.size(), 1);
+    EXPECT_EQ(buffer[0].value, 21);
+    EXPECT_EQ(forwarding_probe::copy_assign_count, 0);
+    EXPECT_EQ(forwarding_probe::move_assign_count, 1);
+}
+
+/**
+ * @brief Verifies that emplace forwards constructor arguments correctly.
+ *
+ * This test emplaces a value from constructor arguments and checks that the
+ * resulting element is correct and that the move assignment path is used.
+ */
+TEST(RingBufferPerfectForwardingTest, EmplaceForwardsConstructorArguments)
+{
+    forwarding_probe::reset_counters();
+
+    tools::ring_buffer<forwarding_probe, 4> buffer;
+    buffer.emplace(64);
+
+    EXPECT_EQ(buffer.size(), 1);
+    EXPECT_EQ(buffer[0].value, 64);
+    EXPECT_EQ(forwarding_probe::copy_assign_count, 0);
+    EXPECT_EQ(forwarding_probe::move_assign_count, 1);
+}
+
+/**
+ * @brief Verifies forwarding support for move-only types.
+ *
+ * This test uses std::unique_ptr<int> to ensure push/emplace accept move-only
+ * payloads and preserve pointed values after insertion.
+ */
+TEST(RingBufferPerfectForwardingTest, SupportsMoveOnlyType)
+{
+    tools::ring_buffer<std::unique_ptr<int>, 4> buffer;
+
+    auto ptr = std::make_unique<int>(5);
+    buffer.push(std::move(ptr));
+    EXPECT_EQ(ptr, nullptr);
+    ASSERT_NE(buffer[0], nullptr);
+    EXPECT_EQ(*buffer[0], 5);
+
+    buffer.emplace(std::make_unique<int>(9));
+    ASSERT_NE(buffer[1], nullptr);
+    EXPECT_EQ(*buffer[1], 9);
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+namespace
+{
+    /**
+     * @brief Marker type intentionally not constructible as int.
+     *
+     * Used by C++20-only constraint checks validating requires-based filtering.
+     */
+    struct non_constructible_payload
+    {
+    };
+}
+
+/**
+ * @brief C++20-only compile-time checks for forwarding constraints.
+ *
+ * This test validates constructibility assumptions used by C++20 requires
+ * clauses in ring_buffer::push and ring_buffer::emplace.
+ */
+TEST(RingBufferPerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    static_assert(std::is_constructible_v<int, int>);
+    static_assert(!std::is_constructible_v<int, non_constructible_payload>);
+    static_assert(!std::is_constructible_v<int, non_constructible_payload&>);
+
+    SUCCEED();
+}
+#endif

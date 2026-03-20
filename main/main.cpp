@@ -133,6 +133,46 @@ void test_ring_buffer()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_ring_buffer_perfect_forwarding()
+{
+    LOG_INFO("-- ring buffer perfect forwarding --");
+    print_stats();
+
+    {
+        constexpr const std::size_t queue_size = 8U;
+        tools::ring_buffer<std::string, queue_size> str_queue;
+
+        std::string lvalue = "lvalue-string";
+        str_queue.push(lvalue);                       // lvalue path
+        str_queue.push(std::string("rvalue-string")); // rvalue path
+        str_queue.emplace(4U, 'x');                   // in-place args forwarding path
+
+        while (!str_queue.empty())
+        {
+            std::printf("%s\n", str_queue.front().c_str());
+            str_queue.pop();
+        }
+    }
+
+    {
+        // move-only type: validates forwarding to push/emplace without copy requirements
+        constexpr const std::size_t queue_size = 4U;
+        tools::ring_buffer<std::unique_ptr<std::string>, queue_size> ptr_queue;
+
+        auto val = std::make_unique<std::string>("move-only-lvalue-as-rvalue");
+        ptr_queue.push(std::move(val));
+        ptr_queue.emplace(std::make_unique<std::string>("move-only-rvalue"));
+
+        while (!ptr_queue.empty())
+        {
+            std::printf("move-only element consumed\n");
+            ptr_queue.pop();
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 void test_ring_vector()
 {
     LOG_INFO("-- ring vector --");
@@ -2763,6 +2803,7 @@ void runner()
 #endif
 
     test_ring_buffer();
+    test_ring_buffer_perfect_forwarding();
     test_ring_buffer_iteration();
 
     test_ring_vector();
