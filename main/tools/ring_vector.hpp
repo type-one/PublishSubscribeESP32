@@ -220,7 +220,10 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, U>
 #endif
-        void push(U&& elem)
+        auto push(U&& elem)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
+    #endif
         {
             m_ring_vector[m_push_index] = std::forward<U>(elem);
             m_last_index = m_push_index;
@@ -245,7 +248,10 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, Args...>
 #endif
-        void emplace(Args&&... args)
+        auto emplace(Args&&... args)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
+    #endif
         {
             m_ring_vector[m_push_index] = T(std::forward<Args>(args)...);
             m_last_index = m_push_index;

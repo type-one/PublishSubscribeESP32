@@ -124,7 +124,10 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, U>
 #endif
-        bool push(U&& elem)
+        auto push(U&& elem)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
+    #endif
         {
             return push_val(T(std::forward<U>(elem)));
         }

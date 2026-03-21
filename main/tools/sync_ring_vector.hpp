@@ -124,7 +124,10 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, U>
 #endif
-        void push(U&& elem)
+        auto push(U&& elem)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
+    #endif
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.push(std::forward<U>(elem));
@@ -142,7 +145,10 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, Args...>
 #endif
-        void emplace(Args&&... args)
+        auto emplace(Args&&... args)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
+    #endif
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.emplace(std::forward<Args>(args)...);
@@ -353,7 +359,10 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, U>
 #endif
-        void isr_push(U&& elem)
+        auto isr_push(U&& elem)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
+    #endif
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.push(std::forward<U>(elem));
@@ -371,7 +380,10 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, Args...>
 #endif
-        void isr_emplace(Args&&... args)
+        auto isr_emplace(Args&&... args)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
+    #endif
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             m_ring_vector.emplace(std::forward<Args>(args)...);
