@@ -41,6 +41,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <utility>
 
 #include "tools/base_task.hpp"
@@ -104,6 +105,42 @@ namespace tools
         }
 
         /**
+         * @brief Constructs a generic_task object using perfect forwarding.
+         *
+         * This overload supports conversion-based arguments beyond exact-type overloads.
+         * In C++20, this constructor is constrained to constructible argument types.
+         */
+        template <typename URoutine,
+            typename UContext,
+            typename UName
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back, URoutine>::value
+                && std::is_constructible<std::shared_ptr<Context>, UContext>::value
+                && std::is_constructible<std::string, UName>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, URoutine>
+                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+                         && std::is_constructible_v<std::string, UName>
+#endif
+        generic_task(URoutine&& routine, UContext&& context, UName&& task_name, std::size_t stack_size,
+            int cpu_affinity, int priority)
+            : base_task(std::string(std::forward<UName>(task_name)), stack_size, cpu_affinity, priority)
+            , m_routine(call_back(std::forward<URoutine>(routine)))
+            , m_context(std::shared_ptr<Context>(std::forward<UContext>(context)))
+        {
+            m_task = std::make_unique<std::thread>(
+                [this]()
+                {
+                    set_current_thread_params(this->task_name(), this->cpu_affinity(), this->priority());
+
+                    single_call();
+                });
+        }
+
+        /**
          * @brief Constructs a generic_task object with default priority and default cpu affinity.
          *
          * This constructor initializes a generic_task with the given parameters and starts a new thread
@@ -118,6 +155,31 @@ namespace tools
             std::size_t stack_size)
             : generic_task(std::move(routine), context, task_name, stack_size, base_task::run_on_all_cores,
                 base_task::default_priority)
+        {
+        }
+
+        /**
+         * @brief Constructs a generic_task object with default priority and default cpu affinity using perfect
+         * forwarding.
+         */
+        template <typename URoutine,
+            typename UContext,
+            typename UName
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back, URoutine>::value
+                && std::is_constructible<std::shared_ptr<Context>, UContext>::value
+                && std::is_constructible<std::string, UName>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, URoutine>
+                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+                         && std::is_constructible_v<std::string, UName>
+#endif
+        generic_task(URoutine&& routine, UContext&& context, UName&& task_name, std::size_t stack_size)
+            : generic_task(std::forward<URoutine>(routine), std::forward<UContext>(context),
+                std::forward<UName>(task_name), stack_size, base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 

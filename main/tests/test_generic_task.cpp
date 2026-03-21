@@ -46,6 +46,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <utility>
 
 #include "tools/generic_task.hpp"
@@ -80,6 +81,8 @@ protected:
         context2.reset();
     }
 
+public:
+
     /**
      * @brief Structure representing the test context.
      * This structure contains an atomic integer value used for testing purposes.
@@ -93,6 +96,8 @@ protected:
      * @brief Alias for the generic task using TestContext.
      */
     using TestTask = tools::generic_task<TestContext>;
+
+protected:
 
     /**
      * @brief Shared pointer to the first test context.
@@ -234,3 +239,88 @@ TEST_F(GenericTaskTest, TwoTasksCommunicate)
     ASSERT_EQ(context1->value, 1);
     ASSERT_EQ(context2->value, 2);
 }
+
+TEST_F(GenericTaskTest, PerfectForwardingConstructorSupportsLvalueRvalueAndConversion)
+{
+    context1->value.store(0);
+
+    TestTask::call_back callback_lvalue = [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+    {
+        (void)task_name;
+        ctx->value.store(7);
+    };
+
+    std::string task_name_lvalue = "ForwardedTask";
+    constexpr std::size_t stack_size = 2048U;
+
+    auto task_lvalue = std::make_unique<TestTask>(callback_lvalue, context1, task_name_lvalue, stack_size);
+    task_lvalue.reset();
+    ASSERT_EQ(context1->value.load(), 7);
+
+    context1->value.store(0);
+    auto task_rvalue = std::make_unique<TestTask>(
+        [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+        {
+            (void)task_name;
+            ctx->value.store(8);
+        },
+        context1, std::string("ForwardedTaskRvalue"), stack_size);
+    task_rvalue.reset();
+    ASSERT_EQ(context1->value.load(), 8);
+
+    context1->value.store(0);
+    void (*callback_conversion)(const std::shared_ptr<TestContext>&, const std::string&)
+        = [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+    {
+        (void)task_name;
+        ctx->value.store(42);
+    };
+    auto task_conversion
+        = std::make_unique<TestTask>(callback_conversion, context1, "ForwardedTaskConversion", stack_size);
+    task_conversion.reset();
+    ASSERT_EQ(context1->value.load(), 42);
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+TEST(GenericTaskCompileTimeChecks, PerfectForwardingConstructorConstraints)
+{
+    struct compile_context
+    {
+    };
+
+    using task_t = tools::generic_task<compile_context>;
+    using callback_t = task_t::call_back;
+
+    static_assert(std::is_constructible_v<task_t,
+        callback_t,
+        std::shared_ptr<compile_context>,
+        std::string,
+        std::size_t>);
+
+    static_assert(std::is_constructible_v<task_t,
+        callback_t,
+        std::shared_ptr<compile_context>,
+        const char*,
+        std::size_t,
+        int,
+        int>);
+
+    static_assert(!std::is_constructible_v<task_t,
+        int,
+        std::shared_ptr<compile_context>,
+        std::string,
+        std::size_t>);
+
+    static_assert(!std::is_constructible_v<task_t,
+        callback_t,
+        int,
+        std::string,
+        std::size_t>);
+
+    static_assert(!std::is_constructible_v<task_t,
+        callback_t,
+        std::shared_ptr<compile_context>,
+        int,
+        std::size_t>);
+}
+#endif

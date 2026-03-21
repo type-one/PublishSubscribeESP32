@@ -1245,6 +1245,37 @@ void test_generic_task()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_generic_task_perfect_forwarding()
+{
+    LOG_INFO("-- generic task perfect forwarding --");
+    print_stats();
+
+    auto context = std::make_shared<my_generic_task_context>();
+    context->stop_tasks.store(false);
+
+    my_generic_task::call_back callback_lvalue
+        = [](const std::shared_ptr<my_generic_task_context>& ctx, const std::string& task_name)
+    {
+        std::printf("generic forwarding start %s\n", task_name.c_str());
+        ctx->stop_tasks.store(true);
+    };
+
+    constexpr const std::size_t stack_size = 2048U;
+
+    my_generic_task task_lvalue(callback_lvalue, context, std::string("generic_forward_lvalue"), stack_size);
+
+    auto context_conversion = std::make_shared<my_generic_task_context>();
+    context_conversion->stop_tasks.store(false);
+    my_generic_task task_conversion(generic_function, context_conversion, "generic_forward_conversion", stack_size);
+
+    constexpr const int wait_join_ms = 200;
+    tools::sleep_for(wait_join_ms);
+    context_conversion->stop_tasks.store(true);
+    tools::sleep_for(wait_join_ms);
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 struct my_periodic_task_context
 {
     std::atomic<int> loop_counter = 0;
@@ -3279,6 +3310,7 @@ void runner()
 
     test_publish_subscribe();
     test_generic_task();
+    test_generic_task_perfect_forwarding();
     test_periodic_task();
     test_periodic_task_perfect_forwarding();
     test_periodic_publish_subscribe();
