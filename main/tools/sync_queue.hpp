@@ -43,6 +43,7 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <type_traits>
 #include <utility>
 
 #include "tools/critical_section.hpp"
@@ -70,11 +71,12 @@ namespace tools
         };
 
         /**
-         * @brief Pushes an element into the queue.
+         * @brief Pushes a copy of an element into the queue.
          *
-         * This method adds a new element to the end of the queue in a thread-safe manner.
+         * This overload keeps brace-init and exact-T calls unambiguous while
+         * preserving legacy call sites.
          *
-         * @param elem The element to be pushed into the queue.
+         * @param elem The element to be copied into the queue.
          */
         void push(const T& elem)
         {
@@ -83,17 +85,55 @@ namespace tools
         }
 
         /**
-         * @brief Adds a new element to the queue.
+         * @brief Pushes an rvalue element into the queue.
          *
-         * This method locks the mutex to ensure thread safety and then
-         * adds a new element to the queue using perfect forwarding.
+         * This overload preserves brace-init and exact-T call compatibility.
          *
-         * @param elem The element to be added to the queue.
+         * @param elem The element to be moved into the queue.
          */
-        void emplace(T&& elem)
+        void push(T&& elem)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_queue.emplace(std::move(elem));
+            m_queue.push(std::move(elem));
+        }
+
+        /**
+         * @brief Perfectly forwards and pushes an element into the queue.
+         *
+         * This template method uses perfect forwarding to efficiently handle conversions
+         * and optimizations beyond the basic exact-type push overloads.
+         * In C++20, this method is constrained to only accept constructible types.
+         *
+         * @tparam U The type of the element (deduced, supports conversions).
+         * @param elem The element to be pushed into the queue.
+         */
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        void push(U&& elem)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_queue.push(std::forward<U>(elem));
+        }
+
+        /**
+         * @brief Emplaces variadic arguments into the queue.
+         *
+         * This method template constructs an element in-place using variadic forwarding,
+         * enabling efficient construction without temporary objects.
+         *
+         * @tparam Args The types of arguments for in-place construction.
+         * @param args The arguments to be forwarded to the element constructor.
+         */
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        void emplace(Args&&... args)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_queue.emplace(std::forward<Args>(args)...);
         }
 
         /**
@@ -142,6 +182,26 @@ namespace tools
             if (!m_queue.empty())
             {
                 item = m_queue.front();
+                m_queue.pop();
+            }
+            return item;
+        }
+
+        /**
+         * @brief Retrieves and removes the front element of the queue with move semantics.
+         *
+         * This method returns and removes the front element of the queue using move semantics
+         * in a thread-safe manner. Useful for move-only types.
+         *
+         * @return The front element of the queue, or none if the queue is empty.
+         */
+        std::optional<T> front_pop_move()
+        {
+            std::optional<T> item;
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            if (!m_queue.empty())
+            {
+                item = std::move(m_queue.front());
                 m_queue.pop();
             }
             return item;
@@ -209,12 +269,11 @@ namespace tools
         }
 
         /**
-         * @brief Pushes an element into the queue in an interrupt service routine (ISR) safe manner.
+         * @brief Pushes a copy of an element into the queue in an ISR-safe manner.
          *
-         * This function uses an ISR lock guard to ensure that the push operation is thread-safe
-         * and can be safely called from an ISR context.
+         * This overload keeps brace-init and exact-T calls unambiguous in ISR context.
          *
-         * @param elem The element to be pushed into the queue.
+         * @param elem The element to be copied into the queue.
          */
         void isr_push(const T& elem)
         {
@@ -223,17 +282,55 @@ namespace tools
         }
 
         /**
-         * @brief Inserts an element into the queue in an interrupt-safe manner.
+         * @brief Pushes an rvalue element into the queue in an ISR-safe manner.
          *
-         * This function uses a lock guard to ensure that the insertion operation
-         * is safe to perform within an interrupt service routine (ISR).
+         * This overload preserves brace-init and exact-T call compatibility in ISR context.
          *
-         * @param elem The element to be inserted into the queue.
+         * @param elem The rvalue element to be pushed into the queue.
          */
-        void isr_emplace(T&& elem)
+        void isr_push(T&& elem)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
-            m_queue.emplace(std::move(elem));
+            m_queue.push(std::move(elem));
+        }
+
+        /**
+         * @brief Perfectly forwards and pushes an element into the queue in an ISR-safe manner.
+         *
+         * This template method uses perfect forwarding to efficiently handle conversions
+         * and optimizations beyond the basic exact-type push overloads, in ISR context.
+         * In C++20, this method is constrained to only accept constructible types.
+         *
+         * @tparam U The type of the element (deduced, supports conversions).
+         * @param elem The element to be pushed into the queue.
+         */
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        void isr_push(U&& elem)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            m_queue.push(std::forward<U>(elem));
+        }
+
+        /**
+         * @brief Emplaces variadic arguments into the queue in an interrupt-safe manner.
+         *
+         * This method template constructs an element in-place using variadic forwarding
+         * in an ISR-safe manner.
+         *
+         * @tparam Args The types of arguments for in-place construction.
+         * @param args The arguments to be forwarded to the element constructor.
+         */
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        void isr_emplace(Args&&... args)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            m_queue.emplace(std::forward<Args>(args)...);
         }
 
         /**
