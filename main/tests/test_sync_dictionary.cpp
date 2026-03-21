@@ -49,6 +49,7 @@
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 
 #include "tools/sync_dictionary.hpp"
 
@@ -89,6 +90,14 @@ protected:
 
 using MyTypes = ::testing::Types<int, float, double, char, std::complex<double>>;
 TYPED_TEST_SUITE(SyncDictionaryTest, MyTypes);
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+template <typename Dict, typename KeyArg, typename ValueArg>
+concept has_sync_dict_add_call = requires(Dict& dict_ref, KeyArg&& key_arg, ValueArg&& value_arg)
+{
+    dict_ref.add(std::forward<KeyArg>(key_arg), std::forward<ValueArg>(value_arg));
+};
+#endif
 
 /**
  * @brief Test case for adding and finding integer keys in the synchronized dictionary.
@@ -767,3 +776,121 @@ TYPED_TEST(SyncDictionaryTest, ConcurrentAddUnorderedCollectionAndFindIntKey)
     t1.join();
     t2.join();
 }
+
+/**
+ * @brief Verifies sync_dictionary add overloads support exact and conversion call paths.
+ *
+ * This test validates lvalue, rvalue, and conversion-based insertion/update
+ * behavior for string key/value dictionaries after perfect-forwarding support.
+ */
+TEST(SyncDictionaryPerfectForwardingTest, AddSupportsExactAndConversionPaths)
+{
+    tools::sync_dictionary<std::string, std::string> str_dict;
+
+    std::string key_lvalue = "lvalue-key";
+    std::string value_lvalue = "lvalue-value";
+
+    str_dict.add(key_lvalue, value_lvalue);
+    str_dict.add(std::string("rvalue-key"), std::string("rvalue-value"));
+    str_dict.add("conversion-key", "conversion-value");
+    str_dict.add("conversion-key", std::string("conversion-updated"));
+
+    auto lvalue_found = str_dict.find("lvalue-key");
+    auto rvalue_found = str_dict.find("rvalue-key");
+    auto conversion_found = str_dict.find("conversion-key");
+
+    ASSERT_TRUE(lvalue_found.has_value());
+    ASSERT_TRUE(rvalue_found.has_value());
+    ASSERT_TRUE(conversion_found.has_value());
+
+    EXPECT_EQ(lvalue_found.value(), "lvalue-value");
+    EXPECT_EQ(rvalue_found.value(), "rvalue-value");
+    EXPECT_EQ(conversion_found.value(), "conversion-updated");
+}
+
+/**
+ * @brief Probe type used to observe copy/move behavior for add forwarding paths.
+ */
+struct sync_dict_forwarding_probe
+{
+    static int copy_ctor_count;
+    static int move_ctor_count;
+
+    int payload = 0;
+
+    sync_dict_forwarding_probe() = default;
+    explicit sync_dict_forwarding_probe(int value)
+        : payload(value)
+    {
+    }
+
+    sync_dict_forwarding_probe(const sync_dict_forwarding_probe& other)
+        : payload(other.payload)
+    {
+        ++copy_ctor_count;
+    }
+
+    sync_dict_forwarding_probe(sync_dict_forwarding_probe&& other) noexcept
+        : payload(other.payload)
+    {
+        ++move_ctor_count;
+    }
+
+    sync_dict_forwarding_probe& operator=(const sync_dict_forwarding_probe&) = default;
+    sync_dict_forwarding_probe& operator=(sync_dict_forwarding_probe&&) noexcept = default;
+
+    static void reset()
+    {
+        copy_ctor_count = 0;
+        move_ctor_count = 0;
+    }
+};
+
+int sync_dict_forwarding_probe::copy_ctor_count = 0;
+int sync_dict_forwarding_probe::move_ctor_count = 0;
+
+/**
+ * @brief Verifies lvalue and rvalue add paths exercise copy and move construction respectively.
+ */
+TEST(SyncDictionaryPerfectForwardingTest, AddLvalueAndRvalueTriggerCopyMovePaths)
+{
+    {
+        sync_dict_forwarding_probe::reset();
+        tools::sync_dictionary<int, sync_dict_forwarding_probe> probe_dict;
+
+        sync_dict_forwarding_probe probe_lvalue(10);
+        probe_dict.add(1, probe_lvalue);
+
+        EXPECT_GE(sync_dict_forwarding_probe::copy_ctor_count, 1);
+    }
+
+    {
+        sync_dict_forwarding_probe::reset();
+        tools::sync_dictionary<int, sync_dict_forwarding_probe> probe_dict;
+
+        probe_dict.add(2, sync_dict_forwarding_probe(20));
+
+        EXPECT_GE(sync_dict_forwarding_probe::move_ctor_count, 1);
+    }
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+/**
+ * @brief Verifies C++20 requires constraints for sync_dictionary add forwarding API.
+ *
+ * This test checks that valid add argument pairs are accepted while
+ * non-constructible key/value argument pairs are rejected.
+ */
+TEST(SyncDictionaryPerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    using str_dict_t = tools::sync_dictionary<std::string, std::string>;
+    using int_dict_t = tools::sync_dictionary<int, int>;
+
+    static_assert(has_sync_dict_add_call<str_dict_t, const char*, const char*>);
+    static_assert(has_sync_dict_add_call<str_dict_t, std::string&&, std::string&&>);
+    static_assert(!has_sync_dict_add_call<int_dict_t, const char*, int>);
+    static_assert(!has_sync_dict_add_call<int_dict_t, int, const char*>);
+
+    SUCCEED();
+}
+#endif

@@ -44,7 +44,9 @@
 #include <map>
 #include <mutex>
 #include <optional>
+#include <type_traits>
 #include <unordered_map>
+#include <utility>
 
 #include "tools/critical_section.hpp"
 #include "tools/non_copyable.hpp"
@@ -85,7 +87,47 @@ namespace tools
         void add(const K& key, const T& value)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
-            m_dictionary[key] = value;
+            m_dictionary.insert_or_assign(key, value);
+        }
+
+        /**
+         * @brief Adds a key-value pair to the dictionary using rvalue references.
+         *
+         * This overload preserves exact-type brace-init and move call compatibility.
+         * If the key already exists, its value is updated.
+         *
+         * @param key The key to be added or updated in the dictionary.
+         * @param value The value associated with the key.
+         */
+        void add(K&& key, T&& value)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_dictionary.insert_or_assign(std::move(key), std::move(value));
+        }
+
+        /**
+         * @brief Adds a key-value pair to the dictionary with perfect forwarding.
+         *
+         * This method supports conversions beyond the exact-type overloads.
+         * In C++20, this method is constrained to constructible key/value types.
+         *
+         * @tparam KU The deduced key type.
+         * @tparam TU The deduced value type.
+         * @param key The key to be forwarded into the dictionary.
+         * @param value The value to be forwarded into the dictionary.
+         */
+        template <typename KU, typename TU>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<K, KU> && std::is_constructible_v<T, TU>
+#endif
+        auto add(KU&& key, TU&& value)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<K, KU>::value && std::is_constructible<T, TU>::value,
+                void>::type
+#endif
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_dictionary.insert_or_assign(std::forward<KU>(key), std::forward<TU>(value));
         }
 
         /**
@@ -116,7 +158,7 @@ namespace tools
             std::lock_guard<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
             {
-                m_dictionary[key] = value;
+                m_dictionary.insert_or_assign(key, value);
             }
         }
 
@@ -133,7 +175,7 @@ namespace tools
             std::lock_guard<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
             {
-                m_dictionary[key] = value;
+                m_dictionary.insert_or_assign(key, value);
             }
         }
 

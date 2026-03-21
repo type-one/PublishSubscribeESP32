@@ -940,15 +940,36 @@ void test_sync_dictionary()
 
     tools::sync_dictionary<std::string, std::string> str_dict;
 
-    str_dict.add("toto", "blob");
+    std::string key_lvalue = "key-lvalue";
+    std::string value_lvalue = "value-lvalue";
 
-    auto result = str_dict.find("toto");
+    str_dict.add(key_lvalue, value_lvalue); // exact-T lvalue overload path
+    str_dict.add(std::string("key-rvalue"), std::string("value-rvalue")); // exact-T rvalue overload path
+    str_dict.add("key-conversion", "value-conversion"); // forwarding conversion path
+    str_dict.add("key-conversion", std::string("value-updated")); // update via forwarding path
 
-    if (result.has_value())
+    auto result_lvalue = str_dict.find("key-lvalue");
+    auto result_rvalue = str_dict.find("key-rvalue");
+    auto result_conversion = str_dict.find("key-conversion");
+
+    if (result_lvalue.has_value())
     {
-        std::printf("%s\n", (*result).c_str());
-        str_dict.remove("toto");
+        std::printf("%s\n", (*result_lvalue).c_str());
     }
+
+    if (result_rvalue.has_value())
+    {
+        std::printf("%s\n", (*result_rvalue).c_str());
+    }
+
+    if (result_conversion.has_value())
+    {
+        std::printf("%s\n", (*result_conversion).c_str());
+    }
+
+    str_dict.remove("key-lvalue");
+    str_dict.remove("key-rvalue");
+    str_dict.remove("key-conversion");
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
