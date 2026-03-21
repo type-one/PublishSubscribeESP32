@@ -1255,6 +1255,28 @@ void test_periodic_task()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_histogram_perfect_forwarding()
+{
+    LOG_INFO("-- histogram perfect forwarding --");
+    print_stats();
+
+    tools::histogram<double> hist;
+
+    constexpr const double value_exact = 2.5;
+    constexpr const int value_int_conversion = 2;
+    constexpr const float value_float_conversion = 2.5F;
+
+    double lvalue_value = value_exact;
+    hist.add(lvalue_value);              // exact-T lvalue overload path
+    hist.add(value_exact);               // exact-T rvalue overload path
+    hist.add(value_int_conversion);      // forwarding conversion path (int -> double)
+    hist.add(value_float_conversion);    // forwarding conversion path (float -> double)
+
+    std::printf("histogram total=%d top=%f occ=%d\n", hist.total_count(), hist.top(), hist.top_occurence());
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 class my_collector : public base_observer // NOLINT inherits from non copyable and non movable class
 {
 public:
@@ -3125,6 +3147,7 @@ void runner()
     test_sync_queue();
     test_sync_queue_perfect_forwarding();
     test_sync_dictionary();
+    test_histogram_perfect_forwarding();
 
     test_publish_subscribe();
     test_generic_task();

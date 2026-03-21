@@ -43,7 +43,9 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "tools/non_copyable.hpp"
@@ -75,7 +77,47 @@ namespace tools
          *
          * @param value The value to be added to the histogram.
          */
-        void add(T value)
+        void add(const T& value)
+        {
+            add_value(value);
+        }
+
+        /**
+         * @brief Adds an rvalue to the histogram and updates the occurrence count.
+         *
+         * This overload preserves exact-type brace-init and move call compatibility.
+         *
+         * @param value The rvalue to be added to the histogram.
+         */
+        void add(T&& value)
+        {
+            add_value(std::move(value));
+        }
+
+        /**
+         * @brief Adds a value to the histogram with perfect forwarding.
+         *
+         * This template supports conversion-based add calls in addition to the
+         * exact-type overloads.
+         * In C++20, this method is constrained to constructible types.
+         *
+         * @tparam U The deduced value type.
+         * @param value The value to be forwarded into the histogram.
+         */
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        auto add(U&& value)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
+#endif
+        {
+            add_value(T(std::forward<U>(value)));
+        }
+
+    private:
+        void add_value(T value)
         {
             if (0 == m_occurences.count(value)) // first time
             {
@@ -104,6 +146,8 @@ namespace tools
 
             ++m_total_count;
         }
+
+    public:
 
         /**
          * @brief Returns the top value of the histogram.

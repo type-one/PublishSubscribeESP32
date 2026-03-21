@@ -42,6 +42,9 @@
 
 #include <cmath>
 #include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 #include "tests/test_helper.hpp"
 #include "tools/histogram.hpp"
@@ -74,6 +77,72 @@ protected:
 
 using MyTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_SUITE(HistogramTest, MyTypes);
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+template <typename Hist, typename ValueArg>
+concept has_histogram_add_call = requires(Hist& hist_ref, ValueArg&& value_arg)
+{
+    hist_ref.add(std::forward<ValueArg>(value_arg));
+};
+#endif
+
+/**
+ * @brief Probe type used to validate copy/move forwarding behavior in histogram::add.
+ */
+struct histogram_forwarding_probe
+{
+    static int copy_ctor_count;
+    static int move_ctor_count;
+
+    int payload = 0;
+
+    histogram_forwarding_probe() = default;
+    explicit histogram_forwarding_probe(int value)
+        : payload(value)
+    {
+    }
+
+    histogram_forwarding_probe(const histogram_forwarding_probe& other)
+        : payload(other.payload)
+    {
+        ++copy_ctor_count;
+    }
+
+    histogram_forwarding_probe(histogram_forwarding_probe&& other) noexcept
+        : payload(other.payload)
+    {
+        ++move_ctor_count;
+    }
+
+    histogram_forwarding_probe& operator=(const histogram_forwarding_probe&) = default;
+    histogram_forwarding_probe& operator=(histogram_forwarding_probe&&) noexcept = default;
+
+    bool operator==(const histogram_forwarding_probe& other) const
+    {
+        return payload == other.payload;
+    }
+
+    static void reset()
+    {
+        copy_ctor_count = 0;
+        move_ctor_count = 0;
+    }
+};
+
+int histogram_forwarding_probe::copy_ctor_count = 0;
+int histogram_forwarding_probe::move_ctor_count = 0;
+
+namespace std
+{
+    template <>
+    struct hash<histogram_forwarding_probe>
+    {
+        std::size_t operator()(const histogram_forwarding_probe& value) const noexcept
+        {
+            return std::hash<int> {}(value.payload);
+        }
+    };
+}
 
 /**
  * @brief Test case for adding elements to the histogram and checking the top element.
@@ -293,3 +362,64 @@ TYPED_TEST(HistogramTest, EmptyHistogram)
     EXPECT_FLOAT_EQ(this->hist->variance(0.0), 0.0);
     EXPECT_FLOAT_EQ(this->hist->median(), 0.0);
 }
+
+/**
+ * @brief Verifies histogram add supports exact and conversion call paths.
+ */
+TEST(HistogramPerfectForwardingTest, AddSupportsExactAndConversionPaths)
+{
+    tools::histogram<double> hist;
+
+    double lvalue_value = 2.5;
+    hist.add(lvalue_value);       // exact-T lvalue overload path
+    hist.add(2.5);                // exact-T rvalue overload path
+    hist.add(2);                  // forwarding conversion path (int -> double)
+    hist.add(static_cast<float>(2.5F)); // forwarding conversion path (float -> double)
+
+    EXPECT_EQ(hist.total_count(), 4);
+    EXPECT_EQ(hist.top_occurence(), 3);
+    EXPECT_FLOAT_EQ(hist.top(), 2.5);
+}
+
+/**
+ * @brief Verifies lvalue and rvalue add paths trigger copy and move construction for probe values.
+ */
+TEST(HistogramPerfectForwardingTest, AddLvalueAndRvalueTriggerCopyMovePaths)
+{
+    {
+        histogram_forwarding_probe::reset();
+        tools::histogram<histogram_forwarding_probe> hist_probe;
+
+        histogram_forwarding_probe probe_lvalue(11);
+        hist_probe.add(probe_lvalue);
+
+        EXPECT_GE(histogram_forwarding_probe::copy_ctor_count, 1);
+    }
+
+    {
+        histogram_forwarding_probe::reset();
+        tools::histogram<histogram_forwarding_probe> hist_probe;
+
+        hist_probe.add(histogram_forwarding_probe(22));
+
+        EXPECT_GE(histogram_forwarding_probe::move_ctor_count, 1);
+    }
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+/**
+ * @brief Verifies C++20 requires constraints for histogram add forwarding API.
+ */
+TEST(HistogramPerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    using hist_double_t = tools::histogram<double>;
+    using hist_int_t = tools::histogram<int>;
+
+    static_assert(has_histogram_add_call<hist_double_t, double>);
+    static_assert(has_histogram_add_call<hist_double_t, int>);
+    static_assert(has_histogram_add_call<hist_double_t, float>);
+    static_assert(!has_histogram_add_call<hist_int_t, const char*>);
+
+    SUCCEED();
+}
+#endif
