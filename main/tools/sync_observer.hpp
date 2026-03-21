@@ -45,6 +45,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -168,6 +169,43 @@ namespace tools
         }
 
         /**
+         * @brief Subscribes an observer to a specific topic using rvalue topic.
+         *
+         * This overload preserves exact-type brace-init and move call compatibility.
+         *
+         * @param topic The topic to which the observer wants to subscribe.
+         * @param observer The observer that wants to subscribe to the topic.
+         */
+        void subscribe(Topic&& topic, sync_observer_shared_ptr observer)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_subscribers.insert({ std::move(topic), std::move(observer) });
+        }
+
+        /**
+         * @brief Subscribes an observer to a specific topic using perfect forwarding.
+         *
+         * This template supports conversion-based topic arguments beyond exact-type overloads.
+         * In C++20, this method is constrained to constructible topic arguments.
+         *
+         * @tparam UTopic The deduced topic type.
+         * @param topic The topic to which the observer wants to subscribe.
+         * @param observer The observer that wants to subscribe to the topic.
+         */
+        template <typename UTopic>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<Topic, UTopic>
+#endif
+        auto subscribe(UTopic&& topic, sync_observer_shared_ptr observer)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<Topic, UTopic>::value, void>::type
+#endif
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_subscribers.insert({ Topic(std::forward<UTopic>(topic)), std::move(observer) });
+        }
+
+        /**
          * @brief Subscribes a handler to a specific topic.
          *
          * This method allows you to subscribe a handler to a given topic. The handler will be called whenever the topic
@@ -181,6 +219,53 @@ namespace tools
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             m_handlers.insert({ topic, std::make_pair(handler_name, handler) });
+        }
+
+        /**
+         * @brief Subscribes a handler to a specific topic using rvalue arguments.
+         *
+         * This overload preserves exact-type brace-init and move call compatibility.
+         *
+         * @param topic The topic to subscribe to.
+         * @param handler_name The name of the handler.
+         * @param handler_fn The handler function to be called when the topic is published.
+         */
+        void subscribe(Topic&& topic, std::string&& handler_name, handler&& handler_fn)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_handlers.insert({ std::move(topic), std::make_pair(std::move(handler_name), std::move(handler_fn)) });
+        }
+
+        /**
+         * @brief Subscribes a handler to a specific topic using perfect forwarding.
+         *
+         * This template supports conversion-based topic/name/handler arguments beyond exact-type overloads.
+         * In C++20, this method is constrained to constructible types.
+         *
+         * @tparam UTopic The deduced topic type.
+         * @tparam UName The deduced handler-name type.
+         * @tparam UHandler The deduced handler type.
+         * @param topic The topic to subscribe to.
+         * @param handler_name The name of the handler.
+         * @param handler_fn The handler function to be called when the topic is published.
+         */
+        template <typename UTopic, typename UName, typename UHandler>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<Topic, UTopic> && std::is_constructible_v<std::string, UName>
+                         && std::is_constructible_v<handler, UHandler>
+#endif
+        auto subscribe(UTopic&& topic, UName&& handler_name, UHandler&& handler_fn)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<Topic, UTopic>::value
+                    && std::is_constructible<std::string, UName>::value
+                    && std::is_constructible<handler, UHandler>::value,
+                void>::type
+#endif
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_handlers.insert({ Topic(std::forward<UTopic>(topic)),
+                std::make_pair(
+                    std::string(std::forward<UName>(handler_name)), handler(std::forward<UHandler>(handler_fn))) });
         }
 
         /**
@@ -239,6 +324,38 @@ namespace tools
          */
         virtual void publish(const Topic& topic, const Evt& event)
         {
+            do_publish(topic, event);
+        }
+
+        /**
+         * @brief Publishes an event using perfect forwarding.
+         *
+         * This template supports conversion-based topic/event arguments beyond exact-type overloads.
+         * In C++20, this method is constrained to constructible types.
+         *
+         * @tparam UTopic The deduced topic type.
+         * @tparam UEvt The deduced event type.
+         * @param topic The topic to publish the event to.
+         * @param event The event to be published.
+         */
+        template <typename UTopic, typename UEvt>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<Topic, UTopic> && std::is_constructible_v<Evt, UEvt>
+#endif
+        auto publish(UTopic&& topic, UEvt&& event)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<
+                std::is_constructible<Topic, UTopic>::value && std::is_constructible<Evt, UEvt>::value, void>::type
+#endif
+        {
+            Topic converted_topic(std::forward<UTopic>(topic));
+            Evt converted_event(std::forward<UEvt>(event));
+            do_publish(converted_topic, converted_event);
+        }
+
+    private:
+        void do_publish(const Topic& topic, const Evt& event)
+        {
             std::vector<sync_observer_shared_ptr> to_inform;
             std::vector<handler> to_invoke;
 
@@ -267,7 +384,6 @@ namespace tools
             }
         }
 
-    private:
         critical_section m_mutex;
         std::multimap<Topic, sync_observer_shared_ptr> m_subscribers;
         std::multimap<Topic, std::pair<std::string, handler>> m_handlers;

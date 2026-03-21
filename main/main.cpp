@@ -1133,6 +1133,30 @@ void test_publish_subscribe()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_sync_observer_perfect_forwarding()
+{
+    LOG_INFO("-- sync observer perfect forwarding --");
+    print_stats();
+
+    tools::sync_subject<std::string, std::string> subject("forwarding_subject");
+
+    std::string topic_lvalue = "demo-topic";
+    std::string handler_name_lvalue = "demo-handler";
+    std::string payload_lvalue = "payload-lvalue";
+
+    subject.subscribe(topic_lvalue, handler_name_lvalue,
+        [](const std::string& topic, const std::string& event, const std::string& origin)
+        {
+            std::printf("sync-fwd [topic %s] event (%s) from %s\n", topic.c_str(), event.c_str(), origin.c_str());
+        });
+
+    subject.publish(topic_lvalue, payload_lvalue);                          // exact lvalue path
+    subject.publish(std::string("demo-topic"), std::string("payload-rvalue")); // exact rvalue path
+    subject.publish("demo-topic", "payload-conversion");                   // conversion forwarding path
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 struct my_generic_task_context
 {
     std::atomic<bool> stop_tasks;
@@ -3148,6 +3172,7 @@ void runner()
     test_sync_queue_perfect_forwarding();
     test_sync_dictionary();
     test_histogram_perfect_forwarding();
+    test_sync_observer_perfect_forwarding();
 
     test_publish_subscribe();
     test_generic_task();

@@ -41,6 +41,8 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
+#include <utility>
 
 #include "tests/test_helper.hpp"
 #include "tools/sync_observer.hpp"
@@ -341,3 +343,105 @@ TEST_F(SyncObserverTest, ConcurrentPublish)
     // Ensure the last event is within the expected range
     ASSERT_TRUE(observer->last_event >= 0 && observer->last_event < 200);
 }
+
+/**
+ * @brief Observer used for perfect-forwarding tests with string event payloads.
+ */
+class StringEventObserver : public tools::sync_observer<std::string, std::string>
+{
+public:
+    void inform(const std::string& topic, const std::string& event, const std::string& origin) override
+    {
+        last_topic = topic;
+        last_event = event;
+        last_origin = origin;
+    }
+
+    std::string last_topic;
+    std::string last_event;
+    std::string last_origin;
+};
+
+/**
+ * @brief Verifies sync_subject subscribe/publish support exact and conversion call paths.
+ */
+TEST(SyncObserverPerfectForwardingTest, SubscribeAndPublishSupportExactAndConversionPaths)
+{
+    tools::sync_subject<std::string, std::string> subject("ForwardingSubject");
+    auto observer_ref = std::make_shared<StringEventObserver>();
+
+    std::string topic_lvalue = "topic-lvalue";
+    std::string event_lvalue = "event-lvalue";
+
+    subject.subscribe(topic_lvalue, observer_ref);
+    subject.publish(topic_lvalue, event_lvalue); // exact lvalue path
+
+    EXPECT_EQ(observer_ref->last_topic, "topic-lvalue");
+    EXPECT_EQ(observer_ref->last_event, "event-lvalue");
+    EXPECT_EQ(observer_ref->last_origin, "ForwardingSubject");
+
+    subject.publish(std::string("topic-lvalue"), std::string("event-rvalue")); // exact rvalue path
+    EXPECT_EQ(observer_ref->last_event, "event-rvalue");
+
+    subject.publish("topic-lvalue", "event-conversion"); // conversion forwarding path
+    EXPECT_EQ(observer_ref->last_event, "event-conversion");
+}
+
+/**
+ * @brief Verifies loosely-coupled handler subscribe supports forwarding argument paths.
+ */
+TEST(SyncObserverPerfectForwardingTest, HandlerSubscribeSupportsForwardingPaths)
+{
+    tools::sync_subject<std::string, std::string> subject("ForwardingSubject");
+
+    int handler_call_count = 0;
+    std::string captured_event;
+
+    std::string topic_lvalue = "handler-topic";
+    std::string handler_name_lvalue = "handler-name";
+
+    subject.subscribe(topic_lvalue, handler_name_lvalue,
+        [&](const std::string&, const std::string& event, const std::string&)
+        {
+            ++handler_call_count;
+            captured_event = event;
+        });
+
+    subject.publish("handler-topic", "handler-event");
+
+    EXPECT_EQ(handler_call_count, 1);
+    EXPECT_EQ(captured_event, "handler-event");
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+template <typename SubjectT, typename TopicArg, typename EventArg>
+concept has_sync_publish_call = requires(SubjectT& subject_ref, TopicArg&& topic_arg, EventArg&& event_arg)
+{
+    subject_ref.publish(std::forward<TopicArg>(topic_arg), std::forward<EventArg>(event_arg));
+};
+
+template <typename SubjectT, typename TopicArg, typename ObserverArg>
+concept has_sync_subscribe_observer_call = requires(
+    SubjectT& subject_ref, TopicArg&& topic_arg, ObserverArg&& observer_arg)
+{
+    subject_ref.subscribe(std::forward<TopicArg>(topic_arg), std::forward<ObserverArg>(observer_arg));
+};
+
+/**
+ * @brief Verifies C++20 requires constraints for sync_subject forwarding APIs.
+ */
+TEST(SyncObserverPerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    using subject_t = tools::sync_subject<std::string, std::string>;
+    using observer_ptr_t = std::shared_ptr<tools::sync_observer<std::string, std::string>>;
+
+    static_assert(has_sync_publish_call<subject_t, const char*, const char*>);
+    static_assert(has_sync_publish_call<subject_t, std::string&&, std::string&&>);
+    static_assert(!has_sync_publish_call<subject_t, int, const char*>);
+
+    static_assert(has_sync_subscribe_observer_call<subject_t, const char*, observer_ptr_t>);
+    static_assert(!has_sync_subscribe_observer_call<subject_t, int, observer_ptr_t>);
+
+    SUCCEED();
+}
+#endif
