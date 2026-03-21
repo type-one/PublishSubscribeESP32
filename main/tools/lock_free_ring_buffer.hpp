@@ -43,7 +43,9 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <type_traits>
+#include <utility>
 
 #include "tools/non_copyable.hpp"
 
@@ -60,9 +62,9 @@ namespace tools
      */
     template <typename T, std::size_t Pow2>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-    requires std::is_standard_layout_v<T> && std::is_trivial_v<T> &&(std::is_scalar_v<T> || std::is_pointer_v<T>)
+        requires std::is_standard_layout_v<T> && std::is_trivial_v<T> && (std::is_scalar_v<T> || std::is_pointer_v<T>)
 #endif
-        class lock_free_ring_buffer : public non_copyable // NOLINT inherits from non copyable and non movable class
+    class lock_free_ring_buffer : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
         static_assert(std::is_standard_layout<T>::value, "T has to provide standard layout");
@@ -79,40 +81,52 @@ namespace tools
         ~lock_free_ring_buffer() = default;
 
         /**
-         * @brief Pushes an element into the ring buffer.
+         * @brief Pushes a copy of an element into the ring buffer.
          *
-         * This function attempts to push an element into the ring buffer. If the buffer is full,
-         * the function returns false. It handles potential race conditions by checking the indices
-         * and waiting if necessary.
+         * This overload keeps brace-init and exact-T calls unambiguous while
+         * preserving legacy call sites.
          *
          * @param elem The element to be pushed into the ring buffer.
-         * @return true if the element was successfully pushed into the buffer, false if the buffer is full.
+         * @return true if the element was successfully pushed, false if the buffer is full.
          */
         bool push(const T& elem)
         {
-            const std::size_t snap_write_idx = m_push_index.load();
-            const std::size_t snap_read_idx = m_pop_index.load();
+            return push_val(elem);
+        }
 
-            // is full ?
-            if ((snap_read_idx & ring_buffer_mask) == ((snap_write_idx + 1U) & ring_buffer_mask))
-            {
-                return false;
-            }
+        /**
+         * @brief Pushes an rvalue element into the ring buffer.
+         *
+         * This overload preserves brace-init and exact-T call compatibility.
+         * For trivial types, move and copy are semantically equivalent; the value
+         * is passed by value to the shared push_val helper.
+         *
+         * @param elem The rvalue element to be pushed into the ring buffer.
+         * @return true if the element was successfully pushed, false if the buffer is full.
+         */
+        bool push(T&& elem)
+        {
+            return push_val(std::move(elem));
+        }
 
-            // getting close or wrap around, risk of race condition
-            if (((snap_write_idx - snap_read_idx) <= 2U) || (snap_write_idx < snap_read_idx))
-            {
-                do
-                {
-                } while (m_reading.load());
-            }
-
-            m_writing.store(true);
-            const std::size_t write_idx = m_push_index.fetch_add(1U);
-            m_ring_buffer.at(write_idx & ring_buffer_mask).store(elem);
-            m_writing.store(false);
-
-            return true;
+        /**
+         * @brief Pushes an element into the ring buffer with perfect forwarding.
+         *
+         * This template method uses perfect forwarding to support conversions
+         * (e.g. pushing an int into a float buffer) beyond the basic exact-T overloads.
+         * In C++20, this method is constrained to only accept constructible types.
+         *
+         * @tparam U The type of the element (deduced, supports conversions).
+         * @param elem The element to be forwarded and pushed into the ring buffer.
+         * @return true if the element was successfully pushed, false if the buffer is full.
+         */
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        bool push(U&& elem)
+        {
+            return push_val(T(std::forward<U>(elem)));
         }
 
         /**
@@ -153,6 +167,24 @@ namespace tools
         }
 
         /**
+         * @brief Pops an element from the ring buffer and returns it wrapped in std::optional.
+         *
+         * This method provides an alternative to the output-parameter pop() that returns
+         * the popped value inside a std::optional, or std::nullopt if the buffer is empty.
+         *
+         * @return An optional containing the popped element, or std::nullopt if empty.
+         */
+        std::optional<T> pop_opt()
+        {
+            T elem {};
+            if (pop(elem))
+            {
+                return elem;
+            }
+            return std::nullopt;
+        }
+
+        /**
          * @brief Returns the capacity of the ring buffer.
          *
          * This function calculates the capacity of the ring buffer based on the
@@ -169,6 +201,42 @@ namespace tools
     private:
         static constexpr const std::size_t ring_buffer_size = (1U << Pow2);
         static constexpr const std::size_t ring_buffer_mask = (ring_buffer_size - 1U);
+
+        /**
+         * @brief Shared push implementation used by all public push overloads.
+         *
+         * Accepts T by value to allow both copy and move callers to converge on a
+         * single code path, avoiding duplication of the lock-free state-machine logic.
+         *
+         * @param elem The element value to store.
+         * @return true if successfully stored, false if the buffer was full.
+         */
+        bool push_val(T elem)
+        {
+            const std::size_t snap_write_idx = m_push_index.load();
+            const std::size_t snap_read_idx = m_pop_index.load();
+
+            // is full ?
+            if ((snap_read_idx & ring_buffer_mask) == ((snap_write_idx + 1U) & ring_buffer_mask))
+            {
+                return false;
+            }
+
+            // getting close or wrap around, risk of race condition
+            if (((snap_write_idx - snap_read_idx) <= 2U) || (snap_write_idx < snap_read_idx))
+            {
+                do
+                {
+                } while (m_reading.load());
+            }
+
+            m_writing.store(true);
+            const std::size_t write_idx = m_push_index.fetch_add(1U);
+            m_ring_buffer.at(write_idx & ring_buffer_mask).store(elem);
+            m_writing.store(false);
+
+            return true;
+        }
 
         std::array<std::atomic<T>, ring_buffer_size> m_ring_buffer;
         std::atomic<std::size_t> m_push_index = 0U;

@@ -43,8 +43,10 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
+#include <type_traits>
 
 #include "tools/lock_free_ring_buffer.hpp"
 
@@ -270,3 +272,133 @@ TYPED_TEST(LockFreeRingBufferTest, ProducerConsumerInterleavedTest)
     producer.join();
     consumer.join();
 }
+
+/**
+ * @brief Verifies exact-T lvalue and rvalue push overloads produce the same stored value.
+ *
+ * This test pushes matching lvalue and rvalue elements into a buffer and confirms
+ * that extracted values are equal, verifying that both overloads route through the
+ * same storage path for trivial types.
+ *
+ * @test
+ * - Push an exact-T lvalue and an exact-T rvalue.
+ * - Extract both values via pop_opt() and verify equality.
+ */
+TEST(LockFreeRingBufferPerfectForwardingTest, PushLvalueAndRvalueAreEquivalentForTrivialTypes)
+{
+    tools::lock_free_ring_buffer<int, 2> buffer;
+
+    int lval = 42;
+    ASSERT_TRUE(buffer.push(lval));
+    ASSERT_TRUE(buffer.push(int(99)));  // NOLINT exact-T rvalue overload
+
+    auto first_opt = buffer.pop_opt();
+    auto second_opt = buffer.pop_opt();
+
+    ASSERT_TRUE(first_opt.has_value());
+    ASSERT_TRUE(second_opt.has_value());
+    EXPECT_EQ(*first_opt, 42);
+    EXPECT_EQ(*second_opt, 99);
+    EXPECT_FALSE(buffer.pop_opt().has_value());
+}
+
+/**
+ * @brief Verifies forwarding template conversion path for push.
+ *
+ * This test pushes convertible-type values (int literals) into a float buffer
+ * and verifies that values are stored and extracted correctly via the forwarding
+ * template conversion path.
+ *
+ * @test
+ * - Push int literals into a float buffer using the conversion forwarding path.
+ * - Extract values via pop_opt() and verify converted values.
+ */
+TEST(LockFreeRingBufferPerfectForwardingTest, PushConversionForwardingTemplate)
+{
+    tools::lock_free_ring_buffer<float, 2> buffer;
+
+    ASSERT_TRUE(buffer.push(1));   // NOLINT int-to-float forwarding conversion
+    ASSERT_TRUE(buffer.push(2));   // NOLINT int-to-float forwarding conversion
+
+    auto first_opt = buffer.pop_opt();
+    auto second_opt = buffer.pop_opt();
+
+    ASSERT_TRUE(first_opt.has_value());
+    ASSERT_TRUE(second_opt.has_value());
+    EXPECT_FLOAT_EQ(*first_opt, 1.0F);
+    EXPECT_FLOAT_EQ(*second_opt, 2.0F);
+}
+
+/**
+ * @brief Verifies that pop_opt() returns nullopt when the buffer is empty.
+ *
+ * This test ensures pop_opt() correctly returns std::nullopt when no elements
+ * are available and returns a valid optional after a successful push.
+ *
+ * @test
+ * - Call pop_opt() on empty buffer and verify it returns nullopt.
+ * - Push one element and call pop_opt() to verify it returns the value.
+ * - Call pop_opt() again on empty buffer and verify nullopt.
+ */
+TEST(LockFreeRingBufferPerfectForwardingTest, PopOptReturnsNulloptWhenEmpty)
+{
+    tools::lock_free_ring_buffer<int, 2> buffer;
+
+    EXPECT_FALSE(buffer.pop_opt().has_value());
+
+    ASSERT_TRUE(buffer.push(7));
+
+    auto item = buffer.pop_opt();
+    ASSERT_TRUE(item.has_value());
+    EXPECT_EQ(*item, 7);
+
+    EXPECT_FALSE(buffer.pop_opt().has_value());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+namespace
+{
+    /**
+     * @brief Marker type intentionally not constructible as int.
+     *
+     * Used by C++20-only checks validating requires-based filtering.
+     */
+    struct non_constructible_payload
+    {
+    };
+
+    template <typename Buf, typename U>
+    concept has_push_call = requires(Buf& buf, U&& value)
+    {
+        buf.push(std::forward<U>(value));
+    };
+}
+
+/**
+ * @brief C++20-only compile-time validation of forwarding constraints.
+ *
+ * This test verifies that requires-constrained push in lock_free_ring_buffer
+ * accepts constructible inputs and rejects non-constructible payload types.
+ *
+ * @test
+ * - Assert constructibility expectations for valid and invalid payload types.
+ * - Assert call-validity for the push forwarding template.
+ * - Ensure non-constructible payload calls are rejected at compile time.
+ */
+TEST(LockFreeRingBufferPerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    using buffer_t = tools::lock_free_ring_buffer<int, 2>;
+
+    static_assert(std::is_constructible_v<int, int>);
+    static_assert(std::is_constructible_v<int, float>);
+    static_assert(!std::is_constructible_v<int, non_constructible_payload>);
+    static_assert(!std::is_constructible_v<int, non_constructible_payload&>);
+
+    static_assert(has_push_call<buffer_t, int>);
+    static_assert(has_push_call<buffer_t, float>);
+    static_assert(!has_push_call<buffer_t, non_constructible_payload>);
+    static_assert(!has_push_call<buffer_t, non_constructible_payload&>);
+
+    SUCCEED();
+}
+#endif

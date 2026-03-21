@@ -705,6 +705,58 @@ void test_lock_free_ring_buffer()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_lock_free_ring_buffer_perfect_forwarding()
+{
+    LOG_INFO("-- lock free ring buffer perfect forwarding --");
+    print_stats();
+
+    {
+        // exact-T rvalue push and optional-pop on a scalar buffer
+        constexpr const std::size_t queue_size_pow2 = 2U;
+        constexpr const std::uint16_t val_first = 10U;
+        constexpr const std::uint16_t val_second = 20U;
+        constexpr const std::uint16_t val_third = 30U;
+        tools::lock_free_ring_buffer<std::uint16_t, queue_size_pow2> buf;
+
+        std::uint16_t lvalue = val_first;
+        buf.push(lvalue);                                  // exact-T lvalue overload
+        buf.push(std::uint16_t(val_second));               // exact-T rvalue overload
+        buf.push(static_cast<std::uint16_t>(val_third));   // forwarding conversion path
+
+        while (true)
+        {
+            auto item = buf.pop_opt();                 // optional-based pop
+            if (!item.has_value())
+            {
+                break;
+            }
+            std::printf("%u\n", static_cast<unsigned>(item.value()));
+        }
+    }
+
+    {
+        // forwarding template conversion: push int literal into float buffer
+        constexpr const std::size_t queue_size_pow2 = 2U;
+        tools::lock_free_ring_buffer<float, queue_size_pow2> float_buf;
+
+        float_buf.push(1);   // NOLINT int-to-float conversion forwarding path
+        float_buf.push(2);   // NOLINT int-to-float conversion forwarding path
+        float_buf.push(3);   // NOLINT int-to-float conversion forwarding path
+
+        while (true)
+        {
+            auto item = float_buf.pop_opt();
+            if (!item.has_value())
+            {
+                break;
+            }
+            std::printf("%.1f\n", item.value());
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 void test_sync_ring_buffer()
 {
     LOG_INFO("-- sync ring buffer --");
@@ -3045,6 +3097,7 @@ void runner()
     test_ring_vector_iteration();
 
     test_lock_free_ring_buffer();
+    test_lock_free_ring_buffer_perfect_forwarding();
     test_sync_ring_buffer();
     test_sync_ring_vector();
     test_sync_ring_vector_perfect_forwarding();
