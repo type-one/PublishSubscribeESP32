@@ -52,8 +52,8 @@ namespace tools
     class base_task : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
-        static constexpr const int run_on_all_cores = -1; ///< Default constant for cpu affinity
-        static constexpr const int default_priority = -1; ///< Default constant for thread priority
+        static constexpr int run_on_all_cores = -1; ///< Default constant for cpu affinity
+        static constexpr int default_priority = -1; ///< Default constant for thread priority
 
         base_task() = delete;
 
@@ -65,9 +65,9 @@ namespace tools
          * @param cpu_affinity The CPU affinity for the task or use base_task::run_on_all_cores if you don't care.
          * @param priority The priority of the task or use base_task::default_priority if you don't care.
          */
-        base_task(const std::string& task_name, std::size_t stack_size, int cpu_affinity, // NOLINT keep interface
-            int priority)                                                                 // NOLINT keep interface
-            : m_task_name(task_name)
+        base_task(std::string task_name, std::size_t stack_size, int cpu_affinity, // NOLINT keep interface
+            int priority)                                                            // NOLINT keep interface
+            : m_task_name(std::move(task_name))
             , m_stack_size(stack_size)
             , m_cpu_affinity(cpu_affinity)
             , m_priority(priority)
@@ -92,7 +92,7 @@ namespace tools
          *
          * @return A constant reference to the task name.
          */
-        [[nodiscard]] const std::string& task_name() const
+        [[nodiscard]] const std::string& task_name() const noexcept
         {
             return m_task_name;
         }
@@ -102,7 +102,7 @@ namespace tools
          *
          * @return The stack size of the task.
          */
-        [[nodiscard]] std::size_t stack_size() const
+        [[nodiscard]] std::size_t stack_size() const noexcept
         {
             return m_stack_size;
         }
@@ -112,7 +112,7 @@ namespace tools
          *
          * @return The CPU affinity of the task.
          */
-        [[nodiscard]] int cpu_affinity() const
+        [[nodiscard]] int cpu_affinity() const noexcept
         {
             return m_cpu_affinity;
         }
@@ -122,7 +122,7 @@ namespace tools
          *
          * @return The priority of the task.
          */
-        [[nodiscard]] int priority() const
+        [[nodiscard]] int priority() const noexcept
         {
             return m_priority;
         }
