@@ -54,6 +54,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "tools/sync_queue.hpp"
@@ -465,3 +466,321 @@ TYPED_TEST(SyncQueueTest, MultipleProducersSingleConsumer)
 
     EXPECT_TRUE(this->queue->empty());
 }
+
+namespace
+{
+    struct forwarding_probe
+    {
+        forwarding_probe() = default;
+        explicit forwarding_probe(int v)
+            : value(v)
+        {
+        }
+
+        forwarding_probe(const forwarding_probe& other)
+            : value(other.value)
+        {
+            ++copy_ctor_count;
+        }
+
+        forwarding_probe(forwarding_probe&& other) noexcept
+            : value(other.value)
+        {
+            other.value = -1;
+            ++move_ctor_count;
+        }
+
+        forwarding_probe& operator=(const forwarding_probe& other)
+        {
+            if (this != &other)
+            {
+                value = other.value;
+            }
+            ++copy_assign_count;
+            return *this;
+        }
+
+        forwarding_probe& operator=(forwarding_probe&& other) noexcept
+        {
+            if (this != &other)
+            {
+                value = other.value;
+                other.value = -1;
+            }
+            ++move_assign_count;
+            return *this;
+        }
+
+        static void reset_counters()
+        {
+            copy_ctor_count = 0;
+            move_ctor_count = 0;
+            copy_assign_count = 0;
+            move_assign_count = 0;
+        }
+
+        int value = 0;
+        static int copy_ctor_count;
+        static int move_ctor_count;
+        static int copy_assign_count;
+        static int move_assign_count;
+    };
+
+    int forwarding_probe::copy_ctor_count = 0;
+    int forwarding_probe::move_ctor_count = 0;
+    int forwarding_probe::copy_assign_count = 0;
+    int forwarding_probe::move_assign_count = 0;
+}
+
+/**
+ * @brief Verifies push/emplace perfect-forwarding behavior for exact, brace-init, and conversion calls.
+ *
+ * This test validates the primary perfect-forwarding insertion paths for `sync_queue<std::string>`.
+ * It covers exact-T lvalue/rvalue overloads, conversion forwarding from `const char*`,
+ * brace-initialization compatibility, and variadic constructor forwarding with `emplace`.
+ *
+ * @test
+ * - Push exact-T lvalue and exact-T rvalue values.
+ * - Push a convertible type (`const char*`) to exercise forwarding conversion.
+ * - Push a brace-initialized value to verify overload compatibility.
+ * - Emplace constructor arguments and verify in-place construction result.
+ * - Pop all values and check ordering and expected payloads.
+ */
+TEST(SyncQueuePerfectForwardingTest, PushAndEmplaceSupportExactBraceAndConversionCalls)
+{
+    tools::sync_queue<std::string> queue;
+
+    std::string exact_lvalue = "exact-lvalue";
+    queue.push(exact_lvalue);                     // exact-T lvalue overload
+    queue.push(std::string("exact-rvalue"));      // exact-T rvalue overload
+    queue.push("conversion-from-cstr");           // forwarding conversion path
+    queue.push({ "brace-init" });                 // brace-init path
+    queue.emplace(4U, 'q');                       // variadic forwarding path
+
+    auto pop_first = queue.front_pop();
+    auto pop_second = queue.front_pop();
+    auto pop_third = queue.front_pop();
+    auto pop_fourth = queue.front_pop();
+    auto pop_fifth = queue.front_pop();
+
+    ASSERT_TRUE(pop_first.has_value());
+    ASSERT_TRUE(pop_second.has_value());
+    ASSERT_TRUE(pop_third.has_value());
+    ASSERT_TRUE(pop_fourth.has_value());
+    ASSERT_TRUE(pop_fifth.has_value());
+
+    EXPECT_EQ(*pop_first, "exact-lvalue");
+    EXPECT_EQ(*pop_second, "exact-rvalue");
+    EXPECT_EQ(*pop_third, "conversion-from-cstr");
+    EXPECT_EQ(*pop_fourth, "brace-init");
+    EXPECT_EQ(*pop_fifth, "qqqq");
+    EXPECT_TRUE(queue.empty());
+}
+
+/**
+ * @brief Verifies ISR insertion APIs preserve perfect-forwarding behavior.
+ *
+ * This test validates that ISR-safe insertion methods follow the same functional
+ * forwarding semantics as regular insertion methods for exact-T, conversion, brace-init,
+ * and variadic emplace argument paths.
+ *
+ * @note In GoogleTest context there is no real ISR; standard C++ fallback behavior is used.
+ *
+ * @test
+ * - Insert exact-T lvalue/rvalue payloads through `isr_push`.
+ * - Insert a convertible payload and a brace-initialized payload through `isr_push`.
+ * - Insert constructor arguments through `isr_emplace`.
+ * - Pop all values and verify FIFO ordering and payload correctness.
+ */
+TEST(SyncQueuePerfectForwardingTest, IsrPushAndEmplaceSupportForwardingPaths)
+{
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
+    tools::sync_queue<std::string> queue;
+
+    std::string exact_lvalue = "isr-lvalue";
+    queue.isr_push(exact_lvalue);                   // exact-T lvalue overload
+    queue.isr_push(std::string("isr-rvalue"));     // exact-T rvalue overload
+    queue.isr_push("isr-conversion");              // forwarding conversion path
+    queue.isr_push({ "isr-brace-init" });           // brace-init path
+    queue.isr_emplace(3U, 'i');                     // variadic forwarding path
+
+    auto pop_first = queue.front_pop();
+    auto pop_second = queue.front_pop();
+    auto pop_third = queue.front_pop();
+    auto pop_fourth = queue.front_pop();
+    auto pop_fifth = queue.front_pop();
+
+    ASSERT_TRUE(pop_first.has_value());
+    ASSERT_TRUE(pop_second.has_value());
+    ASSERT_TRUE(pop_third.has_value());
+    ASSERT_TRUE(pop_fourth.has_value());
+    ASSERT_TRUE(pop_fifth.has_value());
+
+    EXPECT_EQ(*pop_first, "isr-lvalue");
+    EXPECT_EQ(*pop_second, "isr-rvalue");
+    EXPECT_EQ(*pop_third, "isr-conversion");
+    EXPECT_EQ(*pop_fourth, "isr-brace-init");
+    EXPECT_EQ(*pop_fifth, "iii");
+    EXPECT_TRUE(queue.empty());
+}
+
+/**
+ * @brief Verifies exact-T overload preference for lvalue/rvalue insertion paths.
+ *
+ * This test uses `forwarding_probe` counters to confirm insertion behavior for
+ * lvalue and rvalue payloads and validates resulting value ordering after extraction.
+ *
+ * @test
+ * - Push an lvalue probe and an rvalue probe, then emplace a probe value.
+ * - Extract all values with move-pop and verify ordering.
+ * - Check constructor counters to validate lvalue/rvalue insertion behavior.
+ */
+TEST(SyncQueuePerfectForwardingTest, PushLvalueAndRvaluePreferExactTOverloads)
+{
+    forwarding_probe::reset_counters();
+
+    tools::sync_queue<forwarding_probe> queue;
+    forwarding_probe lvalue(10);
+
+    queue.push(lvalue);
+    queue.push(forwarding_probe(20));
+    queue.emplace(30);
+
+    // Validate insertion-path behavior before extraction introduces additional moves.
+    EXPECT_EQ(forwarding_probe::copy_ctor_count, 1);
+    EXPECT_EQ(forwarding_probe::move_ctor_count, 1);
+
+    auto first = queue.front_pop_move();
+    auto second = queue.front_pop_move();
+    auto third = queue.front_pop_move();
+
+    ASSERT_TRUE(first.has_value());
+    ASSERT_TRUE(second.has_value());
+    ASSERT_TRUE(third.has_value());
+
+    EXPECT_EQ(first->value, 10);
+    EXPECT_EQ(second->value, 20);
+    EXPECT_EQ(third->value, 30);
+}
+
+/**
+ * @brief Verifies perfect-forwarding support for move-only payload types.
+ *
+ * This test ensures `sync_queue` accepts `std::unique_ptr<int>` through push,
+ * emplace, and ISR emplace paths and that extraction via `front_pop_move` preserves
+ * pointed values in FIFO order.
+ *
+ * @test
+ * - Push a moved `unique_ptr` and verify source pointer becomes null.
+ * - Emplace additional move-only payloads through regular and ISR APIs.
+ * - Extract with move-pop and validate each pointed integer value.
+ * - Verify queue becomes empty afterward.
+ */
+TEST(SyncQueuePerfectForwardingTest, SupportsMoveOnlyType)
+{
+    tools::sync_queue<std::unique_ptr<int>> queue;
+
+    auto ptr = std::make_unique<int>(5);
+    queue.push(std::move(ptr));
+    EXPECT_EQ(ptr, nullptr);
+
+    queue.emplace(std::make_unique<int>(9));
+
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+    queue.isr_emplace(std::make_unique<int>(12));
+
+    auto first = queue.front_pop_move();
+    auto second = queue.front_pop_move();
+    auto third = queue.front_pop_move();
+
+    ASSERT_TRUE(first.has_value());
+    ASSERT_NE(*first, nullptr);
+    EXPECT_EQ(**first, 5);
+
+    ASSERT_TRUE(second.has_value());
+    ASSERT_NE(*second, nullptr);
+    EXPECT_EQ(**second, 9);
+
+    ASSERT_TRUE(third.has_value());
+    ASSERT_NE(*third, nullptr);
+    EXPECT_EQ(**third, 12);
+
+    EXPECT_FALSE(queue.front_pop_move().has_value());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+namespace
+{
+    struct non_constructible_payload
+    {
+    };
+
+    template <typename Q, typename U>
+    concept has_push_call = requires(Q& queue_ref, U&& value)
+    {
+        queue_ref.push(std::forward<U>(value));
+    };
+
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
+    template <typename Q, typename U>
+    concept has_isr_push_call = requires(Q& queue_ref, U&& value)
+    {
+        queue_ref.isr_push(std::forward<U>(value));
+    };
+
+    template <typename Q, typename... Args>
+    concept has_emplace_call = requires(Q& queue_ref, Args&&... args)
+    {
+        queue_ref.emplace(std::forward<Args>(args)...);
+    };
+
+    template <typename Q, typename... Args>
+    concept has_isr_emplace_call = requires(Q& queue_ref, Args&&... args)
+    {
+        queue_ref.isr_emplace(std::forward<Args>(args)...);
+    };
+}
+
+/**
+ * @brief C++20-only compile-time validation of forwarding constraints.
+ *
+ * This test verifies that `requires`-constrained forwarding APIs in `sync_queue`
+ * accept constructible argument sets and reject non-constructible payload types for
+ * push/isr_push/emplace/isr_emplace call expressions.
+ *
+ * @test
+ * - Assert constructibility expectations for valid and invalid payload types.
+ * - Assert call-validity concepts for each constrained forwarding API.
+ * - Ensure non-constructible payload calls are rejected at compile time.
+ */
+TEST(SyncQueuePerfectForwardingTest, Cpp20RequiresConstraints)
+{
+    using queue_t = tools::sync_queue<std::string>;
+
+    static_assert(std::is_constructible_v<std::string, const char*>);
+    static_assert(std::is_constructible_v<std::string, std::size_t, char>);
+    static_assert(!std::is_constructible_v<std::string, non_constructible_payload>);
+    static_assert(!std::is_constructible_v<std::string, non_constructible_payload&>);
+
+    static_assert(has_push_call<queue_t, const char*>);
+    static_assert(has_push_call<queue_t, std::string&&>);
+    static_assert(!has_push_call<queue_t, non_constructible_payload>);
+    static_assert(!has_push_call<queue_t, non_constructible_payload&>);
+
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
+    static_assert(has_isr_push_call<queue_t, const char*>);
+    static_assert(has_isr_push_call<queue_t, std::string&&>);
+    static_assert(!has_isr_push_call<queue_t, non_constructible_payload>);
+    static_assert(!has_isr_push_call<queue_t, non_constructible_payload&>);
+
+    static_assert(has_emplace_call<queue_t, std::size_t, char>);
+    static_assert(has_isr_emplace_call<queue_t, std::size_t, char>);
+    static_assert(!has_emplace_call<queue_t, non_constructible_payload>);
+    static_assert(!has_isr_emplace_call<queue_t, non_constructible_payload>);
+
+    SUCCEED();
+}
+#endif

@@ -203,6 +203,8 @@ TYPED_TEST(SyncRingBufferTest, FullBuffer)
  */
 TYPED_TEST(SyncRingBufferTest, IsrPushAndIsrFull)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
     this->buffer->isr_push(static_cast<TypeParam>(1));
     this->buffer->isr_push(static_cast<TypeParam>(2));
     this->buffer->isr_push(static_cast<TypeParam>(3));
@@ -503,6 +505,8 @@ TEST(SyncRingBufferPerfectForwardingTest, PushAndEmplaceForwarding)
  */
 TEST(SyncRingBufferPerfectForwardingTest, IsrPushAndEmplaceForwarding)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
     sync_forwarding_probe::reset_counters();
 
     tools::sync_ring_buffer<sync_forwarding_probe, 4> buffer;

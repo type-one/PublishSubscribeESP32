@@ -377,6 +377,12 @@ namespace
  * This test pushes an lvalue instance and checks that the copy assignment counter
  * is incremented while move assignment remains unused.
  */
+/**
+ * @brief Verifies that pushing an lvalue selects copy assignment.
+ *
+ * This test pushes an lvalue object and checks that copy assignment is used
+ * instead of move assignment.
+ */
 TEST(RingBufferPerfectForwardingTest, PushLvalueUsesCopyAssignment)
 {
     forwarding_probe::reset_counters();

@@ -719,8 +719,6 @@ void test_sync_ring_buffer()
         str_queue.push(lvalue);                     // lvalue forwarding
         str_queue.push(std::string("sync-rvalue")); // rvalue forwarding
         str_queue.emplace(repeated_char_count, 'z'); // variadic emplace forwarding
-        str_queue.isr_push(std::string("sync-isr-push"));
-        str_queue.isr_emplace("sync-isr-emplace");
 
         while (!str_queue.empty())
         {
@@ -787,8 +785,6 @@ void test_sync_ring_vector_perfect_forwarding()
         str_queue.push(lvalue);
         str_queue.push(std::string("sync-ring-vector-rvalue"));
         str_queue.emplace(repeated_char_count, 's');
-        str_queue.isr_push(std::string("sync-ring-vector-isr-push"));
-        str_queue.isr_emplace("sync-ring-vector-isr-emplace");
 
         while (!str_queue.empty())
         {
@@ -835,6 +831,51 @@ void test_sync_queue()
     if (item.has_value())
     {
         std::printf("%s\n", item->c_str());
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_sync_queue_perfect_forwarding()
+{
+    LOG_INFO("-- sync queue perfect forwarding --");
+    print_stats();
+
+    {
+        tools::sync_queue<std::string> str_queue;
+
+        std::string lvalue = "sync-queue-lvalue";
+        str_queue.push(lvalue);                         // exact-T lvalue overload path
+        str_queue.push(std::string("sync-queue-rvalue")); // exact-T rvalue overload path
+        str_queue.push("sync-queue-conversion");         // forwarding template conversion path
+        str_queue.push({ "sync-queue-brace-init" });       // brace-init compatibility path
+        str_queue.emplace(4U, 'q');                     // in-place args forwarding path
+
+        while (!str_queue.empty())
+        {
+            auto item = str_queue.front_pop();
+            if (item.has_value())
+            {
+                std::printf("%s\n", item->c_str());
+            }
+        }
+    }
+
+    {
+        tools::sync_queue<std::unique_ptr<std::string>> ptr_queue;
+
+        auto ptr = std::make_unique<std::string>("sync-queue-move-only-push");
+        ptr_queue.push(std::move(ptr));
+        ptr_queue.emplace(std::make_unique<std::string>("sync-queue-move-only-emplace"));
+
+        while (!ptr_queue.empty())
+        {
+            auto item = ptr_queue.front_pop_move();
+            if (item.has_value() && item.value())
+            {
+                std::printf("%s\n", item.value()->c_str());
+            }
+        }
     }
 }
 
@@ -3008,6 +3049,7 @@ void runner()
     test_sync_ring_vector();
     test_sync_ring_vector_perfect_forwarding();
     test_sync_queue();
+    test_sync_queue_perfect_forwarding();
     test_sync_dictionary();
 
     test_publish_subscribe();

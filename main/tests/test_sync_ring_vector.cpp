@@ -202,6 +202,8 @@ TYPED_TEST(SyncRingVectorTest, Resize)
  */
 TYPED_TEST(SyncRingVectorTest, IsrPushAndIsrSize)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
     this->vec->isr_push(static_cast<TypeParam>(1));
     this->vec->isr_push(static_cast<TypeParam>(2));
     this->vec->isr_push(static_cast<TypeParam>(3));
@@ -218,6 +220,8 @@ TYPED_TEST(SyncRingVectorTest, IsrPushAndIsrSize)
  */
 TYPED_TEST(SyncRingVectorTest, IsrFull)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
     this->vec->isr_push(static_cast<TypeParam>(1));
     this->vec->isr_push(static_cast<TypeParam>(2));
     this->vec->isr_push(static_cast<TypeParam>(3));
@@ -240,6 +244,8 @@ TYPED_TEST(SyncRingVectorTest, IsrFull)
  */
 TYPED_TEST(SyncRingVectorTest, IsrResize)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
     this->vec->isr_resize(15);
     EXPECT_EQ(this->vec->capacity(), 15);
 }
@@ -483,6 +489,9 @@ TEST(SyncRingVectorPerfectForwardingTest, PushAndEmplaceForwarding)
  */
 TEST(SyncRingVectorPerfectForwardingTest, IsrPushAndEmplaceForwarding)
 {
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
+
+
     sync_forwarding_probe::reset_counters();
 
     tools::sync_ring_vector<sync_forwarding_probe> vec(4);
