@@ -43,6 +43,8 @@
 #include <string>
 #include <thread>
 #include <tuple>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "tools/async_observer.hpp"
@@ -76,6 +78,118 @@ protected:
     std::unique_ptr<tools::sync_subject<std::string, std::string>> subject1;
     std::unique_ptr<tools::sync_subject<std::string, std::string>> subject2;
 };
+
+namespace
+{
+    struct move_probe
+    {
+        std::string value;
+        bool moved_from = false;
+
+        move_probe() = default;
+        explicit move_probe(std::string v)
+            : value(std::move(v))
+        {
+        }
+
+        move_probe(const move_probe&) = default;
+        move_probe& operator=(const move_probe&) = default;
+
+        move_probe(move_probe&& other) noexcept
+            : value(std::move(other.value))
+        {
+            other.moved_from = true;
+        }
+
+        move_probe& operator=(move_probe&& other) noexcept
+        {
+            if (this != &other)
+            {
+                value = std::move(other.value);
+                moved_from = false;
+                other.moved_from = true;
+            }
+
+            return *this;
+        }
+    };
+
+    template <typename Observer, typename UTopic, typename UEvt, typename UOrigin, typename = void>
+    struct can_call_inform : std::false_type
+    {
+    };
+
+    template <typename Observer, typename UTopic, typename UEvt, typename UOrigin>
+    struct can_call_inform<Observer,
+        UTopic,
+        UEvt,
+        UOrigin,
+        std::void_t<decltype(std::declval<Observer&>().inform(
+            std::declval<UTopic>(), std::declval<UEvt>(), std::declval<UOrigin>()))>> : std::true_type
+    {
+    };
+}
+
+TEST_F(AsyncObserverTest, PerfectForwardingInformSupportsLvalueRvalueAndConversion)
+{
+    tools::async_observer<std::string, std::string, tools::sync_queue> observer;
+
+    std::string topic_lvalue = "topic-lvalue";
+    std::string event_lvalue = "event-lvalue";
+    std::string origin_lvalue = "origin-lvalue";
+
+    observer.inform(topic_lvalue, event_lvalue, origin_lvalue); // exact lvalue path
+    observer.inform(std::string("topic-rvalue"), std::string("event-rvalue"), std::string("origin-rvalue"));
+    observer.inform("topic-conversion", "event-conversion", "origin-conversion"); // conversion forwarding path
+
+    auto events = observer.pop_all_events();
+    ASSERT_EQ(events.size(), 3);
+
+    EXPECT_EQ(std::get<0>(events[0]), "topic-lvalue");
+    EXPECT_EQ(std::get<1>(events[0]), "event-lvalue");
+    EXPECT_EQ(std::get<2>(events[0]), "origin-lvalue");
+
+    EXPECT_EQ(std::get<0>(events[1]), "topic-rvalue");
+    EXPECT_EQ(std::get<1>(events[1]), "event-rvalue");
+    EXPECT_EQ(std::get<2>(events[1]), "origin-rvalue");
+
+    EXPECT_EQ(std::get<0>(events[2]), "topic-conversion");
+    EXPECT_EQ(std::get<1>(events[2]), "event-conversion");
+    EXPECT_EQ(std::get<2>(events[2]), "origin-conversion");
+}
+
+TEST_F(AsyncObserverTest, PerfectForwardingInformMovesExactRvalueArguments)
+{
+    tools::async_observer<move_probe, move_probe, tools::sync_queue> observer;
+
+    move_probe topic_rvalue("topic-rvalue");
+    move_probe event_rvalue("event-rvalue");
+    std::string origin_rvalue = "origin-rvalue";
+
+    observer.inform(std::move(topic_rvalue), std::move(event_rvalue), std::move(origin_rvalue));
+
+    EXPECT_TRUE(topic_rvalue.moved_from);
+    EXPECT_TRUE(event_rvalue.moved_from);
+
+    auto event = observer.pop_first_event();
+    ASSERT_TRUE(event.has_value());
+    EXPECT_EQ(std::get<0>(*event).value, "topic-rvalue");
+    EXPECT_EQ(std::get<1>(*event).value, "event-rvalue");
+    EXPECT_EQ(std::get<2>(*event), "origin-rvalue");
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+TEST(AsyncObserverCompileTimeChecks, PerfectForwardingInformConstraints)
+{
+    using observer_t = tools::async_observer<std::string, std::string, tools::sync_queue>;
+
+    static_assert(can_call_inform<observer_t, std::string, std::string, std::string>::value);
+    static_assert(can_call_inform<observer_t, const char*, const char*, const char*>::value);
+    static_assert(!can_call_inform<observer_t, int, std::string, std::string>::value);
+    static_assert(!can_call_inform<observer_t, std::string, int, std::string>::value);
+    static_assert(!can_call_inform<observer_t, std::string, std::string, int>::value);
+}
+#endif
 
 /**
  * @brief Test case for single observer receiving a single event.

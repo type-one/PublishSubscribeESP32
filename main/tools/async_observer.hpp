@@ -140,8 +140,51 @@ namespace tools
          */
         void inform(const Topic& topic, const Evt& event, const std::string& origin) override
         {
-            m_evt_queue.push({ topic, event, origin });
-            m_wakeable.signal();
+            do_inform(topic, event, origin);
+        }
+
+        /**
+         * @brief Informs the observer of a new event using exact rvalue arguments.
+         *
+         * This overload preserves move call compatibility for exact Topic/Evt/origin argument types.
+         *
+         * @param topic The topic associated with the event.
+         * @param event The event data.
+         * @param origin The origin of the event.
+         */
+        void inform(Topic&& topic, Evt&& event, std::string&& origin)
+        {
+            do_inform(std::move(topic), std::move(event), std::move(origin));
+        }
+
+        /**
+         * @brief Informs the observer of a new event using perfect forwarding.
+         *
+         * This template supports conversion-based arguments beyond exact-type overloads.
+         * In C++20, this method is constrained to constructible argument types.
+         *
+         * @tparam UTopic The deduced topic type.
+         * @tparam UEvt The deduced event type.
+         * @tparam UOrigin The deduced origin type.
+         * @param topic The topic associated with the event.
+         * @param event The event data.
+         * @param origin The origin of the event.
+         */
+        template <typename UTopic, typename UEvt, typename UOrigin>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<Topic, UTopic> && std::is_constructible_v<Evt, UEvt>
+                         && std::is_constructible_v<std::string, UOrigin>
+#endif
+        auto inform(UTopic&& topic, UEvt&& event, UOrigin&& origin)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<Topic, UTopic>::value
+                    && std::is_constructible<Evt, UEvt>::value
+                    && std::is_constructible<std::string, UOrigin>::value,
+                void>::type
+#endif
+        {
+            do_inform(Topic(std::forward<UTopic>(topic)), Evt(std::forward<UEvt>(event)),
+                std::string(std::forward<UOrigin>(origin)));
         }
 
         using event_entry = std::tuple<Topic, Evt, std::string>;
@@ -263,6 +306,14 @@ namespace tools
         }
 
     private:
+        template <typename UTopic, typename UEvt, typename UOrigin>
+        void do_inform(UTopic&& topic, UEvt&& event, UOrigin&& origin)
+        {
+            m_evt_queue.push(event_entry {
+                std::forward<UTopic>(topic), std::forward<UEvt>(event), std::forward<UOrigin>(origin) });
+            m_wakeable.signal();
+        }
+
         /**
          * @brief A synchronization object used for waking up threads or tasks.
          */
