@@ -41,6 +41,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <utility>
 
 #include "tools/base_task.hpp"
@@ -102,6 +103,42 @@ namespace tools
         }
 
         /**
+         * @brief Constructs a worker_task object using perfect forwarding.
+         *
+         * This overload supports conversion-based arguments beyond exact-type overloads.
+         * In C++20, this constructor is constrained to constructible argument types.
+         */
+        template <typename UStartup,
+            typename UContext,
+            typename UName
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
+                && std::is_constructible<std::shared_ptr<Context>, UContext>::value
+                && std::is_constructible<std::string, UName>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, UStartup>
+                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+                         && std::is_constructible_v<std::string, UName>
+#endif
+        worker_task(UStartup&& startup_routine, UContext&& context, UName&& task_name, std::size_t stack_size,
+            int cpu_affinity, int priority)
+            : base_task(std::string(std::forward<UName>(task_name)), stack_size, cpu_affinity, priority)
+            , m_startup_routine(call_back(std::forward<UStartup>(startup_routine)))
+            , m_context(std::shared_ptr<Context>(std::forward<UContext>(context)))
+            , m_task(std::make_unique<std::thread>(
+                  [this]()
+                  {
+                      set_current_thread_params(this->task_name(), this->cpu_affinity(), this->priority());
+
+                      run_loop();
+                  }))
+        {
+        }
+
+        /**
          * @brief Constructs a worker_task object with default priority and default cpu affinity.
          *
          * @param startup_routine A callable object that represents the startup routine.
@@ -113,6 +150,31 @@ namespace tools
             std::size_t stack_size)
             : worker_task(std::move(startup_routine), context, task_name, stack_size, base_task::run_on_all_cores,
                   base_task::default_priority)
+        {
+        }
+
+        /**
+         * @brief Constructs a worker_task object with default priority and default cpu affinity using perfect
+         * forwarding.
+         */
+        template <typename UStartup,
+            typename UContext,
+            typename UName
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
+                && std::is_constructible<std::shared_ptr<Context>, UContext>::value
+                && std::is_constructible<std::string, UName>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, UStartup>
+                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+                         && std::is_constructible_v<std::string, UName>
+#endif
+        worker_task(UStartup&& startup_routine, UContext&& context, UName&& task_name, std::size_t stack_size)
+            : worker_task(std::forward<UStartup>(startup_routine), std::forward<UContext>(context),
+                std::forward<UName>(task_name), stack_size, base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 
@@ -150,8 +212,24 @@ namespace tools
          */
         void delegate(call_back&& work)
         {
-            m_work_queue.emplace(std::move(work));
-            m_work_sync.signal();
+            do_delegate(std::move(work));
+        }
+
+        /**
+         * @brief Delegates a task using perfect forwarding.
+         *
+         * This template supports conversion-based callable arguments beyond exact-type overloads.
+         */
+        template <typename UWork>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, UWork>
+#endif
+        auto delegate(UWork&& work)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<call_back, UWork>::value, void>::type
+#endif
+        {
+            do_delegate(call_back(std::forward<UWork>(work)));
         }
 
         /**
@@ -166,10 +244,32 @@ namespace tools
         void isr_delegate(call_back&& work)
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
-            delegate(work);
+            do_delegate(std::move(work));
+        }
+
+        /**
+         * @brief Delegates a task from ISR context using perfect forwarding.
+         */
+        template <typename UWork>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, UWork>
+#endif
+        auto isr_delegate(UWork&& work)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<call_back, UWork>::value, void>::type
+#endif
+        {
+            // no calls from ISRs in standard C++ platform, fallback to standard call
+            do_delegate(call_back(std::forward<UWork>(work)));
         }
 
     private:
+        void do_delegate(call_back&& work)
+        {
+            m_work_queue.emplace(std::move(work));
+            m_work_sync.signal();
+        }
+
         /**
          * @brief Executes the main loop of the worker task.
          *

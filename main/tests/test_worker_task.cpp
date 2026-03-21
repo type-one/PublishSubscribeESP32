@@ -50,9 +50,11 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 
 #include "tools/worker_task.hpp"
 
@@ -326,3 +328,86 @@ TEST_F(WorkerTaskTest, LambdaWorkTest)
     EXPECT_TRUE(work_called.load());
     EXPECT_EQ(context->computation_result, 42);
 }
+
+TEST_F(WorkerTaskTest, PerfectForwardingConstructorAndDelegate)
+{
+    tools::worker_task<TestContext>::call_back startup_lvalue
+        = [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+    {
+        (void)task_name;
+        startup_called.store(true);
+        ctx->computation_result = 1;
+    };
+
+    std::string task_name_lvalue = "worker-forwarding";
+    constexpr std::size_t stack_size = 4096U;
+
+    {
+        tools::worker_task<TestContext> task(startup_lvalue, context, task_name_lvalue, stack_size);
+
+        tools::worker_task<TestContext>::call_back delegate_lvalue
+            = [&](const std::shared_ptr<TestContext>& ctx, const std::string& delegate_task_name)
+        {
+            (void)delegate_task_name;
+            work_called.store(true);
+            ctx->computation_result = 42;
+        };
+
+        task.delegate(delegate_lvalue); // exact lvalue callback path
+        task.delegate(
+            [](const std::shared_ptr<TestContext>& ctx, const std::string& delegate_task_name)
+            {
+                (void)delegate_task_name;
+                ctx->computation_result = 43;
+            }); // exact rvalue callback path
+        task.delegate(free_function_work); // forwarding conversion path
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    }
+
+    EXPECT_TRUE(startup_called.load());
+    EXPECT_TRUE(work_called.load());
+    EXPECT_EQ(context->computation_result, 42);
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+TEST(WorkerTaskCompileTimeChecks, PerfectForwardingConstraints)
+{
+    using worker_task_t = tools::worker_task<TestContext>;
+    using callback_t = worker_task_t::call_back;
+
+    static_assert(std::is_constructible_v<worker_task_t,
+        callback_t,
+        std::shared_ptr<TestContext>,
+        std::string,
+        std::size_t>);
+
+    static_assert(std::is_constructible_v<worker_task_t,
+        callback_t,
+        std::shared_ptr<TestContext>,
+        const char*,
+        std::size_t,
+        int,
+        int>);
+
+    static_assert(!std::is_constructible_v<worker_task_t,
+        int,
+        std::shared_ptr<TestContext>,
+        std::string,
+        std::size_t>);
+
+    static_assert(!std::is_constructible_v<worker_task_t,
+        callback_t,
+        int,
+        std::string,
+        std::size_t>);
+
+    static_assert(!std::is_constructible_v<worker_task_t,
+        callback_t,
+        std::shared_ptr<TestContext>,
+        int,
+        std::size_t>);
+
+    static_assert(std::is_invocable_v<decltype(&worker_task_t::template delegate<callback_t>), worker_task_t&, callback_t>);
+}
+#endif

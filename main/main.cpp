@@ -1566,6 +1566,52 @@ void test_worker_tasks()
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------
+
+void test_worker_task_perfect_forwarding()
+{
+    LOG_INFO("-- worker task perfect forwarding --");
+    print_stats();
+
+    auto context = std::make_shared<my_worker_task_context>();
+
+    my_worker_task::call_back startup_lvalue
+        = [](const std::shared_ptr<my_worker_task_context>& ctx, const std::string& task_name)
+    {
+        std::printf("startup on %s\n", task_name.c_str());
+        ctx->loop_counter.store(0);
+    };
+
+    std::string task_name_lvalue = "worker_forwarding";
+    constexpr const std::size_t stack_size = 4096U;
+    my_worker_task worker(startup_lvalue, context, task_name_lvalue, stack_size);
+
+    my_worker_task::call_back delegate_lvalue
+        = [](const std::shared_ptr<my_worker_task_context>& ctx, const std::string& task_name)
+    {
+        std::printf("delegate-lvalue on %s\n", task_name.c_str());
+        ctx->loop_counter.fetch_add(1);
+    };
+
+    worker.delegate(delegate_lvalue); // exact lvalue callback path
+    worker.delegate(
+        [](const std::shared_ptr<my_worker_task_context>& ctx, const std::string& task_name)
+        {
+            std::printf("delegate-rvalue on %s\n", task_name.c_str());
+            ctx->loop_counter.fetch_add(1);
+        }); // exact rvalue callback path
+    worker.delegate([](auto ctx, const auto& task_name)
+    {
+        std::printf("delegate-conversion on %s\n", task_name.c_str());
+        ctx->loop_counter.fetch_add(1);
+    }); // forwarding conversion path
+
+    constexpr const int wait_time_ms = 200;
+    tools::sleep_for(wait_time_ms);
+    std::printf("worker forwarding loop counter = %d\n", context->loop_counter.load());
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 
 enum class message_type : std::uint8_t
@@ -3241,6 +3287,7 @@ void runner()
     test_ring_buffer_commands();
 
     test_worker_tasks();
+    test_worker_task_perfect_forwarding();
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
     test_queued_bytepack_data();
