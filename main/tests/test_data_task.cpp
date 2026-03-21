@@ -421,3 +421,122 @@ TEST_F(DataTaskPingPongTest, PingPongCommunicationTest)
     EXPECT_EQ(ping_count.load(), 10);
     EXPECT_EQ(pong_count.load(), 10);
 }
+
+/**
+ * @brief Test fixture for perfect forwarding constructor tests.
+ */
+class DataTaskForwardingTest : public ::testing::Test
+{
+public:
+    struct TestContext
+    {
+        std::atomic<int> store = 0;
+    };
+    using TestTask = tools::data_task<TestContext, int>;
+
+protected:
+    std::shared_ptr<TestContext> context;
+};
+
+/**
+ * @brief Verifies that data_task forwarding constructors accept lvalues, rvalues, and conversion-constructible types.
+ */
+TEST_F(DataTaskForwardingTest, PerfectForwardingConstructorSupportsLvalueRvalueAndConversion)
+{
+    context = std::make_shared<TestContext>();
+
+    // lvalue call_back + lvalue data_call_back + lvalue context + lvalue std::string task name
+    TestTask::call_back startup_lvalue
+        = [](const std::shared_ptr<TestContext>&, const std::string&) {};
+    TestTask::data_call_back process_lvalue
+        = [](const std::shared_ptr<TestContext>& ctx, const int& data, const std::string&) { ctx->store.store(data); };
+
+    {
+        std::string name_lvalue = "lvalue_task";
+        auto task = std::make_unique<TestTask>(startup_lvalue, process_lvalue, context, 10U, name_lvalue, 2048U);
+        task->submit(7);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        EXPECT_EQ(context->store.load(), 7);
+    }
+
+    // rvalue lambda startup + rvalue lambda process + rvalue std::string task name
+    context->store.store(0);
+    {
+        auto task = std::make_unique<TestTask>(
+            [](const std::shared_ptr<TestContext>&, const std::string&) {},
+            [](const std::shared_ptr<TestContext>& ctx, const int& data, const std::string&) { ctx->store.store(data); },
+            context, 10U, std::string("rvalue_task"), 2048U);
+        task->submit(8);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        EXPECT_EQ(context->store.load(), 8);
+    }
+
+    // function pointer conversion (captureless lambda cast to function pointer)
+    context->store.store(0);
+    {
+        void (*startup_fp)(const std::shared_ptr<TestContext>&, const std::string&)
+            = [](const std::shared_ptr<TestContext>&, const std::string&) {};
+        void (*process_fp)(const std::shared_ptr<TestContext>&, const int&, const std::string&)
+            = [](const std::shared_ptr<TestContext>& ctx, const int& data, const std::string&) { ctx->store.store(data); };
+        auto task = std::make_unique<TestTask>(startup_fp, process_fp, context, 10U, "fp_task", 2048U);
+        task->submit(42);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        EXPECT_EQ(context->store.load(), 42);
+    }
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+TEST(DataTaskCompileTimeChecks, PerfectForwardingConstructorConstraints)
+{
+    using task_t = tools::data_task<MockContext, int>;
+    using startup_cb_t = task_t::call_back;
+    using process_cb_t = task_t::data_call_back;
+
+    // exact types work
+    static_assert(std::is_constructible_v<task_t,
+        startup_cb_t,
+        process_cb_t,
+        std::shared_ptr<MockContext>,
+        std::size_t,
+        std::string,
+        std::size_t>);
+
+    // string literal for task_name (const char* -> std::string conversion) works
+    static_assert(std::is_constructible_v<task_t,
+        startup_cb_t,
+        process_cb_t,
+        std::shared_ptr<MockContext>,
+        std::size_t,
+        const char*,
+        std::size_t>);
+
+    // non-callable startup should be rejected
+    static_assert(!std::is_constructible_v<task_t,
+        int,
+        process_cb_t,
+        std::shared_ptr<MockContext>,
+        std::size_t,
+        std::string,
+        std::size_t>);
+
+    // non-callable process should be rejected
+    static_assert(!std::is_constructible_v<task_t,
+        startup_cb_t,
+        int,
+        std::shared_ptr<MockContext>,
+        std::size_t,
+        std::string,
+        std::size_t>);
+
+    // non-string task_name should be rejected
+    static_assert(!std::is_constructible_v<task_t,
+        startup_cb_t,
+        process_cb_t,
+        std::shared_ptr<MockContext>,
+        std::size_t,
+        int,
+        std::size_t>);
+
+    SUCCEED();
+}
+#endif

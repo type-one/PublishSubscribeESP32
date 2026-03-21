@@ -78,15 +78,15 @@ namespace tools
     void sync_object::wait_for_signal()
     {
         std::unique_lock<std::mutex> lock(m_mutex);
-        m_signaled = false;
         m_cond.wait(lock, [&]() { return m_signaled; });
+        m_signaled = false; // consume the signal after waking
     }
 
     void sync_object::wait_for_signal(const std::chrono::duration<std::uint64_t, std::micro>& timeout)
     {
         std::unique_lock<std::mutex> lock(m_mutex);
-        m_signaled = false;
         m_cond.wait_for(lock, timeout, [&]() { return m_signaled; });
+        m_signaled = false; // consume the signal after waking
     }
 
 } // end namespace tools

@@ -183,8 +183,8 @@ TEST_F(SyncObjectTest, WaitForSignalTimeoutWithSignalBeforeWait)
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
 
-    EXPECT_GE(elapsed.count(), 100);
-    EXPECT_FALSE(sync.is_signaled()); // wait_for_signal should reset the signal
+    EXPECT_LT(elapsed.count(), 50); // Should return immediately, not wait 100ms
+    EXPECT_FALSE(sync.is_signaled()); // wait_for_signal should consume/reset the signal
 }
 
 /**

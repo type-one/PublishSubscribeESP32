@@ -135,6 +135,53 @@ namespace tools
         }
 
         /**
+         * @brief Constructs a data_task object using perfect forwarding.
+         *
+         * This overload supports conversion-based arguments beyond exact-type overloads.
+         * In C++20, this constructor is constrained to constructible argument types.
+         */
+        template <typename UStartup,
+            typename UProcess,
+            typename UContext,
+            typename UName
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
+                && std::is_constructible<data_call_back, UProcess>::value
+                && std::is_constructible<std::shared_ptr<Context>, UContext>::value
+                && std::is_constructible<std::string, UName>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, UStartup>
+                         && std::is_constructible_v<data_call_back, UProcess>
+                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+                         && std::is_constructible_v<std::string, UName>
+#endif
+        data_task(UStartup&& startup_routine, UProcess&& process_routine,
+            UContext&& context, std::size_t data_queue_depth, UName&& task_name,
+            std::size_t stack_size, int cpu_affinity, int priority,
+            const std::chrono::duration<std::uint64_t, std::micro>& data_timeout)
+            : base_task(std::string(std::forward<UName>(task_name)), stack_size, cpu_affinity, priority)
+            , m_startup_routine(call_back(std::forward<UStartup>(startup_routine)))
+            , m_process_routine(data_call_back(std::forward<UProcess>(process_routine)))
+            , m_context(std::shared_ptr<Context>(std::forward<UContext>(context)))
+            , m_data_timeout(data_timeout)
+        {
+            // FreeRTOS platform
+            m_data_queue = xQueueCreate(data_queue_depth, sizeof(DataType));
+
+            if (nullptr == m_data_queue)
+            {
+                LOG_ERROR("FATAL error: xQueueCreate() failed for task %s", this->task_name().c_str());
+            }
+
+            m_task_created = task_create(&m_task, this->task_name(), run_loop,
+                reinterpret_cast<void*>(this), // NOLINT only way to pass the instance as a void* to the task
+                this->stack_size(), this->cpu_affinity(), this->priority());
+        }
+
+        /**
          * @brief Constructor for the data_task class with default priority and cpu affinity.
          *
          * @param startup_routine The startup routine callback function.
@@ -148,6 +195,37 @@ namespace tools
             const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
             std::size_t stack_size)
             : data_task(std::move(startup_routine), std::move(process_routine), context, data_queue_depth, task_name,
+                  stack_size, base_task::run_on_all_cores, base_task::default_priority,
+                  std::chrono::duration<std::uint64_t, std::micro>::max())
+        {
+        }
+
+        /**
+         * @brief Constructs a data_task object with default priority and default cpu affinity using perfect forwarding.
+         */
+        template <typename UStartup,
+            typename UProcess,
+            typename UContext,
+            typename UName
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
+                && std::is_constructible<data_call_back, UProcess>::value
+                && std::is_constructible<std::shared_ptr<Context>, UContext>::value
+                && std::is_constructible<std::string, UName>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, UStartup>
+                         && std::is_constructible_v<data_call_back, UProcess>
+                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+                         && std::is_constructible_v<std::string, UName>
+#endif
+        data_task(UStartup&& startup_routine, UProcess&& process_routine,
+            UContext&& context, std::size_t data_queue_depth, UName&& task_name,
+            std::size_t stack_size)
+            : data_task(std::forward<UStartup>(startup_routine), std::forward<UProcess>(process_routine),
+                  std::forward<UContext>(context), data_queue_depth, std::forward<UName>(task_name),
                   stack_size, base_task::run_on_all_cores, base_task::default_priority,
                   std::chrono::duration<std::uint64_t, std::micro>::max())
         {
@@ -288,6 +366,6 @@ namespace tools
         TaskHandle_t m_task = {};
         bool m_task_created = false;
 
-        const std::chrono::duration<std::uint64_t, std::micro>& m_data_timeout;
+        std::chrono::duration<std::uint64_t, std::micro> m_data_timeout;
     };
 }
