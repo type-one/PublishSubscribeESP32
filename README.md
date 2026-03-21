@@ -83,11 +83,15 @@ idf.py build
 
 idf.py flash monitor
 ```
+Note: `Ctrl-] will exit the monitor.` 
 
 For an ESP32 classic, just type `idf.py set-target esp32` above instead.
 
 If you develop under Windows/WSL2, this tool is useful to bind the serial port:
-[usbipd-win](https://github.com/dorssel/usbipd-win)
+[usbipd-win](https://github.com/dorssel/usbipd-win).
+
+Note: Under WSL2 if you got `usbipd: error: Loading vhci_hcd failed.` try
+`sudo modprobe vhci_hcd` in you linux shell.
 
 Be sure to `chmod 666 your /dev/ttyUSB0 or /dev/ttyACM0` if you got a flashing error.
 

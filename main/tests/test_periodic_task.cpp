@@ -46,6 +46,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 
 #include "tests/test_helper.hpp"
 #include "tools/periodic_task.hpp"
@@ -215,3 +216,78 @@ TEST_F(PeriodicTaskTest, ContextValueAfterShortRun)
     ASSERT_GT(context->get_value(), 0);
     TEST_COUT << "Test passed. Context value: " << context->get_value() << '\n';
 }
+
+TEST(PeriodicTaskForwardingTest, ConstructorSupportsLvalueRvalueAndConversion)
+{
+    auto context = std::make_shared<TestContext>();
+
+    tools::periodic_task<TestContext>::call_back startup_lvalue
+        = [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+    {
+        (void)task_name;
+        ctx->set_value(1);
+    };
+
+    auto periodic_rvalue = [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+    {
+        (void)task_name;
+        ctx->inc_value();
+    };
+
+    constexpr std::size_t stack_size = 2048U;
+    tools::periodic_task<TestContext> task(
+        startup_lvalue, std::move(periodic_rvalue), context, "periodic-forwarding", std::chrono::milliseconds(50), stack_size);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(180));
+    EXPECT_GT(context->get_value(), 1);
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+TEST(PeriodicTaskCompileTimeChecks, PerfectForwardingConstructorConstraints)
+{
+    using periodic_task_t = tools::periodic_task<TestContext>;
+    using callback_t = periodic_task_t::call_back;
+
+    static_assert(std::is_constructible_v<periodic_task_t,
+        callback_t,
+        callback_t,
+        std::shared_ptr<TestContext>,
+        std::string,
+        std::chrono::milliseconds,
+        std::size_t>);
+
+    static_assert(std::is_constructible_v<periodic_task_t,
+        callback_t,
+        callback_t,
+        std::shared_ptr<TestContext>,
+        const char*,
+        std::chrono::milliseconds,
+        std::size_t,
+        int,
+        int>);
+
+    static_assert(!std::is_constructible_v<periodic_task_t,
+        int,
+        callback_t,
+        std::shared_ptr<TestContext>,
+        std::string,
+        std::chrono::milliseconds,
+        std::size_t>);
+
+    static_assert(!std::is_constructible_v<periodic_task_t,
+        callback_t,
+        callback_t,
+        int,
+        std::string,
+        std::chrono::milliseconds,
+        std::size_t>);
+
+    static_assert(!std::is_constructible_v<periodic_task_t,
+        callback_t,
+        callback_t,
+        std::shared_ptr<TestContext>,
+        std::string,
+        const char*,
+        std::size_t>);
+}
+#endif

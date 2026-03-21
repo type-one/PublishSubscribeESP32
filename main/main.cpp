@@ -1303,6 +1303,38 @@ void test_periodic_task()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_periodic_task_perfect_forwarding()
+{
+    LOG_INFO("-- periodic task perfect forwarding --");
+    print_stats();
+
+    auto context = std::make_shared<my_periodic_task_context>();
+
+    tools::periodic_task<my_periodic_task_context>::call_back startup_lvalue
+        = [](const std::shared_ptr<my_periodic_task_context>& ctx, const std::string& task_name)
+    {
+        (void)task_name;
+        ctx->loop_counter.store(0);
+    };
+
+    auto periodic_rvalue = [](const std::shared_ptr<my_periodic_task_context>& ctx, const std::string& task_name)
+    {
+        (void)task_name;
+        ctx->loop_counter.fetch_add(1);
+    };
+
+    constexpr std::size_t stack_size = 2048U;
+    constexpr const int period_ms = 20;
+    tools::periodic_task<my_periodic_task_context> task(startup_lvalue, std::move(periodic_rvalue), context,
+        "my_periodic_forwarding_task", std::chrono::milliseconds(period_ms), stack_size);
+
+    constexpr const int wait_time_ms = 200;
+    tools::sleep_for(wait_time_ms);
+    std::printf("periodic forwarding loop counter = %d\n", context->loop_counter.load());
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 void test_histogram_perfect_forwarding()
 {
     LOG_INFO("-- histogram perfect forwarding --");
@@ -3202,6 +3234,7 @@ void runner()
     test_publish_subscribe();
     test_generic_task();
     test_periodic_task();
+    test_periodic_task_perfect_forwarding();
     test_periodic_publish_subscribe();
 
     test_queued_commands();

@@ -43,6 +43,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include <freertos/FreeRTOS.h>
@@ -109,6 +110,54 @@ namespace tools
                 this->stack_size(), this->cpu_affinity(), this->priority());
         }
 
+            /**
+             * @brief Constructs a periodic_task object using perfect forwarding.
+             *
+             * This overload supports conversion-based arguments beyond exact-type overloads.
+             * In C++20, this method is constrained to constructible argument types.
+             *
+             * @tparam UStartup The deduced startup callback type.
+             * @tparam UPeriodic The deduced periodic callback type.
+             * @tparam UContext The deduced context pointer type.
+             * @tparam UName The deduced task name type.
+             * @tparam UPeriod The deduced period type.
+             */
+            template <typename UStartup,
+                typename UPeriodic,
+                typename UContext,
+                typename UName,
+                typename UPeriod
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+                ,
+                typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
+                    && std::is_constructible<call_back, UPeriodic>::value
+                    && std::is_constructible<std::shared_ptr<Context>, UContext>::value
+                    && std::is_constructible<std::string, UName>::value
+                    && std::is_constructible<std::chrono::duration<std::uint64_t, std::micro>, UPeriod>::value>::type
+    #endif
+                >
+    #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+                requires std::is_constructible_v<call_back, UStartup>
+                             && std::is_constructible_v<call_back, UPeriodic>
+                             && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+                             && std::is_constructible_v<std::string, UName>
+                             && std::is_constructible_v<std::chrono::duration<std::uint64_t, std::micro>, UPeriod>
+    #endif
+            periodic_task(UStartup&& startup_routine, UPeriodic&& periodic_routine, UContext&& context,
+                UName&& task_name, UPeriod&& period, std::size_t stack_size, int cpu_affinity, int priority)
+                : base_task(std::string(std::forward<UName>(task_name)), stack_size, cpu_affinity, priority)
+                , m_startup_routine(call_back(std::forward<UStartup>(startup_routine)))
+                , m_periodic_routine(call_back(std::forward<UPeriodic>(periodic_routine)))
+                , m_context(std::shared_ptr<Context>(std::forward<UContext>(context)))
+                , m_period(std::chrono::duration<std::uint64_t, std::micro>(std::forward<UPeriod>(period)))
+            {
+                // FreeRTOS platform
+
+                m_task_created = task_create(&m_task, this->task_name(), periodic_call,
+                reinterpret_cast<void*>(this), // NOLINT only way to pass the instance as a void* to the task
+                this->stack_size(), this->cpu_affinity(), this->priority());
+            }
+
         /**
          * @brief Constructs a periodic_task object with default priority and cpu affinity.
          *
@@ -124,6 +173,44 @@ namespace tools
             const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size)
             : periodic_task(std::move(startup_routine), std::move(periodic_routine), context, task_name, period,
                   stack_size, base_task::run_on_all_cores, base_task::default_priority)
+        {
+        }
+
+        /**
+         * @brief Constructs a periodic_task object with default priority and cpu affinity using perfect forwarding.
+         *
+         * @tparam UStartup The deduced startup callback type.
+         * @tparam UPeriodic The deduced periodic callback type.
+         * @tparam UContext The deduced context pointer type.
+         * @tparam UName The deduced task name type.
+         * @tparam UPeriod The deduced period type.
+         */
+        template <typename UStartup,
+            typename UPeriodic,
+            typename UContext,
+            typename UName,
+            typename UPeriod
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
+                && std::is_constructible<call_back, UPeriodic>::value
+                && std::is_constructible<std::shared_ptr<Context>, UContext>::value
+                && std::is_constructible<std::string, UName>::value
+                && std::is_constructible<std::chrono::duration<std::uint64_t, std::micro>, UPeriod>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, UStartup>
+                         && std::is_constructible_v<call_back, UPeriodic>
+                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+                         && std::is_constructible_v<std::string, UName>
+                         && std::is_constructible_v<std::chrono::duration<std::uint64_t, std::micro>, UPeriod>
+#endif
+        periodic_task(UStartup&& startup_routine, UPeriodic&& periodic_routine, UContext&& context,
+            UName&& task_name, UPeriod&& period, std::size_t stack_size)
+            : periodic_task(std::forward<UStartup>(startup_routine), std::forward<UPeriodic>(periodic_routine),
+            std::forward<UContext>(context), std::forward<UName>(task_name), std::forward<UPeriod>(period),
+            stack_size, base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 
