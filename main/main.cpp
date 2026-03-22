@@ -115,9 +115,23 @@ void test_ring_buffer()
     constexpr const std::size_t queue_size = 64U;
     auto str_queue = std::make_unique<tools::ring_buffer<std::string, queue_size>>();
 
-    str_queue->emplace("toto1");
-    str_queue->emplace("toto2");
-    str_queue->emplace("toto3");
+    str_queue->push_range({ "toto1", "toto2", "toto3" });
+
+    constexpr const std::array<std::string_view, 2U> extra_values = {
+        "toto4",
+        "toto5"
+    };
+    str_queue->push_range(extra_values);
+
+    constexpr const std::size_t pop_batch_size = 2U;
+    std::array<std::string, pop_batch_size> popped_batch = { "", "" };
+    const std::size_t popped_count = str_queue->pop_range(popped_batch.begin(), popped_batch.end());
+    auto* popped_it = popped_batch.data();
+    for (std::size_t remaining = popped_count; remaining > 0U; --remaining)
+    {
+        std::printf("%s\n", popped_it->c_str());
+        ++popped_it;
+    }
 
     auto item = str_queue->front();
     std::printf("%s\n", item.c_str());
@@ -772,6 +786,23 @@ void test_sync_ring_buffer()
         str_queue.push(lvalue);                     // lvalue forwarding
         str_queue.push(std::string("sync-rvalue")); // rvalue forwarding
         str_queue.emplace(repeated_char_count, 'z'); // variadic emplace forwarding
+        str_queue.push_range({ "sync-range-1", "sync-range-2" });
+
+        constexpr const std::array<std::string_view, 2U> isr_values = {
+            "sync-isr-range-1",
+            "sync-isr-range-2"
+        };
+        str_queue.isr_push_range(isr_values);
+
+        constexpr const std::size_t pop_batch_size = 2U;
+        std::array<std::string, pop_batch_size> popped_batch = { "", "" };
+        const std::size_t popped_count = str_queue.pop_range(popped_batch.begin(), popped_batch.end());
+        auto* popped_it = popped_batch.data();
+        for (std::size_t remaining = popped_count; remaining > 0U; --remaining)
+        {
+            std::printf("%s\n", popped_it->c_str());
+            ++popped_it;
+        }
 
         while (!str_queue.empty())
         {

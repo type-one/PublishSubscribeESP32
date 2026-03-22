@@ -42,6 +42,7 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
+#include <array>
 #include <chrono>
 #include <complex>
 #include <memory>
@@ -49,6 +50,10 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <span>
+#endif
 
 #include "tools/sync_ring_buffer.hpp"
 
@@ -549,6 +554,120 @@ TEST(SyncRingBufferPerfectForwardingTest, SupportsMoveOnlyType)
 
     EXPECT_FALSE(buffer.front_pop_move().has_value());
 }
+
+/**
+ * @brief Verifies push_range supports initializer-list and generic ranges.
+ *
+ * @test
+ * - Push initializer-list values.
+ * - Push std::vector range values.
+ * - Verify resulting front/back and size.
+ */
+TEST(SyncRingBufferRangeTest, PushRangeSupportsInitializerAndRange)
+{
+    tools::sync_ring_buffer<int, 8> buffer;
+
+    buffer.push_range({ 1, 2, 3 });
+    const std::vector<int> extra_values = { 4, 5 };
+    buffer.push_range(extra_values);
+
+    EXPECT_EQ(buffer.size(), 5U);
+    EXPECT_EQ(buffer.front().value_or(0), 1);
+    EXPECT_EQ(buffer.back().value_or(0), 5);
+}
+
+/**
+ * @brief Verifies ISR push_range supports initializer-list and generic ranges.
+ *
+ * @note In GoogleTest context there is no real ISR; standard C++ fallback behavior is used.
+ *
+ * @test
+ * - Push range values using ISR-safe APIs.
+ * - Verify resulting front/back and size.
+ */
+TEST(SyncRingBufferRangeTest, IsrPushRangeSupportsInitializerAndRange)
+{
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()
+    tools::sync_ring_buffer<int, 8> buffer;
+
+    buffer.isr_push_range({ 6, 7 });
+    const std::vector<int> more_values = { 8, 9 };
+    buffer.isr_push_range(more_values);
+
+    EXPECT_EQ(buffer.isr_size(), 4U);
+    EXPECT_EQ(buffer.front().value_or(0), 6);
+    EXPECT_EQ(buffer.back().value_or(0), 9);
+}
+
+/**
+ * @brief Verifies iterator-pair pop_range extracts effective count in FIFO order.
+ *
+ * @test
+ * - Fill buffer.
+ * - Pop into fixed destination storage via iterators.
+ * - Validate returned count and remaining queue content.
+ */
+TEST(SyncRingBufferRangeTest, PopRangeIteratorReturnsEffectiveCount)
+{
+    tools::sync_ring_buffer<int, 8> buffer;
+    buffer.push_range({ 10, 20, 30, 40 });
+
+    std::array<int, 3> destination = { 0, 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(destination.begin(), destination.end());
+
+    ASSERT_EQ(popped_count, 3U);
+    EXPECT_EQ(destination[0], 10);
+    EXPECT_EQ(destination[1], 20);
+    EXPECT_EQ(destination[2], 30);
+    EXPECT_EQ(buffer.size(), 1U);
+    EXPECT_EQ(buffer.front().value_or(0), 40);
+}
+
+/**
+ * @brief Verifies pop_range clamps to available data.
+ *
+ * @test
+ * - Push fewer elements than destination capacity.
+ * - Validate returned count and empty buffer state.
+ */
+TEST(SyncRingBufferRangeTest, PopRangeClampsToAvailable)
+{
+    tools::sync_ring_buffer<int, 8> buffer;
+    buffer.push_range({ 50, 60 });
+
+    std::array<int, 5> destination = { 0, 0, 0, 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(destination.begin(), destination.end());
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(destination[0], 50);
+    EXPECT_EQ(destination[1], 60);
+    EXPECT_TRUE(buffer.empty());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+/**
+ * @brief Verifies C++20 span-based pop_range overload for sync_ring_buffer.
+ *
+ * @test
+ * - Fill buffer.
+ * - Pop through std::span destination.
+ * - Validate returned count and remaining data.
+ */
+TEST(SyncRingBufferRangeTest, PopRangeSpanReturnsEffectiveCount)
+{
+    tools::sync_ring_buffer<int, 8> buffer;
+    buffer.push_range({ 70, 80, 90 });
+
+    std::array<int, 2> destination = { 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(std::span<int>(destination));
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(destination[0], 70);
+    EXPECT_EQ(destination[1], 80);
+    EXPECT_EQ(buffer.size(), 1U);
+    EXPECT_EQ(buffer.front().value_or(0), 90);
+}
+#endif
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 namespace

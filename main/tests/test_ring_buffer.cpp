@@ -41,10 +41,16 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <complex>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <span>
+#endif
 
 #include "tools/ring_buffer.hpp"
 
@@ -463,6 +469,98 @@ TEST(RingBufferPerfectForwardingTest, SupportsMoveOnlyType)
 
     EXPECT_FALSE(buffer.pop_move().has_value());
 }
+
+/**
+ * @brief Verifies push_range supports initializer-list and range insertion.
+ *
+ * @test
+ * - Push an initializer-list into the ring buffer.
+ * - Push an std::vector range into the ring buffer.
+ * - Verify resulting FIFO order in the preserved capacity window.
+ */
+TEST(RingBufferRangeTest, PushRangeSupportsInitializerAndRange)
+{
+    tools::ring_buffer<int, 8> buffer;
+
+    buffer.push_range({ 1, 2, 3 });
+
+    const std::vector<int> extra_values = { 4, 5 };
+    buffer.push_range(extra_values);
+
+    EXPECT_EQ(buffer.size(), 5U);
+    EXPECT_EQ(buffer.front(), 1);
+    EXPECT_EQ(buffer.back(), 5);
+}
+
+/**
+ * @brief Verifies iterator-pair pop_range extracts the effective item count.
+ *
+ * @test
+ * - Push several values into the buffer.
+ * - Extract into fixed destination storage via iterators.
+ * - Validate returned count, extracted order, and remaining content.
+ */
+TEST(RingBufferRangeTest, PopRangeIteratorReturnsEffectiveCount)
+{
+    tools::ring_buffer<int, 8> buffer;
+    buffer.push_range({ 10, 20, 30, 40 });
+
+    std::array<int, 3> destination = { 0, 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(destination.begin(), destination.end());
+
+    ASSERT_EQ(popped_count, 3U);
+    EXPECT_EQ(destination[0], 10);
+    EXPECT_EQ(destination[1], 20);
+    EXPECT_EQ(destination[2], 30);
+    EXPECT_EQ(buffer.size(), 1U);
+    EXPECT_EQ(buffer.front(), 40);
+}
+
+/**
+ * @brief Verifies pop_range clamps to available data when destination is larger.
+ *
+ * @test
+ * - Push fewer elements than destination capacity.
+ * - Validate returned count and that buffer is empty afterward.
+ */
+TEST(RingBufferRangeTest, PopRangeClampsToAvailable)
+{
+    tools::ring_buffer<int, 8> buffer;
+    buffer.push_range({ 7, 8 });
+
+    std::array<int, 5> destination = { 0, 0, 0, 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(destination.begin(), destination.end());
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(destination[0], 7);
+    EXPECT_EQ(destination[1], 8);
+    EXPECT_TRUE(buffer.empty());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+/**
+ * @brief Verifies C++20 span-based pop_range overload.
+ *
+ * @test
+ * - Push values into the ring buffer.
+ * - Pop through std::span destination.
+ * - Validate returned count and ordering.
+ */
+TEST(RingBufferRangeTest, PopRangeSpanReturnsEffectiveCount)
+{
+    tools::ring_buffer<int, 8> buffer;
+    buffer.push_range({ 3, 4, 5 });
+
+    std::array<int, 2> destination = { 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(std::span<int>(destination));
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(destination[0], 3);
+    EXPECT_EQ(destination[1], 4);
+    EXPECT_EQ(buffer.size(), 1U);
+    EXPECT_EQ(buffer.front(), 5);
+}
+#endif
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 namespace
