@@ -1053,6 +1053,13 @@ void test_sync_dictionary()
     str_dict.add("key-conversion", "value-conversion"); // forwarding conversion path
     str_dict.add("key-conversion", std::string("value-updated")); // update via forwarding path
 
+    const std::vector<std::pair<std::string, std::string>> range_values = {
+        { "key-range-1", "value-range-1" },
+        { "key-range-2", "value-range-2" }
+    };
+    str_dict.add_collection(range_values);
+    str_dict.add_collection({ { "key-brace-1", "value-brace-1" }, { "key-brace-2", "value-brace-2" } });
+
     auto result_lvalue = str_dict.find("key-lvalue");
     auto result_rvalue = str_dict.find("key-rvalue");
     auto result_conversion = str_dict.find("key-conversion");
@@ -1072,9 +1079,14 @@ void test_sync_dictionary()
         std::printf("%s\n", (*result_conversion).c_str());
     }
 
+    std::printf("contains key-range-1: %s\n", str_dict.contains("key-range-1") ? "yes" : "no");
+    std::printf("contains missing-key: %s\n", str_dict.contains("missing-key") ? "yes" : "no");
+
     str_dict.remove("key-lvalue");
     str_dict.remove("key-rvalue");
     str_dict.remove("key-conversion");
+    str_dict.remove_collection(std::vector<std::string> { "key-range-1", "key-brace-1" });
+    str_dict.remove_collection({ "key-range-2", "key-brace-2" });
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------

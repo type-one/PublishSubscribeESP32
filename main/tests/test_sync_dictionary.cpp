@@ -50,6 +50,11 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <vector>
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#endif
 
 #include "tools/sync_dictionary.hpp"
 
@@ -96,6 +101,18 @@ template <typename Dict, typename KeyArg, typename ValueArg>
 concept has_sync_dict_add_call = requires(Dict& dict_ref, KeyArg&& key_arg, ValueArg&& value_arg)
 {
     dict_ref.add(std::forward<KeyArg>(key_arg), std::forward<ValueArg>(value_arg));
+};
+
+template <typename Dict, typename Collection>
+concept has_sync_dict_add_collection_call = requires(Dict& dict_ref, Collection&& collection)
+{
+    dict_ref.add_collection(std::forward<Collection>(collection));
+};
+
+template <typename Dict, typename Collection>
+concept has_sync_dict_remove_collection_call = requires(Dict& dict_ref, Collection&& collection)
+{
+    dict_ref.remove_collection(std::forward<Collection>(collection));
 };
 #endif
 
@@ -874,6 +891,53 @@ TEST(SyncDictionaryPerfectForwardingTest, AddLvalueAndRvalueTriggerCopyMovePaths
     }
 }
 
+/**
+ * @brief Verifies range-based add_collection and contains support.
+ */
+TEST(SyncDictionaryRangeTest, AddCollectionFromRangeAndContains)
+{
+    tools::sync_dictionary<std::string, std::string> str_dict;
+
+    const std::vector<std::pair<std::string, std::string>> entries = {
+        { "alpha", "one" },
+        { "beta", "two" }
+    };
+
+    str_dict.add_collection(entries);
+    str_dict.add_collection({ { "gamma", "three" }, { "beta", "two-updated" } });
+
+    EXPECT_TRUE(str_dict.contains("alpha"));
+    EXPECT_TRUE(str_dict.contains("beta"));
+    EXPECT_TRUE(str_dict.contains("gamma"));
+
+    auto beta_value = str_dict.find("beta");
+    ASSERT_TRUE(beta_value.has_value());
+    EXPECT_EQ(beta_value.value(), "two-updated");
+}
+
+/**
+ * @brief Verifies range-based remove_collection support.
+ */
+TEST(SyncDictionaryRangeTest, RemoveCollectionFromRange)
+{
+    tools::sync_dictionary<std::string, std::string> str_dict;
+
+    str_dict.add_collection({
+        { "key-1", "value-1" },
+        { "key-2", "value-2" },
+        { "key-3", "value-3" }
+    });
+
+    const std::vector<std::string> keys_to_remove = { "key-1", "key-3" };
+    str_dict.remove_collection(keys_to_remove);
+    str_dict.remove_collection({ "missing", "key-2" });
+
+    EXPECT_FALSE(str_dict.contains("key-1"));
+    EXPECT_FALSE(str_dict.contains("key-2"));
+    EXPECT_FALSE(str_dict.contains("key-3"));
+    EXPECT_TRUE(str_dict.empty());
+}
+
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 /**
  * @brief Verifies C++20 requires constraints for sync_dictionary add forwarding API.
@@ -890,6 +954,29 @@ TEST(SyncDictionaryPerfectForwardingTest, Cpp20RequiresConstraints)
     static_assert(has_sync_dict_add_call<str_dict_t, std::string&&, std::string&&>);
     static_assert(!has_sync_dict_add_call<int_dict_t, const char*, int>);
     static_assert(!has_sync_dict_add_call<int_dict_t, int, const char*>);
+
+    SUCCEED();
+}
+
+/**
+ * @brief Verifies C++20 range-call constraints for collection add/remove APIs.
+ */
+TEST(SyncDictionaryRangeTest, Cpp20RangeConstraints)
+{
+    using dict_t = tools::sync_dictionary<std::string, std::string>;
+
+    static_assert(has_sync_dict_add_collection_call<dict_t, std::vector<std::pair<std::string, std::string>>&>);
+    static_assert(has_sync_dict_remove_collection_call<dict_t, std::vector<std::string>&>);
+
+    static_assert(has_sync_dict_add_collection_call<dict_t, std::initializer_list<std::pair<std::string, std::string>>>);
+    static_assert(has_sync_dict_remove_collection_call<dict_t, std::initializer_list<std::string>>);
+
+    const auto transformed = std::views::iota(0, 2)
+        | std::views::transform([](const int value)
+          {
+              return std::pair<std::string, std::string>("k" + std::to_string(value), "v");
+          });
+    static_assert(has_sync_dict_add_collection_call<dict_t, decltype(transformed)>);
 
     SUCCEED();
 }

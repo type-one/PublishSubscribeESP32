@@ -41,12 +41,18 @@
 #define SYNC_DICTIONARY_HPP_
 
 #include <cstddef>
+#include <initializer_list>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#endif
 
 #include "tools/critical_section.hpp"
 #include "tools/non_copyable.hpp"
@@ -180,6 +186,59 @@ namespace tools
         }
 
         /**
+         * @brief Adds key-value pairs from a generic range-like collection.
+         *
+         * In C++20, accepts any std::ranges::input_range of pair-like entries.
+         * In C++17, accepts any iterable of pair-like entries whose key/value are constructible to K/T.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param collection The source collection of key-value entries.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    K,
+                    decltype(std::get<0>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))
+                >::value
+                && std::is_constructible<
+                    T,
+                    decltype(std::get<1>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<K, decltype(std::get<0>(*std::begin(std::declval<TRange&>())))>
+                  && std::is_constructible_v<T, decltype(std::get<1>(*std::begin(std::declval<TRange&>())))>
+#endif
+        void add_collection(TRange&& collection)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            for (auto&& entry : std::forward<TRange>(collection))
+            {
+                m_dictionary.insert_or_assign(
+                    K(std::get<0>(std::forward<decltype(entry)>(entry))),
+                    T(std::get<1>(std::forward<decltype(entry)>(entry))));
+            }
+        }
+
+        /**
+         * @brief Adds key-value pairs from an initializer-list.
+         *
+         * @param collection The source initializer-list of key-value pairs.
+         */
+        void add_collection(std::initializer_list<std::pair<K, T>> collection)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            for (const auto& [key, value] : collection)
+            {
+                m_dictionary.insert_or_assign(key, value);
+            }
+        }
+
+        /**
          * @brief Retrieves a snapshot of the current dictionary.
          *
          * This method returns a copy of the internal dictionary, ensuring thread safety
@@ -187,7 +246,7 @@ namespace tools
          *
          * @return A copy of the current dictionary.
          */
-        std::map<K, T> snapshot() const
+        [[nodiscard]] std::map<K, T> snapshot() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_dictionary;
@@ -204,7 +263,7 @@ namespace tools
          * @return std::optional<T> The value associated with the key if found,
          *         otherwise an empty std::optional.
          */
-        std::optional<T> find(const K& key) const
+        [[nodiscard]] std::optional<T> find(const K& key) const
         {
             std::optional<T> result;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -217,6 +276,70 @@ namespace tools
         }
 
         /**
+         * @brief Checks whether a key exists in the dictionary.
+         *
+         * Uses std::map::contains in C++20 and find-based fallback in C++17.
+         *
+         * @param key The key to check.
+         * @return true when the key exists, otherwise false.
+         */
+        [[nodiscard]] bool contains(const K& key) const
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            return m_dictionary.contains(key);
+#else
+            return m_dictionary.find(key) != m_dictionary.cend();
+#endif
+        }
+
+        /**
+         * @brief Removes keys from a generic range-like collection.
+         *
+         * In C++20, accepts any std::ranges::input_range whose elements are constructible to K.
+         * In C++17, accepts any iterable whose elements are constructible to K.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param keys The source collection of keys to remove.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    K,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<K, decltype(*std::begin(std::declval<TRange&>()))>
+#endif
+        void remove_collection(TRange&& keys)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            for (auto&& key : std::forward<TRange>(keys))
+            {
+                m_dictionary.erase(K(std::forward<decltype(key)>(key)));
+            }
+        }
+
+        /**
+         * @brief Removes keys from an initializer-list.
+         *
+         * @param keys The source initializer-list of keys to remove.
+         */
+        void remove_collection(std::initializer_list<K> keys)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            for (const auto& key : keys)
+            {
+                m_dictionary.erase(key);
+            }
+        }
+
+        /**
          * @brief Checks if the dictionary is empty.
          *
          * This method acquires a lock on the mutex to ensure thread safety
@@ -224,7 +347,7 @@ namespace tools
          *
          * @return true if the dictionary is empty, false otherwise.
          */
-        bool empty() const
+        [[nodiscard]] bool empty() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_dictionary.empty();
@@ -238,7 +361,7 @@ namespace tools
          *
          * @return The number of elements in the dictionary.
          */
-        std::size_t size() const
+        [[nodiscard]] std::size_t size() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_dictionary.size();
