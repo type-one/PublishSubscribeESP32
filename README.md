@@ -83,7 +83,7 @@ idf.py build
 
 idf.py flash monitor
 ```
-Note: `Ctrl-] will exit the monitor.` 
+Note: `Ctrl-T Ctrl-X will exit the monitor.` 
 
 For an ESP32 classic, just type `idf.py set-target esp32` above instead.
 
