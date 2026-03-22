@@ -41,12 +41,17 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <vector>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <span>
+#endif
 
 #include "tools/lock_free_ring_buffer.hpp"
 
@@ -398,6 +403,141 @@ TEST(LockFreeRingBufferPerfectForwardingTest, Cpp20RequiresConstraints)
     static_assert(has_push_call<buffer_t, float>);
     static_assert(!has_push_call<buffer_t, non_constructible_payload>);
     static_assert(!has_push_call<buffer_t, non_constructible_payload&>);
+
+    SUCCEED();
+}
+#endif
+
+/**
+ * @brief Verifies push_range supports initializer-list and generic range insertion.
+ *
+ * @test
+ * - Push an initializer-list and verify the reported pushed count.
+ * - Push a std::vector range and verify the reported pushed count.
+ * - Drain buffer via pop_opt() and verify FIFO order.
+ */
+TEST(LockFreeRingBufferRangeTest, PushRangeSupportsInitializerAndRange)
+{
+    tools::lock_free_ring_buffer<int, 3> buffer; // capacity 8, 7 usable slots
+
+    const std::size_t pushed_init = buffer.push_range({ 1, 2, 3 });
+    ASSERT_EQ(pushed_init, 3U);
+
+    const std::vector<int> extra_values = { 4, 5 };
+    const std::size_t pushed_vec = buffer.push_range(extra_values);
+    ASSERT_EQ(pushed_vec, 2U);
+
+    for (int expected = 1; expected <= 5; ++expected)
+    {
+        auto item = buffer.pop_opt();
+        ASSERT_TRUE(item.has_value());
+        EXPECT_EQ(*item, expected);
+    }
+    EXPECT_FALSE(buffer.pop_opt().has_value());
+}
+
+/**
+ * @brief Verifies iterator-pair pop_range extracts the effective item count.
+ *
+ * @test
+ * - Push four values and extract three.
+ * - Validate returned count and extracted order.
+ * - Verify the fourth item remains and buffer is then empty.
+ */
+TEST(LockFreeRingBufferRangeTest, PopRangeIteratorReturnsEffectiveCount)
+{
+    tools::lock_free_ring_buffer<int, 3> buffer;
+    const std::size_t pushed = buffer.push_range({ 10, 20, 30, 40 });
+    ASSERT_EQ(pushed, 4U);
+
+    std::array<int, 3> destination = { 0, 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(destination.begin(), destination.end());
+
+    ASSERT_EQ(popped_count, 3U);
+    EXPECT_EQ(destination[0], 10);
+    EXPECT_EQ(destination[1], 20);
+    EXPECT_EQ(destination[2], 30);
+
+    auto remaining = buffer.pop_opt();
+    ASSERT_TRUE(remaining.has_value());
+    EXPECT_EQ(*remaining, 40);
+    EXPECT_FALSE(buffer.pop_opt().has_value());
+}
+
+/**
+ * @brief Verifies pop_range clamps to available data when destination is larger.
+ *
+ * @test
+ * - Push fewer elements than destination capacity.
+ * - Validate returned count and that buffer is empty afterward.
+ */
+TEST(LockFreeRingBufferRangeTest, PopRangeClampsToAvailable)
+{
+    tools::lock_free_ring_buffer<int, 3> buffer;
+    const std::size_t pushed = buffer.push_range({ 7, 8 });
+    ASSERT_EQ(pushed, 2U);
+
+    std::array<int, 5> destination = { 0, 0, 0, 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(destination.begin(), destination.end());
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(destination[0], 7);
+    EXPECT_EQ(destination[1], 8);
+    EXPECT_FALSE(buffer.pop_opt().has_value());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+/**
+ * @brief Verifies C++20 span-based pop_range overload.
+ *
+ * @test
+ * - Push values into the buffer.
+ * - Pop through std::span destination.
+ * - Validate returned count, ordering, and remaining content.
+ */
+TEST(LockFreeRingBufferRangeTest, PopRangeSpanReturnsEffectiveCount)
+{
+    tools::lock_free_ring_buffer<int, 3> buffer;
+    const std::size_t pushed = buffer.push_range({ 3, 4, 5 });
+    ASSERT_EQ(pushed, 3U);
+
+    std::array<int, 2> destination = { 0, 0 };
+    const std::size_t popped_count = buffer.pop_range(std::span<int>(destination));
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(destination[0], 3);
+    EXPECT_EQ(destination[1], 4);
+
+    auto remaining = buffer.pop_opt();
+    ASSERT_TRUE(remaining.has_value());
+    EXPECT_EQ(*remaining, 5);
+}
+
+namespace
+{
+    template <typename Buf, typename Range>
+    concept has_push_range_call = requires(Buf& buf, Range&& range)
+    {
+        buf.push_range(std::forward<Range>(range));
+    };
+
+    template <typename Buf, typename OutputIt>
+    concept has_pop_range_iter_call = requires(Buf& buf, OutputIt first, OutputIt last)
+    {
+        buf.pop_range(first, last);
+    };
+}
+
+/**
+ * @brief Verifies C++20 range-call constraints for push_range and pop_range.
+ */
+TEST(LockFreeRingBufferRangeTest, Cpp20RangeConstraints)
+{
+    using buf_t = tools::lock_free_ring_buffer<int, 3>;
+
+    static_assert(has_push_range_call<buf_t, std::vector<int>&>);
+    static_assert(has_push_range_call<buf_t, std::initializer_list<int>>);
+    static_assert(has_pop_range_iter_call<buf_t, int*>);
 
     SUCCEED();
 }

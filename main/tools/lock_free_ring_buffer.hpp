@@ -43,9 +43,15 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
+#include <iterator>
 #include <optional>
 #include <type_traits>
 #include <utility>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#include <span>
+#endif
 
 #include "tools/non_copyable.hpp"
 
@@ -89,7 +95,7 @@ namespace tools
          * @param elem The element to be pushed into the ring buffer.
          * @return true if the element was successfully pushed, false if the buffer is full.
          */
-        bool push(const T& elem)
+        [[nodiscard]] bool push(const T& elem)
         {
             return push_val(elem);
         }
@@ -104,7 +110,7 @@ namespace tools
          * @param elem The rvalue element to be pushed into the ring buffer.
          * @return true if the element was successfully pushed, false if the buffer is full.
          */
-        bool push(T&& elem)
+        [[nodiscard]] bool push(T&& elem)
         {
             return push_val(std::move(elem));
         }
@@ -124,7 +130,7 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, U>
 #endif
-        auto push(U&& elem)
+        [[nodiscard]] auto push(U&& elem)
     #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
     #endif
@@ -177,7 +183,7 @@ namespace tools
          *
          * @return An optional containing the popped element, or std::nullopt if empty.
          */
-        std::optional<T> pop_opt()
+        [[nodiscard]] std::optional<T> pop_opt()
         {
             T elem {};
             if (pop(elem))
@@ -186,6 +192,119 @@ namespace tools
             }
             return std::nullopt;
         }
+
+        /**
+         * @brief Pushes all elements from a range into the ring buffer.
+         *
+         * Returns the count of elements actually pushed; fewer may be pushed if
+         * the buffer becomes full before the range is exhausted.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type is constructible to T.
+         * In C++17, accepts any iterable whose element type is constructible to T.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param range The source range of elements to push.
+         * @return The number of elements successfully pushed.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+#endif
+        [[nodiscard]] std::size_t push_range(TRange&& range)
+        {
+            std::size_t pushed_count = 0U;
+            for (auto&& elem : std::forward<TRange>(range))
+            {
+                if (push(T(std::forward<decltype(elem)>(elem))))
+                {
+                    ++pushed_count;
+                }
+            }
+            return pushed_count;
+        }
+
+        /**
+         * @brief Pushes all elements from an initializer-list into the ring buffer.
+         *
+         * Returns the count of elements actually pushed; fewer may be pushed if
+         * the buffer becomes full before the list is exhausted.
+         *
+         * @tparam U The initializer-list element type.
+         * @param range The source initializer-list.
+         * @return The number of elements successfully pushed.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, const U&>
+#endif
+        [[nodiscard]] std::size_t push_range(std::initializer_list<U> range)
+        {
+            std::size_t pushed_count = 0U;
+            for (const auto& elem : range)
+            {
+                if (push(T(elem)))
+                {
+                    ++pushed_count;
+                }
+            }
+            return pushed_count;
+        }
+
+        /**
+         * @brief Pops a batch of elements into an output range.
+         *
+         * Extracts up to the destination capacity in FIFO order, stopping early
+         * if the buffer becomes empty.
+         *
+         * @tparam OutputIt Output iterator type.
+         * @param first Destination begin iterator.
+         * @param last Destination end iterator.
+         * @return The effective number of elements extracted.
+         */
+        template <typename OutputIt>
+        [[nodiscard]] std::size_t pop_range(OutputIt first, OutputIt last)
+        {
+            std::size_t popped_count = 0U;
+            while (first != last)
+            {
+                T elem {};
+                if (!pop(elem))
+                {
+                    break;
+                }
+                *first = elem;
+                ++first;
+                ++popped_count;
+            }
+            return popped_count;
+        }
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        /**
+         * @brief C++20 span-based batch pop into contiguous storage.
+         *
+         * @param destination Span over writable destination storage.
+         * @return The effective number of elements extracted.
+         */
+        [[nodiscard]] std::size_t pop_range(std::span<T> destination)
+        {
+            return pop_range(destination.begin(), destination.end());
+        }
+#endif
 
         /**
          * @brief Returns the capacity of the ring buffer.

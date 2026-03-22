@@ -751,9 +751,9 @@ void test_lock_free_ring_buffer_perfect_forwarding()
         tools::lock_free_ring_buffer<std::uint16_t, queue_size_pow2> buf;
 
         std::uint16_t lvalue = val_first;
-        buf.push(lvalue);                                  // exact-T lvalue overload
-        buf.push(std::uint16_t(val_second));               // exact-T rvalue overload
-        buf.push(static_cast<std::uint16_t>(val_third));   // forwarding conversion path
+        (void)buf.push(lvalue);                                  // exact-T lvalue overload
+        (void)buf.push(std::uint16_t(val_second));               // exact-T rvalue overload
+        (void)buf.push(static_cast<std::uint16_t>(val_third));   // forwarding conversion path
 
         while (true)
         {
@@ -771,9 +771,9 @@ void test_lock_free_ring_buffer_perfect_forwarding()
         constexpr const std::size_t queue_size_pow2 = 2U;
         tools::lock_free_ring_buffer<float, queue_size_pow2> float_buf;
 
-        float_buf.push(1);   // NOLINT int-to-float conversion forwarding path
-        float_buf.push(2);   // NOLINT int-to-float conversion forwarding path
-        float_buf.push(3);   // NOLINT int-to-float conversion forwarding path
+        (void)float_buf.push(1);   // NOLINT int-to-float conversion forwarding path
+        (void)float_buf.push(2);   // NOLINT int-to-float conversion forwarding path
+        (void)float_buf.push(3);   // NOLINT int-to-float conversion forwarding path
 
         while (true)
         {
@@ -784,6 +784,45 @@ void test_lock_free_ring_buffer_perfect_forwarding()
             }
             std::printf("%.1f\n", item.value());
         }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+void test_lock_free_ring_buffer_range()
+{
+    LOG_INFO("-- lock free ring buffer range --");
+    print_stats();
+
+    constexpr const std::size_t queue_size_pow2 = 3U;
+    tools::lock_free_ring_buffer<int, queue_size_pow2> buffer;
+
+    const std::size_t pushed_init = buffer.push_range({ 10, 20, 30 });
+    std::printf("push_range init-list pushed: %zu\n", pushed_init);
+
+    const std::vector<int> extra_values = { 40, 50 };
+    const std::size_t pushed_vec = buffer.push_range(extra_values);
+    std::printf("push_range vector pushed: %zu\n", pushed_vec);
+
+    constexpr const std::size_t batch_size = 3U;
+    std::array<int, batch_size> batch = {};
+    const std::size_t popped_count = buffer.pop_range(batch.begin(), batch.end());
+    std::printf("pop_range iterator popped: %zu\n", popped_count);
+
+    auto* batch_ptr = batch.data();
+    for (std::size_t idx = 0U; idx < popped_count; ++idx)
+    {
+        std::printf("  batch[%zu] = %d\n", idx, batch_ptr[idx]);  // NOLINT
+    }
+
+    while (true)
+    {
+        auto item = buffer.pop_opt();
+        if (!item.has_value())
+        {
+            break;
+        }
+        std::printf("  remaining: %d\n", item.value());
     }
 }
 
@@ -3094,7 +3133,7 @@ void test_smp_tasks_lock_free_ring_buffer()
         ++count;
 
         constexpr const int mask = 0xff;
-        context->m_to_worker_pipe.push(static_cast<std::uint8_t>(count & mask));
+        (void)context->m_to_worker_pipe.push(static_cast<std::uint8_t>(count & mask));
 
         std::uint8_t val = 0U; 
         if (context->m_from_worker_pipe.pop(val))
@@ -3109,7 +3148,7 @@ void test_smp_tasks_lock_free_ring_buffer()
             std::uint8_t value = 0U; 
             if (context->m_to_worker_pipe.pop(value))
             {
-                context->m_from_worker_pipe.push(static_cast<std::uint8_t>(value * value));
+                (void)context->m_from_worker_pipe.push(static_cast<std::uint8_t>(value * value));
             }
         });
     };
@@ -3536,6 +3575,7 @@ void runner()
 
     test_lock_free_ring_buffer();
     test_lock_free_ring_buffer_perfect_forwarding();
+    test_lock_free_ring_buffer_range();
     test_sync_ring_buffer();
     test_sync_ring_vector();
     test_sync_ring_vector_perfect_forwarding();
