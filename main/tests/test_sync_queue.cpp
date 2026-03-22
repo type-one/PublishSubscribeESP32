@@ -52,11 +52,16 @@
 
 #include <array>
 #include <complex>
+#include <concepts>
 #include <memory>
 #include <string>
 #include <thread>
 #include <type_traits>
 #include <vector>
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <span>
+#endif
 
 #include "tools/sync_queue.hpp"
 
@@ -754,6 +759,19 @@ namespace
     {
         queue_ref.isr_push_range(range);
     };
+
+    template <typename Q, typename TDest>
+    concept has_pop_range_iter_call = requires(Q& queue_ref, TDest& destination)
+    {
+        { queue_ref.pop_range(destination.begin(), destination.end()) } -> std::same_as<std::size_t>;
+    };
+
+    template <typename Q, typename U>
+    concept has_pop_range_span_call = requires(Q& queue_ref, std::span<U> destination)
+    {
+        { queue_ref.pop_range(destination) } -> std::same_as<std::size_t>;
+    };
+
 }
 
 /**
@@ -810,6 +828,7 @@ TEST(SyncQueuePerfectForwardingTest, Cpp20RequiresConstraints)
 TEST(SyncQueueRangeTest, Cpp20RangeConstraints)
 {
     using queue_t = tools::sync_queue<std::string>;
+    using destination_t = std::array<std::string, 4>;
 
     static_assert(std::ranges::input_range<std::vector<std::string>>);
     static_assert(std::ranges::input_range<std::array<std::string, 3>>);
@@ -821,6 +840,29 @@ TEST(SyncQueueRangeTest, Cpp20RangeConstraints)
     // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()
     static_assert(has_isr_push_range_call<queue_t, std::vector<std::string>>);
     static_assert(!has_isr_push_range_call<queue_t, std::vector<non_constructible_payload>>);
+
+    static_assert(has_pop_range_iter_call<queue_t, destination_t>);
+    static_assert(has_pop_range_span_call<queue_t, std::string>);
+
+    SUCCEED();
+}
+#endif
+
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+/**
+ * @brief C++17 compile-time checks for iterator-based pop_range API.
+ *
+ * @test
+ * - Ensure pop_range iterator overload returns std::size_t.
+ */
+TEST(SyncQueueRangeTest, Cpp17IteratorPopRangeCompileChecks)
+{
+    tools::sync_queue<int> queue;
+    std::array<int, 3> destination = { 0, 0, 0 };
+
+    using pop_return_t = decltype(queue.pop_range(destination.begin(), destination.end()));
+
+     static_assert(std::is_same<pop_return_t, std::size_t>::value, "pop_range iterator overload must return std::size_t");
 
     SUCCEED();
 }
@@ -880,3 +922,115 @@ TEST(SyncQueueRangeTest, IsrPushRangeFromVector)
     EXPECT_EQ(queue.isr_size(), 3U);
     EXPECT_EQ(queue.front().value_or(0), 7);
 }
+
+/**
+ * @brief Test case for push_range accepting brace-init lists.
+ *
+ * @test
+ * - Push a brace-init list through push_range.
+ * - Verify FIFO ordering and resulting queue size.
+ */
+TEST(SyncQueueRangeTest, PushRangeSupportsInitializerList)
+{
+    tools::sync_queue<int> queue;
+    queue.push_range({ 11, 22, 33 });
+
+    EXPECT_EQ(queue.size(), 3U);
+    EXPECT_EQ(queue.front_pop().value_or(0), 11);
+    EXPECT_EQ(queue.front_pop().value_or(0), 22);
+    EXPECT_EQ(queue.front_pop().value_or(0), 33);
+    EXPECT_TRUE(queue.empty());
+}
+
+/**
+ * @brief Test case for isr_push_range accepting brace-init lists.
+ *
+ * @note In GoogleTest context there is no real ISR; standard C++ fallback behavior is used.
+ *
+ * @test
+ * - Push a brace-init list through isr_push_range.
+ * - Verify FIFO ordering and resulting queue size.
+ */
+TEST(SyncQueueRangeTest, IsrPushRangeSupportsInitializerList)
+{
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()
+    tools::sync_queue<int> queue;
+    queue.isr_push_range({ 44, 55, 66 });
+
+    EXPECT_EQ(queue.isr_size(), 3U);
+    EXPECT_EQ(queue.front_pop().value_or(0), 44);
+    EXPECT_EQ(queue.front_pop().value_or(0), 55);
+    EXPECT_EQ(queue.front_pop().value_or(0), 66);
+    EXPECT_TRUE(queue.empty());
+}
+
+/**
+ * @brief Test case for pop_range extracting batches in FIFO order.
+ *
+ * @test
+ * - Fill queue with five elements.
+ * - Pop a batch smaller than queue size.
+ * - Verify extracted order and remaining queue state.
+ */
+TEST(SyncQueueRangeTest, PopRangeReturnsFifoBatch)
+{
+    tools::sync_queue<int> queue;
+    queue.push_range({ 1, 2, 3, 4, 5 });
+
+    std::array<int, 3> batch = { 0, 0, 0 };
+    const std::size_t popped_count = queue.pop_range(batch.begin(), batch.end());
+
+    ASSERT_EQ(popped_count, 3U);
+    EXPECT_EQ(batch[0], 1);
+    EXPECT_EQ(batch[1], 2);
+    EXPECT_EQ(batch[2], 3);
+    EXPECT_EQ(queue.size(), 2U);
+    EXPECT_EQ(queue.front().value_or(0), 4);
+}
+
+/**
+ * @brief Test case for pop_range when asked for more items than available.
+ *
+ * @test
+ * - Fill queue with two elements.
+ * - Request a larger batch than available.
+ * - Verify all available elements are returned and queue becomes empty.
+ */
+TEST(SyncQueueRangeTest, PopRangeClampsToAvailableItems)
+{
+    tools::sync_queue<int> queue;
+    queue.push_range({ 9, 10 });
+
+    std::array<int, 10> batch = { 0 };
+    const std::size_t popped_count = queue.pop_range(batch.begin(), batch.end());
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(batch[0], 9);
+    EXPECT_EQ(batch[1], 10);
+    EXPECT_TRUE(queue.empty());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+/**
+ * @brief Test case for span-based pop_range overload.
+ *
+ * @test
+ * - Fill queue and extract into contiguous storage via span.
+ * - Verify extracted count and values.
+ */
+TEST(SyncQueueRangeTest, PopRangeWithSpanReturnsCount)
+{
+    tools::sync_queue<int> queue;
+    queue.push_range({ 6, 7, 8 });
+
+    std::array<int, 5> batch = { 0, 0, 0, 0, 0 };
+    const std::size_t popped_count = queue.pop_range(std::span<int>(batch));
+
+    ASSERT_EQ(popped_count, 3U);
+    EXPECT_EQ(batch[0], 6);
+    EXPECT_EQ(batch[1], 7);
+    EXPECT_EQ(batch[2], 8);
+    EXPECT_TRUE(queue.empty());
+}
+
+#endif

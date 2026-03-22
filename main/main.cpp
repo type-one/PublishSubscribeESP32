@@ -915,6 +915,7 @@ void test_sync_queue_perfect_forwarding()
 
         str_queue.push_range(range_lvalue);
         str_queue.isr_push_range(range_isr);
+        str_queue.push_range({ "sync-queue-brace-range-1", "sync-queue-brace-range-2" });
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
         constexpr const std::array<std::size_t, 2U> suffixes = { 1U, 2U };
@@ -931,6 +932,16 @@ void test_sync_queue_perfect_forwarding()
         };
         str_queue.push_range(transformed);
 #endif
+
+        constexpr const std::size_t pop_batch_size = 2U;
+        std::array<std::string, pop_batch_size> popped_batch = { "", "" };
+        const std::size_t popped_count = str_queue.pop_range(popped_batch.begin(), popped_batch.end());
+        auto* popped_it = popped_batch.data();
+        for (std::size_t remaining = popped_count; remaining > 0U; --remaining)
+        {
+            std::printf("%s\n", popped_it->c_str());
+            ++popped_it;
+        }
 
         while (!str_queue.empty())
         {
