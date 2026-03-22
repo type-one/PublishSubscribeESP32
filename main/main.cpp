@@ -47,6 +47,7 @@
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 #include <numbers>
+#include <ranges>
 #endif
 
 #if !defined(FREERTOS_PLATFORM)
@@ -897,11 +898,39 @@ void test_sync_queue_perfect_forwarding()
         tools::sync_queue<std::string> str_queue;
 
         std::string lvalue = "sync-queue-lvalue";
-        str_queue.push(lvalue);                         // exact-T lvalue overload path
+        str_queue.push(lvalue);                             // exact-T lvalue overload path
         str_queue.push(std::string("sync-queue-rvalue")); // exact-T rvalue overload path
-        str_queue.push("sync-queue-conversion");         // forwarding template conversion path
-        str_queue.push({ "sync-queue-brace-init" });       // brace-init compatibility path
-        str_queue.emplace(4U, 'q');                     // in-place args forwarding path
+        str_queue.push("sync-queue-conversion");          // forwarding template conversion path
+        str_queue.push({ "sync-queue-brace-init" });      // brace-init compatibility path
+        str_queue.emplace(4U, 'q');                         // in-place args forwarding path
+
+        constexpr const std::array<std::string_view, 2U> range_lvalue = {
+            "sync-queue-range-lvalue-1",
+            "sync-queue-range-lvalue-2"
+        };
+        constexpr const std::array<std::string_view, 2U> range_isr = {
+            "sync-queue-range-isr-1",
+            "sync-queue-range-isr-2"
+        };
+
+        str_queue.push_range(range_lvalue);
+        str_queue.isr_push_range(range_isr);
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        constexpr const std::array<std::size_t, 2U> suffixes = { 1U, 2U };
+        const auto transformed = suffixes
+            | std::views::transform([](const std::size_t suffix)
+              {
+                  return std::string("sync-queue-ranges-view-") + std::to_string(suffix);
+              });
+        str_queue.push_range(transformed);
+#else
+        const std::array<std::string, 2U> transformed = {
+            "sync-queue-ranges-fallback-1",
+            "sync-queue-ranges-fallback-2"
+        };
+        str_queue.push_range(transformed);
+#endif
 
         while (!str_queue.empty())
         {

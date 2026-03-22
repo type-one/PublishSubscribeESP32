@@ -50,6 +50,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <complex>
 #include <memory>
 #include <string>
@@ -741,6 +742,18 @@ namespace
     {
         queue_ref.isr_emplace(std::forward<Args>(args)...);
     };
+
+    template <typename Q, typename TRange>
+    concept has_push_range_call = requires(Q& queue_ref, TRange& range)
+    {
+        queue_ref.push_range(range);
+    };
+
+    template <typename Q, typename TRange>
+    concept has_isr_push_range_call = requires(Q& queue_ref, TRange& range)
+    {
+        queue_ref.isr_push_range(range);
+    };
 }
 
 /**
@@ -783,4 +796,87 @@ TEST(SyncQueuePerfectForwardingTest, Cpp20RequiresConstraints)
 
     SUCCEED();
 }
+
+/**
+ * @brief C++20-only compile-time validation of push_range and isr_push_range constraints.
+ *
+ * Verifies that push_range and isr_push_range accept ranges with compatible element types
+ * and reject ranges whose element type cannot be used to construct T.
+ *
+ * @test
+ * - Assert push_range/isr_push_range accept std::vector and std::array of compatible type.
+ * - Assert push_range/isr_push_range reject ranges with non-constructible element type.
+ */
+TEST(SyncQueueRangeTest, Cpp20RangeConstraints)
+{
+    using queue_t = tools::sync_queue<std::string>;
+
+    static_assert(std::ranges::input_range<std::vector<std::string>>);
+    static_assert(std::ranges::input_range<std::array<std::string, 3>>);
+
+    static_assert(has_push_range_call<queue_t, std::vector<std::string>>);
+    static_assert(has_push_range_call<queue_t, std::array<std::string, 3>>);
+    static_assert(!has_push_range_call<queue_t, std::vector<non_constructible_payload>>);
+
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()
+    static_assert(has_isr_push_range_call<queue_t, std::vector<std::string>>);
+    static_assert(!has_isr_push_range_call<queue_t, std::vector<non_constructible_payload>>);
+
+    SUCCEED();
+}
 #endif
+
+/**
+ * @brief Test case for push_range inserting elements from an std::vector.
+ *
+ * @test
+ * - Push a vector of ints into the queue via push_range.
+ * - Verify size, front, and back after insertion.
+ */
+TEST(SyncQueueRangeTest, PushRangeFromVector)
+{
+    tools::sync_queue<int> queue;
+    const std::vector<int> source = { 1, 2, 3, 4, 5 };
+    queue.push_range(source);
+    EXPECT_EQ(queue.size(), 5U);
+    EXPECT_EQ(queue.front().value_or(0), 1);
+    EXPECT_EQ(queue.back().value_or(0), 5);
+}
+
+/**
+ * @brief Test case for push_range inserting elements from an std::array.
+ *
+ * @test
+ * - Push an array of ints into the queue via push_range.
+ * - Verify size and FIFO order after extraction.
+ */
+TEST(SyncQueueRangeTest, PushRangeFromStdArray)
+{
+    tools::sync_queue<int> queue;
+    const std::array<int, 3> source = { 10, 20, 30 };
+    queue.push_range(source);
+    EXPECT_EQ(queue.size(), 3U);
+    EXPECT_EQ(queue.front_pop().value_or(0), 10);
+    EXPECT_EQ(queue.front_pop().value_or(0), 20);
+    EXPECT_EQ(queue.front_pop().value_or(0), 30);
+    EXPECT_TRUE(queue.empty());
+}
+
+/**
+ * @brief Test case for isr_push_range inserting elements from an std::vector.
+ *
+ * @note In GoogleTest context there is no real ISR; standard C++ fallback behavior is used.
+ *
+ * @test
+ * - Push a vector of ints into the queue via isr_push_range.
+ * - Verify size and front element after insertion.
+ */
+TEST(SyncQueueRangeTest, IsrPushRangeFromVector)
+{
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()
+    tools::sync_queue<int> queue;
+    const std::vector<int> source = { 7, 8, 9 };
+    queue.isr_push_range(source);
+    EXPECT_EQ(queue.isr_size(), 3U);
+    EXPECT_EQ(queue.front().value_or(0), 7);
+}

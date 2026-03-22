@@ -40,11 +40,16 @@
 #if !defined(SYNC_QUEUE_HPP_)
 #define SYNC_QUEUE_HPP_
 
+#include <algorithm>
 #include <mutex>
 #include <optional>
 #include <queue>
 #include <type_traits>
 #include <utility>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <concepts>
+#include <ranges>
+#endif
 
 #include "tools/critical_section.hpp"
 #include "tools/non_copyable.hpp"
@@ -109,7 +114,7 @@ namespace tools
          */
         template <typename U>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<T, U>
+            requires std::constructible_from<T, U>
 #endif
         auto push(U&& elem)
     #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
@@ -131,7 +136,7 @@ namespace tools
          */
         template <typename... Args>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<T, Args...>
+            requires std::constructible_from<T, Args...>
 #endif
         auto emplace(Args&&... args)
     #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
@@ -163,7 +168,7 @@ namespace tools
          *
          * @return The front element of the queue, or none if the queue is empty.
          */
-        std::optional<T> front() const
+        [[nodiscard]] std::optional<T> front() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -181,7 +186,7 @@ namespace tools
          *
          * @return The front element of the queue, or none if the queue is empty.
          */
-        std::optional<T> front_pop()
+        [[nodiscard]] std::optional<T> front_pop()
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -201,7 +206,7 @@ namespace tools
          *
          * @return The front element of the queue, or none if the queue is empty.
          */
-        std::optional<T> front_pop_move()
+        [[nodiscard]] std::optional<T> front_pop_move()
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -221,7 +226,7 @@ namespace tools
          *
          * @return The last element in the queue, or none if the queue is empty.
          */
-        std::optional<T> back() const
+        [[nodiscard]] std::optional<T> back() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -240,7 +245,7 @@ namespace tools
          *
          * @return A copy of the internal queue
          */
-        std::queue<T> snapshot() const
+        [[nodiscard]] std::queue<T> snapshot() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue;
@@ -254,7 +259,7 @@ namespace tools
          *
          * @return true if the queue is empty, false otherwise.
          */
-        bool empty() const
+        [[nodiscard]] bool empty() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.empty();
@@ -268,7 +273,7 @@ namespace tools
          *
          * @return The number of elements in the queue.
          */
-        std::size_t size() const
+        [[nodiscard]] std::size_t size() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.size();
@@ -312,7 +317,7 @@ namespace tools
          */
         template <typename U>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<T, U>
+            requires std::constructible_from<T, U>
 #endif
         auto isr_push(U&& elem)
     #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
@@ -334,7 +339,7 @@ namespace tools
          */
         template <typename... Args>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<T, Args...>
+            requires std::constructible_from<T, Args...>
 #endif
         auto isr_emplace(Args&&... args)
     #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
@@ -353,10 +358,74 @@ namespace tools
          *
          * @return The size of the queue.
          */
-        std::size_t isr_size() const
+        [[nodiscard]] std::size_t isr_size() const
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.size();
+        }
+
+        /**
+         * @brief Pushes all elements from a range into the queue.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type is constructible to T.
+         * In C++17, accepts any iterable whose element type is constructible to T.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param range The source range of elements to push.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::constructible_from<T, std::ranges::range_value_t<TRange>>
+#endif
+        void push_range(TRange&& range)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            for (auto&& elem : std::forward<TRange>(range))
+            {
+                m_queue.push(T(std::forward<decltype(elem)>(elem)));
+            }
+        }
+
+        /**
+         * @brief Pushes all elements from a range into the queue in an ISR-safe manner.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type is constructible to T.
+         * In C++17, accepts any iterable whose element type is constructible to T.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param range The source range of elements to push.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::constructible_from<T, std::ranges::range_value_t<TRange>>
+#endif
+        void isr_push_range(TRange&& range)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            for (auto&& elem : std::forward<TRange>(range))
+            {
+                m_queue.push(T(std::forward<decltype(elem)>(elem)));
+            }
         }
 
     private:
