@@ -42,11 +42,16 @@
 
 #include <algorithm>
 #include <cmath>
+#include <initializer_list>
+#include <iterator>
 #include <random>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#endif
 
 #include "tools/non_copyable.hpp"
 
@@ -116,6 +121,85 @@ namespace tools
             add_value(T(std::forward<U>(value)));
         }
 
+        /**
+         * @brief Adds values from a generic range-like source.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type is constructible to T.
+         * In C++17, accepts any iterable whose element type is constructible to T.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param values The source range of values.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+#endif
+        void add_range(TRange&& values)
+        {
+            for (auto&& value : std::forward<TRange>(values))
+            {
+                add(T(std::forward<decltype(value)>(value)));
+            }
+        }
+
+        /**
+         * @brief Adds values from an initializer-list source.
+         *
+         * @param values The source initializer-list of values.
+         */
+        void add_range(std::initializer_list<T> values)
+        {
+            for (const auto& value : values)
+            {
+                add(value);
+            }
+        }
+
+        /**
+         * @brief Backward-compatible alias for add_range(range).
+         *
+         * @tparam TRange The range type (deduced).
+         * @param values The source collection of values.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+#endif
+        void add_collection(TRange&& values)
+        {
+            add_range(std::forward<TRange>(values));
+        }
+
+        /**
+         * @brief Backward-compatible alias for add_range(initializer_list).
+         *
+         * @param values The source initializer-list of values.
+         */
+        void add_collection(std::initializer_list<T> values)
+        {
+            add_range(values);
+        }
+
     private:
         void add_value(T value)
         {
@@ -154,7 +238,7 @@ namespace tools
          *
          * @return The top value of the histogram.
          */
-        constexpr T top() const
+        [[nodiscard]] constexpr T top() const
         {
             return m_top_value;
         }
@@ -269,7 +353,11 @@ namespace tools
                 return 0.0;
             }
 
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            std::ranges::sort(to_sort);
+#else
             std::sort(to_sort.begin(), to_sort.end());
+#endif
 
             // https://www.calculator.net/mean-median-mode-range-calculator.html
 
@@ -301,7 +389,7 @@ namespace tools
          * @param standard_deviation The standard deviation (sigma) of the Gaussian distribution.
          * @return The density of the given value under the specified Gaussian distribution.
          */
-        double gaussian_density(T value, double average, double standard_deviation) const // NOLINT keep it
+        [[nodiscard]] double gaussian_density(T value, double average, double standard_deviation) const // NOLINT keep it
         {
             // https://fr.wikipedia.org/wiki/Loi_normale
             // https://www.savarese.org/math/gaussianintegral.html
@@ -332,7 +420,7 @@ namespace tools
          * @param montecarlo_samples The number of Monte Carlo samples to use for the estimation.
          * @return The estimated probability that a value falls within the specified range.
          */
-        double gaussian_probability(
+        [[nodiscard]] double gaussian_probability(
             T range_from, T range_to, double average, double standard_deviation, int montecarlo_samples) const
         {
             // https://cameron-mcelfresh.medium.com/monte-carlo-integration-313b37157852

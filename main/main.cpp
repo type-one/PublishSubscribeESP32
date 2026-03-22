@@ -1493,12 +1493,17 @@ void test_histogram_perfect_forwarding()
     constexpr const double value_exact = 2.5;
     constexpr const int value_int_conversion = 2;
     constexpr const float value_float_conversion = 2.5F;
+    constexpr const std::array<double, 2U> repeated_values = { 3.0, 3.0 };
 
     double lvalue_value = value_exact;
     hist.add(lvalue_value);              // exact-T lvalue overload path
     hist.add(value_exact);               // exact-T rvalue overload path
     hist.add(value_int_conversion);      // forwarding conversion path (int -> double)
     hist.add(value_float_conversion);    // forwarding conversion path (float -> double)
+
+    const std::vector<int> range_values = { 2, 3, 3 };
+    hist.add_range(range_values);
+    hist.add_range(repeated_values);
 
     std::printf("histogram total=%d top=%f occ=%d\n", hist.total_count(), hist.top(), hist.top_occurence());
 }

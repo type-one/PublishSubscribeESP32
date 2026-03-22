@@ -45,6 +45,11 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#endif
 
 #include "tests/test_helper.hpp"
 #include "tools/histogram.hpp"
@@ -83,6 +88,18 @@ template <typename Hist, typename ValueArg>
 concept has_histogram_add_call = requires(Hist& hist_ref, ValueArg&& value_arg)
 {
     hist_ref.add(std::forward<ValueArg>(value_arg));
+};
+
+template <typename Hist, typename Collection>
+concept has_histogram_add_collection_call = requires(Hist& hist_ref, Collection&& collection)
+{
+    hist_ref.add_collection(std::forward<Collection>(collection));
+};
+
+template <typename Hist, typename Collection>
+concept has_histogram_add_range_call = requires(Hist& hist_ref, Collection&& collection)
+{
+    hist_ref.add_range(std::forward<Collection>(collection));
 };
 #endif
 
@@ -406,6 +423,22 @@ TEST(HistogramPerfectForwardingTest, AddLvalueAndRvalueTriggerCopyMovePaths)
     }
 }
 
+/**
+ * @brief Verifies add_range supports generic ranges and brace-init lists.
+ */
+TEST(HistogramRangeTest, AddRangeSupportsRangeAndInitializerList)
+{
+    tools::histogram<double> hist;
+
+    hist.add_range({ 2.5, 2.5 });
+    const std::vector<int> extra_values = { 2, 3 };
+    hist.add_range(extra_values);
+
+    EXPECT_EQ(hist.total_count(), 4);
+    EXPECT_EQ(hist.top_occurence(), 2);
+    EXPECT_FLOAT_EQ(hist.top(), 2.5);
+}
+
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 /**
  * @brief Verifies C++20 requires constraints for histogram add forwarding API.
@@ -419,6 +452,30 @@ TEST(HistogramPerfectForwardingTest, Cpp20RequiresConstraints)
     static_assert(has_histogram_add_call<hist_double_t, int>);
     static_assert(has_histogram_add_call<hist_double_t, float>);
     static_assert(!has_histogram_add_call<hist_int_t, const char*>);
+
+    SUCCEED();
+}
+
+/**
+ * @brief Verifies C++20 range constraints for add_range API.
+ */
+TEST(HistogramRangeTest, Cpp20RangeConstraints)
+{
+    using hist_double_t = tools::histogram<double>;
+
+    static_assert(has_histogram_add_range_call<hist_double_t, std::vector<double>&>);
+    static_assert(has_histogram_add_range_call<hist_double_t, std::initializer_list<double>>);
+
+    const auto transformed = std::views::iota(0, 3)
+        | std::views::transform([](const int value)
+          {
+              return static_cast<float>(value);
+          });
+    static_assert(has_histogram_add_range_call<hist_double_t, decltype(transformed)>);
+
+    // Backward-compatibility aliases remain available.
+    static_assert(has_histogram_add_collection_call<hist_double_t, std::vector<double>&>);
+    static_assert(has_histogram_add_collection_call<hist_double_t, std::initializer_list<double>>);
 
     SUCCEED();
 }
