@@ -43,10 +43,16 @@
 #define SYNC_RING_VECTOR_HPP_
 
 #include <cstddef>
+#include <initializer_list>
+#include <iterator>
 #include <mutex>
 #include <optional>
 #include <type_traits>
 #include <utility>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#include <span>
+#endif
 
 #include "tools/critical_section.hpp"
 #include "tools/non_copyable.hpp"
@@ -174,7 +180,7 @@ namespace tools
          *
          * @return The first element of type T from the ring vector, or none if the vector is empty.
          */
-        std::optional<T> front() const
+        [[nodiscard]] std::optional<T> front() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -193,7 +199,7 @@ namespace tools
          *
          * @return The first element of type T from the ring vector, or none if the vector is empty.
          */
-        std::optional<T> front_pop()
+        [[nodiscard]] std::optional<T> front_pop()
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -212,7 +218,7 @@ namespace tools
          *
          * @return The moved first element, or none if the vector is empty.
          */
-        std::optional<T> front_pop_move()
+        [[nodiscard]] std::optional<T> front_pop_move()
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.pop_move();
@@ -226,7 +232,7 @@ namespace tools
          *
          * @return The last element of type T in the ring vector, or none if the vector is empty.
          */
-        std::optional<T> back() const
+        [[nodiscard]] std::optional<T> back() const
         {
             std::optional<T> item;
             std::lock_guard<tools::critical_section> guard(m_mutex);
@@ -245,7 +251,7 @@ namespace tools
          *
          * @return A copy of the internal ring vector.
          */
-        tools::ring_vector<T> snapshot() const
+        [[nodiscard]] tools::ring_vector<T> snapshot() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector;
@@ -259,7 +265,7 @@ namespace tools
          *
          * @return true if the ring vector is empty, false otherwise.
          */
-        bool empty() const
+        [[nodiscard]] bool empty() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.empty();
@@ -273,7 +279,7 @@ namespace tools
          *
          * @return true if the ring vector is full, false otherwise.
          */
-        bool full() const
+        [[nodiscard]] bool full() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.full();
@@ -286,7 +292,7 @@ namespace tools
          *
          * @return The number of elements in the ring vector.
          */
-        std::size_t size() const
+        [[nodiscard]] std::size_t size() const
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.size();
@@ -302,6 +308,83 @@ namespace tools
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.capacity();
         }
+
+        /**
+         * @brief Pushes all elements from a range into the ring vector.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type is constructible to T.
+         * In C++17, accepts any iterable whose element type is constructible to T.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param range The source range of elements to push.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+#endif
+        void push_range(TRange&& range)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_vector.push_range(std::forward<TRange>(range));
+        }
+
+        /**
+         * @brief Pushes all elements from an initializer-list into the ring vector.
+         *
+         * @tparam U The initializer-list element type.
+         * @param range The source initializer-list.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, const U&>
+#endif
+        void push_range(std::initializer_list<U> range)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_vector.push_range(range);
+        }
+
+        /**
+         * @brief Pops a batch of elements into an output range under a single lock.
+         *
+         * @tparam OutputIt Output iterator type.
+         * @param first Destination begin iterator.
+         * @param last Destination end iterator.
+         * @return The effective number of elements extracted.
+         */
+        template <typename OutputIt>
+        [[nodiscard]] std::size_t pop_range(OutputIt first, OutputIt last)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            return m_ring_vector.pop_range(first, last);
+        }
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        /**
+         * @brief C++20 span-based batch pop into contiguous storage.
+         *
+         * @param destination Span over writable destination storage.
+         * @return The effective number of elements extracted.
+         */
+        [[nodiscard]] std::size_t pop_range(std::span<T> destination)
+        {
+            return pop_range(destination.begin(), destination.end());
+        }
+#endif
 
         /**
          * @brief Resizes the ring vector to the specified new size.
@@ -390,13 +473,62 @@ namespace tools
         }
 
         /**
+         * @brief Pushes all elements from a range into the ring vector in an ISR-safe manner.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type is constructible to T.
+         * In C++17, accepts any iterable whose element type is constructible to T.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param range The source range of elements to push.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+#endif
+        void isr_push_range(TRange&& range)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_vector.push_range(std::forward<TRange>(range));
+        }
+
+        /**
+         * @brief Pushes all elements from an initializer-list into the ring vector in an ISR-safe manner.
+         *
+         * @tparam U The initializer-list element type.
+         * @param range The source initializer-list.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, const U&>
+#endif
+        void isr_push_range(std::initializer_list<U> range)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            m_ring_vector.push_range(range);
+        }
+
+        /**
          * @brief Checks if the ring vector is full in an interrupt service routine (ISR) context.
          *
          * This function uses an ISR lock guard to ensure thread safety while checking if the ring vector is full.
          *
          * @return true if the ring vector is full, false otherwise.
          */
-        bool isr_full() const
+        [[nodiscard]] bool isr_full() const
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.full();
@@ -411,7 +543,7 @@ namespace tools
          *
          * @return The size of the ring vector.
          */
-        std::size_t isr_size() const
+        [[nodiscard]] std::size_t isr_size() const
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_ring_vector.size();

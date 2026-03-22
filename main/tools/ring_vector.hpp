@@ -42,11 +42,16 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <initializer_list>
 #include <iterator>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#include <span>
+#endif
 
 namespace tools
 {
@@ -379,6 +384,99 @@ namespace tools
         {
             return m_capacity;
         }
+
+        /**
+         * @brief Pushes all elements from a range into the ring vector.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type is constructible to T.
+         * In C++17, accepts any iterable whose element type is constructible to T.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param range The source range of elements to push.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+#endif
+        void push_range(TRange&& range)
+        {
+            for (auto&& elem : std::forward<TRange>(range))
+            {
+                push(T(std::forward<decltype(elem)>(elem)));
+            }
+        }
+
+        /**
+         * @brief Pushes all elements from an initializer-list into the ring vector.
+         *
+         * This overload enables direct brace-init calls like
+         * `vector.push_range({ ... })` while preserving type constraints.
+         *
+         * @tparam U The initializer-list element type.
+         * @param range The source initializer-list.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, const U&>
+#endif
+        void push_range(std::initializer_list<U> range)
+        {
+            for (const auto& elem : range)
+            {
+                push(T(elem));
+            }
+        }
+
+        /**
+         * @brief Pops a batch of elements into an output range.
+         *
+         * Extracts up to destination capacity in FIFO order.
+         *
+         * @tparam OutputIt Output iterator type.
+         * @param first Destination begin iterator.
+         * @param last Destination end iterator.
+         * @return The effective number of elements extracted.
+         */
+        template <typename OutputIt>
+        [[nodiscard]] std::size_t pop_range(OutputIt first, OutputIt last)
+        {
+            std::size_t popped_count = 0U;
+            while ((first != last) && !empty())
+            {
+                *first = front();
+                ++first;
+                pop();
+                ++popped_count;
+            }
+            return popped_count;
+        }
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        /**
+         * @brief C++20 span-based batch pop into contiguous storage.
+         *
+         * @param destination Span over writable destination storage.
+         * @return The effective number of elements extracted.
+         */
+        [[nodiscard]] std::size_t pop_range(std::span<T> destination)
+        {
+            return pop_range(destination.begin(), destination.end());
+        }
+#endif
 
         /**
          * @brief Accesses the element at the specified index in the ring vector.

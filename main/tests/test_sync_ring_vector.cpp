@@ -38,6 +38,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <complex>
 #include <memory>
 #include <string>
@@ -45,6 +46,10 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <span>
+#endif
 
 #include "tools/sync_ring_vector.hpp"
 
@@ -531,6 +536,95 @@ TEST(SyncRingVectorPerfectForwardingTest, SupportsMoveOnlyType)
 
     EXPECT_FALSE(vec.front_pop_move().has_value());
 }
+
+/**
+ * @brief Verifies push_range supports initializer-list and generic range insertion.
+ */
+TEST(SyncRingVectorRangeTest, PushRangeSupportsInitializerAndRange)
+{
+    tools::sync_ring_vector<int> vec(8);
+
+    vec.push_range({ 1, 2, 3 });
+    const std::vector<int> extra_values = { 4, 5 };
+    vec.push_range(extra_values);
+
+    EXPECT_EQ(vec.size(), 5U);
+    EXPECT_EQ(vec.front().value_or(0), 1);
+    EXPECT_EQ(vec.back().value_or(0), 5);
+}
+
+/**
+ * @brief Verifies ISR push_range supports initializer-list and generic ranges.
+ */
+TEST(SyncRingVectorRangeTest, IsrPushRangeSupportsInitializerAndRange)
+{
+    // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()
+    tools::sync_ring_vector<int> vec(8);
+
+    vec.isr_push_range({ 6, 7 });
+    const std::vector<int> extra_values = { 8, 9 };
+    vec.isr_push_range(extra_values);
+
+    EXPECT_EQ(vec.isr_size(), 4U);
+    EXPECT_EQ(vec.front().value_or(0), 6);
+    EXPECT_EQ(vec.back().value_or(0), 9);
+}
+
+/**
+ * @brief Verifies iterator-based pop_range returns effective extracted count.
+ */
+TEST(SyncRingVectorRangeTest, PopRangeIteratorReturnsEffectiveCount)
+{
+    tools::sync_ring_vector<int> vec(8);
+    vec.push_range({ 10, 20, 30, 40 });
+
+    std::array<int, 3> destination = { 0, 0, 0 };
+    const std::size_t popped_count = vec.pop_range(destination.begin(), destination.end());
+
+    ASSERT_EQ(popped_count, 3U);
+    EXPECT_EQ(destination[0], 10);
+    EXPECT_EQ(destination[1], 20);
+    EXPECT_EQ(destination[2], 30);
+    EXPECT_EQ(vec.size(), 1U);
+    EXPECT_EQ(vec.front().value_or(0), 40);
+}
+
+/**
+ * @brief Verifies pop_range clamps to available elements.
+ */
+TEST(SyncRingVectorRangeTest, PopRangeClampsToAvailable)
+{
+    tools::sync_ring_vector<int> vec(8);
+    vec.push_range({ 50, 60 });
+
+    std::array<int, 5> destination = { 0, 0, 0, 0, 0 };
+    const std::size_t popped_count = vec.pop_range(destination.begin(), destination.end());
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(destination[0], 50);
+    EXPECT_EQ(destination[1], 60);
+    EXPECT_TRUE(vec.empty());
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+/**
+ * @brief Verifies C++20 span-based pop_range overload.
+ */
+TEST(SyncRingVectorRangeTest, PopRangeSpanReturnsEffectiveCount)
+{
+    tools::sync_ring_vector<int> vec(8);
+    vec.push_range({ 70, 80, 90 });
+
+    std::array<int, 2> destination = { 0, 0 };
+    const std::size_t popped_count = vec.pop_range(std::span<int>(destination));
+
+    ASSERT_EQ(popped_count, 2U);
+    EXPECT_EQ(destination[0], 70);
+    EXPECT_EQ(destination[1], 80);
+    EXPECT_EQ(vec.size(), 1U);
+    EXPECT_EQ(vec.front().value_or(0), 90);
+}
+#endif
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 namespace
