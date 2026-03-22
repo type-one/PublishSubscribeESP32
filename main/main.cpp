@@ -3262,19 +3262,20 @@ void test_smp_tasks_memory_pipe()
 
             const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(20);        
 
-            while(!stop.load())
+            while (!stop.load())
             {
-                std::vector<std::uint8_t> received;
                 constexpr const std::size_t bytes_to_receive = 128U;
-                const auto received_bytes = context->m_to_worker_pipe.receive(received, bytes_to_receive, timeout);
+                std::array<std::uint8_t, bytes_to_receive> received = {};
+                const auto received_bytes = context->m_to_worker_pipe.receive_range(
+                    received.begin(), received.end(), timeout);
                 if (received_bytes > 0U)
                 {
-                    for(const auto val : received)
+                    auto *iter = std::data(received);
+                    for (std::size_t idx = 0U; idx < received_bytes; ++idx)
                     {
-                        std::printf("%c", val);   
+                        std::printf("%c", *iter++);
                     }
                 }
-                
             }
 
             std::printf("\n");
@@ -3291,9 +3292,8 @@ void test_smp_tasks_memory_pipe()
             if (offset < label.size())
             {            
                 const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(10);
-                const auto sent = context->m_to_worker_pipe.send(
-                    reinterpret_cast<const std::uint8_t*>(label.data() + offset), // NOLINT const char* to const std::uint8_t* 
-                    to_send, timeout);
+                const std::string_view chunk(label.data() + offset, to_send);
+                const auto sent = context->m_to_worker_pipe.send_range(chunk, timeout);
                 offset += sent; // try again on characters left 
             }
         };
@@ -3328,13 +3328,20 @@ void test_memory_pipe_perfect_forwarding()
     std::vector<std::uint8_t> lvalue_data(lvalue_payload.begin(), lvalue_payload.end());
     std::vector<std::uint8_t> received;
 
-    pipe.send(lvalue_data, timeout);
-    pipe.receive(received, lvalue_data.size(), timeout);
-    std::printf("lvalue bytes: %zu\n", received.size());
+    const auto lvalue_sent = pipe.send(lvalue_data, timeout);
+    const auto lvalue_received = pipe.receive(received, lvalue_data.size(), timeout);
+    std::printf("lvalue bytes: sent=%zu received=%zu\n", lvalue_sent, lvalue_received);
 
-    pipe.send(std::vector<std::uint8_t>(rvalue_payload.begin(), rvalue_payload.end()), timeout);
-    pipe.receive(received, rvalue_payload.size(), timeout);
-    std::printf("rvalue bytes: %zu\n", received.size());
+    const auto rvalue_sent = pipe.send(std::vector<std::uint8_t>(rvalue_payload.begin(), rvalue_payload.end()), timeout);
+    const auto rvalue_received = pipe.receive(received, rvalue_payload.size(), timeout);
+    std::printf("rvalue bytes: sent=%zu received=%zu\n", rvalue_sent, rvalue_received);
+
+    const std::vector<std::uint8_t> range_values = { 10U, 11U, 12U, 13U };
+    const auto range_sent = pipe.send_range(range_values, timeout);
+    constexpr const std::size_t range_batch_size = 4U;
+    std::array<std::uint8_t, range_batch_size> range_received = { 0U, 0U, 0U, 0U };
+    const auto range_received_count = pipe.receive_range(range_received.begin(), range_received.end(), timeout);
+    std::printf("range bytes: sent=%zu received=%zu\n", range_sent, range_received_count);
 
     struct vector_convertible_data
     {
@@ -3349,9 +3356,14 @@ void test_memory_pipe_perfect_forwarding()
     auto converted = vector_convertible_data {
         std::vector<std::uint8_t>(conversion_payload.begin(), conversion_payload.end())
     };
-    pipe.send(std::move(converted), timeout);
-    pipe.receive(received, conversion_payload.size(), timeout);
-    std::printf("conversion bytes: %zu\n", received.size());
+    const auto conversion_sent = pipe.send(std::move(converted), timeout);
+    const auto conversion_received = pipe.receive(received, conversion_payload.size(), timeout);
+    std::printf("conversion bytes: sent=%zu received=%zu\n", conversion_sent, conversion_received);
+
+    const auto isr_sent = pipe.isr_send_range({ 14U, 15U, 16U });
+    std::array<std::uint8_t, 3> isr_received = { 0U, 0U, 0U };
+    const auto isr_received_count = pipe.isr_receive_range(isr_received.begin(), isr_received.end());
+    std::printf("isr range bytes: sent=%zu received=%zu\n", isr_sent, isr_received_count);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------

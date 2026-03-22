@@ -39,9 +39,15 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
+#include <iterator>
 #include <type_traits>
 #include <utility>
 #include <vector>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#include <span>
+#endif
 
 #include "tools/non_copyable.hpp"
 #include "tools/platform_helpers.hpp"
@@ -105,7 +111,7 @@ namespace tools
          *
          * @return std::size_t The capacity of the memory pipe.
          */
-        std::size_t capacity() const
+        [[nodiscard]] std::size_t capacity() const
         {
             return m_capacity;
         }
@@ -121,7 +127,7 @@ namespace tools
          * @param timeout Maximum duration to keep trying to send the data before giving up.
          * @return The number of bytes successfully sent.
          */
-        std::size_t send(const std::uint8_t* data, std::size_t send_bytes,
+        [[nodiscard]] std::size_t send(const std::uint8_t* data, std::size_t send_bytes,
             const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
             std::size_t sent = 0U;
@@ -175,7 +181,7 @@ namespace tools
          * @param timeout Maximum duration to keep trying to send the data before giving up.
          * @return The number of bytes successfully sent.
          */
-        std::size_t send(
+        [[nodiscard]] std::size_t send(
             const std::vector<std::uint8_t>& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
             return send(data.data(), data.size(), timeout);
@@ -184,7 +190,7 @@ namespace tools
         /**
          * @brief Sends data through the memory pipe from an rvalue vector.
          */
-        std::size_t send(
+        [[nodiscard]] std::size_t send(
             std::vector<std::uint8_t>&& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
             return send(data.data(), data.size(), timeout);
@@ -204,9 +210,71 @@ namespace tools
             requires std::is_constructible_v<std::vector<std::uint8_t>, UData>
                          && (!std::is_integral_v<std::decay_t<UData>>)
 #endif
-        std::size_t send(UData&& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        [[nodiscard]] std::size_t send(UData&& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
             auto forwarding_data = std::vector<std::uint8_t>(std::forward<UData>(data));
+            return send(forwarding_data.data(), forwarding_data.size(), timeout);
+        }
+
+        /**
+         * @brief Sends bytes from a generic range source.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type is
+         * constructible to std::uint8_t. In C++17, accepts any iterable source
+         * whose dereferenced element is constructible to std::uint8_t.
+         *
+         * @return The number of bytes successfully sent.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_convertible<
+                    typename std::decay<
+                        decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                    >::type,
+                    std::uint8_t
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_convertible_v<std::ranges::range_value_t<TRange>, std::uint8_t>
+#endif
+        [[nodiscard]] std::size_t send_range(
+            TRange&& range, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        {
+            std::vector<std::uint8_t> forwarding_data;
+            for (auto&& value : std::forward<TRange>(range))
+            {
+                forwarding_data.push_back(std::uint8_t(std::forward<decltype(value)>(value)));
+            }
+
+            return send(forwarding_data.data(), forwarding_data.size(), timeout);
+        }
+
+        /**
+         * @brief Sends bytes from an initializer-list source.
+         *
+         * @return The number of bytes successfully sent.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_convertible<const U&, std::uint8_t>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_convertible_v<const U&, std::uint8_t>
+#endif
+        [[nodiscard]] std::size_t send_range(
+            std::initializer_list<U> range, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        {
+            std::vector<std::uint8_t> forwarding_data;
+            for (const auto& value : range)
+            {
+                forwarding_data.push_back(std::uint8_t(value));
+            }
+
             return send(forwarding_data.data(), forwarding_data.size(), timeout);
         }
 
@@ -221,7 +289,7 @@ namespace tools
          * @param timeout The maximum duration to wait for the data.
          * @return The number of bytes successfully received.
          */
-        std::size_t receive(
+        [[nodiscard]] std::size_t receive(
             std::uint8_t* data, std::size_t rcv_bytes, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
             std::size_t received = 0U;
@@ -271,7 +339,7 @@ namespace tools
          * @param timeout The maximum duration to wait for the data.
          * @return The number of bytes successfully received.
          */
-        std::size_t receive(std::vector<std::uint8_t>& data, std::size_t rcv_bytes,
+        [[nodiscard]] std::size_t receive(std::vector<std::uint8_t>& data, std::size_t rcv_bytes,
             const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
             data.resize(rcv_bytes);
@@ -279,6 +347,40 @@ namespace tools
             data.resize(effective_size);
             return effective_size;
         }
+
+        /**
+         * @brief Receives bytes into an output iterator range.
+         *
+         * Extracts up to the destination capacity and returns the effective
+         * number of bytes received.
+         */
+        template <typename OutputIt>
+        [[nodiscard]] std::size_t receive_range(OutputIt first, OutputIt last,
+            const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        {
+            const auto destination_size = static_cast<std::size_t>(std::distance(first, last));
+            std::vector<std::uint8_t> buffer(destination_size);
+            const std::size_t received_count = receive(buffer.data(), buffer.size(), timeout);
+
+            for (std::size_t idx = 0U; idx < received_count; ++idx)
+            {
+                *first = buffer[idx];
+                ++first;
+            }
+
+            return received_count;
+        }
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        /**
+         * @brief Receives bytes into contiguous storage exposed as std::span.
+         */
+        [[nodiscard]] std::size_t receive_range(std::span<std::uint8_t> destination,
+            const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        {
+            return receive(destination.data(), destination.size(), timeout);
+        }
+#endif
 
         /**
          * @brief Sends data from an ISR context.
@@ -290,7 +392,7 @@ namespace tools
          * @param send_bytes Number of bytes to send from the data buffer.
          * @return The number of bytes successfully sent.
          */
-        std::size_t isr_send(const std::uint8_t* data, std::size_t send_bytes)
+        [[nodiscard]] std::size_t isr_send(const std::uint8_t* data, std::size_t send_bytes)
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
             return send(data, send_bytes, std::chrono::duration<std::uint64_t, std::milli>(0));
@@ -305,7 +407,7 @@ namespace tools
          * @param data std::vector data buffer to be sent.
          * @return The number of bytes successfully sent.
          */
-        std::size_t isr_send(const std::vector<std::uint8_t>& data)
+        [[nodiscard]] std::size_t isr_send(const std::vector<std::uint8_t>& data)
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
             return isr_send(data.data(), data.size());
@@ -314,7 +416,7 @@ namespace tools
         /**
          * @brief Sends data from an ISR context from an rvalue vector.
          */
-        std::size_t isr_send(std::vector<std::uint8_t>&& data)
+        [[nodiscard]] std::size_t isr_send(std::vector<std::uint8_t>&& data)
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
             return isr_send(data.data(), data.size());
@@ -334,9 +436,65 @@ namespace tools
             requires std::is_constructible_v<std::vector<std::uint8_t>, UData>
                          && (!std::is_integral_v<std::decay_t<UData>>)
 #endif
-        std::size_t isr_send(UData&& data)
+        [[nodiscard]] std::size_t isr_send(UData&& data)
         {
             auto forwarding_data = std::vector<std::uint8_t>(std::forward<UData>(data));
+            return isr_send(forwarding_data.data(), forwarding_data.size());
+        }
+
+        /**
+         * @brief Sends bytes from a generic range source in ISR context.
+         *
+         * On standard C++ platform, ISR variants fallback to standard semantics.
+         *
+         * @return The number of bytes successfully sent.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_convertible<
+                    typename std::decay<
+                        decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                    >::type,
+                    std::uint8_t
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_convertible_v<std::ranges::range_value_t<TRange>, std::uint8_t>
+#endif
+        [[nodiscard]] std::size_t isr_send_range(TRange&& range)
+        {
+            std::vector<std::uint8_t> forwarding_data;
+            for (auto&& value : std::forward<TRange>(range))
+            {
+                forwarding_data.push_back(std::uint8_t(std::forward<decltype(value)>(value)));
+            }
+
+            return isr_send(forwarding_data.data(), forwarding_data.size());
+        }
+
+        /**
+         * @brief Sends bytes from an initializer-list source in ISR context.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_convertible<const U&, std::uint8_t>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_convertible_v<const U&, std::uint8_t>
+#endif
+        [[nodiscard]] std::size_t isr_send_range(std::initializer_list<U> range)
+        {
+            std::vector<std::uint8_t> forwarding_data;
+            for (const auto& value : range)
+            {
+                forwarding_data.push_back(std::uint8_t(value));
+            }
+
             return isr_send(forwarding_data.data(), forwarding_data.size());
         }
 
@@ -350,7 +508,7 @@ namespace tools
          * @param rcv_bytes Number of bytes to receive.
          * @return The number of bytes actually received.
          */
-        std::size_t isr_receive(std::uint8_t* data, std::size_t rcv_bytes)
+        [[nodiscard]] std::size_t isr_receive(std::uint8_t* data, std::size_t rcv_bytes)
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
             return receive(data, rcv_bytes, std::chrono::duration<std::uint64_t, std::milli>(0));
@@ -366,7 +524,7 @@ namespace tools
          * @param rcv_bytes Number of bytes to receive.
          * @return The number of bytes actually received.
          */
-        std::size_t isr_receive(std::vector<std::uint8_t>& data, std::size_t rcv_bytes)
+        [[nodiscard]] std::size_t isr_receive(std::vector<std::uint8_t>& data, std::size_t rcv_bytes)
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
             data.resize(rcv_bytes);
@@ -374,6 +532,35 @@ namespace tools
             data.resize(effective_size);
             return effective_size;
         }
+
+        /**
+         * @brief Receives bytes into an output iterator range in ISR context.
+         */
+        template <typename OutputIt>
+        [[nodiscard]] std::size_t isr_receive_range(OutputIt first, OutputIt last)
+        {
+            const auto destination_size = static_cast<std::size_t>(std::distance(first, last));
+            std::vector<std::uint8_t> buffer(destination_size);
+            const std::size_t received_count = isr_receive(buffer.data(), buffer.size());
+
+            for (std::size_t idx = 0U; idx < received_count; ++idx)
+            {
+                *first = buffer[idx];
+                ++first;
+            }
+
+            return received_count;
+        }
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        /**
+         * @brief Receives bytes into contiguous storage exposed as std::span in ISR context.
+         */
+        [[nodiscard]] std::size_t isr_receive_range(std::span<std::uint8_t> destination)
+        {
+            return isr_receive(destination.data(), destination.size());
+        }
+#endif
 
     private:
         /**

@@ -42,12 +42,17 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <chrono>
 #include <memory>
 #include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#include <span>
+#endif
 
 #include "tools/memory_pipe.hpp"
 
@@ -280,7 +285,89 @@ TEST_F(MemoryPipeTest, PerfectForwardingSendSupportsLvalueRvalueAndConversion)
     ASSERT_EQ(received, (std::vector<std::uint8_t> { 9U, 8U, 7U, 6U }));
 }
 
+TEST_F(MemoryPipeTest, SendRangeSupportsInitializerAndRange)
+{
+    tools::memory_pipe local_pipe(64U);
+    const auto timeout = std::chrono::milliseconds(100);
+
+    const std::vector<std::uint8_t> extra_values = { 4U, 5U };
+    ASSERT_EQ(local_pipe.send_range({ 1U, 2U, 3U }, timeout), 3U);
+    ASSERT_EQ(local_pipe.send_range(extra_values, timeout), extra_values.size());
+
+    std::array<std::uint8_t, 5> received = { 0U, 0U, 0U, 0U, 0U };
+    const std::size_t received_count = local_pipe.receive_range(received.begin(), received.end(), timeout);
+
+    ASSERT_EQ(received_count, 5U);
+    EXPECT_EQ(received[0], 1U);
+    EXPECT_EQ(received[1], 2U);
+    EXPECT_EQ(received[2], 3U);
+    EXPECT_EQ(received[3], 4U);
+    EXPECT_EQ(received[4], 5U);
+}
+
+TEST_F(MemoryPipeTest, IsrSendRangeSupportsInitializerAndRange)
+{
+    tools::memory_pipe local_pipe(64U);
+
+    const std::vector<std::uint8_t> extra_values = { 8U, 9U };
+    ASSERT_EQ(local_pipe.isr_send_range({ 6U, 7U }), 2U);
+    ASSERT_EQ(local_pipe.isr_send_range(extra_values), extra_values.size());
+
+    std::array<std::uint8_t, 4> received = { 0U, 0U, 0U, 0U };
+    const std::size_t received_count = local_pipe.isr_receive_range(received.begin(), received.end());
+
+    ASSERT_EQ(received_count, 4U);
+    EXPECT_EQ(received[0], 6U);
+    EXPECT_EQ(received[1], 7U);
+    EXPECT_EQ(received[2], 8U);
+    EXPECT_EQ(received[3], 9U);
+}
+
+TEST_F(MemoryPipeTest, ReceiveRangeClampsToAvailable)
+{
+    tools::memory_pipe local_pipe(64U);
+    const auto timeout = std::chrono::milliseconds(100);
+
+    ASSERT_EQ(local_pipe.send_range({ 11U, 12U }, timeout), 2U);
+
+    std::array<std::uint8_t, 5> received = { 0U, 0U, 0U, 0U, 0U };
+    const std::size_t received_count = local_pipe.receive_range(received.begin(), received.end(), timeout);
+
+    ASSERT_EQ(received_count, 2U);
+    EXPECT_EQ(received[0], 11U);
+    EXPECT_EQ(received[1], 12U);
+}
+
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+TEST_F(MemoryPipeTest, ReceiveRangeSpanReturnsEffectiveCount)
+{
+    tools::memory_pipe local_pipe(64U);
+    const auto timeout = std::chrono::milliseconds(100);
+
+    ASSERT_EQ(local_pipe.send_range({ 21U, 22U, 23U }, timeout), 3U);
+
+    std::array<std::uint8_t, 2> received = { 0U, 0U };
+    const std::size_t received_count = local_pipe.receive_range(std::span<std::uint8_t>(received), timeout);
+
+    ASSERT_EQ(received_count, 2U);
+    EXPECT_EQ(received[0], 21U);
+    EXPECT_EQ(received[1], 22U);
+}
+
+TEST_F(MemoryPipeTest, IsrReceiveRangeSpanReturnsEffectiveCount)
+{
+    tools::memory_pipe local_pipe(64U);
+
+    ASSERT_EQ(local_pipe.isr_send_range({ 31U, 32U, 33U }), 3U);
+
+    std::array<std::uint8_t, 2> received = { 0U, 0U };
+    const std::size_t received_count = local_pipe.isr_receive_range(std::span<std::uint8_t>(received));
+
+    ASSERT_EQ(received_count, 2U);
+    EXPECT_EQ(received[0], 31U);
+    EXPECT_EQ(received[1], 32U);
+}
+
 namespace
 {
     template <typename TData, typename = void>
@@ -306,6 +393,30 @@ namespace
         : std::true_type
     {
     };
+
+    template <typename TRange, typename = void>
+    struct can_call_send_range_with_timeout : std::false_type
+    {
+    };
+
+    template <typename TRange>
+    struct can_call_send_range_with_timeout<TRange,
+        std::void_t<decltype(std::declval<tools::memory_pipe&>().send_range(std::declval<TRange>(),
+            std::declval<const std::chrono::duration<std::uint64_t, std::milli>&>()))>> : std::true_type
+    {
+    };
+
+    template <typename TRange, typename = void>
+    struct can_call_isr_send_range : std::false_type
+    {
+    };
+
+    template <typename TRange>
+    struct can_call_isr_send_range<TRange,
+        std::void_t<decltype(std::declval<tools::memory_pipe&>().isr_send_range(std::declval<TRange>()))>>
+        : std::true_type
+    {
+    };
 }
 
 TEST(MemoryPipeCompileTimeChecks, PerfectForwardingSendConstraints)
@@ -317,5 +428,27 @@ TEST(MemoryPipeCompileTimeChecks, PerfectForwardingSendConstraints)
     static_assert(can_call_isr_send<std::vector<std::uint8_t>>::value);
     static_assert(can_call_isr_send<vector_convertible_data>::value);
     static_assert(!can_call_isr_send<int>::value);
+}
+
+TEST(MemoryPipeCompileTimeChecks, RangeConstraints)
+{
+    static_assert(can_call_send_range_with_timeout<std::vector<std::uint8_t>>::value);
+    static_assert(can_call_send_range_with_timeout<std::initializer_list<std::uint8_t>>::value);
+    static_assert(!can_call_send_range_with_timeout<int>::value);
+
+    static_assert(can_call_isr_send_range<std::vector<std::uint8_t>>::value);
+    static_assert(can_call_isr_send_range<std::initializer_list<std::uint8_t>>::value);
+    static_assert(!can_call_isr_send_range<int>::value);
+
+    const auto transformed = std::views::iota(0, 3)
+        | std::views::transform([](const int value)
+          {
+              return static_cast<std::uint8_t>(value + 41);
+          });
+
+    static_assert(can_call_send_range_with_timeout<decltype(transformed)>::value);
+    static_assert(can_call_isr_send_range<decltype(transformed)>::value);
+
+    SUCCEED();
 }
 #endif
