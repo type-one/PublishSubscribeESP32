@@ -29,7 +29,7 @@ Goodies:
   Rainer Grimm and Bartlomiej Filipek C++ publications)
 - C++20 calendar day test
 - simple timer helper using 3rdparty (Michael Egli - MIT license) for standard implementation and using FreeRTOS timer for FreeRTOS platform
-- C++20 only: custom pool allocator for global new/new[]/delete/delete[]
+- custom pool allocator for global new/new[]/delete/delete[]
 
 [GitHub repository](https://github.com/type-one/PublishSubscribeESP32)
 
