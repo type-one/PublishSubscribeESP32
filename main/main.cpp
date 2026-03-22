@@ -3104,6 +3104,47 @@ void test_smp_tasks_memory_pipe()
     }
 }
 
+void test_memory_pipe_perfect_forwarding()
+{
+    LOG_INFO("-- memory pipe perfect forwarding --");
+    print_stats();
+
+    constexpr const std::size_t capacity = 64U;
+    tools::memory_pipe pipe(capacity);
+    constexpr const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(100);
+    constexpr const std::array<std::uint8_t, 4> lvalue_payload = { 1U, 2U, 3U, 4U };
+    constexpr const std::array<std::uint8_t, 3> rvalue_payload = { 5U, 6U, 7U };
+    constexpr const std::array<std::uint8_t, 4> conversion_payload = { 9U, 8U, 7U, 6U };
+
+    std::vector<std::uint8_t> lvalue_data(lvalue_payload.begin(), lvalue_payload.end());
+    std::vector<std::uint8_t> received;
+
+    pipe.send(lvalue_data, timeout);
+    pipe.receive(received, lvalue_data.size(), timeout);
+    std::printf("lvalue bytes: %zu\n", received.size());
+
+    pipe.send(std::vector<std::uint8_t>(rvalue_payload.begin(), rvalue_payload.end()), timeout);
+    pipe.receive(received, rvalue_payload.size(), timeout);
+    std::printf("rvalue bytes: %zu\n", received.size());
+
+    struct vector_convertible_data
+    {
+        std::vector<std::uint8_t> payload;
+
+        operator std::vector<std::uint8_t>() &&
+        {
+            return std::move(payload);
+        }
+    };
+
+    auto converted = vector_convertible_data {
+        std::vector<std::uint8_t>(conversion_payload.begin(), conversion_payload.end())
+    };
+    pipe.send(std::move(converted), timeout);
+    pipe.receive(received, conversion_payload.size(), timeout);
+    std::printf("conversion bytes: %zu\n", received.size());
+}
+
 //--------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -3418,6 +3459,7 @@ void runner()
 
     test_smp_tasks_cpu_affinity();
     test_smp_tasks_lock_free_ring_buffer();
+    test_memory_pipe_perfect_forwarding();
     test_smp_tasks_memory_pipe();
     test_tasks_priority();
     

@@ -39,6 +39,8 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "tools/non_copyable.hpp"
@@ -180,6 +182,35 @@ namespace tools
         }
 
         /**
+         * @brief Sends data through the memory pipe from an rvalue vector.
+         */
+        std::size_t send(
+            std::vector<std::uint8_t>&& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        {
+            return send(data.data(), data.size(), timeout);
+        }
+
+        /**
+         * @brief Sends data through the memory pipe using perfect forwarding.
+         */
+        template <typename UData
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<std::vector<std::uint8_t>, UData>::value
+                && !std::is_integral<typename std::decay<UData>::type>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<std::vector<std::uint8_t>, UData>
+                         && (!std::is_integral_v<std::decay_t<UData>>)
+#endif
+        std::size_t send(UData&& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        {
+            auto forwarding_data = std::vector<std::uint8_t>(std::forward<UData>(data));
+            return send(forwarding_data.data(), forwarding_data.size(), timeout);
+        }
+
+        /**
          * @brief Receives data from the memory pipe with a specified timeout.
          *
          * This function attempts to receive a specified number of bytes from the memory pipe.
@@ -278,6 +309,35 @@ namespace tools
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
             return isr_send(data.data(), data.size());
+        }
+
+        /**
+         * @brief Sends data from an ISR context from an rvalue vector.
+         */
+        std::size_t isr_send(std::vector<std::uint8_t>&& data)
+        {
+            // no calls from ISRs in standard C++ platform, fallback to standard call
+            return isr_send(data.data(), data.size());
+        }
+
+        /**
+         * @brief Sends data from an ISR context using perfect forwarding.
+         */
+        template <typename UData
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            ,
+            typename = typename std::enable_if<std::is_constructible<std::vector<std::uint8_t>, UData>::value
+                && !std::is_integral<typename std::decay<UData>::type>::value>::type
+#endif
+            >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<std::vector<std::uint8_t>, UData>
+                         && (!std::is_integral_v<std::decay_t<UData>>)
+#endif
+        std::size_t isr_send(UData&& data)
+        {
+            auto forwarding_data = std::vector<std::uint8_t>(std::forward<UData>(data));
+            return isr_send(forwarding_data.data(), forwarding_data.size());
         }
 
         /**

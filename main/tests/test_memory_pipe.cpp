@@ -45,6 +45,8 @@
 #include <chrono>
 #include <memory>
 #include <thread>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "tools/memory_pipe.hpp"
@@ -235,3 +237,85 @@ TEST_F(MemoryPipeTest, SingleProducerSingleConsumer)
     producer.join();
     consumer.join();
 }
+
+namespace
+{
+    struct vector_convertible_data
+    {
+        std::vector<std::uint8_t> payload;
+
+        operator std::vector<std::uint8_t>() &&
+        {
+            return std::move(payload);
+        }
+    };
+}
+
+TEST_F(MemoryPipeTest, PerfectForwardingSendSupportsLvalueRvalueAndConversion)
+{
+    constexpr std::size_t local_capacity = 64U;
+    tools::memory_pipe local_pipe(local_capacity);
+
+    const auto timeout = std::chrono::milliseconds(100);
+
+    // lvalue vector path
+    std::vector<std::uint8_t> lvalue_data = { 1U, 2U, 3U, 4U };
+    std::vector<std::uint8_t> received;
+    ASSERT_EQ(local_pipe.send(lvalue_data, timeout), lvalue_data.size());
+    ASSERT_EQ(local_pipe.receive(received, lvalue_data.size(), timeout), lvalue_data.size());
+    ASSERT_EQ(received, lvalue_data);
+
+    // rvalue vector path
+    received.clear();
+    std::vector<std::uint8_t> rvalue_expected = { 5U, 6U, 7U };
+    ASSERT_EQ(local_pipe.send(std::vector<std::uint8_t> { 5U, 6U, 7U }, timeout), rvalue_expected.size());
+    ASSERT_EQ(local_pipe.receive(received, rvalue_expected.size(), timeout), rvalue_expected.size());
+    ASSERT_EQ(received, rvalue_expected);
+
+    // conversion path
+    received.clear();
+    vector_convertible_data converted { std::vector<std::uint8_t> { 9U, 8U, 7U, 6U } };
+    ASSERT_EQ(local_pipe.send(std::move(converted), timeout), 4U);
+    ASSERT_EQ(local_pipe.receive(received, 4U, timeout), 4U);
+    ASSERT_EQ(received, (std::vector<std::uint8_t> { 9U, 8U, 7U, 6U }));
+}
+
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+namespace
+{
+    template <typename TData, typename = void>
+    struct can_call_send_with_timeout : std::false_type
+    {
+    };
+
+    template <typename TData>
+    struct can_call_send_with_timeout<TData,
+        std::void_t<decltype(std::declval<tools::memory_pipe&>().send(std::declval<TData>(),
+            std::declval<const std::chrono::duration<std::uint64_t, std::milli>&>()))>> : std::true_type
+    {
+    };
+
+    template <typename TData, typename = void>
+    struct can_call_isr_send : std::false_type
+    {
+    };
+
+    template <typename TData>
+    struct can_call_isr_send<TData,
+        std::void_t<decltype(std::declval<tools::memory_pipe&>().isr_send(std::declval<TData>()))>>
+        : std::true_type
+    {
+    };
+}
+
+TEST(MemoryPipeCompileTimeChecks, PerfectForwardingSendConstraints)
+{
+    static_assert(can_call_send_with_timeout<std::vector<std::uint8_t>>::value);
+    static_assert(can_call_send_with_timeout<vector_convertible_data>::value);
+    static_assert(!can_call_send_with_timeout<int>::value);
+
+    static_assert(can_call_isr_send<std::vector<std::uint8_t>>::value);
+    static_assert(can_call_isr_send<vector_convertible_data>::value);
+    static_assert(!can_call_isr_send<int>::value);
+}
+#endif
