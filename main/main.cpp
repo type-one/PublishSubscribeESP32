@@ -844,11 +844,11 @@ void test_sync_ring_buffer()
         str_queue.emplace(repeated_char_count, 'z'); // variadic emplace forwarding
         str_queue.push_range({ "sync-range-1", "sync-range-2" });
 
-        constexpr const std::array<std::string_view, 2U> isr_values = {
-            "sync-isr-range-1",
-            "sync-isr-range-2"
+        constexpr const std::array<std::string_view, 2U> ar_values = {
+            "sync-ar-range-1",
+            "sync-ar-range-2"
         };
-        str_queue.isr_push_range(isr_values);
+        str_queue.push_range(ar_values);
 
         constexpr const std::size_t pop_batch_size = 2U;
         std::array<std::string, pop_batch_size> popped_batch = { "", "" };
@@ -900,6 +900,23 @@ void test_sync_ring_vector()
     tools::sync_ring_vector<std::string> str_queue(queue_size);
 
     str_queue.emplace("toto");
+    str_queue.push_range({ "sync-ring-vector-basic-range-1", "sync-ring-vector-basic-range-2" });
+
+    constexpr const std::array<std::string_view, 2U> ar_values = {
+        "sync-ring-vector-basic-ar-1",
+        "sync-ring-vector-basic-ar-2"
+    };
+    str_queue.push_range(ar_values);
+
+    constexpr const std::size_t pop_batch_size = 2U;
+    std::array<std::string, pop_batch_size> popped_batch = { "", "" };
+    const std::size_t popped_count = str_queue.pop_range(popped_batch.begin(), popped_batch.end());
+    auto* popped_it = popped_batch.data();
+    for (std::size_t remaining = popped_count; remaining > 0U; --remaining)
+    {
+        std::printf("%s\n", popped_it->c_str());
+        ++popped_it;
+    }
 
     auto item = str_queue.front_pop();
 
@@ -927,11 +944,11 @@ void test_sync_ring_vector_perfect_forwarding()
         str_queue.emplace(repeated_char_count, 's');
         str_queue.push_range({ "sync-ring-vector-range-1", "sync-ring-vector-range-2" });
 
-        constexpr const std::array<std::string_view, 2U> isr_values = {
-            "sync-ring-vector-isr-range-1",
-            "sync-ring-vector-isr-range-2"
+        constexpr const std::array<std::string_view, 2U> ar_values = {
+            "sync-ring-vector-ar-range-1",
+            "sync-ring-vector-ar-range-2"
         };
-        str_queue.isr_push_range(isr_values);
+        str_queue.push_range(ar_values);
 
         constexpr const std::size_t pop_batch_size = 2U;
         std::array<std::string, pop_batch_size> popped_batch = { "", "" };
@@ -1012,13 +1029,13 @@ void test_sync_queue_perfect_forwarding()
             "sync-queue-range-lvalue-1",
             "sync-queue-range-lvalue-2"
         };
-        constexpr const std::array<std::string_view, 2U> range_isr = {
-            "sync-queue-range-isr-1",
-            "sync-queue-range-isr-2"
+        constexpr const std::array<std::string_view, 2U> range_ar = {
+            "sync-queue-range-ar-1",
+            "sync-queue-range-ar-2"
         };
 
         str_queue.push_range(range_lvalue);
-        str_queue.isr_push_range(range_isr);
+        str_queue.push_range(range_ar);
         str_queue.push_range({ "sync-queue-brace-range-1", "sync-queue-brace-range-2" });
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))

@@ -52,6 +52,7 @@
 #include <vector>
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
 #include <span>
 #endif
 
@@ -680,6 +681,55 @@ namespace
     struct sync_non_constructible_payload
     {
     };
+
+    template <typename Buf, typename Range>
+    concept has_sync_rb_push_range_call = requires(Buf& buffer, Range&& range)
+    {
+        buffer.push_range(std::forward<Range>(range));
+    };
+
+    template <typename Buf, typename Range>
+    concept has_sync_rb_isr_push_range_call = requires(Buf& buffer, Range&& range)
+    {
+        buffer.isr_push_range(std::forward<Range>(range));
+    };
+
+    template <typename Buf, typename OutputIt>
+    concept has_sync_rb_pop_range_iter_call = requires(Buf& buffer, OutputIt first, OutputIt last)
+    {
+        buffer.pop_range(first, last);
+    };
+
+    template <typename Buf>
+    concept has_sync_rb_pop_range_span_call = requires(Buf& buffer, std::span<int> destination)
+    {
+        buffer.pop_range(destination);
+    };
+}
+
+/**
+ * @brief C++20-only compile-time checks for range API constraints.
+ */
+TEST(SyncRingBufferRangeTest, Cpp20RangeConstraints)
+{
+    using buffer_t = tools::sync_ring_buffer<int, 8>;
+
+    static_assert(has_sync_rb_push_range_call<buffer_t, std::vector<int>&>);
+    static_assert(has_sync_rb_push_range_call<buffer_t, std::initializer_list<int>>);
+    static_assert(has_sync_rb_isr_push_range_call<buffer_t, std::vector<int>&>);
+    static_assert(has_sync_rb_isr_push_range_call<buffer_t, std::initializer_list<int>>);
+    static_assert(has_sync_rb_pop_range_iter_call<buffer_t, int*>);
+    static_assert(has_sync_rb_pop_range_span_call<buffer_t>);
+
+    const auto transformed = std::views::iota(0, 3)
+        | std::views::transform([](const int value)
+          {
+              return value + 100;
+          });
+    static_assert(has_sync_rb_push_range_call<buffer_t, decltype(transformed)>);
+    static_assert(has_sync_rb_isr_push_range_call<buffer_t, decltype(transformed)>);
+
+    SUCCEED();
 }
 
 /**

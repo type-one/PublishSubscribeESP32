@@ -48,6 +48,7 @@
 #include <vector>
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
 #include <span>
 #endif
 
@@ -635,6 +636,55 @@ namespace
     struct non_constructible_payload
     {
     };
+
+    template <typename Vec, typename Range>
+    concept has_sync_rv_push_range_call = requires(Vec& vec, Range&& range)
+    {
+        vec.push_range(std::forward<Range>(range));
+    };
+
+    template <typename Vec, typename Range>
+    concept has_sync_rv_isr_push_range_call = requires(Vec& vec, Range&& range)
+    {
+        vec.isr_push_range(std::forward<Range>(range));
+    };
+
+    template <typename Vec, typename OutputIt>
+    concept has_sync_rv_pop_range_iter_call = requires(Vec& vec, OutputIt first, OutputIt last)
+    {
+        vec.pop_range(first, last);
+    };
+
+    template <typename Vec>
+    concept has_sync_rv_pop_range_span_call = requires(Vec& vec, std::span<int> destination)
+    {
+        vec.pop_range(destination);
+    };
+}
+
+/**
+ * @brief C++20-only compile-time checks for range API constraints.
+ */
+TEST(SyncRingVectorRangeTest, Cpp20RangeConstraints)
+{
+    using vector_t = tools::sync_ring_vector<int>;
+
+    static_assert(has_sync_rv_push_range_call<vector_t, std::vector<int>&>);
+    static_assert(has_sync_rv_push_range_call<vector_t, std::initializer_list<int>>);
+    static_assert(has_sync_rv_isr_push_range_call<vector_t, std::vector<int>&>);
+    static_assert(has_sync_rv_isr_push_range_call<vector_t, std::initializer_list<int>>);
+    static_assert(has_sync_rv_pop_range_iter_call<vector_t, int*>);
+    static_assert(has_sync_rv_pop_range_span_call<vector_t>);
+
+    const auto transformed = std::views::iota(0, 3)
+        | std::views::transform([](const int value)
+          {
+              return value + 200;
+          });
+    static_assert(has_sync_rv_push_range_call<vector_t, decltype(transformed)>);
+    static_assert(has_sync_rv_isr_push_range_call<vector_t, decltype(transformed)>);
+
+    SUCCEED();
 }
 
 /**
