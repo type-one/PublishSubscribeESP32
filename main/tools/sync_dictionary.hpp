@@ -151,15 +151,11 @@ namespace tools
         }
 
         /**
-         * @brief Adds a collection of key-value pairs to the dictionary.
+         * @brief Adds values from an ordered map range.
          *
-         * This method takes a collection of key-value pairs and adds them to the
-         * internal dictionary. It uses a mutex to ensure thread safety during the
-         * operation.
-         *
-         * @param collection A map containing the key-value pairs to be added to the dictionary.
+         * @param collection A map containing key-value pairs to add.
          */
-        void add_collection(const std::map<K, T>& collection)
+        void add_range(const std::map<K, T>& collection)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
@@ -169,14 +165,11 @@ namespace tools
         }
 
         /**
-         * @brief Adds an unordered collection of key-value pairs to the dictionary.
+         * @brief Adds values from an unordered map range.
          *
-         * This method takes an unordered map of key-value pairs and adds each pair to the dictionary.
-         * It uses a lock guard to ensure thread safety during the operation.
-         *
-         * @param collection The unordered map containing key-value pairs to be added to the dictionary.
+         * @param collection The unordered map containing key-value pairs to add.
          */
-        void add_collection(const std::unordered_map<K, T>& collection)
+        void add_range(const std::unordered_map<K, T>& collection)
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
@@ -186,13 +179,76 @@ namespace tools
         }
 
         /**
-         * @brief Adds key-value pairs from a generic range-like collection.
+         * @brief Adds key-value pairs from a generic range-like source.
          *
          * In C++20, accepts any std::ranges::input_range of pair-like entries.
          * In C++17, accepts any iterable of pair-like entries whose key/value are constructible to K/T.
          *
          * @tparam TRange The range type (deduced).
-         * @param collection The source collection of key-value entries.
+         * @param values The source range of key-value entries.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    K,
+                    decltype(std::get<0>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))
+                >::value
+                && std::is_constructible<
+                    T,
+                    decltype(std::get<1>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<K, decltype(std::get<0>(*std::begin(std::declval<TRange&>())))>
+                  && std::is_constructible_v<T, decltype(std::get<1>(*std::begin(std::declval<TRange&>())))>
+#endif
+        void add_range(TRange&& values)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            for (auto&& entry : std::forward<TRange>(values))
+            {
+                m_dictionary.insert_or_assign(
+                    K(std::get<0>(std::forward<decltype(entry)>(entry))),
+                    T(std::get<1>(std::forward<decltype(entry)>(entry))));
+            }
+        }
+
+        /**
+         * @brief Adds key-value pairs from an initializer-list range.
+         *
+         * @param values The source initializer-list of key-value pairs.
+         */
+        void add_range(std::initializer_list<std::pair<K, T>> values)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            for (const auto& [key, value] : values)
+            {
+                m_dictionary.insert_or_assign(key, value);
+            }
+        }
+
+        /**
+         * @brief Backward-compatible alias for add_range(map).
+         */
+        void add_collection(const std::map<K, T>& collection)
+        {
+            add_range(collection);
+        }
+
+        /**
+         * @brief Backward-compatible alias for add_range(unordered_map).
+         */
+        void add_collection(const std::unordered_map<K, T>& collection)
+        {
+            add_range(collection);
+        }
+
+        /**
+         * @brief Backward-compatible alias for add_range(generic range).
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
@@ -215,27 +271,15 @@ namespace tools
 #endif
         void add_collection(TRange&& collection)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
-            for (auto&& entry : std::forward<TRange>(collection))
-            {
-                m_dictionary.insert_or_assign(
-                    K(std::get<0>(std::forward<decltype(entry)>(entry))),
-                    T(std::get<1>(std::forward<decltype(entry)>(entry))));
-            }
+            add_range(std::forward<TRange>(collection));
         }
 
         /**
-         * @brief Adds key-value pairs from an initializer-list.
-         *
-         * @param collection The source initializer-list of key-value pairs.
+         * @brief Backward-compatible alias for add_range(initializer_list).
          */
         void add_collection(std::initializer_list<std::pair<K, T>> collection)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
-            for (const auto& [key, value] : collection)
-            {
-                m_dictionary.insert_or_assign(key, value);
-            }
+            add_range(collection);
         }
 
         /**

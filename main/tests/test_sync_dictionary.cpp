@@ -104,6 +104,12 @@ concept has_sync_dict_add_call = requires(Dict& dict_ref, KeyArg&& key_arg, Valu
 };
 
 template <typename Dict, typename Collection>
+concept has_sync_dict_add_range_call = requires(Dict& dict_ref, Collection&& collection)
+{
+    dict_ref.add_range(std::forward<Collection>(collection));
+};
+
+template <typename Dict, typename Collection>
 concept has_sync_dict_add_collection_call = requires(Dict& dict_ref, Collection&& collection)
 {
     dict_ref.add_collection(std::forward<Collection>(collection));
@@ -892,9 +898,9 @@ TEST(SyncDictionaryPerfectForwardingTest, AddLvalueAndRvalueTriggerCopyMovePaths
 }
 
 /**
- * @brief Verifies range-based add_collection and contains support.
+ * @brief Verifies range-based add_range and contains support.
  */
-TEST(SyncDictionaryRangeTest, AddCollectionFromRangeAndContains)
+TEST(SyncDictionaryRangeTest, AddRangeFromRangeAndContains)
 {
     tools::sync_dictionary<std::string, std::string> str_dict;
 
@@ -903,8 +909,8 @@ TEST(SyncDictionaryRangeTest, AddCollectionFromRangeAndContains)
         { "beta", "two" }
     };
 
-    str_dict.add_collection(entries);
-    str_dict.add_collection({ { "gamma", "three" }, { "beta", "two-updated" } });
+    str_dict.add_range(entries);
+    str_dict.add_range({ { "gamma", "three" }, { "beta", "two-updated" } });
 
     EXPECT_TRUE(str_dict.contains("alpha"));
     EXPECT_TRUE(str_dict.contains("beta"));
@@ -916,13 +922,37 @@ TEST(SyncDictionaryRangeTest, AddCollectionFromRangeAndContains)
 }
 
 /**
+ * @brief Verifies add_collection remains covered as a compatibility alias.
+ */
+TEST(SyncDictionaryRangeTest, AddCollectionCompatibilityCoverage)
+{
+    tools::sync_dictionary<std::string, std::string> str_dict;
+
+    const std::vector<std::pair<std::string, std::string>> entries = {
+        { "legacy-alpha", "one" },
+        { "legacy-beta", "two" }
+    };
+
+    str_dict.add_collection(entries);
+    str_dict.add_collection({ { "legacy-gamma", "three" }, { "legacy-beta", "two-updated" } });
+
+    EXPECT_TRUE(str_dict.contains("legacy-alpha"));
+    EXPECT_TRUE(str_dict.contains("legacy-beta"));
+    EXPECT_TRUE(str_dict.contains("legacy-gamma"));
+
+    auto beta_value = str_dict.find("legacy-beta");
+    ASSERT_TRUE(beta_value.has_value());
+    EXPECT_EQ(beta_value.value(), "two-updated");
+}
+
+/**
  * @brief Verifies range-based remove_collection support.
  */
 TEST(SyncDictionaryRangeTest, RemoveCollectionFromRange)
 {
     tools::sync_dictionary<std::string, std::string> str_dict;
 
-    str_dict.add_collection({
+    str_dict.add_range({
         { "key-1", "value-1" },
         { "key-2", "value-2" },
         { "key-3", "value-3" }
@@ -959,15 +989,17 @@ TEST(SyncDictionaryPerfectForwardingTest, Cpp20RequiresConstraints)
 }
 
 /**
- * @brief Verifies C++20 range-call constraints for collection add/remove APIs.
+ * @brief Verifies C++20 range-call constraints for add/remove APIs.
  */
 TEST(SyncDictionaryRangeTest, Cpp20RangeConstraints)
 {
     using dict_t = tools::sync_dictionary<std::string, std::string>;
 
+    static_assert(has_sync_dict_add_range_call<dict_t, std::vector<std::pair<std::string, std::string>>&>);
     static_assert(has_sync_dict_add_collection_call<dict_t, std::vector<std::pair<std::string, std::string>>&>);
     static_assert(has_sync_dict_remove_collection_call<dict_t, std::vector<std::string>&>);
 
+    static_assert(has_sync_dict_add_range_call<dict_t, std::initializer_list<std::pair<std::string, std::string>>>);
     static_assert(has_sync_dict_add_collection_call<dict_t, std::initializer_list<std::pair<std::string, std::string>>>);
     static_assert(has_sync_dict_remove_collection_call<dict_t, std::initializer_list<std::string>>);
 
@@ -976,6 +1008,7 @@ TEST(SyncDictionaryRangeTest, Cpp20RangeConstraints)
           {
               return std::pair<std::string, std::string>("k" + std::to_string(value), "v");
           });
+    static_assert(has_sync_dict_add_range_call<dict_t, decltype(transformed)>);
     static_assert(has_sync_dict_add_collection_call<dict_t, decltype(transformed)>);
 
     SUCCEED();

@@ -1057,8 +1057,8 @@ void test_sync_dictionary()
         { "key-range-1", "value-range-1" },
         { "key-range-2", "value-range-2" }
     };
-    str_dict.add_collection(range_values);
-    str_dict.add_collection({ { "key-brace-1", "value-brace-1" }, { "key-brace-2", "value-brace-2" } });
+    str_dict.add_range(range_values);
+    str_dict.add_range({ { "key-brace-1", "value-brace-1" }, { "key-brace-2", "value-brace-2" } });
 
     auto result_lvalue = str_dict.find("key-lvalue");
     auto result_rvalue = str_dict.find("key-rvalue");
