@@ -51,10 +51,15 @@
 
 #include <atomic>
 #include <chrono>
+#include <initializer_list>
 #include <memory>
+#include <vector>
 #include <string>
 #include <thread>
 #include <type_traits>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#endif
 
 #include "tools/worker_task.hpp"
 
@@ -370,6 +375,90 @@ TEST_F(WorkerTaskTest, PerfectForwardingConstructorAndDelegate)
     EXPECT_EQ(context->computation_result, 42);
 }
 
+TEST_F(WorkerTaskTest, DelegateRangeSupportsInitializerAndRange)
+{
+    {
+        tools::worker_task<TestContext> task(
+            [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+            {
+                (void)task_name;
+                startup_called.store(true);
+                ctx->computation_result = 0;
+            },
+            context, "test_task", 4096);
+
+        const std::vector<tools::worker_task<TestContext>::call_back> callbacks = {
+            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+            {
+                (void)task_name;
+                ctx->computation_result += 1;
+            },
+            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+            {
+                (void)task_name;
+                ctx->computation_result += 2;
+            }
+        };
+
+        task.delegate_range(callbacks);
+        task.delegate_range({
+            tools::worker_task<TestContext>::call_back(
+                [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+                {
+                    (void)task_name;
+                    ctx->computation_result += 3;
+                })
+        });
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    }
+
+    EXPECT_TRUE(startup_called.load());
+    EXPECT_EQ(context->computation_result, 6);
+}
+
+TEST_F(WorkerTaskTest, IsrDelegateRangeSupportsInitializerAndRange)
+{
+    {
+        tools::worker_task<TestContext> task(
+            [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+            {
+                (void)task_name;
+                startup_called.store(true);
+                ctx->computation_result = 0;
+            },
+            context, "test_task", 4096);
+
+        const std::vector<tools::worker_task<TestContext>::call_back> callbacks = {
+            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+            {
+                (void)task_name;
+                ctx->computation_result += 4;
+            },
+            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+            {
+                (void)task_name;
+                ctx->computation_result += 5;
+            }
+        };
+
+        task.isr_delegate_range(callbacks);
+        task.isr_delegate_range({
+            tools::worker_task<TestContext>::call_back(
+                [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+                {
+                    (void)task_name;
+                    ctx->computation_result += 6;
+                })
+        });
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    }
+
+    EXPECT_TRUE(startup_called.load());
+    EXPECT_EQ(context->computation_result, 15);
+}
+
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 TEST(WorkerTaskCompileTimeChecks, PerfectForwardingConstraints)
 {
@@ -409,5 +498,50 @@ TEST(WorkerTaskCompileTimeChecks, PerfectForwardingConstraints)
         std::size_t>);
 
     static_assert(std::is_invocable_v<decltype(&worker_task_t::template delegate<callback_t>), worker_task_t&, callback_t>);
+}
+
+TEST(WorkerTaskCompileTimeChecks, RangeConstraints)
+{
+    using worker_task_t = tools::worker_task<TestContext>;
+    using callback_t = worker_task_t::call_back;
+
+    static_assert(requires(worker_task_t& task, std::vector<callback_t>& callbacks)
+    {
+        task.delegate_range(callbacks);
+    });
+    static_assert(requires(worker_task_t& task, std::vector<callback_t>& callbacks)
+    {
+        task.isr_delegate_range(callbacks);
+    });
+    static_assert(requires(worker_task_t& task)
+    {
+        task.delegate_range(std::initializer_list<callback_t> {});
+    });
+    static_assert(requires(worker_task_t& task)
+    {
+        task.isr_delegate_range(std::initializer_list<callback_t> {});
+    });
+
+    const auto transformed = std::views::iota(0, 2)
+        | std::views::transform([](int)
+          {
+              return callback_t(
+                  [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+                  {
+                      (void)task_name;
+                      ctx->do_something();
+                  });
+          });
+
+    static_assert(requires(worker_task_t& task)
+    {
+        task.delegate_range(transformed);
+    });
+    static_assert(requires(worker_task_t& task)
+    {
+        task.isr_delegate_range(transformed);
+    });
+
+    SUCCEED();
 }
 #endif

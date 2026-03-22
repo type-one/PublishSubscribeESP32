@@ -40,10 +40,15 @@
 #include <chrono>
 #include <cstdio>
 #include <functional>
+#include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#include <ranges>
+#endif
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -240,6 +245,54 @@ namespace tools
         }
 
         /**
+         * @brief Delegates a batch of work callbacks from a generic range.
+         *
+         * In C++20, accepts any std::ranges::input_range whose value type can
+         * construct call_back. In C++17, accepts any iterable source whose
+         * dereferenced element can construct call_back.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    call_back,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<call_back, std::ranges::range_value_t<TRange>>
+#endif
+        void delegate_range(TRange&& range)
+        {
+            for (auto&& work : std::forward<TRange>(range))
+            {
+                do_delegate(call_back(std::forward<decltype(work)>(work)));
+            }
+        }
+
+        /**
+         * @brief Delegates a batch of work callbacks from an initializer-list.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_constructible<call_back, const U&>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, const U&>
+#endif
+        void delegate_range(std::initializer_list<U> range)
+        {
+            for (const auto& work : range)
+            {
+                do_delegate(call_back(work));
+            }
+        }
+
+        /**
          * @brief Delegate function to handle ISR (Interrupt Service Routine) work.
          *
          * This function is designed to be called from an ISR context. It enqueues the given work
@@ -267,6 +320,50 @@ namespace tools
 #endif
         {
             do_isr_delegate(call_back(std::forward<UWork>(work)));
+        }
+
+        /**
+         * @brief Delegates a batch of ISR work callbacks from a generic range.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    call_back,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<call_back, std::ranges::range_value_t<TRange>>
+#endif
+        void isr_delegate_range(TRange&& range)
+        {
+            for (auto&& work : std::forward<TRange>(range))
+            {
+                do_isr_delegate(call_back(std::forward<decltype(work)>(work)));
+            }
+        }
+
+        /**
+         * @brief Delegates a batch of ISR work callbacks from an initializer-list.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_constructible<call_back, const U&>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<call_back, const U&>
+#endif
+        void isr_delegate_range(std::initializer_list<U> range)
+        {
+            for (const auto& work : range)
+            {
+                do_isr_delegate(call_back(work));
+            }
         }
 
     private:

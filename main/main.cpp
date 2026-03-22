@@ -1743,13 +1743,22 @@ void test_worker_tasks()
     {
         auto idx = distribution(generator);
 
-        tasks.at(idx)->delegate(
-            [](auto context, const auto& task_name)
+        const std::array<my_worker_task::call_back, 2> work_batch = {
+            [](const auto& local_context, const auto& local_task_name)
             {
-                std::printf("job %d on worker task %s\n", context->loop_counter.load(), task_name.c_str());
-                context->loop_counter++;
-                context->time_points.emplace(std::chrono::high_resolution_clock::now());
-            });
+                std::printf("job %d on worker task %s\n", local_context->loop_counter.load(), local_task_name.c_str());
+                local_context->loop_counter++;
+                local_context->time_points.emplace(std::chrono::high_resolution_clock::now());
+            },
+            [](const auto& local_context, const auto& local_task_name)
+            {
+                std::printf("job %d on worker task %s\n", local_context->loop_counter.load(), local_task_name.c_str());
+                local_context->loop_counter++;
+                local_context->time_points.emplace(std::chrono::high_resolution_clock::now());
+            }
+        };
+
+        tasks.at(idx)->delegate_range(work_batch);
 
         std::this_thread::yield();
     }
@@ -1813,6 +1822,28 @@ void test_worker_task_perfect_forwarding()
         std::printf("delegate-conversion on %s\n", task_name.c_str());
         ctx->loop_counter.fetch_add(1);
     }); // forwarding conversion path
+
+    const std::vector<my_worker_task::call_back> work_batch = {
+        [](const std::shared_ptr<my_worker_task_context>& ctx, const std::string& task_name)
+        {
+            std::printf("delegate-range on %s\n", task_name.c_str());
+            ctx->loop_counter.fetch_add(1);
+        },
+        [](const std::shared_ptr<my_worker_task_context>& ctx, const std::string& task_name)
+        {
+            std::printf("delegate-range on %s\n", task_name.c_str());
+            ctx->loop_counter.fetch_add(1);
+        }
+    };
+    worker.delegate_range(work_batch);
+    worker.delegate_range({
+        my_worker_task::call_back(
+            [](const std::shared_ptr<my_worker_task_context>& ctx, const std::string& task_name)
+            {
+                std::printf("delegate-range-init on %s\n", task_name.c_str());
+                ctx->loop_counter.fetch_add(1);
+            })
+    });
 
     constexpr const int wait_time_ms = 200;
     tools::sleep_for(wait_time_ms);
