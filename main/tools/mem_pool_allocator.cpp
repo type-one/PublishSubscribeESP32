@@ -30,16 +30,16 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#if defined(FREERTOS_PLATFORM) 
+#if defined(FREERTOS_PLATFORM)
 
-# mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
-# note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
+// mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
+// note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
 
-# uncomment to use mem pool allocator instead of regular heap allocation (requires C++ 20 or above)
+// uncomment to use mem pool allocator instead of regular heap allocation (requires C++ 20 or above)
 #define USE_MEM_POOL_ALLOCATOR
 
-# uncomment to warmup the mem pool with pre-allocated chunks of memory
-//#define DUSE_MEM_POOL_ALLOCATOR_WARMUP
+// uncomment to warmup the mem pool with pre-allocated chunks of memory
+// #define DUSE_MEM_POOL_ALLOCATOR_WARMUP
 
 #endif
 
@@ -202,11 +202,11 @@ namespace
             return ptr;
         }
 
-#if !defined(FREERTOS_PLATFORM)        
+#if !defined(FREERTOS_PLATFORM)
         throw std::bad_alloc();
 #else
         return nullptr; // NOLINT for freertos we return nullptr on allocation failure, for standard C++ we throw
-#endif        
+#endif
     }
 
     void cached_delete(void* ptr, std::size_t size) noexcept
