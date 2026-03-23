@@ -12,15 +12,6 @@ if(CMAKE_CXX_STANDARD GREATER_EQUAL 20)
     message(STATUS "C++20 or newer is supported/enabled")
 endif()
 
-# mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
-# note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
-
-# uncomment to use mem pool allocator instead of regular heap allocation (requires C++ 20 or above)
-#idf_build_set_property(COMPILE_OPTIONS "-DUSE_MEM_POOL_ALLOCATOR" APPEND)
-
-# uncomment to warmup the mem pool with pre-allocated chunks of memory
-#idf_build_set_property(COMPILE_OPTIONS "-DUSE_MEM_POOL_ALLOCATOR_WARMUP" APPEND)
-
 # Local header files here ONLY
 file(GLOB_RECURSE TARGET_H
     *.h
