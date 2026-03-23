@@ -193,10 +193,9 @@ namespace tools
             // FreeRTOS platform
 
             m_stop_task.store(true);
-            xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
-
             if (m_task_created)
             {
+                xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
                 vTaskSuspend(m_task);
                 vTaskDelete(m_task);
             }
@@ -377,7 +376,10 @@ namespace tools
             // parameter set to eSetBits) in place of the xEventGroupSetBits() and xEventGroupSetBitsFromISR() functions
             // respectively.
 
-            xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
+            if (m_task_created)
+            {
+                xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
+            }
         }
 
         void do_isr_delegate(call_back&& work)
@@ -386,9 +388,12 @@ namespace tools
 
             m_work_queue.isr_emplace(std::move(work));
 
-            BaseType_t x_higher_priority_task_woken = pdFALSE;
-            xTaskNotifyFromISR(m_task, 0x01 /* BIT */, eSetBits, &x_higher_priority_task_woken);
-            portYIELD_FROM_ISR(x_higher_priority_task_woken);
+            if (m_task_created)
+            {
+                BaseType_t x_higher_priority_task_woken = pdFALSE;
+                xTaskNotifyFromISR(m_task, 0x01 /* BIT */, eSetBits, &x_higher_priority_task_woken);
+                portYIELD_FROM_ISR(x_higher_priority_task_woken);
+            }
         }
 
         /**
