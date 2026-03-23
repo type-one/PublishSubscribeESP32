@@ -86,8 +86,6 @@ namespace tools
             (void)static_holder;
             m_push_index.store(0U);
             m_pop_index.store(0U);
-            m_reading.store(false);
-            m_writing.store(false);
 
             if (nullptr == m_active_buffer)
             {
@@ -193,7 +191,8 @@ namespace tools
         [[nodiscard]] std::size_t send(
             std::vector<std::uint8_t>&& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
-            return send(data.data(), data.size(), timeout);
+            auto forwarding_data = std::vector<std::uint8_t>(std::move(data));
+            return send(forwarding_data.data(), forwarding_data.size(), timeout);
         }
 
         /**
@@ -419,7 +418,8 @@ namespace tools
         [[nodiscard]] std::size_t isr_send(std::vector<std::uint8_t>&& data)
         {
             // no calls from ISRs in standard C++ platform, fallback to standard call
-            return isr_send(data.data(), data.size());
+            auto forwarding_data = std::vector<std::uint8_t>(std::move(data));
+            return isr_send(forwarding_data.data(), forwarding_data.size());
         }
 
         /**
@@ -577,8 +577,8 @@ namespace tools
         bool push(std::uint8_t value)
         {
             // push on an internal lock free ring buffer
-            const std::size_t snap_write_idx = m_push_index.load();
-            const std::size_t snap_read_idx = m_pop_index.load();
+            const std::size_t snap_write_idx = m_push_index.load(std::memory_order_relaxed);
+            const std::size_t snap_read_idx = m_pop_index.load(std::memory_order_acquire);
 
             // is full ?
             if ((snap_read_idx % m_capacity) == ((snap_write_idx + 1U) % m_capacity))
@@ -586,18 +586,8 @@ namespace tools
                 return false;
             }
 
-            // getting close or wrap around, risk of race condition
-            if (((snap_write_idx - snap_read_idx) <= 2U) || (snap_write_idx < snap_read_idx))
-            {
-                do
-                {
-                } while (m_reading.load());
-            }
-
-            m_writing.store(true);
-            const std::size_t write_idx = m_push_index.fetch_add(1U);
-            m_active_buffer[write_idx % m_capacity] = value;
-            m_writing.store(false);
+            m_active_buffer[snap_write_idx % m_capacity] = value;
+            m_push_index.store(snap_write_idx + 1U, std::memory_order_release);
 
             return true;
         }
@@ -615,8 +605,8 @@ namespace tools
         {
             // pop from an internal lock free ring buffer
 
-            const std::size_t snap_write_idx = m_push_index.load();
-            const std::size_t snap_read_idx = m_pop_index.load();
+            const std::size_t snap_read_idx = m_pop_index.load(std::memory_order_relaxed);
+            const std::size_t snap_write_idx = m_push_index.load(std::memory_order_acquire);
 
             // is empty ?
             if ((snap_read_idx % m_capacity) == (snap_write_idx % m_capacity))
@@ -624,18 +614,8 @@ namespace tools
                 return false;
             }
 
-            // getting close or wrap around, risk of race condition
-            if (((snap_write_idx - snap_read_idx) <= 2U) || (snap_write_idx < snap_read_idx))
-            {
-                do
-                {
-                } while (m_writing.load());
-            }
-
-            m_reading.store(true);
-            const std::size_t read_idx = m_pop_index.fetch_add(1U);
-            variable = m_active_buffer[read_idx % m_capacity];
-            m_reading.store(false);
+            variable = m_active_buffer[snap_read_idx % m_capacity];
+            m_pop_index.store(snap_read_idx + 1U, std::memory_order_release);
 
             return true;
         }
@@ -646,8 +626,6 @@ namespace tools
 
         std::atomic<std::size_t> m_push_index;
         std::atomic<std::size_t> m_pop_index;
-        std::atomic_bool m_reading;
-        std::atomic_bool m_writing;
 
         tools::sync_object m_sync;
     };

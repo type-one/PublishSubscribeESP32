@@ -178,11 +178,8 @@ namespace tools
 
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
-                if (pdFALSE == xMessageBufferIsFull(m_message_buffer_hnd))
-                {
-                    const TickType_t ticks_to_wait = static_cast<TickType_t>(timeout.count() * portTICK_PERIOD_MS);
-                    sent = xMessageBufferSend(m_message_buffer_hnd, data, send_bytes, ticks_to_wait);
-                }
+                const TickType_t ticks_to_wait = static_cast<TickType_t>(timeout.count() * portTICK_PERIOD_MS);
+                sent = xMessageBufferSend(m_message_buffer_hnd, data, send_bytes, ticks_to_wait);
             }
 
             return sent;
@@ -210,7 +207,8 @@ namespace tools
         [[nodiscard]] std::size_t send(
             std::vector<std::uint8_t>&& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
-            return send(data.data(), data.size(), timeout);
+            auto forwarding_data = std::vector<std::uint8_t>(std::move(data));
+            return send(forwarding_data.data(), forwarding_data.size(), timeout);
         }
 
         /**
@@ -309,11 +307,8 @@ namespace tools
 
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
-                if (pdFALSE == xMessageBufferIsEmpty(m_message_buffer_hnd))
-                {
-                    const TickType_t ticks_to_wait = static_cast<TickType_t>(timeout.count() * portTICK_PERIOD_MS);
-                    received = xMessageBufferReceive(m_message_buffer_hnd, data, rcv_bytes, ticks_to_wait);
-                }
+                const TickType_t ticks_to_wait = static_cast<TickType_t>(timeout.count() * portTICK_PERIOD_MS);
+                received = xMessageBufferReceive(m_message_buffer_hnd, data, rcv_bytes, ticks_to_wait);
             }
 
             return received;
@@ -388,13 +383,10 @@ namespace tools
 
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
-                if (pdFALSE == xMessageBufferIsFull(m_message_buffer_hnd))
-                {
-                    BaseType_t px_higher_priority_task_woken = pdFALSE;
-                    sent = xMessageBufferSendFromISR(
-                        m_message_buffer_hnd, data, send_bytes, &px_higher_priority_task_woken);
-                    portYIELD_FROM_ISR(px_higher_priority_task_woken);
-                }
+                BaseType_t px_higher_priority_task_woken = pdFALSE;
+                sent = xMessageBufferSendFromISR(
+                    m_message_buffer_hnd, data, send_bytes, &px_higher_priority_task_woken);
+                portYIELD_FROM_ISR(px_higher_priority_task_woken);
             }
 
             return sent;
@@ -419,7 +411,8 @@ namespace tools
          */
         [[nodiscard]] std::size_t isr_send(std::vector<std::uint8_t>&& data)
         {
-            return isr_send(data.data(), data.size());
+            auto forwarding_data = std::vector<std::uint8_t>(std::move(data));
+            return isr_send(forwarding_data.data(), forwarding_data.size());
         }
 
         /**
@@ -514,13 +507,10 @@ namespace tools
 
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
-                if (pdFALSE == xMessageBufferIsEmpty(m_message_buffer_hnd))
-                {
-                    BaseType_t px_higher_priority_task_woken = pdFALSE;
-                    received = xMessageBufferReceiveFromISR(
-                        m_message_buffer_hnd, data, rcv_bytes, &px_higher_priority_task_woken);
-                    portYIELD_FROM_ISR(px_higher_priority_task_woken);
-                }
+                BaseType_t px_higher_priority_task_woken = pdFALSE;
+                received = xMessageBufferReceiveFromISR(
+                    m_message_buffer_hnd, data, rcv_bytes, &px_higher_priority_task_woken);
+                portYIELD_FROM_ISR(px_higher_priority_task_woken);
             }
 
             return received;
