@@ -54,6 +54,7 @@
 #endif
 
 #include "tools/lock_free_ring_buffer.hpp"
+#include "tools/generic_task.hpp"
 
 /**
  * @brief Test fixture for LockFreeRingBuffer tests.
@@ -276,6 +277,71 @@ TYPED_TEST(LockFreeRingBufferTest, ProducerConsumerInterleavedTest)
 
     producer.join();
     consumer.join();
+}
+
+TEST(LockFreeRingBufferStressTest, PortableTaskHelpersProducerConsumer)
+{
+    constexpr const std::size_t stress_buffer_pow2 = 10U;
+
+    struct stress_context
+    {
+        tools::lock_free_ring_buffer<std::uint32_t, stress_buffer_pow2> buffer;
+        std::atomic<std::uint64_t> producer_sum = { 0U };
+        std::atomic<std::uint64_t> consumer_sum = { 0U };
+        std::atomic<std::uint32_t> consumed_count = { 0U };
+    };
+
+    using stress_task = tools::generic_task<stress_context>;
+
+    auto context = std::make_shared<stress_context>();
+
+    constexpr const std::uint32_t item_count = 200000U;
+    constexpr const std::size_t task_stack = 4096U;
+
+    {
+        stress_task producer_task(
+            [](const std::shared_ptr<stress_context>& shared_context, const std::string& task_name)
+            {
+                (void)task_name;
+
+                std::uint64_t local_sum = 0U;
+                for (std::uint32_t value = 1U; value <= item_count; ++value)
+                {
+                    while (!shared_context->buffer.push(value))
+                    {
+                        std::this_thread::yield();
+                    }
+                    local_sum += value;
+                }
+                shared_context->producer_sum.store(local_sum);
+            },
+            context, "lf_rb_stress_producer", task_stack);
+
+        stress_task consumer_task(
+            [](const std::shared_ptr<stress_context>& shared_context, const std::string& task_name)
+            {
+                (void)task_name;
+
+                std::uint64_t local_sum = 0U;
+                for (std::uint32_t expected = 1U; expected <= item_count; ++expected)
+                {
+                    std::uint32_t popped_value = 0U;
+                    while (!shared_context->buffer.pop(popped_value))
+                    {
+                        std::this_thread::yield();
+                    }
+
+                    ASSERT_EQ(popped_value, expected);
+                    local_sum += popped_value;
+                    shared_context->consumed_count.fetch_add(1U);
+                }
+                shared_context->consumer_sum.store(local_sum);
+            },
+            context, "lf_rb_stress_consumer", task_stack);
+    }
+
+    ASSERT_EQ(context->consumed_count.load(), item_count);
+    ASSERT_EQ(context->consumer_sum.load(), context->producer_sum.load());
 }
 
 /**

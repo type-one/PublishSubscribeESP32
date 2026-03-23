@@ -828,6 +828,87 @@ void test_lock_free_ring_buffer_range()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_lock_free_ring_buffer_task_stress()
+{
+    LOG_INFO("-- lock free ring buffer task stress --");
+    print_stats();
+
+    constexpr const std::size_t stress_buffer_pow2 = 10U;
+
+    struct stress_context
+    {
+        tools::lock_free_ring_buffer<std::uint32_t, stress_buffer_pow2> buffer;
+        std::atomic<std::uint64_t> producer_sum = { 0U };
+        std::atomic<std::uint64_t> consumer_sum = { 0U };
+        std::atomic<std::uint32_t> consumed_count = { 0U };
+    };
+
+    using stress_task = tools::generic_task<stress_context>;
+    auto context = std::make_shared<stress_context>();
+
+    constexpr const std::uint32_t item_count = 200000U;
+    constexpr const std::size_t task_stack = 4096U;
+
+    const auto begin = std::chrono::steady_clock::now();
+
+    {
+        stress_task producer_task(
+            [](const std::shared_ptr<stress_context>& shared_context, const std::string& task_name)
+            {
+                (void)task_name;
+
+                std::uint64_t local_sum = 0U;
+                for (std::uint32_t value = 1U; value <= item_count; ++value)
+                {
+                    while (!shared_context->buffer.push(value))
+                    {
+                        tools::yield();
+                    }
+                    local_sum += value;
+                }
+                shared_context->producer_sum.store(local_sum);
+            },
+            context, "lf_rb_stress_producer", task_stack);
+
+        stress_task consumer_task(
+            [](const std::shared_ptr<stress_context>& shared_context, const std::string& task_name)
+            {
+                (void)task_name;
+
+                std::uint64_t local_sum = 0U;
+                for (std::uint32_t expected = 1U; expected <= item_count; ++expected)
+                {
+                    std::uint32_t popped_value = 0U;
+                    while (!shared_context->buffer.pop(popped_value))
+                    {
+                        tools::yield();
+                    }
+
+                    if (popped_value != expected)
+                    {
+                        std::printf("stress mismatch: expected=%" PRIu32 " got=%" PRIu32 "\n", expected, popped_value);
+                    }
+
+                    local_sum += popped_value;
+                    shared_context->consumed_count.fetch_add(1U);
+                }
+                shared_context->consumer_sum.store(local_sum);
+            },
+            context, "lf_rb_stress_consumer", task_stack);
+    }
+
+    const auto end = std::chrono::steady_clock::now();
+    const auto elapsed_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
+    std::printf("stress consumed=%" PRIu32 "/%" PRIu32 " in %lld ms\n",
+        context->consumed_count.load(), item_count, static_cast<long long>(elapsed_ms));
+    std::printf("stress checksum producer=%" PRIu64 " consumer=%" PRIu64 "\n",
+        context->producer_sum.load(), context->consumer_sum.load());
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 void test_sync_ring_buffer()
 {
     LOG_INFO("-- sync ring buffer --");
@@ -3636,6 +3717,7 @@ void runner()
     test_lock_free_ring_buffer();
     test_lock_free_ring_buffer_perfect_forwarding();
     test_lock_free_ring_buffer_range();
+    test_lock_free_ring_buffer_task_stress();
     test_sync_ring_buffer();
     test_sync_ring_vector();
     test_sync_ring_vector_perfect_forwarding();

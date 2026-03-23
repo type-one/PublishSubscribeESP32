@@ -150,8 +150,10 @@ namespace tools
          */
         bool pop(T& elem)
         {
-            const std::size_t snap_write_idx = m_push_index.load();
-            const std::size_t snap_read_idx = m_pop_index.load();
+            // Canonical SPSC consumer path: read producer index with acquire,
+            // then consume current slot and publish new read index with release.
+            const std::size_t snap_read_idx = m_pop_index.load(std::memory_order_relaxed);
+            const std::size_t snap_write_idx = m_push_index.load(std::memory_order_acquire);
 
             // is empty ?
             if ((snap_read_idx & ring_buffer_mask) == (snap_write_idx & ring_buffer_mask))
@@ -159,18 +161,8 @@ namespace tools
                 return false;
             }
 
-            // getting close or wrap around, risk of race condition
-            if (((snap_write_idx - snap_read_idx) <= 2U) || (snap_write_idx < snap_read_idx))
-            {
-                do
-                {
-                } while (m_writing.load());
-            }
-
-            m_reading.store(true);
-            const std::size_t read_idx = m_pop_index.fetch_add(1U);
-            elem = m_ring_buffer.at(read_idx & ring_buffer_mask).load();
-            m_reading.store(false);
+            elem = m_ring_buffer.at(snap_read_idx & ring_buffer_mask).load(std::memory_order_relaxed);
+            m_pop_index.store(snap_read_idx + 1U, std::memory_order_release);
 
             return true;
         }
@@ -335,8 +327,10 @@ namespace tools
          */
         bool push_val(T elem)
         {
-            const std::size_t snap_write_idx = m_push_index.load();
-            const std::size_t snap_read_idx = m_pop_index.load();
+            // Canonical SPSC producer path: read consumer index with acquire,
+            // then publish written element by advancing write index with release.
+            const std::size_t snap_write_idx = m_push_index.load(std::memory_order_relaxed);
+            const std::size_t snap_read_idx = m_pop_index.load(std::memory_order_acquire);
 
             // is full ?
             if ((snap_read_idx & ring_buffer_mask) == ((snap_write_idx + 1U) & ring_buffer_mask))
@@ -344,18 +338,8 @@ namespace tools
                 return false;
             }
 
-            // getting close or wrap around, risk of race condition
-            if (((snap_write_idx - snap_read_idx) <= 2U) || (snap_write_idx < snap_read_idx))
-            {
-                do
-                {
-                } while (m_reading.load());
-            }
-
-            m_writing.store(true);
-            const std::size_t write_idx = m_push_index.fetch_add(1U);
-            m_ring_buffer.at(write_idx & ring_buffer_mask).store(elem);
-            m_writing.store(false);
+            m_ring_buffer.at(snap_write_idx & ring_buffer_mask).store(elem, std::memory_order_relaxed);
+            m_push_index.store(snap_write_idx + 1U, std::memory_order_release);
 
             return true;
         }
@@ -363,8 +347,6 @@ namespace tools
         std::array<std::atomic<T>, ring_buffer_size> m_ring_buffer;
         std::atomic<std::size_t> m_push_index = 0U;
         std::atomic<std::size_t> m_pop_index = 0U;
-        std::atomic_bool m_reading = false;
-        std::atomic_bool m_writing = false;
     };
 }
 
