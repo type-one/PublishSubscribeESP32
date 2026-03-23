@@ -16,10 +16,10 @@ endif()
 # note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
 
 # uncomment to use mem pool allocator instead of regular heap allocation (requires C++ 20 or above)
-add_compile_definitions(USE_MEM_POOL_ALLOCATOR)
+#idf_build_set_property(COMPILE_OPTIONS "-DUSE_MEM_POOL_ALLOCATOR" APPEND)
 
 # uncomment to warmup the mem pool with pre-allocated chunks of memory
-#add_compile_definitions(USE_MEM_POOL_ALLOCATOR_WARMUP)
+#idf_build_set_property(COMPILE_OPTIONS "-DUSE_MEM_POOL_ALLOCATOR_WARMUP" APPEND)
 
 # Local header files here ONLY
 file(GLOB_RECURSE TARGET_H
