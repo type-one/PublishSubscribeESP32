@@ -188,7 +188,7 @@ namespace tools
          * This destructor stops the FreeRTOS task by setting the stop flag and notifying the task.
          * If the task was created, it suspends and deletes the task.
          */
-        ~worker_task()
+        ~worker_task() override
         {
             // FreeRTOS platform
 
