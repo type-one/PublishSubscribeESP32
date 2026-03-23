@@ -6,6 +6,7 @@ cmake_minimum_required(VERSION 3.12)
 project(PublishSubscribe VERSION 1.0)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_CLANG_TIDY "clang-tidy;--extra-arg=-std=c++20")
+find_package(Threads REQUIRED)
 
 # https://stackoverflow.com/questions/11944060/how-to-detect-target-architecture-using-cmake
 
@@ -16,11 +17,11 @@ endif()
 if(UNIX AND (${CMAKE_SYSTEM_NAME} STREQUAL ${CMAKE_HOST_SYSTEM_NAME}))
     EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE )
 elseif(ANDROID)
-    set(ARCHITECTURE, ${ANDROID_ABI})
+    set(ARCHITECTURE ${ANDROID_ABI})
 elseif(APPLE)
-    set(ARCHITECTURE, ${OSX_ARCHITECTURES})
+    set(ARCHITECTURE ${OSX_ARCHITECTURES})
 else()
-    set(ARCHITECTURE, "unknown")
+    set(ARCHITECTURE "unknown")
 endif()
 
 #detect Platform (Jetson, Raspberry Pi, ...)
@@ -73,29 +74,32 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(LINUX) 
-    set(CMAKE_CXX_FLAGS "-march=native")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall -Wextra -D DEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -D NDEBUG")
-
-    set(CMAKE_C_FLAGS "-march=native")
-    set(CMAKE_C_FLAGS_DEBUG "-g -Wall -Wextra -D DEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "-O2 -D NDEBUG")
-
     find_program(CCACHE_PROGRAM ccache)
     if(CCACHE_PROGRAM)
         set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
         set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
         message(STATUS "ccache found and enabled")
     endif()
+endif()
 
+add_library(project_options INTERFACE)
+
+if(LINUX)
+    target_compile_options(project_options INTERFACE
+        -march=native
+        $<$<CONFIG:Debug>:-g>
+        $<$<CONFIG:Debug>:-Wall>
+        $<$<CONFIG:Debug>:-Wextra>
+        $<$<CONFIG:Debug>:-DDEBUG>
+        $<$<CONFIG:Release>:-O2>
+        $<$<CONFIG:Release>:-DNDEBUG>
+    )
 elseif(WIN32)
-    set(CMAKE_CXX_FLAGS "")
-    set(CMAKE_CXX_FLAGS_DEBUG "/D DEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /D NDEBUG")
-
-    set(CMAKE_C_FLAGS "")
-    set(CMAKE_C_FLAGS_DEBUG "/D DEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "/O2 /D NDEBUG")
+    target_compile_options(project_options INTERFACE
+        $<$<CONFIG:Debug>:/DDEBUG>
+        $<$<CONFIG:Release>:/O2>
+        $<$<CONFIG:Release>:/DNDEBUG>
+    )
 endif()
 
 # uname -m
@@ -170,18 +174,15 @@ set(TARGET_SRC
         "${TARGET_CPPTIME_SRC}"        
 )
 
-include_directories("${PROJECT_SOURCE_DIR}")
-
 add_library(framework_modules STATIC "${TARGET_H}" "${TARGET_SRC}")
+target_include_directories(framework_modules PUBLIC "${PROJECT_SOURCE_DIR}")
+target_link_libraries(framework_modules PUBLIC project_options)
 
 add_executable(publish_subscribe main.cpp)   
+target_link_libraries(publish_subscribe PRIVATE framework_modules project_options Threads::Threads)
 
 if(LINUX) 
-    #target_link_libraries(publish_subscribe -lm -lpthread)
-    target_link_libraries(publish_subscribe framework_modules -lm -lpthread)
-elseif(WIN32)
-    #target_link_libraries(publish_subscribe)
-    target_link_libraries(publish_subscribe framework_modules)
+    target_link_libraries(publish_subscribe PRIVATE m)
 endif()
 
 
@@ -191,6 +192,7 @@ endif()
 
 # https://matgomes.com/integrate-google-test-into-cmake/
 include(FetchContent)
+include(GoogleTest)
 
 # https://cmake.org/cmake/help/latest/module/FindGit.html
 find_package(Git REQUIRED)
@@ -258,11 +260,11 @@ set(TEST_SOURCES
 add_executable(run_tests ${TEST_SOURCES})
 
 # Link Google Test and pthread library
-target_link_libraries(run_tests framework_modules gtest gtest_main pthread)
+target_link_libraries(run_tests PRIVATE framework_modules project_options gtest gtest_main Threads::Threads)
 
 # Add a custom target to run the tests
 add_custom_target(
-    run_tests_command ALL
+    run_tests_command
     COMMAND run_tests
     DEPENDS run_tests
 )
