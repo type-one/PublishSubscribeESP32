@@ -39,7 +39,7 @@
 #define USE_MEM_POOL_ALLOCATOR
 
 // uncomment to warmup the mem pool with pre-allocated chunks of memory
-// #define DUSE_MEM_POOL_ALLOCATOR_WARMUP
+// #define USE_MEM_POOL_ALLOCATOR_WARMUP
 
 #endif
 
@@ -257,6 +257,7 @@ void init_mem_pool_allocator()
                 if (!entry.m_pool.push(ptr))
                 {
                     // std::fprintf(stderr, "[pre-alloc] %d bytes failed !\n", block_size);
+                    std::free(ptr); // NOLINT avoid warmup leak if pool push fails
                 }
             }
             else
@@ -294,7 +295,13 @@ void destroy_mem_pool_allocator()
 void* operator new(std::size_t size)
 {
     // std::printf("[new] %d bytes\n", static_cast<int>(size));
-    return cached_new(size);
+    if (void* ptr = cached_new(size))
+    {
+        return ptr;
+    }
+
+    // Global throwing new must never return nullptr.
+    std::terminate();
 }
 
 // ------------------------------------------------------------
@@ -302,6 +309,8 @@ void* operator new(std::size_t size)
 // ------------------------------------------------------------
 void operator delete(void* ptr) noexcept
 {
+    // Intentionally bypass cache for unsized delete: we rely on modern toolchains
+    // emitting sized delete for most deallocations.
     // std::printf("[delete] unsized\n");
     std::free(ptr); // NOLINT we want to use libc free as we overload delete operator
 }
@@ -322,11 +331,19 @@ void operator delete(void* ptr, std::size_t size) noexcept
 void* operator new[](std::size_t size)
 {
     // std::printf("[new[]] %d bytes\n", static_cast<int>(size));
-    return cached_new(size);
+    if (void* ptr = cached_new(size))
+    {
+        return ptr;
+    }
+
+    // Global throwing new[] must never return nullptr.
+    std::terminate();
 }
 
 void operator delete[](void* ptr) noexcept
 {
+    // Intentionally bypass cache for unsized delete[]: we rely on modern toolchains
+    // emitting sized delete[] for most deallocations.
     // std::printf("[delete[]] unsized\n");
     std::free(ptr); // NOLINT we want to use libc free as we overload delete operator
 }
