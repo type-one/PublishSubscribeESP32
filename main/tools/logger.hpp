@@ -193,7 +193,14 @@ namespace tools
 
         std::fprintf(output, "%s %s [%s, line %d] ", lookup.at(level).c_str(),
             std::filesystem::path(fmt.loc.file_name()).filename().c_str(), fmt.loc.function_name(), fmt.loc.line());
-        std::fprintf(output, fmt.value, std::forward<Args>(args)...); // NOLINT source_location returns const char*
+        if constexpr (sizeof...(Args) == 0)
+        {
+            std::fputs(fmt.value, output);
+        }
+        else
+        {
+            std::fprintf(output, fmt.value, std::forward<Args>(args)...); // NOLINT source_location returns const char*
+        }
         std::fprintf(output, "%s\n", end_restore.c_str());
         std::fflush(output);
     }
