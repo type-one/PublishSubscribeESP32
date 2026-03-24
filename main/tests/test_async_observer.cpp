@@ -81,6 +81,27 @@ protected:
 
 namespace
 {
+    using async_event = std::tuple<std::string, std::string, std::string>;
+
+    template <typename TObserver>
+    std::vector<async_event> collect_events_until_count(TObserver& observer, const std::size_t expected_count,
+        const std::chrono::milliseconds wait_timeout = std::chrono::milliseconds(100),
+        const std::size_t max_wait_attempts = 50U)
+    {
+        std::vector<async_event> events;
+        for (std::size_t attempt = 0; (attempt < max_wait_attempts) && (events.size() < expected_count); ++attempt)
+        {
+            observer->wait_for_events(wait_timeout);
+            auto current_events = observer->pop_all_events();
+            if (!current_events.empty())
+            {
+                events.insert(events.end(), current_events.begin(), current_events.end());
+            }
+        }
+
+        return events;
+    }
+
     struct move_probe
     {
         std::string value;
@@ -120,10 +141,7 @@ namespace
     };
 
     template <typename Observer, typename UTopic, typename UEvt, typename UOrigin>
-    struct can_call_inform<Observer,
-        UTopic,
-        UEvt,
-        UOrigin,
+    struct can_call_inform<Observer, UTopic, UEvt, UOrigin,
         std::void_t<decltype(std::declval<Observer&>().inform(
             std::declval<UTopic>(), std::declval<UEvt>(), std::declval<UOrigin>()))>> : std::true_type
     {
@@ -262,14 +280,7 @@ TEST_F(AsyncObserverTest, SingleObserverMultipleEvents)
             subject1->subscribe("topic_3", observer);
             subscribed.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer->wait_for_events();
-                auto current_events = observer->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -322,14 +333,7 @@ TEST_F(AsyncObserverTest, SingleObserverMultipleEventsSameTopic)
             subject1->subscribe("topic_1", observer);
             subscribed.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer->wait_for_events();
-                auto current_events = observer->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -458,14 +462,7 @@ TEST_F(AsyncObserverTest, MultipleObserversMultipleEvents)
             subject1->subscribe("topic_2", observer1);
             subscribed1.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 2) && (events.size() < 2); ++i)
-            {
-                observer1->wait_for_events();
-                auto current_events = observer1->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer1, 2U);
 
             ASSERT_EQ(events.size(), 2);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -483,14 +480,7 @@ TEST_F(AsyncObserverTest, MultipleObserversMultipleEvents)
             subject1->subscribe("topic_2", observer2);
             subscribed2.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 2) && (events.size() < 2); ++i)
-            {
-                observer2->wait_for_events();
-                auto current_events = observer2->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer2, 2U);
 
             ASSERT_EQ(events.size(), 2);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -546,14 +536,7 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEvents)
             subject1->subscribe("topic_3", observer1);
             subscribed1.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer1->wait_for_events();
-                auto current_events = observer1->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer1, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -575,14 +558,7 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEvents)
             subject1->subscribe("topic_3", observer2);
             subscribed2.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer2->wait_for_events();
-                auto current_events = observer2->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer2, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -646,17 +622,7 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeout)
             subject1->subscribe("topic_3", observer1);
             subscribed1.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer1->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer1->pop_all_events();
-                if (!current_events.empty())
-                {
-                    events.insert(events.end(), current_events.begin(), current_events.end());
-                }
-            }
+            auto events = collect_events_until_count(observer1, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -678,17 +644,7 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeout)
             subject1->subscribe("topic_3", observer2);
             subscribed2.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer2->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer2->pop_all_events();
-                if (!current_events.empty())
-                {
-                    events.insert(events.end(), current_events.begin(), current_events.end());
-                }
-            }
+            auto events = collect_events_until_count(observer2, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -751,17 +707,7 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutExpired)
             subject1->subscribe("topic_3", observer1);
             subscribed1.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer1->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer1->pop_all_events();
-                if (!current_events.empty())
-                {
-                    events.insert(events.end(), current_events.begin(), current_events.end());
-                }
-            }
+            auto events = collect_events_until_count(observer1, 2U);
 
             ASSERT_EQ(events.size(), 0); // nothing received
         });
@@ -774,17 +720,7 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutExpired)
             subject1->subscribe("topic_3", observer2);
             subscribed2.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer2->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer2->pop_all_events();
-                if (!current_events.empty())
-                {
-                    events.insert(events.end(), current_events.begin(), current_events.end());
-                }
-            }
+            auto events = collect_events_until_count(observer2, 2U);
 
             ASSERT_EQ(events.size(), 0); // nothing received
         });
@@ -1010,14 +946,7 @@ TEST_F(AsyncObserverTest, DifferentSubjectsMultipleEvents)
             subject2->subscribe("topic_3", observer1);
             subscribed1.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 2) && (events.size() < 2); ++i)
-            {
-                observer1->wait_for_events();
-                auto current_events = observer1->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer1, 2U);
 
             ASSERT_EQ(events.size(), 2);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -1035,14 +964,7 @@ TEST_F(AsyncObserverTest, DifferentSubjectsMultipleEvents)
             subject1->subscribe("topic_4", observer2);
             subscribed2.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 2) && (events.size() < 2); ++i)
-            {
-                observer2->wait_for_events();
-                auto current_events = observer2->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer2, 2U);
 
             ASSERT_EQ(events.size(), 2);
             ASSERT_EQ(std::get<0>(events[0]), "topic_2");
@@ -1099,14 +1021,7 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEvents)
             subject1->subscribe("topic_5", observer1);
             subscribed1.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer1->wait_for_events();
-                auto current_events = observer1->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer1, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -1128,14 +1043,7 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEvents)
             subject2->subscribe("topic_6", observer2);
             subscribed2.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer2->wait_for_events();
-                auto current_events = observer2->pop_all_events();
-                events.insert(events.end(), current_events.begin(), current_events.end());
-            }
+            auto events = collect_events_until_count(observer2, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_2");
@@ -1207,17 +1115,7 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEventsWithTimeout)
             subject1->subscribe("topic_5", observer1);
             subscribed1.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer1->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer1->pop_all_events();
-                if (!current_events.empty())
-                {
-                    events.insert(events.end(), current_events.begin(), current_events.end());
-                }
-            }
+            auto events = collect_events_until_count(observer1, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_1");
@@ -1239,17 +1137,7 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEventsWithTimeout)
             subject2->subscribe("topic_6", observer2);
             subscribed2.store(true);
 
-            std::vector<std::tuple<std::string, std::string, std::string>> events;
-
-            for (int i = 0; (i < 3) && (events.size() < 3); ++i)
-            {
-                observer2->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
-                auto current_events = observer2->pop_all_events();
-                if (!current_events.empty())
-                {
-                    events.insert(events.end(), current_events.begin(), current_events.end());
-                }
-            }
+            auto events = collect_events_until_count(observer2, 3U);
 
             ASSERT_EQ(events.size(), 3);
             ASSERT_EQ(std::get<0>(events[0]), "topic_2");
