@@ -120,9 +120,9 @@ namespace tools
             requires std::constructible_from<T, U>
 #endif
         auto push(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
-    #endif
+#endif
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             m_queue.push(std::forward<U>(elem));
@@ -142,9 +142,9 @@ namespace tools
             requires std::constructible_from<T, Args...>
 #endif
         auto emplace(Args&&... args)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
-    #endif
+#endif
         {
             std::lock_guard<tools::critical_section> guard(m_mutex);
             m_queue.emplace(std::forward<Args>(args)...);
@@ -281,7 +281,7 @@ namespace tools
             std::lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.size();
         }
-        
+
         /**
          * @brief Pushes all elements from a range into the queue.
          *
@@ -293,17 +293,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::constructible_from<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::constructible_from<T, std::ranges::range_value_t<TRange>>
 #endif
         void push_range(TRange&& range)
         {
@@ -325,9 +321,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::constructible_from<T, const U&>
 #endif
@@ -339,7 +336,7 @@ namespace tools
                 m_queue.push(T(elem));
             }
         }
-        
+
         /**
          * @brief Pops a batch of elements into an output range under a single lock.
          *
@@ -419,9 +416,9 @@ namespace tools
             requires std::constructible_from<T, U>
 #endif
         auto isr_push(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
-    #endif
+#endif
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             m_queue.push(std::forward<U>(elem));
@@ -441,9 +438,9 @@ namespace tools
             requires std::constructible_from<T, Args...>
 #endif
         auto isr_emplace(Args&&... args)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
-    #endif
+#endif
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             m_queue.emplace(std::forward<Args>(args)...);
@@ -474,17 +471,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::constructible_from<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::constructible_from<T, std::ranges::range_value_t<TRange>>
 #endif
         void isr_push_range(TRange&& range)
         {
@@ -506,9 +499,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::constructible_from<T, const U&>
 #endif
