@@ -14,13 +14,22 @@ if(UNIX AND NOT APPLE)
     set(LINUX TRUE)
 endif()
 
-if(UNIX AND (${CMAKE_SYSTEM_NAME} STREQUAL ${CMAKE_HOST_SYSTEM_NAME}))
-    EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE )
+if(WIN32)
+    set(ARCHITECTURE "${CMAKE_SYSTEM_PROCESSOR}")
+    if(NOT ARCHITECTURE)
+        set(ARCHITECTURE "$ENV{PROCESSOR_ARCHITECTURE}")
+    endif()
+elseif(UNIX AND (${CMAKE_SYSTEM_NAME} STREQUAL ${CMAKE_HOST_SYSTEM_NAME}))
+    execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
 elseif(ANDROID)
     set(ARCHITECTURE ${ANDROID_ABI})
 elseif(APPLE)
     set(ARCHITECTURE ${OSX_ARCHITECTURES})
 else()
+    set(ARCHITECTURE "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
+if(NOT ARCHITECTURE)
     set(ARCHITECTURE "unknown")
 endif()
 
@@ -29,20 +38,16 @@ endif()
 # grep Hardware /proc/cpuinfo
 set(PLATFORM_DETECTION, "unknown")
 
-message( STATUS "Architecture: ${ARCHITECTURE}" )
-
-# if(NOT LINUX) should work, too, if you need that
-if(LINUX) 
-    message(STATUS "OS: Linux")
-# linux stuff here
-else()
-    message(STATUS "OS: Unix Not Linux")
-    # stuff that should happen not on Linux 
-endif()
+message(STATUS "Architecture: ${ARCHITECTURE}")
 
 if(WIN32)
-    # for Windows operating system in general
     message(STATUS "OS: Windows")
+elseif(LINUX)
+    message(STATUS "OS: Linux")
+elseif(UNIX)
+    message(STATUS "OS: Unix Not Linux")
+else()
+    message(STATUS "OS: Unknown")
 endif()
 
 if(MSVC OR MSYS OR MINGW)
@@ -195,9 +200,9 @@ include(FetchContent)
 include(GoogleTest)
 
 # https://cmake.org/cmake/help/latest/module/FindGit.html
-find_package(Git REQUIRED)
+find_package(Git QUIET)
 if(Git_FOUND)
-  message("Git found: ${GIT_EXECUTABLE}")
+    message("Git found: ${GIT_EXECUTABLE}")
 endif()
 
 # https://cmake.org/cmake/help/latest/module/FindGTest.html
@@ -205,11 +210,12 @@ find_package(GTest 1.11.0)
 if(GTest_FOUND)
   message("Google Test found")
 else()
-    message("Google Test fetch from github")
+    message("Google Test fetch from release archive")
     FetchContent_Declare(
     googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        release-1.11.0
+    URL      https://github.com/google/googletest/archive/refs/tags/release-1.11.0.tar.gz
+    URL_HASH SHA256=b4870bf121ff7795ba20d20bcdd8627b8e088f2d1dab299a031c1034eddc93d5
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
 
     if(MSVC OR MSYS OR MINGW)
