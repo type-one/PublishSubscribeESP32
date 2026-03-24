@@ -112,6 +112,43 @@ On Linux, just use `cmake . -B build` and then go to build and run make (or ninj
 
 On Windows, just use `cmake-gui` to generate a Visual Studio solution
 
+### Linux desktop build modes (speed vs analysis)
+
+The desktop CMake files provide two build modes:
+
+- fast local build (default): `clang-tidy` disabled
+- analysis build: `clang-tidy` enabled explicitly
+
+Fast local build (recommended for day-to-day dev):
+
+```bash
+cd main
+cmake -S . -B build -G Ninja
+cmake --build build -j
+```
+
+Analysis build (slower, static analysis enabled):
+
+```bash
+cd main
+cmake -S . -B build_tidy -G Ninja -DENABLE_CLANG_TIDY=ON
+cmake --build build_tidy -j
+```
+
+`ccache` is used as compiler launcher when available on Linux.
+To verify cache activity:
+
+```bash
+ccache -s
+```
+
+Useful maintenance commands:
+
+```bash
+ccache -z   # reset stats
+ccache -s   # inspect hit/miss ratio after a build
+```
+
 
 ## Memory usage
 
