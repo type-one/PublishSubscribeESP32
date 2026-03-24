@@ -184,6 +184,11 @@ set(TARGET_SRC
         "${TARGET_CPPTIME_SRC}"        
 )
 
+if(MSVC)
+    # Keep project warnings visible, but relax noisy third-party uzlib conversion warnings.
+    set_source_files_properties(${TARGET_UZLIB_SRC} PROPERTIES COMPILE_OPTIONS "/wd4244;/wd4146")
+endif()
+
 add_library(framework_modules STATIC "${TARGET_H}" "${TARGET_SRC}")
 target_include_directories(framework_modules PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(framework_modules PUBLIC project_options)

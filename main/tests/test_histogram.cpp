@@ -183,7 +183,7 @@ TYPED_TEST(HistogramTest, AddAndTop)
     this->hist->add(static_cast<TypeParam>(5));
     this->hist->add(static_cast<TypeParam>(3));
     this->hist->add(static_cast<TypeParam>(5));
-    EXPECT_FLOAT_EQ(this->hist->top(), static_cast<TypeParam>(5));
+    EXPECT_NEAR(static_cast<double>(this->hist->top()), 5.0, 1e-6);
     EXPECT_EQ(this->hist->total_count(), 3);
     EXPECT_EQ(this->hist->top_occurence(), 2);
 }
@@ -214,7 +214,7 @@ TYPED_TEST(HistogramTest, Average)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     // https://www.calculator.net/average-calculator.html
-    EXPECT_FLOAT_EQ(this->hist->average(), 5.6666666666667);
+    EXPECT_NEAR(static_cast<double>(this->hist->average()), 5.6666666666667, 1e-6);
 }
 
 /**
@@ -245,8 +245,8 @@ TYPED_TEST(HistogramTest, Variance)
     const auto avg = this->hist->average();
     const auto variance = this->hist->variance(avg);
     // https://www.calculator.net/standard-deviation-calculator.html
-    EXPECT_FLOAT_EQ(variance, 2.2222222222222);
-    EXPECT_FLOAT_EQ(this->hist->standard_deviation(variance), 1.4907119849999);
+    EXPECT_NEAR(static_cast<double>(variance), 2.2222222222222, 1e-6);
+    EXPECT_NEAR(static_cast<double>(this->hist->standard_deviation(variance)), 1.4907119849999, 1e-6);
 }
 
 /**
@@ -275,7 +275,7 @@ TYPED_TEST(HistogramTest, MedianEven)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(7));
     // https://www.calculator.net/mean-median-mode-range-calculator.html
-    EXPECT_FLOAT_EQ(this->hist->median(), 6.0);
+    EXPECT_NEAR(static_cast<double>(this->hist->median()), 6.0, 1e-6);
 }
 
 /**
@@ -306,7 +306,7 @@ TYPED_TEST(HistogramTest, MedianOdd)
     this->hist->add(static_cast<TypeParam>(7));
     this->hist->add(static_cast<TypeParam>(8));
     // https://www.calculator.net/mean-median-mode-range-calculator.html
-    EXPECT_FLOAT_EQ(this->hist->median(), 7.0);
+    EXPECT_NEAR(static_cast<double>(this->hist->median()), 7.0, 1e-6);
 }
 
 
@@ -329,7 +329,7 @@ TYPED_TEST(HistogramTest, GaussianDensity)
     this->hist->add(static_cast<TypeParam>(7));
     const auto avg = this->hist->average();
     const auto variance = this->hist->variance(avg);
-    const auto density = this->hist->gaussian_density(5.0, avg, this->hist->standard_deviation(variance));
+    const auto density = this->hist->gaussian_density(static_cast<TypeParam>(5), avg, this->hist->standard_deviation(variance));
     EXPECT_GT(density, 0.0);
 }
 
@@ -353,7 +353,12 @@ TYPED_TEST(HistogramTest, GaussianProbability)
     this->hist->add(static_cast<TypeParam>(7));
     const auto avg = this->hist->average();
     const auto variance = this->hist->variance(avg);
-    const auto prob = this->hist->gaussian_probability(3.0, 5.0, avg, this->hist->standard_deviation(variance), 100);
+    const auto prob = this->hist->gaussian_probability(
+        static_cast<TypeParam>(3),
+        static_cast<TypeParam>(5),
+        avg,
+        this->hist->standard_deviation(variance),
+        100);
     EXPECT_GT(prob, 0.0);
 }
 
@@ -375,9 +380,9 @@ TYPED_TEST(HistogramTest, EmptyHistogram)
 {
     EXPECT_EQ(this->hist->total_count(), 0);
     EXPECT_EQ(this->hist->top_occurence(), 0);
-    EXPECT_FLOAT_EQ(this->hist->average(), 0.0);
-    EXPECT_FLOAT_EQ(this->hist->variance(0.0), 0.0);
-    EXPECT_FLOAT_EQ(this->hist->median(), 0.0);
+    EXPECT_NEAR(static_cast<double>(this->hist->average()), 0.0, 1e-6);
+    EXPECT_NEAR(static_cast<double>(this->hist->variance(static_cast<TypeParam>(0))), 0.0, 1e-6);
+    EXPECT_NEAR(static_cast<double>(this->hist->median()), 0.0, 1e-6);
 }
 
 /**

@@ -41,6 +41,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -75,6 +76,12 @@ namespace tools
 
         if ((nullptr != m_hash_table) && !unpacked_input.empty())
         {
+            if (unpacked_input.size() > static_cast<std::size_t>(std::numeric_limits<unsigned int>::max()))
+            {
+                LOG_ERROR("input too large for uzlib pack API: %u", static_cast<unsigned int>(unpacked_input.size()));
+                return gzip_packed;
+            }
+
             struct uzlib_comp comp = {};
             comp.dict_size = gzip_dict_size;
             comp.hash_bits = gzip_hash_bits;
@@ -82,10 +89,11 @@ namespace tools
             std::memset(reinterpret_cast<void*>(comp.hash_table), 0, gzip_hash_size);
 
             zlib_start_block(&comp.out);
-            uzlib_compress(&comp, unpacked_input.data(), unpacked_input.size());
+            const auto input_size = static_cast<unsigned int>(unpacked_input.size());
+            uzlib_compress(&comp, unpacked_input.data(), input_size);
             zlib_finish_block(&comp.out);
 
-            std::uint32_t crc32 = ~uzlib_crc32(unpacked_input.data(), unpacked_input.size(), ~0);
+            std::uint32_t crc32 = ~uzlib_crc32(unpacked_input.data(), input_size, ~0);
 
             // create other buffer with gzip header + footer
             const std::size_t packed_size = comp.out.outlen;
