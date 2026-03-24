@@ -400,7 +400,7 @@ TEST(HistogramPerfectForwardingTest, AddSupportsExactAndConversionPaths)
 
     EXPECT_EQ(hist.total_count(), 4);
     EXPECT_EQ(hist.top_occurence(), 3);
-    EXPECT_FLOAT_EQ(hist.top(), 2.5);
+    EXPECT_NEAR(static_cast<double>(hist.top()), 2.5, 1e-6);
 }
 
 /**
@@ -441,7 +441,7 @@ TEST(HistogramRangeTest, AddRangeSupportsRangeAndInitializerList)
 
     EXPECT_EQ(hist.total_count(), 4);
     EXPECT_EQ(hist.top_occurence(), 2);
-    EXPECT_FLOAT_EQ(hist.top(), 2.5);
+    EXPECT_NEAR(static_cast<double>(hist.top()), 2.5, 1e-6);
 }
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
