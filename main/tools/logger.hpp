@@ -45,24 +45,12 @@
 #include <string>
 #include <utility>
 
-#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-#if defined(__has_include)
+#if (((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))) && defined(__has_include))
 #if __has_include(<source_location>)
 #include <source_location>
-#define TOOLS_HAS_SOURCE_LOCATION 1
-#define TOOLS_STD_SOURCE_LOCATION 1
 #elif __has_include(<experimental/source_location>)
 #include <experimental/source_location>
-#define TOOLS_HAS_SOURCE_LOCATION 1
-#define TOOLS_STD_SOURCE_LOCATION 0
-#else
-#define TOOLS_HAS_SOURCE_LOCATION 0
 #endif
-#else
-#define TOOLS_HAS_SOURCE_LOCATION 0
-#endif
-#else
-#define TOOLS_HAS_SOURCE_LOCATION 0
 #endif
 
 #if defined(ESP_PLATFORM)
@@ -134,13 +122,13 @@
 #else
 
 
-#if (((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))) && (TOOLS_HAS_SOURCE_LOCATION == 1))
+#if (((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))) && defined(__has_include) && (__has_include(<source_location>) || __has_include(<experimental/source_location>)))
 namespace tools
 {
     // https://stackoverflow.com/questions/57547273/how-to-use-source-location-in-a-variadic-template-function
     // https://github.com/gabime/spdlog/issues/1959
 
-#if TOOLS_STD_SOURCE_LOCATION == 1
+#if __has_include(<source_location>)
     using source_location = std::source_location;
 #else
     using source_location = std::experimental::source_location;
