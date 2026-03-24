@@ -117,6 +117,11 @@ if(CMAKE_CXX_STANDARD GREATER_EQUAL 20)
     message(STATUS "C++20 or newer is supported/enabled")
 endif()
 
+if(WIN32)
+    # Prevent Windows headers from defining min/max macros that break std::min/std::max and type::max().
+    add_compile_definitions(NOMINMAX)
+endif()
+
 # mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
 # note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
 

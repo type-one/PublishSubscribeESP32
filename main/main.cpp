@@ -3368,7 +3368,8 @@ void test_smp_tasks_memory_pipe()
             std::printf(" / %s (core 0)\n", task_name.c_str());
 
             constexpr const std::size_t chunk_size = 16U; 
-            std::size_t to_send = std::min(chunk_size, label.size() - offset);
+            // Parenthesized std::min avoids Windows min macro expansion if NOMINMAX is missing in a TU.
+            std::size_t to_send = (std::min)(chunk_size, label.size() - offset);
             
             if (offset < label.size())
             {            
