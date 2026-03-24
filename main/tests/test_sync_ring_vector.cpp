@@ -270,28 +270,43 @@ TYPED_TEST(SyncRingVectorTest, IsrResize)
  */
 TYPED_TEST(SyncRingVectorTest, MultipleProducersMultipleConsumers)
 {
+    constexpr std::size_t total_values = 10U;
     std::atomic_bool producers_done { false };
+    std::atomic<std::size_t> accepted_count { 0U };
+    std::atomic<std::size_t> consumed_count { 0U };
 
-    auto producer = [this](int start, int end)
+    auto producer = [this, &accepted_count](int start, int end)
     {
         for (int i = start; i < end; ++i)
         {
-            this->vec->push(static_cast<TypeParam>(i));
-        }
-    };
-
-    auto consumer = [this, &producers_done](int count)
-    {
-        for (int i = 0; i < count; ++i)
-        {
-            while (this->vec->empty() && !producers_done.load())
+            const auto value = static_cast<TypeParam>(i);
+            while (!this->vec->push(value))
             {
                 std::this_thread::yield();
             }
+            ++accepted_count;
+        }
+    };
 
-            if (!this->vec->empty())
+    auto consumer = [this, &producers_done, &accepted_count, &consumed_count](int /*count*/)
+    {
+        while (true)
+        {
+            const auto item = this->vec->front_pop();
+            if (item.has_value())
             {
-                this->vec->pop();
+                ++consumed_count;
+                continue;
+            }
+
+            if (producers_done.load() && (consumed_count.load() >= accepted_count.load()))
+            {
+                break;
+            }
+
+            if (!producers_done.load() || !this->vec->empty())
+            {
+                std::this_thread::yield();
             }
         }
     };
@@ -309,6 +324,8 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersMultipleConsumers)
     consumer1.join();
     consumer2.join();
 
+    EXPECT_EQ(accepted_count.load(), total_values);
+    EXPECT_EQ(consumed_count.load(), total_values);
     EXPECT_TRUE(this->vec->empty());
 }
 
@@ -326,28 +343,43 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersMultipleConsumers)
  */
 TYPED_TEST(SyncRingVectorTest, SingleProducerMultipleConsumers)
 {
+    constexpr std::size_t total_values = 10U;
     std::atomic_bool producers_done { false };
+    std::atomic<std::size_t> accepted_count { 0U };
+    std::atomic<std::size_t> consumed_count { 0U };
 
-    auto producer = [this]()
+    auto producer = [this, &accepted_count]()
     {
         for (int i = 0; i < 10; ++i)
         {
-            this->vec->push(static_cast<TypeParam>(i));
-        }
-    };
-
-    auto consumer = [this, &producers_done](int count)
-    {
-        for (int i = 0; i < count; ++i)
-        {
-            while (this->vec->empty() && !producers_done.load())
+            const auto value = static_cast<TypeParam>(i);
+            while (!this->vec->push(value))
             {
                 std::this_thread::yield();
             }
+            ++accepted_count;
+        }
+    };
 
-            if (!this->vec->empty())
+    auto consumer = [this, &producers_done, &accepted_count, &consumed_count](int /*count*/)
+    {
+        while (true)
+        {
+            const auto item = this->vec->front_pop();
+            if (item.has_value())
             {
-                this->vec->pop();
+                ++consumed_count;
+                continue;
+            }
+
+            if (producers_done.load() && (consumed_count.load() >= accepted_count.load()))
+            {
+                break;
+            }
+
+            if (!producers_done.load() || !this->vec->empty())
+            {
+                std::this_thread::yield();
             }
         }
     };
@@ -363,6 +395,8 @@ TYPED_TEST(SyncRingVectorTest, SingleProducerMultipleConsumers)
     consumer1.join();
     consumer2.join();
 
+    EXPECT_EQ(accepted_count.load(), total_values);
+    EXPECT_EQ(consumed_count.load(), total_values);
     EXPECT_TRUE(this->vec->empty());
 }
 
@@ -379,28 +413,43 @@ TYPED_TEST(SyncRingVectorTest, SingleProducerMultipleConsumers)
  */
 TYPED_TEST(SyncRingVectorTest, MultipleProducersSingleConsumer)
 {
+    constexpr std::size_t total_values = 10U;
     std::atomic_bool producers_done { false };
+    std::atomic<std::size_t> accepted_count { 0U };
+    std::atomic<std::size_t> consumed_count { 0U };
 
-    auto producer = [this](int start, int end)
+    auto producer = [this, &accepted_count](int start, int end)
     {
         for (int i = start; i < end; ++i)
         {
-            this->vec->push(static_cast<TypeParam>(i));
-        }
-    };
-
-    auto consumer = [this, &producers_done](int count)
-    {
-        for (int i = 0; i < count; ++i)
-        {
-            while (this->vec->empty() && !producers_done.load())
+            const auto value = static_cast<TypeParam>(i);
+            while (!this->vec->push(value))
             {
                 std::this_thread::yield();
             }
+            ++accepted_count;
+        }
+    };
 
-            if (!this->vec->empty())
+    auto consumer = [this, &producers_done, &accepted_count, &consumed_count](int /*count*/)
+    {
+        while (true)
+        {
+            const auto item = this->vec->front_pop();
+            if (item.has_value())
             {
-                this->vec->pop();
+                ++consumed_count;
+                continue;
+            }
+
+            if (producers_done.load() && (consumed_count.load() >= accepted_count.load()))
+            {
+                break;
+            }
+
+            if (!producers_done.load() || !this->vec->empty())
+            {
+                std::this_thread::yield();
             }
         }
     };
@@ -416,6 +465,8 @@ TYPED_TEST(SyncRingVectorTest, MultipleProducersSingleConsumer)
 
     consumerThread.join();
 
+    EXPECT_EQ(accepted_count.load(), total_values);
+    EXPECT_EQ(consumed_count.load(), total_values);
     EXPECT_TRUE(this->vec->empty());
 }
 

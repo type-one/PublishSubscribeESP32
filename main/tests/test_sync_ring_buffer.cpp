@@ -263,28 +263,43 @@ TYPED_TEST(SyncRingBufferTest, Capacity)
  */
 TYPED_TEST(SyncRingBufferTest, MultipleProducersMultipleConsumers)
 {
+    constexpr std::size_t total_values = 20U;
     std::atomic_bool producers_done { false };
+    std::atomic<std::size_t> accepted_count { 0U };
+    std::atomic<std::size_t> consumed_count { 0U };
 
-    auto producer = [this](int id)
+    auto producer = [this, &accepted_count](int id)
     {
         for (int i = 0; i < 10; ++i)
         {
-            this->buffer->push(static_cast<TypeParam>(id * 10 + i));
-        }
-    };
-
-    auto consumer = [this, &producers_done]()
-    {
-        for (int i = 0; i < 10; ++i)
-        {
-            while (this->buffer->empty() && !producers_done.load())
+            const auto value = static_cast<TypeParam>(id * 10 + i);
+            while (!this->buffer->push(value))
             {
                 std::this_thread::yield();
             }
+            ++accepted_count;
+        }
+    };
 
-            if (!this->buffer->empty())
+    auto consumer = [this, &producers_done, &accepted_count, &consumed_count]()
+    {
+        while (true)
+        {
+            const auto item = this->buffer->front_pop();
+            if (item.has_value())
             {
-                this->buffer->pop();
+                ++consumed_count;
+                continue;
+            }
+
+            if (producers_done.load() && (consumed_count.load() >= accepted_count.load()))
+            {
+                break;
+            }
+
+            if (!producers_done.load() || !this->buffer->empty())
+            {
+                std::this_thread::yield();
             }
         }
     };
@@ -302,6 +317,8 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersMultipleConsumers)
     consumer1.join();
     consumer2.join();
 
+    ASSERT_EQ(accepted_count.load(), total_values);
+    ASSERT_EQ(consumed_count.load(), total_values);
     ASSERT_TRUE(this->buffer->empty());
 }
 
@@ -322,28 +339,43 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersMultipleConsumers)
  */
 TYPED_TEST(SyncRingBufferTest, SingleProducerMultipleConsumers)
 {
+    constexpr std::size_t total_values = 20U;
     std::atomic_bool producer_done { false };
+    std::atomic<std::size_t> accepted_count { 0U };
+    std::atomic<std::size_t> consumed_count { 0U };
 
-    auto producer = [this]()
+    auto producer = [this, &accepted_count]()
     {
         for (int i = 0; i < 20; ++i)
         {
-            this->buffer->push(static_cast<TypeParam>(i));
-        }
-    };
-
-    auto consumer = [this, &producer_done]()
-    {
-        for (int i = 0; i < 10; ++i)
-        {
-            while (this->buffer->empty() && !producer_done.load())
+            const auto value = static_cast<TypeParam>(i);
+            while (!this->buffer->push(value))
             {
                 std::this_thread::yield();
             }
+            ++accepted_count;
+        }
+    };
 
-            if (!this->buffer->empty())
+    auto consumer = [this, &producer_done, &accepted_count, &consumed_count]()
+    {
+        while (true)
+        {
+            const auto item = this->buffer->front_pop();
+            if (item.has_value())
             {
-                this->buffer->pop();
+                ++consumed_count;
+                continue;
+            }
+
+            if (producer_done.load() && (consumed_count.load() >= accepted_count.load()))
+            {
+                break;
+            }
+
+            if (!producer_done.load() || !this->buffer->empty())
+            {
+                std::this_thread::yield();
             }
         }
     };
@@ -359,6 +391,8 @@ TYPED_TEST(SyncRingBufferTest, SingleProducerMultipleConsumers)
     consumer1.join();
     consumer2.join();
 
+    ASSERT_EQ(accepted_count.load(), total_values);
+    ASSERT_EQ(consumed_count.load(), total_values);
     ASSERT_TRUE(this->buffer->empty());
 }
 
@@ -373,28 +407,43 @@ TYPED_TEST(SyncRingBufferTest, SingleProducerMultipleConsumers)
  */
 TYPED_TEST(SyncRingBufferTest, MultipleProducersSingleConsumer)
 {
+    constexpr std::size_t total_values = 20U;
     std::atomic_bool producers_done { false };
+    std::atomic<std::size_t> accepted_count { 0U };
+    std::atomic<std::size_t> consumed_count { 0U };
 
-    auto producer = [this](int id)
+    auto producer = [this, &accepted_count](int id)
     {
         for (int i = 0; i < 10; ++i)
         {
-            this->buffer->push(static_cast<TypeParam>(id * 10 + i));
-        }
-    };
-
-    auto consumer = [this, &producers_done]()
-    {
-        for (int i = 0; i < 20; ++i)
-        {
-            while (this->buffer->empty() && !producers_done.load())
+            const auto value = static_cast<TypeParam>(id * 10 + i);
+            while (!this->buffer->push(value))
             {
                 std::this_thread::yield();
             }
+            ++accepted_count;
+        }
+    };
 
-            if (!this->buffer->empty())
+    auto consumer = [this, &producers_done, &accepted_count, &consumed_count]()
+    {
+        while (true)
+        {
+            const auto item = this->buffer->front_pop();
+            if (item.has_value())
             {
-                this->buffer->pop();
+                ++consumed_count;
+                continue;
+            }
+
+            if (producers_done.load() && (consumed_count.load() >= accepted_count.load()))
+            {
+                break;
+            }
+
+            if (!producers_done.load() || !this->buffer->empty())
+            {
+                std::this_thread::yield();
             }
         }
     };
@@ -410,6 +459,8 @@ TYPED_TEST(SyncRingBufferTest, MultipleProducersSingleConsumer)
 
     consumerThread.join();
 
+    ASSERT_EQ(accepted_count.load(), total_values);
+    ASSERT_EQ(consumed_count.load(), total_values);
     ASSERT_TRUE(this->buffer->empty());
 }
 
