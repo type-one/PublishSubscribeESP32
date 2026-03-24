@@ -190,9 +190,10 @@ namespace tools
 #endif
 
         FILE* output = (level >= log_level::error) && (level <= log_level::warning) ? stderr : stdout;
+        const std::string file_name = std::filesystem::path(fmt.loc.file_name()).filename().string();
 
-        std::fprintf(output, "%s %s [%s, line %d] ", lookup.at(level).c_str(),
-            std::filesystem::path(fmt.loc.file_name()).filename().c_str(), fmt.loc.function_name(), fmt.loc.line());
+        std::fprintf(output, "%s %s [%s, line %d] ", lookup.at(level).c_str(), file_name.c_str(),
+            fmt.loc.function_name(), fmt.loc.line());
         if constexpr (sizeof...(Args) == 0)
         {
             std::fputs(fmt.value, output);

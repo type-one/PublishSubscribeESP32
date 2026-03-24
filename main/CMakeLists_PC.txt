@@ -233,6 +233,14 @@ else()
     FetchContent_MakeAvailable(googletest)
 endif()
 
+if(TARGET GTest::gtest_main)
+    set(GTEST_MAIN_TARGET GTest::gtest_main)
+elseif(TARGET gtest_main)
+    set(GTEST_MAIN_TARGET gtest_main)
+else()
+    message(FATAL_ERROR "GoogleTest main target not available")
+endif()
+
 enable_testing()
 
 ################################
@@ -267,17 +275,30 @@ set(TEST_SOURCES
     # Add more test files as needed
 )
 
-# Create an executable for running tests
-add_executable(run_tests ${TEST_SOURCES})
+# Create an executable for running tests.
+# Do not use `run_tests` on Visual Studio because CTest generates a built-in
+# `RUN_TESTS` utility target and Windows project names are case-insensitive.
+set(RUN_TESTS_TARGET publish_subscribe_tests)
+if(TARGET ${RUN_TESTS_TARGET})
+    get_filename_component(_cmake_list_name "${CMAKE_CURRENT_LIST_FILE}" NAME_WE)
+    set(RUN_TESTS_TARGET "publish_subscribe_tests_${_cmake_list_name}")
+    message(WARNING "Target publish_subscribe_tests already exists. Using ${RUN_TESTS_TARGET} in this CMake list to avoid solution project-name collisions.")
+endif()
+add_executable(${RUN_TESTS_TARGET} ${TEST_SOURCES})
 
-# Link Google Test and pthread library
-target_link_libraries(run_tests PRIVATE framework_modules project_options gtest gtest_main Threads::Threads)
+# Link Google Test and threads in a platform-portable way
+target_link_libraries(${RUN_TESTS_TARGET} PRIVATE framework_modules project_options ${GTEST_MAIN_TARGET} Threads::Threads)
 
 # Add a custom target to run the tests
+set(RUN_TESTS_COMMAND_TARGET run_tests_command)
+if(TARGET ${RUN_TESTS_COMMAND_TARGET})
+    get_filename_component(_cmake_list_name "${CMAKE_CURRENT_LIST_FILE}" NAME_WE)
+    set(RUN_TESTS_COMMAND_TARGET "run_tests_command_${_cmake_list_name}")
+endif()
 add_custom_target(
-    run_tests_command
-    COMMAND run_tests
-    DEPENDS run_tests
+    ${RUN_TESTS_COMMAND_TARGET}
+    COMMAND $<TARGET_FILE:${RUN_TESTS_TARGET}>
+    DEPENDS ${RUN_TESTS_TARGET}
 )
 
-gtest_discover_tests(run_tests)
+gtest_discover_tests(${RUN_TESTS_TARGET})
