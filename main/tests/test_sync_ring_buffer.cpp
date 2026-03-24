@@ -556,6 +556,88 @@ TEST(SyncRingBufferPerfectForwardingTest, SupportsMoveOnlyType)
     EXPECT_FALSE(buffer.front_pop_move().has_value());
 }
 
+TEST(SyncRingBufferOverwriteApiTest, ScalarOverwriteAndRejectReturns)
+{
+    tools::sync_ring_buffer<int, 3> buffer;
+
+    EXPECT_TRUE(buffer.push(1));
+    EXPECT_TRUE(buffer.push(2));
+    EXPECT_TRUE(buffer.emplace(3));
+    EXPECT_TRUE(buffer.full());
+
+    EXPECT_FALSE(buffer.push(4));
+    EXPECT_FALSE(buffer.emplace(5));
+    EXPECT_EQ(buffer.size(), 3U);
+    EXPECT_EQ(buffer.front().value_or(-1), 1);
+    EXPECT_EQ(buffer.back().value_or(-1), 3);
+
+    EXPECT_TRUE(buffer.push_overwrite(4));
+    EXPECT_TRUE(buffer.emplace_overwrite(5));
+    EXPECT_EQ(buffer.size(), 3U);
+    EXPECT_EQ(buffer.front().value_or(-1), 3);
+    EXPECT_EQ(buffer.back().value_or(-1), 5);
+}
+
+TEST(SyncRingBufferOverwriteApiTest, IsrScalarOverwriteAndRejectReturns)
+{
+    tools::sync_ring_buffer<int, 3> buffer;
+
+    buffer.isr_push(1);
+    buffer.isr_push(2);
+    buffer.isr_emplace(3);
+    EXPECT_TRUE(buffer.isr_full());
+
+    buffer.isr_push(4);
+    buffer.isr_emplace(5);
+    EXPECT_EQ(buffer.isr_size(), 3U);
+    EXPECT_EQ(buffer.front().value_or(-1), 1);
+    EXPECT_EQ(buffer.back().value_or(-1), 3);
+
+    EXPECT_TRUE(buffer.isr_push_overwrite(4));
+    EXPECT_TRUE(buffer.isr_emplace_overwrite(5));
+    EXPECT_EQ(buffer.isr_size(), 3U);
+    EXPECT_EQ(buffer.front().value_or(-1), 3);
+    EXPECT_EQ(buffer.back().value_or(-1), 5);
+}
+
+TEST(SyncRingBufferOverwriteApiTest, RangeOverwriteReportsInsertedVsOverwritten)
+{
+    tools::sync_ring_buffer<int, 3> buffer;
+
+    auto result = buffer.push_range_overwrite({ 10, 20 });
+    EXPECT_EQ(result.inserted, 2U);
+    EXPECT_EQ(result.overwritten, 0U);
+
+    result = buffer.push_range_overwrite({ 30, 40, 50 });
+    EXPECT_EQ(result.inserted, 1U);
+    EXPECT_EQ(result.overwritten, 2U);
+    EXPECT_EQ(buffer.size(), 3U);
+    EXPECT_EQ(buffer.front().value_or(-1), 30);
+    EXPECT_EQ(buffer.back().value_or(-1), 50);
+
+    const std::size_t accepted = buffer.push_range({ 60, 70 });
+    EXPECT_EQ(accepted, 0U);
+}
+
+TEST(SyncRingBufferOverwriteApiTest, IsrRangeOverwriteReportsInsertedVsOverwritten)
+{
+    tools::sync_ring_buffer<int, 3> buffer;
+
+    auto result = buffer.isr_push_range_overwrite({ 1, 2 });
+    EXPECT_EQ(result.inserted, 2U);
+    EXPECT_EQ(result.overwritten, 0U);
+
+    result = buffer.isr_push_range_overwrite({ 3, 4, 5 });
+    EXPECT_EQ(result.inserted, 1U);
+    EXPECT_EQ(result.overwritten, 2U);
+    EXPECT_EQ(buffer.isr_size(), 3U);
+    EXPECT_EQ(buffer.front().value_or(-1), 3);
+    EXPECT_EQ(buffer.back().value_or(-1), 5);
+
+    const std::size_t accepted = buffer.isr_push_range({ 6, 7 });
+    EXPECT_EQ(accepted, 0U);
+}
+
 /**
  * @brief Verifies push_range supports initializer-list and generic ranges.
  *

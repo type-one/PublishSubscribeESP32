@@ -239,6 +239,55 @@ TYPED_TEST(RingVectorTest, TestResize)
     EXPECT_EQ(this->rv->size(), 5);
 }
 
+TEST(RingVectorOverwriteApiTest, ScalarOverwriteReturnsEvictionAndKeepsBoundedHistory)
+{
+    tools::ring_vector<int> vec(3);
+
+    EXPECT_TRUE(vec.push(1));
+    EXPECT_TRUE(vec.push(2));
+    EXPECT_TRUE(vec.emplace(3));
+    EXPECT_TRUE(vec.full());
+
+    EXPECT_FALSE(vec.push(4));
+    EXPECT_FALSE(vec.emplace(5));
+    EXPECT_EQ(vec.size(), 3U);
+    EXPECT_EQ(vec.front(), 1);
+    EXPECT_EQ(vec.back(), 3);
+
+    EXPECT_TRUE(vec.push_overwrite(4));
+    EXPECT_EQ(vec.size(), 3U);
+    EXPECT_EQ(vec.front(), 2);
+    EXPECT_EQ(vec.back(), 4);
+
+    EXPECT_TRUE(vec.emplace_overwrite(5));
+    EXPECT_EQ(vec.size(), 3U);
+    EXPECT_EQ(vec.front(), 3);
+    EXPECT_EQ(vec.back(), 5);
+}
+
+TEST(RingVectorOverwriteApiTest, RangeOverwriteReportsInsertedVsOverwritten)
+{
+    tools::ring_vector<int> vec(3);
+
+    auto result = vec.push_range_overwrite({ 10, 20 });
+    EXPECT_EQ(result.inserted, 2U);
+    EXPECT_EQ(result.overwritten, 0U);
+    EXPECT_EQ(vec.size(), 2U);
+
+    result = vec.push_range_overwrite({ 30, 40, 50 });
+    EXPECT_EQ(result.inserted, 1U);
+    EXPECT_EQ(result.overwritten, 2U);
+    EXPECT_EQ(vec.size(), 3U);
+    EXPECT_EQ(vec.front(), 30);
+    EXPECT_EQ(vec.back(), 50);
+
+    const std::size_t accepted = vec.push_range({ 60, 70 });
+    EXPECT_EQ(accepted, 0U);
+    EXPECT_EQ(vec.size(), 3U);
+    EXPECT_EQ(vec.front(), 30);
+    EXPECT_EQ(vec.back(), 50);
+}
+
 namespace
 {
     /**

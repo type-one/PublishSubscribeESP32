@@ -203,11 +203,61 @@ TYPED_TEST(RingBufferTest, OverwriteWhenFull)
     this->buffer->push(static_cast<TypeParam>(4));
     this->buffer->push(static_cast<TypeParam>(5));
 
-    this->buffer->push(static_cast<TypeParam>(6)); // This should overwrite the first element (1)
+    const bool inserted = this->buffer->push(static_cast<TypeParam>(6));
 
-    EXPECT_EQ(this->buffer->size(), 6); // Size should be 6 because we increment size even when overwriting
-    EXPECT_EQ(this->buffer->front(), static_cast<TypeParam>(2)); // The new front should be 2
-    EXPECT_EQ(this->buffer->back(), static_cast<TypeParam>(6));  // The new back should be 6
+    EXPECT_FALSE(inserted);
+    EXPECT_EQ(this->buffer->size(), 5U);
+    EXPECT_EQ(this->buffer->front(), static_cast<TypeParam>(1));
+    EXPECT_EQ(this->buffer->back(), static_cast<TypeParam>(5));
+}
+
+TEST(RingBufferOverwriteApiTest, ScalarOverwriteReturnsEvictionAndKeepsBoundedHistory)
+{
+    tools::ring_buffer<int, 3> buffer;
+
+    EXPECT_TRUE(buffer.push(1));
+    EXPECT_TRUE(buffer.push(2));
+    EXPECT_TRUE(buffer.emplace(3));
+    EXPECT_TRUE(buffer.full());
+
+    EXPECT_FALSE(buffer.push(4));
+    EXPECT_FALSE(buffer.emplace(5));
+    EXPECT_EQ(buffer.size(), 3U);
+    EXPECT_EQ(buffer.front(), 1);
+    EXPECT_EQ(buffer.back(), 3);
+
+    EXPECT_TRUE(buffer.push_overwrite(4));
+    EXPECT_EQ(buffer.size(), 3U);
+    EXPECT_EQ(buffer.front(), 2);
+    EXPECT_EQ(buffer.back(), 4);
+
+    EXPECT_TRUE(buffer.emplace_overwrite(5));
+    EXPECT_EQ(buffer.size(), 3U);
+    EXPECT_EQ(buffer.front(), 3);
+    EXPECT_EQ(buffer.back(), 5);
+}
+
+TEST(RingBufferOverwriteApiTest, RangeOverwriteReportsInsertedVsOverwritten)
+{
+    tools::ring_buffer<int, 3> buffer;
+
+    auto result = buffer.push_range_overwrite({ 10, 20 });
+    EXPECT_EQ(result.inserted, 2U);
+    EXPECT_EQ(result.overwritten, 0U);
+    EXPECT_EQ(buffer.size(), 2U);
+
+    result = buffer.push_range_overwrite({ 30, 40, 50 });
+    EXPECT_EQ(result.inserted, 1U);
+    EXPECT_EQ(result.overwritten, 2U);
+    EXPECT_EQ(buffer.size(), 3U);
+    EXPECT_EQ(buffer.front(), 30);
+    EXPECT_EQ(buffer.back(), 50);
+
+    const std::size_t accepted = buffer.push_range({ 60, 70 });
+    EXPECT_EQ(accepted, 0U);
+    EXPECT_EQ(buffer.size(), 3U);
+    EXPECT_EQ(buffer.front(), 30);
+    EXPECT_EQ(buffer.back(), 50);
 }
 
 /**

@@ -180,17 +180,9 @@ namespace tools
          *
          * @param elem The element to be copied into the ring vector.
          */
-        void push(const T& elem)
+        bool push(const T& elem)
         {
-            m_ring_vector[m_push_index] = elem;
-            m_last_index = m_push_index;
-            m_push_index = next_index(m_push_index);
-            ++m_size;
-            if (m_size > m_capacity)
-            {
-                // first entry is overwritten
-                m_pop_index = next_index(m_pop_index);
-            }
+            return write_value(elem, overflow_policy::reject) != write_status::rejected;
         }
 
         /**
@@ -200,17 +192,9 @@ namespace tools
          *
          * @param elem The element to be moved into the ring vector.
          */
-        void push(T&& elem)
+        bool push(T&& elem)
         {
-            m_ring_vector[m_push_index] = std::move(elem);
-            m_last_index = m_push_index;
-            m_push_index = next_index(m_push_index);
-            ++m_size;
-            if (m_size > m_capacity)
-            {
-                // first entry is overwritten
-                m_pop_index = next_index(m_pop_index);
-            }
+            return write_value(std::move(elem), overflow_policy::reject) != write_status::rejected;
         }
 
         /**
@@ -227,18 +211,10 @@ namespace tools
 #endif
         auto push(U&& elem)
     #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
+            -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
     #endif
         {
-            m_ring_vector[m_push_index] = std::forward<U>(elem);
-            m_last_index = m_push_index;
-            m_push_index = next_index(m_push_index);
-            ++m_size;
-            if (m_size > m_capacity)
-            {
-                // first entry is overwritten
-                m_pop_index = next_index(m_pop_index);
-            }
+            return write_value(std::forward<U>(elem), overflow_policy::reject) != write_status::rejected;
         }
 
         /**
@@ -255,18 +231,10 @@ namespace tools
 #endif
         auto emplace(Args&&... args)
     #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
+            -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
     #endif
         {
-            m_ring_vector[m_push_index] = T(std::forward<Args>(args)...);
-            m_last_index = m_push_index;
-            m_push_index = next_index(m_push_index);
-            ++m_size;
-            if (m_size > m_capacity)
-            {
-                // first entry is overwritten
-                m_pop_index = next_index(m_pop_index);
-            }
+            return write_value(T(std::forward<Args>(args)...), overflow_policy::reject) != write_status::rejected;
         }
 
         /**
@@ -408,12 +376,18 @@ namespace tools
             requires std::ranges::input_range<TRange>
                   && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
-        void push_range(TRange&& range)
+        std::size_t push_range(TRange&& range)
         {
+            std::size_t inserted = 0U;
             for (auto&& elem : std::forward<TRange>(range))
             {
-                push(T(std::forward<decltype(elem)>(elem)));
+                if (!push(T(std::forward<decltype(elem)>(elem))))
+                {
+                    break;
+                }
+                ++inserted;
             }
+            return inserted;
         }
 
         /**
@@ -433,12 +407,146 @@ namespace tools
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, const U&>
 #endif
-        void push_range(std::initializer_list<U> range)
+        std::size_t push_range(std::initializer_list<U> range)
         {
+            std::size_t inserted = 0U;
             for (const auto& elem : range)
             {
-                push(T(elem));
+                if (!push(T(elem)))
+                {
+                    break;
+                }
+                ++inserted;
             }
+            return inserted;
+        }
+
+        /**
+         * @brief Result of a push_range_overwrite operation.
+         *
+         * Reports how many items were freshly inserted into available capacity
+         * vs. how many items overwrote an existing (oldest) entry.
+         */
+        struct push_range_overwrite_result
+        {
+            std::size_t inserted = 0U;
+            std::size_t overwritten = 0U;
+        };
+
+        /**
+         * @brief Pushes a copy of an element, overwriting the oldest entry if full.
+         *
+         * @param elem The element to be copied into the ring vector.
+         */
+        bool push_overwrite(const T& elem)
+        {
+            return write_value(elem, overflow_policy::overwrite) == write_status::overwritten;
+        }
+
+        /**
+         * @brief Pushes an rvalue element, overwriting the oldest entry if full.
+         *
+         * @param elem The element to be moved into the ring vector.
+         */
+        bool push_overwrite(T&& elem)
+        {
+            return write_value(std::move(elem), overflow_policy::overwrite) == write_status::overwritten;
+        }
+
+        /**
+         * @brief Pushes an element using perfect forwarding, overwriting the oldest entry if full.
+         *
+         * @tparam U The type of the element (deduced).
+         * @param elem The element to be pushed into the ring vector.
+         */
+        template <typename U>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, U>
+#endif
+        auto push_overwrite(U&& elem)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
+    #endif
+        {
+            return write_value(std::forward<U>(elem), overflow_policy::overwrite) == write_status::overwritten;
+        }
+
+        /**
+         * @brief Constructs an element in place, overwriting the oldest entry if full.
+         *
+         * @tparam Args Parameter types for T's constructor (deduced).
+         * @param args Arguments to forward to T's constructor.
+         */
+        template <typename... Args>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, Args...>
+#endif
+        auto emplace_overwrite(Args&&... args)
+    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
+    #endif
+        {
+            return write_value(T(std::forward<Args>(args)...), overflow_policy::overwrite) == write_status::overwritten;
+        }
+
+        /**
+         * @brief Pushes all elements from a range, overwriting the oldest entries if full.
+         *
+         * @tparam TRange The range type (deduced).
+         * @param range The source range of elements to push.
+         * @return Result indicating how many elements were inserted vs. how many overwrote existing entries.
+         */
+        template <typename TRange
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<
+                std::is_constructible<
+                    T,
+                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
+                >::value
+            >::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::ranges::input_range<TRange>
+                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+#endif
+        push_range_overwrite_result push_range_overwrite(TRange&& range)
+        {
+            push_range_overwrite_result result;
+            for (auto&& elem : std::forward<TRange>(range))
+            {
+                const bool overwritten = push_overwrite(T(std::forward<decltype(elem)>(elem)));
+                result.overwritten += overwritten ? 1U : 0U;
+                result.inserted += overwritten ? 0U : 1U;
+            }
+            return result;
+        }
+
+        /**
+         * @brief Pushes all elements from an initializer-list, overwriting the oldest entries if full.
+         *
+         * @tparam U The initializer-list element type.
+         * @param range The source initializer-list.
+         * @return Result indicating how many elements were inserted vs. how many overwrote existing entries.
+         */
+        template <typename U
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+#endif
+        >
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<T, const U&>
+#endif
+        push_range_overwrite_result push_range_overwrite(std::initializer_list<U> range)
+        {
+            push_range_overwrite_result result;
+            for (const auto& elem : range)
+            {
+                const bool overwritten = push_overwrite(T(elem));
+                result.overwritten += overwritten ? 1U : 0U;
+                result.inserted += overwritten ? 0U : 1U;
+            }
+            return result;
         }
 
         /**
@@ -555,6 +663,44 @@ namespace tools
         }
 
     private:
+        enum class overflow_policy : unsigned char
+        {
+            reject,
+            overwrite
+        };
+
+        enum class write_status : unsigned char
+        {
+            rejected,
+            inserted,
+            overwritten
+        };
+
+        template <typename U>
+        write_status write_value(U&& elem, overflow_policy policy)
+        {
+            const bool is_full = (m_size >= m_capacity);
+            if (is_full && (policy == overflow_policy::reject))
+            {
+                return write_status::rejected;
+            }
+
+            if (is_full)
+            {
+                m_pop_index = next_index(m_pop_index);
+            }
+            else
+            {
+                ++m_size;
+            }
+
+            m_ring_vector[m_push_index] = std::forward<U>(elem);
+            m_last_index = m_push_index;
+            m_push_index = next_index(m_push_index);
+
+            return is_full ? write_status::overwritten : write_status::inserted;
+        }
+
         /**
          * @brief Calculates the next index in a circular buffer.
          *

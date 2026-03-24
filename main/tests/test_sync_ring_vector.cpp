@@ -538,6 +538,85 @@ TEST(SyncRingVectorPerfectForwardingTest, SupportsMoveOnlyType)
     EXPECT_FALSE(vec.front_pop_move().has_value());
 }
 
+TEST(SyncRingVectorOverwriteApiTest, ScalarOverwriteAndRejectReturns)
+{
+    tools::sync_ring_vector<int> vec(3);
+
+    EXPECT_TRUE(vec.push(1));
+    EXPECT_TRUE(vec.push(2));
+    EXPECT_TRUE(vec.emplace(3));
+    EXPECT_TRUE(vec.full());
+
+    EXPECT_FALSE(vec.push(4));
+    EXPECT_FALSE(vec.emplace(5));
+    EXPECT_EQ(vec.size(), 3U);
+    EXPECT_EQ(vec.front().value_or(-1), 1);
+    EXPECT_EQ(vec.back().value_or(-1), 3);
+
+    EXPECT_TRUE(vec.push_overwrite(4));
+    EXPECT_TRUE(vec.emplace_overwrite(5));
+    EXPECT_EQ(vec.size(), 3U);
+    EXPECT_EQ(vec.front().value_or(-1), 3);
+    EXPECT_EQ(vec.back().value_or(-1), 5);
+}
+
+TEST(SyncRingVectorOverwriteApiTest, IsrScalarOverwriteAndRejectReturns)
+{
+    tools::sync_ring_vector<int> vec(3);
+
+    EXPECT_EQ(vec.isr_push_range({ 1, 2, 3 }), 3U);
+    EXPECT_TRUE(vec.isr_full());
+
+    EXPECT_EQ(vec.isr_push_range({ 4, 5 }), 0U);
+    EXPECT_EQ(vec.isr_size(), 3U);
+    EXPECT_EQ(vec.front().value_or(-1), 1);
+    EXPECT_EQ(vec.back().value_or(-1), 3);
+
+    EXPECT_TRUE(vec.isr_push_overwrite(4));
+    EXPECT_TRUE(vec.isr_emplace_overwrite(5));
+    EXPECT_EQ(vec.isr_size(), 3U);
+    EXPECT_EQ(vec.front().value_or(-1), 3);
+    EXPECT_EQ(vec.back().value_or(-1), 5);
+}
+
+TEST(SyncRingVectorOverwriteApiTest, RangeOverwriteReportsInsertedVsOverwritten)
+{
+    tools::sync_ring_vector<int> vec(3);
+
+    auto result = vec.push_range_overwrite({ 10, 20 });
+    EXPECT_EQ(result.inserted, 2U);
+    EXPECT_EQ(result.overwritten, 0U);
+
+    result = vec.push_range_overwrite({ 30, 40, 50 });
+    EXPECT_EQ(result.inserted, 1U);
+    EXPECT_EQ(result.overwritten, 2U);
+    EXPECT_EQ(vec.size(), 3U);
+    EXPECT_EQ(vec.front().value_or(-1), 30);
+    EXPECT_EQ(vec.back().value_or(-1), 50);
+
+    const std::size_t accepted = vec.push_range({ 60, 70 });
+    EXPECT_EQ(accepted, 0U);
+}
+
+TEST(SyncRingVectorOverwriteApiTest, IsrRangeOverwriteReportsInsertedVsOverwritten)
+{
+    tools::sync_ring_vector<int> vec(3);
+
+    auto result = vec.isr_push_range_overwrite({ 1, 2 });
+    EXPECT_EQ(result.inserted, 2U);
+    EXPECT_EQ(result.overwritten, 0U);
+
+    result = vec.isr_push_range_overwrite({ 3, 4, 5 });
+    EXPECT_EQ(result.inserted, 1U);
+    EXPECT_EQ(result.overwritten, 2U);
+    EXPECT_EQ(vec.isr_size(), 3U);
+    EXPECT_EQ(vec.front().value_or(-1), 3);
+    EXPECT_EQ(vec.back().value_or(-1), 5);
+
+    const std::size_t accepted = vec.isr_push_range({ 6, 7 });
+    EXPECT_EQ(accepted, 0U);
+}
+
 /**
  * @brief Verifies push_range supports initializer-list and generic range insertion.
  */
