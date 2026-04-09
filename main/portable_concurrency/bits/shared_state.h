@@ -61,8 +61,12 @@ public:
       }
       state_storage_t<T> &operator()(monostate) {
         assert(false);
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
         throw std::logic_error{
             "Attempt to access shared_state storage while it's empty"};
+#else
+        std::terminate();
+#endif
       }
     } visitor;
     return storage_.visit(visitor);
@@ -83,8 +87,12 @@ public:
       }
       std::exception_ptr operator()(monostate) {
         assert(false);
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
         throw std::logic_error{
             "Attempt to access shared_state storage while it's empty"};
+#else
+        std::terminate();
+#endif
       }
     } visitor;
     return storage_.visit(visitor);

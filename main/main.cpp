@@ -116,6 +116,7 @@ void launch_runner() noexcept
 #if defined(CPP_EXCEPTIONS_ENABLED)
 void runner_except_catch()
 {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     try
     {
         runner();
@@ -124,6 +125,9 @@ void runner_except_catch()
     {
         LOG_ERROR("Exception catched - %s", exc.what());
     }
+#else
+    runner();
+#endif
 }
 #else
 void runner_no_except()

@@ -133,6 +133,19 @@ if(WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
+# Async future API policy:
+#   OFF (default) — use the v1 exception-based pc::future / pc::async API
+#   ON             — use the v2 result-based pc::v2::future_result / pc::v2::async_result API
+#                    (no exception requirement; sets PORTABLE_CONCURRENCY_V2_DEFAULT)
+option(PORTABLE_CONCURRENCY_V2_DEFAULT "Use result-based v2 future API as the project default" OFF)
+if(PORTABLE_CONCURRENCY_V2_DEFAULT)
+    add_compile_definitions(PORTABLE_CONCURRENCY_V2_DEFAULT)
+    add_compile_definitions(CJSONPP_NO_EXCEPTION)
+    message(STATUS "Async policy: v2 (result-based, no-exception)")
+else()
+    message(STATUS "Async policy: v1 (exception-based, default)")
+endif()
+
 # mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
 # note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
 
@@ -187,12 +200,17 @@ set(TARGET_TOOLS_SRC
         tools/timer_scheduler.cpp
 )
 
+set(TARGET_PORTABLE_CONCURRENCY_SRC
+        portable_concurrency/bits/portable_concurrency.cpp
+)
+
 file(GLOB TARGET_EXAMPLES_SRC
     examples/*.cpp
 )
 
 set(TARGET_SRC
         "${TARGET_TOOLS_SRC}"
+        "${TARGET_PORTABLE_CONCURRENCY_SRC}"
         "${TARGET_CEXCEPTION_SRC}"
         "${TARGET_CJSON_SRC}"
         "${TARGET_UZLIB_SRC}"
@@ -327,6 +345,7 @@ set(TEST_SOURCES
     tests/test_bytepack.cpp
     tests/test_cexception.cpp
     tests/test_cjsonpp.cpp
+    tests/test_cond_var.cpp
     tests/test_cpptime.cpp
     tests/test_critical_section.cpp
     tests/test_data_task.cpp
@@ -336,6 +355,10 @@ set(TEST_SOURCES
     tests/test_lock_free_ring_buffer.cpp
     tests/test_memory_pipe.cpp
     tests/test_periodic_task.cpp
+    tests/test_portable_concurrency_scenarios.cpp
+    tests/test_portable_concurrency_policy.cpp
+    tests/test_portable_concurrency_v2.cpp
+    tests/test_portable_concurrency_v2_worker_task.cpp
     tests/test_ring_buffer.cpp
     tests/test_ring_vector.cpp
     tests/test_sync_dictionary.cpp
@@ -349,6 +372,68 @@ set(TEST_SOURCES
     ${TEST_FPM_SOURCES}
     # Add more test files as needed
 )
+
+set(PORTABLE_CONCURRENCY_BUNDLE_COMMON_TEST_SOURCES
+    tests/portable_concurrency/test_either.cpp
+    tests/portable_concurrency/test_thread_pool.cpp
+    tests/portable_concurrency/test_unique_function.cpp
+)
+
+set(PORTABLE_CONCURRENCY_BUNDLE_V1_TEST_SOURCES
+    tests/portable_concurrency/test_abandon.cpp
+    tests/portable_concurrency/test_algo_adapters.cpp
+    tests/portable_concurrency/test_async.cpp
+    tests/portable_concurrency/test_cancelation.cpp
+    tests/portable_concurrency/test_future.cpp
+    tests/portable_concurrency/test_future_next.cpp
+    tests/portable_concurrency/test_future_then.cpp
+    tests/portable_concurrency/test_future_then_unwrap.cpp
+    tests/portable_concurrency/test_notify.cpp
+    tests/portable_concurrency/test_once_consumable_stack.cpp
+    tests/portable_concurrency/test_packaged_task.cpp
+    tests/portable_concurrency/test_packaged_task_unwrap.cpp
+    tests/portable_concurrency/test_promise.cpp
+    tests/portable_concurrency/test_shared_future.cpp
+    tests/portable_concurrency/test_shared_future_next.cpp
+    tests/portable_concurrency/test_shared_future_then.cpp
+    tests/portable_concurrency/test_shared_future_then_unwrap.cpp
+    tests/portable_concurrency/test_small_unique_function.cpp
+    tests/portable_concurrency/test_tools.cpp
+    tests/portable_concurrency/test_timed_waiter.cpp
+    tests/portable_concurrency/test_when_all_tuple.cpp
+    tests/portable_concurrency/test_when_all_vector.cpp
+    tests/portable_concurrency/test_when_any_tuple.cpp
+    tests/portable_concurrency/test_when_any_vector.cpp
+)
+
+set(PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES
+    tests/portable_concurrency_v2/test_abandon_result.cpp
+    tests/portable_concurrency_v2/test_async_result.cpp
+    tests/portable_concurrency_v2/test_continuation_result.cpp
+    tests/portable_concurrency_v2/test_continuation_result_no_exceptions.cpp
+    tests/portable_concurrency_v2/test_future_result.cpp
+    tests/portable_concurrency_v2/test_next_result.cpp
+    tests/portable_concurrency_v2/test_packaged_task_result.cpp
+    tests/portable_concurrency_v2/test_promise_result.cpp
+    tests/portable_concurrency_v2/test_reference_type_unsupported.cpp
+    tests/portable_concurrency_v2/test_shared_result.cpp
+    tests/portable_concurrency_v2/test_v2_scenarios.cpp
+    tests/portable_concurrency_v2/test_when_all_result.cpp
+    tests/portable_concurrency_v2/test_when_any_result.cpp
+)
+
+list(APPEND TEST_SOURCES ${PORTABLE_CONCURRENCY_BUNDLE_COMMON_TEST_SOURCES})
+
+if(PORTABLE_CONCURRENCY_V2_DEFAULT)
+    list(APPEND TEST_SOURCES ${PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES})
+else()
+    list(APPEND TEST_SOURCES ${PORTABLE_CONCURRENCY_BUNDLE_V1_TEST_SOURCES})
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        # Upstream v1 tests intentionally exercise deprecated/no-discard paths.
+        set_source_files_properties(${PORTABLE_CONCURRENCY_BUNDLE_V1_TEST_SOURCES}
+            PROPERTIES COMPILE_OPTIONS "-Wno-deprecated-declarations;-Wno-unused-result")
+    endif()
+endif()
 
 # Create an executable for running tests.
 # Do not use `run_tests` on Visual Studio because CTest generates a built-in
@@ -396,4 +481,4 @@ add_custom_target(
     DEPENDS ${RUN_TESTS_TARGET}
 )
 
-gtest_discover_tests(${RUN_TESTS_TARGET})
+gtest_discover_tests(${RUN_TESTS_TARGET} DISCOVERY_MODE PRE_TEST)

@@ -1,4 +1,6 @@
 #include <atomic>
+#include "tools/critical_section.hpp"
+#include "tools/cond_var.hpp"
 #include <functional>
 #include <future>
 
@@ -21,7 +23,13 @@ namespace portable_concurrency {
 inline namespace cxx14_v1 {
 namespace detail {
 
-[[noreturn]] void throw_bad_func_call() { throw std::bad_function_call{}; }
+[[noreturn]] void throw_bad_func_call() {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+  throw std::bad_function_call{};
+#else
+  std::terminate();
+#endif
+}
 
 template class small_unique_function<void()>;
 template struct forward_list_deleter<continuation>;
@@ -41,31 +49,43 @@ void continuations_stack::execute() {
 bool continuations_stack::executed() const { return stack_.is_consumed(); }
 
 void wait(future_state_base &state) {
-  std::mutex mtx;
-  std::condition_variable cv;
+  tools::critical_section mtx;
+  tools::cond_var cv;
   bool ready = false;
   state.push([&] {
-    std::lock_guard<std::mutex> guard{mtx};
+    std::lock_guard<tools::critical_section> guard{mtx};
     ready = true;
     cv.notify_one();
   });
 
-  std::unique_lock<std::mutex> lk{mtx};
+  std::unique_lock<tools::critical_section> lk{mtx};
   cv.wait(lk, [&] { return ready; });
 }
 
 template class closable_queue<unique_function<void()>>;
 
 [[noreturn]] void throw_no_state() {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
   throw std::future_error{std::future_errc::no_state};
+#else
+  std::terminate();
+#endif
 }
 
 [[noreturn]] void throw_already_satisfied() {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
   throw std::future_error(std::future_errc::promise_already_satisfied);
+#else
+  std::terminate();
+#endif
 }
 
 [[noreturn]] void throw_already_retrieved() {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
   throw std::future_error(std::future_errc::future_already_retrieved);
+#else
+  std::terminate();
+#endif
 }
 
 std::exception_ptr make_broken_promise() {
@@ -98,12 +118,12 @@ void process_queue(
 template class unique_function<void()>;
 
 latch::~latch() {
-  std::unique_lock<std::mutex> lock{mutex_};
+  std::unique_lock<tools::critical_section> lock{mutex_};
   cv_.wait(lock, [this] { return waiters_ == 0; });
 }
 
 void latch::count_down_and_wait() {
-  std::unique_lock<std::mutex> lock{mutex_};
+  std::unique_lock<tools::critical_section> lock{mutex_};
   ++waiters_;
   assert(counter_ > 0);
   if (--counter_ == 0) {
@@ -118,7 +138,7 @@ void latch::count_down_and_wait() {
 
 void latch::count_down(ptrdiff_t n) {
   {
-    std::lock_guard<std::mutex> lock{mutex_};
+    std::lock_guard<tools::critical_section> lock{mutex_};
     assert(counter_ >= n);
     assert(n >= 0);
     counter_ -= n;
@@ -129,12 +149,12 @@ void latch::count_down(ptrdiff_t n) {
 }
 
 bool latch::is_ready() const noexcept {
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<tools::critical_section> lock{mutex_};
   return counter_ == 0;
 }
 
 void latch::wait() const {
-  std::unique_lock<std::mutex> lock{mutex_};
+  std::unique_lock<tools::critical_section> lock{mutex_};
   ++waiters_;
   cv_.wait(lock, [this] { return counter_ == 0; });
   if (--waiters_ == 0)
@@ -143,7 +163,11 @@ void latch::wait() const {
 
 template <> void future<void>::get() {
   if (!state_)
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     throw std::future_error(std::future_errc::no_state);
+#else
+    std::terminate();
+#endif
   wait();
   auto state = std::move(state_);
   state->value_ref();
@@ -152,7 +176,11 @@ template <> void future<void>::get() {
 template <>
 typename shared_future<void>::get_result_type shared_future<void>::get() const {
   if (!state_)
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     throw std::future_error(std::future_errc::no_state);
+#else
+    std::terminate();
+#endif
   wait();
   state_->value_ref();
 }
@@ -183,12 +211,12 @@ static_thread_pool::~static_thread_pool() {
 
 void static_thread_pool::attach() {
   {
-    std::lock_guard<std::mutex> lock{mutex_};
+    std::lock_guard<tools::critical_section> lock{mutex_};
     ++attached_threads_;
   }
   process_queue(queue_, stopped_);
   {
-    std::unique_lock<std::mutex> lock{mutex_};
+    std::unique_lock<tools::critical_section> lock{mutex_};
     --attached_threads_;
     cv_.wait(lock, [&] { return attached_threads_ == 0; });
   }

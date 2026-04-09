@@ -1,5 +1,6 @@
 #pragma once
 
+#include <new>
 #include <type_traits>
 
 #include "invoke.h"
@@ -33,14 +34,19 @@ template <typename R, typename... A> struct callable_vtbl {
   func_ptr_t<R, small_buffer &, A...> call;
 };
 
+template <typename F>
+F &small_buffer_cast(small_buffer &buf) {
+  return *std::launder(reinterpret_cast<F *>(buf.data.data()));
+}
+
 template <typename F, typename R, typename... A>
 const callable_vtbl<R, A...> &get_callable_vtbl() {
   static_assert(is_storable_t<F>::value,
                 "Can't embed object into small buffer");
   static const callable_vtbl<R, A...> res = {
-      [](small_buffer &buf) { reinterpret_cast<F &>(buf).~F(); },
+      [](small_buffer &buf) { small_buffer_cast<F>(buf).~F(); },
       [](small_buffer &src, small_buffer &dst) {
-        new (&dst) F{std::move(reinterpret_cast<F &>(src))};
+        new (dst.data.data()) F{std::move(small_buffer_cast<F>(src))};
       },
       [](small_buffer &buf, A... a) -> R {
 #if !defined(_MSC_VER)
@@ -49,12 +55,12 @@ const callable_vtbl<R, A...> &get_callable_vtbl() {
         return static_cast<std::conditional_t<
             std::is_void<R>::value, void,
             decltype(portable_concurrency::cxx14_v1::detail::invoke(
-                reinterpret_cast<F &>(buf), std::forward<A>(a)...))>>(
+                small_buffer_cast<F>(buf), std::forward<A>(a)...))>>(
             portable_concurrency::cxx14_v1::detail::invoke(
-                reinterpret_cast<F &>(buf), std::forward<A>(a)...));
+                small_buffer_cast<F>(buf), std::forward<A>(a)...));
 #else
         return static_cast<R>(portable_concurrency::cxx14_v1::detail::invoke(
-            reinterpret_cast<F &>(buf), std::forward<A>(a)...));
+            small_buffer_cast<F>(buf), std::forward<A>(a)...));
 #endif
       }};
   return res;
@@ -102,7 +108,7 @@ small_unique_function<R(A...)>::small_unique_function(F &&f) {
                 "Can't embed object into small_unique_function");
   if (detail::is_null(f))
     return;
-  new (&buffer_) std::decay_t<F>{std::forward<F>(f)};
+  new (buffer_.data.data()) std::decay_t<F>{std::forward<F>(f)};
   vtbl_ = &detail::get_callable_vtbl<std::decay_t<F>, R, A...>();
 }
 

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <condition_variable>
+#include "tools/critical_section.hpp"
+#include "tools/cond_var.hpp"
 #include <mutex>
 #include <queue>
 
@@ -15,8 +17,8 @@ public:
   void close();
 
 private:
-  std::mutex mutex_;
-  std::condition_variable cv_;
+  tools::critical_section mutex_;
+  tools::cond_var cv_;
   std::queue<T> queue_;
   bool closed_ = false;
 };

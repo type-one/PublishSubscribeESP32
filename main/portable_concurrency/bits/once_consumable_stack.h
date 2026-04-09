@@ -49,6 +49,7 @@ forward_list<T> allocate_list_node(T &&val, const Alloc &alloc) {
       typename std::allocator_traits<Alloc>::template rebind_alloc<node>;
   node_allocator nalloc{alloc};
   auto result = std::allocator_traits<node_allocator>::allocate(nalloc, 1);
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
   try {
     std::allocator_traits<node_allocator>::construct(nalloc, result,
                                                      std::move(val), alloc);
@@ -56,6 +57,10 @@ forward_list<T> allocate_list_node(T &&val, const Alloc &alloc) {
     std::allocator_traits<node_allocator>::deallocate(nalloc, result, 1);
     throw;
   }
+#else
+  std::allocator_traits<node_allocator>::construct(nalloc, result,
+                                                   std::move(val), alloc);
+#endif
   return forward_list<T>{result, forward_list_deleter<T>{}};
 }
 

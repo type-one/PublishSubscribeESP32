@@ -54,11 +54,47 @@
 #include <freertos/task.h>
 
 #include "tools/base_task.hpp"
+#include "portable_concurrency/bits/coro.h"
+#include "portable_concurrency/p_future_v2.hpp"
 #include "tools/platform_helpers.hpp"
 #include "tools/sync_queue.hpp"
 
+// portable_concurrency requires exception support; gate everything that pulls it in.
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#define WORKER_TASK_HAS_PC_ASYNC
+#include "portable_concurrency/p_execution.hpp"
+#include "portable_concurrency/p_future.hpp"
+#endif
+
 namespace tools
 {
+    template <typename Context>
+    class worker_task;
+
+    template <typename Context>
+    class worker_task_executor
+    {
+    public:
+        explicit worker_task_executor(worker_task<Context>* owner)
+            : m_owner(owner)
+        {
+        }
+
+    private:
+        worker_task<Context>* m_owner = nullptr;
+
+        template <typename Ctx, typename Task>
+        friend void post(worker_task_executor<Ctx> exec, Task&& task);
+    };
+
+    template <typename Context, typename Task>
+    void post(worker_task_executor<Context> exec, Task&& task)
+    {
+        auto shared_task = std::make_shared<std::decay_t<Task>>(std::forward<Task>(task));
+        exec.m_owner->delegate(
+            [shared_task](const std::shared_ptr<Context>&, const std::string&) mutable { (*shared_task)(); });
+    }
+
     /**
      * @brief A worker task class template for FreeRTOS.
      *
@@ -84,6 +120,7 @@ namespace tools
          * @param task_name The name of the task as a string.
          */
         using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
+        using executor_type = worker_task_executor<Context>;
 
         /**
          * @brief Constructs a worker_task object and initializes the FreeRTOS task.
@@ -232,6 +269,11 @@ namespace tools
             do_delegate(std::move(work));
         }
 
+        void delegate(const call_back& work)
+        {
+            do_delegate(call_back(work));
+        }
+
         /**
          * @brief Delegates a task using perfect forwarding.
          */
@@ -276,6 +318,16 @@ namespace tools
             }
         }
 
+        template <typename InputIt>
+        void delegate_range(InputIt first, InputIt last)
+        {
+            m_work_queue.push_range(first, last);
+            if (m_task_created)
+            {
+                xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
+            }
+        }
+
         /**
          * @brief Delegates a batch of work callbacks from an initializer-list.
          */
@@ -294,6 +346,112 @@ namespace tools
                 do_delegate(call_back(work));
             }
         }
+
+        [[nodiscard]] executor_type as_executor()
+        {
+            return executor_type { this };
+        }
+
+        template <typename Callable, typename... Args>
+        auto delegate_async_v2(Callable&& work, Args&&... args)
+            -> decltype(portable_concurrency::v2::async_result(std::declval<executor_type>(),
+                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
+                std::forward<Args>(args)...))
+        {
+            return portable_concurrency::v2::async_result(
+                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
+        }
+
+        /**
+         * @brief Delegates a callable to the worker task and returns a policy-selected future.
+         *
+         * When PORTABLE_CONCURRENCY_V2_DEFAULT is defined, dispatches via delegate_async_v2
+         * and returns a future_result<R, result_error> (no-exception API).
+         * Otherwise (default), dispatches via delegate_async and returns a future<R>
+         * (requires exception support).
+         *
+         * @tparam Callable Callable type.
+         * @tparam Args     Additional argument types forwarded to the callable.
+         * @param  work     The callable to execute on the FreeRTOS task.
+         * @param  args     Additional arguments forwarded after context and task_name.
+         * @return          A future whose type depends on the active async policy.
+         */
+#ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
+        template <typename Callable, typename... Args>
+        auto delegate_async_policy(Callable&& work, Args&&... args)
+            -> decltype(portable_concurrency::v2::async_result(std::declval<executor_type>(),
+                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
+                std::forward<Args>(args)...))
+        {
+            return portable_concurrency::v2::async_result(
+                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
+        }
+#elif defined(WORKER_TASK_HAS_PC_ASYNC)
+        template <typename Callable, typename... Args>
+        auto delegate_async_policy(Callable&& work, Args&&... args)
+            -> decltype(portable_concurrency::async(std::declval<executor_type>(),
+                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
+                std::forward<Args>(args)...))
+        {
+            return portable_concurrency::async(
+                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
+        }
+#else
+        template <typename Callable, typename... Args>
+        auto delegate_async_policy(Callable&& work, Args&&... args)
+            -> decltype(portable_concurrency::v2::async_result(std::declval<executor_type>(),
+                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
+                std::forward<Args>(args)...))
+        {
+            return portable_concurrency::v2::async_result(
+                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
+        }
+#endif // delegate_async_policy
+
+#if defined(WORKER_TASK_HAS_PC_ASYNC)
+        template <typename Callable, typename... Args>
+        auto delegate_async(Callable&& work, Args&&... args) -> decltype(portable_concurrency::async(
+            std::declval<executor_type>(), std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(),
+            std::declval<std::string>(), std::forward<Args>(args)...))
+        {
+            return portable_concurrency::async(
+                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
+        }
+#endif // WORKER_TASK_HAS_PC_ASYNC
+
+#if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines) || (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        class schedule_awaitable
+        {
+        public:
+            explicit schedule_awaitable(worker_task* owner)
+                : m_owner(owner)
+            {
+            }
+
+            [[nodiscard]] bool await_ready() const noexcept
+            {
+                return false;
+            }
+
+            void await_suspend(portable_concurrency::detail::coroutine_handle<> handle)
+            {
+                m_owner->delegate(
+                    [handle](const std::shared_ptr<Context>&, const std::string&) mutable { handle.resume(); });
+            }
+
+            void await_resume() const noexcept
+            {
+            }
+
+        private:
+            worker_task* m_owner = nullptr;
+        };
+
+        [[nodiscard]] schedule_awaitable schedule()
+        {
+            return schedule_awaitable { this };
+        }
+#endif // coroutine support
 
     private:
         void do_delegate(call_back&& work)
@@ -374,5 +532,13 @@ namespace tools
 
         TaskHandle_t m_task = {};
         bool m_task_created = false;
+    };
+}
+
+namespace portable_concurrency
+{
+    template <typename Context>
+    struct is_executor<tools::worker_task_executor<Context>> : std::true_type
+    {
     };
 }

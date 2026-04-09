@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <type_traits>
 
@@ -9,8 +10,10 @@ namespace detail {
 
 constexpr size_t small_buffer_size = 5 * sizeof(void *);
 constexpr size_t small_buffer_align = alignof(void *);
-using small_buffer =
-    std::aligned_storage_t<small_buffer_size, small_buffer_align>;
+
+struct small_buffer {
+  alignas(small_buffer_align) std::array<std::byte, small_buffer_size> data;
+};
 
 template <typename R, typename... A> struct callable_vtbl;
 

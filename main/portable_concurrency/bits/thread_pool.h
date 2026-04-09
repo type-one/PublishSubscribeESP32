@@ -1,6 +1,8 @@
 #pragma once
 
 #include <atomic>
+#include "tools/critical_section.hpp"
+#include "tools/cond_var.hpp"
 #include <cstdint>
 #include <thread>
 #include <type_traits>
@@ -62,8 +64,8 @@ private:
   detail::closable_queue<unique_function<void()>> queue_;
   std::vector<std::thread> threads_;
   unsigned attached_threads_ = 0;
-  std::mutex mutex_;
-  std::condition_variable cv_;
+  tools::critical_section mutex_;
+  tools::cond_var cv_;
   std::atomic<bool> stopped_{false};
 };
 

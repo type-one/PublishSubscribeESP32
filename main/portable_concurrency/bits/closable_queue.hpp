@@ -7,7 +7,7 @@ inline namespace cxx14_v1 {
 namespace detail {
 
 template <typename T> bool closable_queue<T>::pop(T &dest) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::unique_lock<tools::critical_section> lock(mutex_);
   cv_.wait(lock, [this]() { return closed_ || !queue_.empty(); });
   if (closed_ && queue_.empty())
     return false;
@@ -17,7 +17,7 @@ template <typename T> bool closable_queue<T>::pop(T &dest) {
 }
 
 template <typename T> void closable_queue<T>::push(T &&val) {
-  std::lock_guard<std::mutex> guard(mutex_);
+  std::lock_guard<tools::critical_section> guard(mutex_);
   if (closed_)
     return;
   queue_.emplace(std::move(val));
@@ -25,7 +25,7 @@ template <typename T> void closable_queue<T>::push(T &&val) {
 }
 
 template <typename T> void closable_queue<T>::close() {
-  std::lock_guard<std::mutex> guard(mutex_);
+  std::lock_guard<tools::critical_section> guard(mutex_);
   closed_ = true;
   cv_.notify_all();
 }

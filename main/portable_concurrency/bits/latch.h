@@ -1,6 +1,8 @@
 #pragma once
 
 #include <condition_variable>
+#include "tools/critical_section.hpp"
+#include "tools/cond_var.hpp"
 #include <cstddef>
 #include <mutex>
 
@@ -34,8 +36,8 @@ public:
 private:
   ptrdiff_t counter_;
   mutable unsigned waiters_ = 0;
-  mutable std::mutex mutex_;
-  mutable std::condition_variable cv_;
+  mutable tools::critical_section mutex_;
+  mutable tools::cond_var cv_;
 };
 
 } // namespace cxx14_v1

@@ -55,6 +55,10 @@ set(TARGET_UZLIB_SRC
         uzlib/tinfzlib.c
 )
 
+set(TARGET_PORTABLE_CONCURRENCY_SRC
+        portable_concurrency/bits/portable_concurrency.cpp
+)
+
 set(TARGET_TOOLS_SRC
         tools/gzip_wrapper.cpp
         tools/mem_pool_allocator.cpp
@@ -72,6 +76,7 @@ set(TARGET_SRC
         "${TARGET_TOOLS_SRC}"
         "${TARGET_CEXCEPTION_SRC}"
         "${TARGET_CJSON_SRC}"
+        "${TARGET_PORTABLE_CONCURRENCY_SRC}"
         "${TARGET_UZLIB_SRC}"
 )
 
