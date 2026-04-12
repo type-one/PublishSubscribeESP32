@@ -707,7 +707,8 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutExpired)
             subject1->subscribe("topic_3", observer1);
             subscribed1.store(true);
 
-            auto events = collect_events_until_count(observer1, 2U);
+            observer1->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+            auto events = observer1->pop_all_events();
 
             ASSERT_EQ(events.size(), 0); // nothing received
         });
@@ -720,7 +721,8 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutExpired)
             subject1->subscribe("topic_3", observer2);
             subscribed2.store(true);
 
-            auto events = collect_events_until_count(observer2, 2U);
+            observer2->wait_for_events(std::chrono::milliseconds(100)); // NOLINT test
+            auto events = observer2->pop_all_events();
 
             ASSERT_EQ(events.size(), 0); // nothing received
         });
