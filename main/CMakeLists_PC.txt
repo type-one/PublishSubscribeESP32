@@ -5,7 +5,11 @@ cmake_minimum_required(VERSION 3.12)
 # set the project name and version
 project(PublishSubscribe VERSION 1.0)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
+
+# force clang-tidy by default
+option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" ON)
+# option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
+
 if(ENABLE_CLANG_TIDY)
     # Keep clang-tidy opt-in for local dev: enabling it on every file can significantly slow full builds.
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy;--extra-arg=-std=c++20")
