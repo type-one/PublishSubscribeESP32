@@ -2412,28 +2412,28 @@ void test_json()
 #else
         constexpr const double number_pi = 3.141592;
 #endif
-        obj.set("pi", number_pi);                  // add a number that is stored as double
-        obj.set("happy", true);                    // add a Boolean that is stored as bool
-        obj.set("name", "Niels");                  // add a string that is stored as std::string
-        obj.set("nothing", cjsonpp::nullObject()); // add another null object by passing nullptr
+        obj.try_set("pi", number_pi);                  // add a number that is stored as double
+        obj.try_set("happy", true);                    // add a Boolean that is stored as bool
+        obj.try_set("name", "Niels");                  // add a string that is stored as std::string
+        obj.try_set("nothing", cjsonpp::nullObject()); // add another null object by passing nullptr
 
         // add an array that is stored as std::vector (using an initializer list)
         std::vector<int> val = { 0, 1, 2 };
-        obj.set("list", val);
+        obj.try_set("list", val);
 
         // add an object inside the object
-        obj2.set("everything", 42); // NOLINT test value
-        obj.set("answer", obj2);
+        obj2.try_set("everything", 42); // NOLINT test value
+        obj.try_set("answer", obj2);
 
         // add another object (using an initializer list of pairs)
-        obj3.set("currency", "USD");
-        obj4.set("value", 42.99); // NOLINT test value
+        obj3.try_set("currency", "USD");
+        obj4.try_set("value", 42.99); // NOLINT test value
 
         cjsonpp::JSONObject arr = cjsonpp::arrayObject();
-        arr.add(obj3);
-        arr.add(obj4);
+        arr.try_add(obj3);
+        arr.try_add(obj4);
 
-        obj.set("object", arr);
+        obj.try_set("object", arr);
 
         const auto str = obj.print();
         std::printf("%s\n", str.c_str());
@@ -2468,14 +2468,14 @@ void test_queued_json_data()
 
     {
         cjsonpp::JSONObject json = {};
-        json.set("msg_type", "sensor");
-        json.set("sensor_name", "indoor_temperature");
-        json.set("temp", 19.47); // NOLINT test value
-        json.set("activity", true);
+        json.try_set("msg_type", "sensor");
+        json.try_set("sensor_name", "indoor_temperature");
+        json.try_set("temp", 19.47); // NOLINT test value
+        json.try_set("activity", true);
 
         cjsonpp::JSONObject json_answer = {};
-        json_answer.set("everything", 42); // NOLINT test value
-        json.set("answer", json_answer);
+        json_answer.try_set("everything", 42); // NOLINT test value
+        json.try_set("answer", json_answer);
 
         std::printf("%s\n", json.print(true).c_str());
         data_queue->emplace(json.print(false));
@@ -2483,10 +2483,10 @@ void test_queued_json_data()
 
     {
         cjsonpp::JSONObject json = {};
-        json.set("msg_type", "time");
-        json.set("yyyy_mm_dd", "2025/01/13");
-        json.set("hh_mm_ss", "23:05:12");
-        json.set("time_zone", "GMT+2");
+        json.try_set("msg_type", "time");
+        json.try_set("yyyy_mm_dd", "2025/01/13");
+        json.try_set("hh_mm_ss", "23:05:12");
+        json.try_set("time_zone", "GMT+2");
 
         std::printf("%s\n", json.print(true).c_str());
         data_queue->emplace(json.print(false));

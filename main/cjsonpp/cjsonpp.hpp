@@ -31,20 +31,6 @@
 #include "cJSON/cJSON.h"
 #include "cjsonpp/cjsonpp_result.hpp"
 
-// modified for clang-tidy checks
-
-// clang-format off
-#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
-#include <exception>
-#define CJSONPP_THROW(msg, value) throw std::runtime_error(std::string{msg} + " (" + std::to_string(value) + ")") /* NOLINT keep it */
-#else
-#include "tools/logger.hpp"
-#include "CException/CException.h"
-#define CJSONPP_THROW(msg, value) do { LOG_ERROR("%s (%d)", msg, static_cast<int>(value)); /* NOLINT keep it */ \
-                                       Throw(0); } while (false)
-#endif
-// clang-format on
-
 namespace cjsonpp
 {
 
@@ -62,21 +48,12 @@ namespace cjsonpp
     };
 
     /**
-     * @brief Create a cjsonpp error payload.
+    * @brief Create a cjsonpp error payload.
      */
     inline result_error make_error(result_code code_value, int detail_value, const char* message_text)
     {
         return result_error { code_value, detail_value, message_text };
     }
-
-    /**
-     * @brief Convert a result error into the legacy throw/CException path.
-     */
-    [[noreturn]] inline void raise_error(const result_error& error_value)
-    {
-        CJSONPP_THROW(error_value.message.c_str(), error_value.detail);
-    }
-
 
     /**
      * @brief JSONObject class is a thin wrapper over cJSON data type
@@ -121,17 +98,6 @@ namespace cjsonpp
         // get value (specialized below)
         template <typename T>
         cjsonpp_result<T> as_result(cJSON* obj) const;
-
-        template <typename T>
-        T as(cJSON* obj) const
-        {
-            const auto result_value = as_result<T>(obj);
-            if (!result_value)
-            {
-                raise_error(result_value.error());
-            }
-            return result_value.value();
-        }
 
         HolderPtr obj_;
 
@@ -266,7 +232,7 @@ namespace cjsonpp
         {
             for (auto itr = elems.begin(); itr != elems.end(); ++itr)
             {
-                add(*itr);
+                try_add(*itr);
             }
         }
 
@@ -286,7 +252,7 @@ namespace cjsonpp
         {
             for (auto& itr : elems)
             {
-                add(itr);
+                try_add(itr);
             }
         }
 
@@ -307,7 +273,7 @@ namespace cjsonpp
         {
             for (auto itr = elems.begin(); itr != elems.end(); ++itr)
             {
-                add(*itr);
+                try_add(*itr);
             }
         }
 
@@ -352,105 +318,12 @@ namespace cjsonpp
         [[nodiscard]] JSONType type() const;
 
         /**
-         * @brief get and cast value from this object
-         *
-         * @tparam T type of the value
-         * @return T type casted value
-         */
-        template <typename T>
-        T as() const
-        {
-            return as<T>(obj_->o);
-        }
-
-        /**
          * @brief Try to cast the current value to T without throwing.
          */
         template <typename T>
         cjsonpp_result<T> try_as() const
         {
             return as_result<T>(obj_->o);
-        }
-
-        /**
-         * @brief Converts the current JSON object to an array of JSON objects.
-         *
-         * This function checks if the current JSON object is of array type. If it is,
-         * it iterates through the array and converts each item to the specified type T,
-         * storing them in a container of type ContT.
-         *
-         * @tparam T The type to which each item in the array should be converted. Defaults to JSONObject.
-         * @tparam ContT The container type to store the converted items. Defaults to std::vector.
-         * @return A container of type ContT containing the converted items.
-         * @throws std::runtime_error (or CException) if the current JSON object is not of array type.
-         */
-        template <typename T = JSONObject, template <typename X, typename A> class ContT = std::vector>
-        ContT<T, std::allocator<T>> asArray() const
-        {
-            if (((*obj_)->type & byte_mask) != cJSON_Array)
-            {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask); // NOLINT keep it
-            }
-
-            ContT<T, std::allocator<T>> retval;
-            for (int i = 0; i < cJSON_GetArraySize(obj_->o); i++)
-            {
-                retval.push_back(as<T>(cJSON_GetArrayItem(obj_->o, i)));
-            }
-
-            return retval;
-        }
-
-        /**
-         * @brief Converts the cJSON object to an array of the specified type. (for Qt-style containers)
-         *
-         * This function checks if the cJSON object is of array type and then
-         * converts it to a container of the specified type.
-         *
-         * @tparam T The type of elements in the array.
-         * @tparam ContT The template container type that holds elements of type T.
-         * @return ContT<T> A container of type ContT holding elements of type T.
-         * @throws std::runtime_error (or CException) if the cJSON object is not an array.
-         */
-        template <typename T, template <typename X> class ContT>
-        ContT<T> asArray() const
-        {
-            if (((*obj_)->type & byte_mask) != cJSON_Array)
-            {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask);
-            }
-
-            ContT<T> retval;
-            for (int i = 0; i < cJSON_GetArraySize(obj_->o); i++)
-            {
-                retval.push_back(as<T>(cJSON_GetArrayItem(obj_->o, i)));
-            }
-
-            return retval;
-        }
-
-        /**
-         * @brief Retrieves an item from the JSON object by name.
-         *
-         * This function retrieves an item from the JSON object by its name.
-         * If the object is not of type cJSON_Object, an exception is thrown.
-         * If the item with the specified name does not exist, an exception is thrown.
-         *
-         * @tparam T The type to which the item should be cast. Defaults to JSONObject.
-         * @param name The name of the item to retrieve.
-         * @return T The item cast to the specified type.
-         * @throws std::runtime_error (or CException) if the object is not of type cJSON_Object or if the item does not
-         * exist.
-         */
-        template <typename T = JSONObject>
-        [[nodiscard]] T get(const char* name) const
-        {
-            const auto result_value = try_get<T>(name);
-            if (!result_value)
-            {
-                raise_error(result_value.error());
-            }
-            return result_value.value();
         }
 
         /**
@@ -472,21 +345,6 @@ namespace cjsonpp
             }
 
             return as_result<T>(item);
-        }
-
-        /**
-         * @brief Retrieves a JSON object associated with the given key.
-         *
-         * This function template retrieves a JSON object of type T associated with the specified key.
-         *
-         * @tparam T The type of JSON object to retrieve. Defaults to JSONObject.
-         * @param value The key associated with the JSON object to retrieve.
-         * @return JSONObject The JSON object associated with the specified key.
-         */
-        template <typename T = JSONObject>
-        [[nodiscard]] JSONObject get(const std::string& value) const
-        {
-            return get<T>(value.c_str());
         }
 
         /**
@@ -515,30 +373,6 @@ namespace cjsonpp
         [[nodiscard]] bool has(const std::string& name) const;
 
         /**
-         * @brief Retrieves an item from a JSON array at the specified index.
-         *
-         * This function checks if the current JSON object is an array and retrieves
-         * the item at the given index. If the object is not an array or the index is
-         * out of bounds, an exception is thrown.
-         *
-         * @tparam T The type to which the JSON item should be converted. Defaults to JSONObject.
-         * @param index The index of the item to retrieve from the JSON array.
-         * @return T The JSON item at the specified index, converted to the specified type.
-         * @throws std::runtime_error (or CException) if the current JSON object is not an array or if the index is out
-         * of bounds.
-         */
-        template <typename T = JSONObject>
-        T get(int index) const
-        {
-            const auto result_value = try_get<T>(index);
-            if (!result_value)
-            {
-                raise_error(result_value.error());
-            }
-            return result_value.value();
-        }
-
-        /**
          * @brief Retrieves an item from an array by index without throwing.
          */
         template <typename T = JSONObject>
@@ -560,26 +394,6 @@ namespace cjsonpp
         }
 
         /**
-         * @brief Adds a value to the JSON array.
-         *
-         * This function adds a value to the JSON array. It checks if the current object is of array type,
-         * and if so, it creates a JSONObject from the given value and adds it to the array.
-         *
-         * @tparam T The type of the value to be added.
-         * @param value The value to be added to the JSON array.
-         * @throws std::runtime_error (or CException) if the current object is not of array type.
-         */
-        template <typename T>
-        void add(const T& value)
-        {
-            const auto status_value = try_add(value);
-            if (!status_value)
-            {
-                raise_error(status_value.error());
-            }
-        }
-
-        /**
          * @brief Adds a value to an array without throwing.
          */
         template <typename T>
@@ -594,26 +408,6 @@ namespace cjsonpp
             cJSON_AddItemReferenceToArray(obj_->o, output.obj_->o);
             refs_->insert(output);
             return cjsonpp_status {};
-        }
-
-        /**
-         * @brief Sets a value in the JSON object with the given name.
-         *
-         * This function is a template that allows setting a value of any type in the JSON object.
-         *
-         * @tparam T The type of the value to be set.
-         * @param name The name of the JSON key as a null-terminated C string.
-         * @param value The value to be set in the JSON object.
-         * @throws std::runtime_error (or CException) if the current object is not of JSON object.
-         */
-        template <typename T>
-        void set(const char* name, const T& value)
-        {
-            const auto status_value = try_set(name, value);
-            if (!status_value)
-            {
-                raise_error(status_value.error());
-            }
         }
 
         /**
@@ -635,21 +429,6 @@ namespace cjsonpp
         }
 
         /**
-         * @brief Sets a value in the JSON object with the given name.
-         *
-         * This function is a template that allows setting a value of any type in the JSON object.
-         *
-         * @tparam T The type of the value to be set.
-         * @param name The name of the JSON key as a string.
-         * @param value The value to be set in the JSON object.
-         */
-        template <typename T>
-        void set(const std::string& name, const T& value)
-        {
-            set(name.c_str(), value);
-        }
-
-        /**
          * @brief Sets a key/value pair in an object without throwing.
          */
         template <typename T>
@@ -658,33 +437,10 @@ namespace cjsonpp
             return try_set(name.c_str(), value);
         }
 
-
-        /**
-         * @brief Sets a JSON object with the given name and value.
-         *
-         * @param name The name of the JSON object to set.
-         * @param value The JSON object to set.
-         */
-        void set(const std::string& name, const JSONObject& value);
-
-        /**
-         * @brief Removes from object an item with the specified name.
-         *
-         * @param name The name of the item to remove as a null-terminated C string.
-         */
-        void remove(const char* name);
-
         /**
          * @brief Removes from object an item with the specified name without throwing.
          */
         cjsonpp_status try_remove(const char* name);
-
-        /**
-         * @brief Removes from object an item with the specified name.
-         *
-         * @param name The name of the item to remove as a std::string
-         */
-        void remove(const std::string& name);
 
         /**
          * @brief Removes from object an item with the specified name without throwing.
@@ -693,14 +449,6 @@ namespace cjsonpp
         {
             return try_remove(name.c_str());
         }
-
-        /**
-         * @brief Removes an item from array at the specified index.
-         *
-         * @param index The index of the item to remove.
-         */
-        void remove(int index);
-
         /**
          * @brief Removes an item from array at the specified index without throwing.
          */
@@ -716,22 +464,6 @@ namespace cjsonpp
      * @brief Parses a JSON string and returns a result instead of throwing.
      */
     cjsonpp_result<JSONObject> parse_result(const std::string& str);
-
-    /**
-     * @brief Parses a JSON string and returns a JSONObject.
-     *
-     * @param str The JSON string to be parsed, as a null-terminated C string.
-     * @return JSONObject The parsed JSON object.
-     */
-    JSONObject parse(const char* str);
-
-    /**
-     * @brief Parses a JSON string and returns a JSONObject.
-     *
-     * @param str The JSON string to be parsed, as a std::string.
-     * @return JSONObject The parsed JSON object.
-     */
-    JSONObject parse(const std::string& str);
 
     /**
      * @brief create null object
@@ -753,8 +485,7 @@ namespace cjsonpp
      * This function converts a cJSON object to an integer if the type of the cJSON object is a number.
      *
      * @param obj Pointer to the cJSON object to be converted.
-     * @return The integer value of the cJSON object.
-     * @throws std::runtime_error (or CException) if the type of the cJSON object is not a number.
+     * @return The integer value of the cJSON object, or an error payload on type mismatch.
      */
     template <>
     inline cjsonpp_result<int> JSONObject::as_result<int>(cJSON* obj) const
@@ -771,12 +502,10 @@ namespace cjsonpp
      * @brief Specialized getter: Converts a cJSON object to an int64_t value.
      *
      * This template specialization of the `as` method converts a cJSON object
-     * to an int64_t value. It checks if the cJSON object is of type number
-     * and throws an exception if it is not.
+     * to an int64_t value. It checks if the cJSON object is of type number.
      *
      * @param obj Pointer to the cJSON object to be converted.
-     * @return The int64_t value of the cJSON object.
-     * @throws std::runtime_error (or CException) if the cJSON object is not of type number.
+     * @return The int64_t value of the cJSON object, or an error payload on type mismatch.
      */
     template <>
     inline cjsonpp_result<std::int64_t> JSONObject::as_result<std::int64_t>(cJSON* obj) const
@@ -793,11 +522,10 @@ namespace cjsonpp
      * @brief Specialized getter: Converts a cJSON object to a std::string.
      *
      * This template specialization converts a cJSON object to a std::string.
-     * It checks if the cJSON object is of string type and throws an exception if not.
+     * It checks if the cJSON object is of string type.
      *
      * @param obj The cJSON object to be converted.
-     * @return The std::string representation of the cJSON object.
-     * @throws std::runtime_error (or CException) if the cJSON object is not of string type.
+     * @return The std::string representation of the cJSON object, or an error payload on type mismatch.
      */
     template <>
     inline cjsonpp_result<std::string> JSONObject::as_result<std::string>(cJSON* obj) const
@@ -814,12 +542,10 @@ namespace cjsonpp
      * @brief Specialized getter: Converts a cJSON object to a double.
      *
      * This template specialization of the `as` method converts a given cJSON object
-     * to a double value. It checks if the type of the cJSON object is a number and
-     * throws an exception if it is not.
+     * to a double value. It checks if the type of the cJSON object is a number.
      *
      * @param obj Pointer to the cJSON object to be converted.
-     * @return The double value of the cJSON object.
-     * @throws std::runtime_error (or CException) if the cJSON object is not of type number.
+     * @return The double value of the cJSON object, or an error payload on type mismatch.
      */
     template <>
     inline cjsonpp_result<double> JSONObject::as_result<double>(cJSON* obj) const
@@ -837,11 +563,10 @@ namespace cjsonpp
      *
      * This template specialization of the as function converts a cJSON object to a boolean value.
      * It checks the type of the cJSON object and returns true if the type is cJSON_True,
-     * false if the type is cJSON_False, and throws an exception otherwise.
+     * false if the type is cJSON_False, and returns an error otherwise.
      *
      * @param obj Pointer to the cJSON object to be converted.
-     * @return Boolean value representing the cJSON object.
-     * @throws std::runtime_error (or CException) if the cJSON object is not of boolean type.
+     * @return Boolean value representing the cJSON object, or an error payload on type mismatch.
      */
     template <>
     inline cjsonpp_result<bool> JSONObject::as_result<bool>(cJSON* obj) const

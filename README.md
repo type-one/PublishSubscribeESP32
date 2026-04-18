@@ -22,7 +22,7 @@ Goodies:
 - simple single producer/single consumer memory pipe on top of FreeRTOS memory buffer and lock-free ring buffer
 - queuable commands
 - bytepack serialization in C++20 using header-only 3rd party (Faruk Eryilmaz - MIT license)
-- json serialization and deserialization using 3rd party (Dave Gamble & Dmitry Pankratov - MIT license)
+- json serialization and deserialization using 3rd party with result-based API in this project (Dave Gamble & Dmitry Pankratov - MIT license)
 - gzip compression / decompression C++ wrapper using 3rd party (Paul Sokolovsky, Joergen Ibsen & Simon Tatham - Zlib license)
 - some logging macros
 - finite state machine based on std::variant, std::visit and overload pattern with transitions and states callbacks (based on
@@ -42,6 +42,11 @@ Third Parties used in the examples:
 - [uzlib](https://github.com/pfalcon/uzlib) (v2.9.5)
 - [tinf](https://github.com/jibsen/tinf) (from uzlib v2.9.5 bundle)
 - [cpptime](https://github.com/eglimi/cpptime) (master 08abf1d)
+
+JSON integration note:
+
+- The project now uses the non-throwing cjsonpp API based on result values (`parse_result`, `try_get`, `try_set`, `try_add`, `try_remove`).
+- See `main/cjsonpp/README.md` for current usage examples.
 
 Publications:
 

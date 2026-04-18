@@ -237,16 +237,6 @@ namespace cjsonpp
         return has(name.c_str());
     }
 
-    // set value in object (std::string)
-    void JSONObject::set(const std::string& name, const JSONObject& value)
-    {
-        const auto status_value = try_set(name.c_str(), value);
-        if (!status_value)
-        {
-            raise_error(status_value.error());
-        }
-    }
-
     // remove item from object without throwing
     cjsonpp_status JSONObject::try_remove(const char* name)
     {
@@ -271,21 +261,6 @@ namespace cjsonpp
         }
         cJSON_Delete(detached);
         return cjsonpp_status {};
-    }
-
-    // remove item from object
-    void JSONObject::remove(const char* name)
-    {
-        const auto status_value = try_remove(name);
-        if (!status_value)
-        {
-            raise_error(status_value.error());
-        }
-    }
-
-    void JSONObject::remove(const std::string& name)
-    {
-        remove(name.c_str());
     }
 
     // remove item from array without throwing
@@ -314,16 +289,6 @@ namespace cjsonpp
         return cjsonpp_status {};
     }
 
-    // remove item from array
-    void JSONObject::remove(int index)
-    {
-        const auto status_value = try_remove(index);
-        if (!status_value)
-        {
-            raise_error(status_value.error());
-        }
-    }
-
     // parse from C string without throwing
     cjsonpp_result<JSONObject> parse_result(const char* str)
     {
@@ -335,32 +300,10 @@ namespace cjsonpp
         return cjsonpp_result<JSONObject> { JSONObject { cjson, true } };
     }
 
-    // parse from C string
-    JSONObject parse(const char* str)
-    {
-        const auto result_value = parse_result(str);
-        if (!result_value)
-        {
-            raise_error(result_value.error());
-        }
-        return result_value.value();
-    }
-
     // parse from std::string without throwing
     cjsonpp_result<JSONObject> parse_result(const std::string& str)
     {
         return parse_result(str.c_str());
-    }
-
-    // parse from std::string
-    JSONObject parse(const std::string& str)
-    {
-        const auto result_value = parse_result(str);
-        if (!result_value)
-        {
-            raise_error(result_value.error());
-        }
-        return result_value.value();
     }
 
     // create null object

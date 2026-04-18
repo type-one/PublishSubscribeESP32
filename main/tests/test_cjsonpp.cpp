@@ -42,11 +42,11 @@
 
 #include <gtest/gtest.h>
 
-#include <exception>
 #include <string>
 #include <vector>
 
 #include "cjsonpp/cjsonpp.hpp"
+#include "cJSON/cJSON.h"
 
 /**
  * @class JSONObjectTest
@@ -152,7 +152,9 @@ TEST_F(JSONObjectTest, CreateStringObject)
 TEST_F(JSONObjectTest, ParseJSONString)
 {
     std::string jsonString = R"({"key": "value", "number": 42})";
-    auto obj = cjsonpp::parse(jsonString);
+    const auto parse_res = cjsonpp::parse_result(jsonString);
+    ASSERT_TRUE(parse_res.has_value());
+    const auto& obj = parse_res.value();
     EXPECT_EQ(obj.type(), cjsonpp::Object);
     EXPECT_TRUE(obj.has("key"));
     EXPECT_TRUE(obj.has("number"));
@@ -201,9 +203,9 @@ TEST_F(JSONObjectTest, SetAndRemoveObjectItem)
 {
     auto obj = cjsonpp::JSONObject();
     cjsonpp::JSONObject value("test");
-    obj.set("key", value);
+    ASSERT_TRUE(obj.try_set("key", value));
     EXPECT_TRUE(obj.has("key"));
-    obj.remove("key");
+    ASSERT_TRUE(obj.try_remove("key"));
     EXPECT_FALSE(obj.has("key"));
 }
 
@@ -223,10 +225,11 @@ TEST_F(JSONObjectTest, AddArrayItem)
 {
     auto obj = cjsonpp::arrayObject();
     cjsonpp::JSONObject value("test");
-    obj.add(value);
+    ASSERT_TRUE(obj.try_add(value));
     EXPECT_EQ(obj.type(), cjsonpp::Array);
-    auto item = obj.get(0);
-    EXPECT_EQ(item.type(), cjsonpp::String);
+    const auto item_res = obj.try_get(0);
+    ASSERT_TRUE(item_res.has_value());
+    EXPECT_EQ(item_res.value().type(), cjsonpp::String);
 }
 
 /**
@@ -247,7 +250,9 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeBoolean)
 {
     auto obj = cjsonpp::JSONObject(true);
     std::string serialized = obj.print();
-    auto de_obj = cjsonpp::parse(serialized);
+    const auto parse_res = cjsonpp::parse_result(serialized);
+    ASSERT_TRUE(parse_res.has_value());
+    const auto& de_obj = parse_res.value();
     EXPECT_EQ(de_obj.type(), cjsonpp::Bool);
     EXPECT_TRUE(de_obj.obj()->valueint);
 }
@@ -270,7 +275,9 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeNumber)
 {
     auto obj = cjsonpp::JSONObject(123.456);
     std::string serialized = obj.print();
-    auto de_obj = cjsonpp::parse(serialized);
+    const auto parse_res = cjsonpp::parse_result(serialized);
+    ASSERT_TRUE(parse_res.has_value());
+    const auto& de_obj = parse_res.value();
     EXPECT_EQ(de_obj.type(), cjsonpp::Number);
     EXPECT_DOUBLE_EQ(de_obj.obj()->valuedouble, 123.456);
 }
@@ -293,7 +300,9 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeString)
 {
     auto obj = cjsonpp::JSONObject("Test String");
     std::string serialized = obj.print();
-    auto de_obj = cjsonpp::parse(serialized);
+    const auto parse_res = cjsonpp::parse_result(serialized);
+    ASSERT_TRUE(parse_res.has_value());
+    const auto& de_obj = parse_res.value();
     EXPECT_EQ(de_obj.type(), cjsonpp::String);
     EXPECT_STREQ(de_obj.obj()->valuestring, "Test String");
 }
@@ -337,15 +346,23 @@ TEST_F(JSONObjectTest, CreateAndCheckArrayObject)
 TEST_F(JSONObjectTest, ParseAndCheckNestedJSON)
 {
     std::string jsonString = R"({"outer": {"inner": {"key": "value"}}})";
-    auto obj = cjsonpp::parse(jsonString);
+    const auto parse_res = cjsonpp::parse_result(jsonString);
+    ASSERT_TRUE(parse_res.has_value());
+    const auto& obj = parse_res.value();
     EXPECT_EQ(obj.type(), cjsonpp::Object);
     EXPECT_TRUE(obj.has("outer"));
-    cjsonpp::JSONObject outer = obj.get("outer");
+    const auto outer_res = obj.try_get("outer");
+    ASSERT_TRUE(outer_res.has_value());
+    const auto& outer = outer_res.value();
     EXPECT_TRUE(outer.has("inner"));
-    cjsonpp::JSONObject inner = outer.get("inner");
+    const auto inner_res = outer.try_get("inner");
+    ASSERT_TRUE(inner_res.has_value());
+    const auto& inner = inner_res.value();
     EXPECT_TRUE(inner.has("key"));
-    EXPECT_EQ(inner.get("key").type(), cjsonpp::String);
-    EXPECT_STREQ(inner.get("key").obj()->valuestring, "value");
+    const auto key_res = inner.try_get("key");
+    ASSERT_TRUE(key_res.has_value());
+    EXPECT_EQ(key_res.value().type(), cjsonpp::String);
+    EXPECT_STREQ(key_res.value().obj()->valuestring, "value");
 }
 
 /**
@@ -376,20 +393,23 @@ TEST_F(JSONObjectTest, TryGetMissingItemResultApi)
 TEST_F(JSONObjectTest, ParseAndCheckArrayInJSON)
 {
     std::string jsonString = R"({"array": [1, 2, 3, 4, 5]})";
-    auto obj = cjsonpp::parse(jsonString);
+    const auto parse_res = cjsonpp::parse_result(jsonString);
+    ASSERT_TRUE(parse_res.has_value());
+    const auto& obj = parse_res.value();
     EXPECT_EQ(obj.type(), cjsonpp::Object);
     EXPECT_TRUE(obj.has("array"));
-    cjsonpp::JSONObject array = obj.get("array");
+    const auto array_res = obj.try_get("array");
+    ASSERT_TRUE(array_res.has_value());
+    const auto& array = array_res.value();
     EXPECT_EQ(array.type(), cjsonpp::Array);
 
-    auto arr = array.asArray<int>();
-    EXPECT_EQ(arr.size(), 5);
-
-    int i = 0;
-    for (auto item : arr)
+    constexpr int expected_size = 5;
+    EXPECT_EQ(cJSON_GetArraySize(array.obj()), expected_size);
+    for (int idx = 0; idx < expected_size; ++idx)
     {
-        EXPECT_EQ(item, i + 1);
-        ++i;
+        const auto item_res = array.try_get<int>(idx);
+        ASSERT_TRUE(item_res.has_value());
+        EXPECT_EQ(item_res.value(), idx + 1);
     }
 }
 
@@ -408,22 +428,23 @@ TEST_F(JSONObjectTest, ParseAndCheckArrayInJSON)
  * - Retrieve the outer object and verify it contains the inner object.
  * - Retrieve the inner object and verify its type and value.
  */
-#if 0 // TODO FIX
 TEST_F(JSONObjectTest, SetAndGetNestedObject)
 {
     cjsonpp::JSONObject inner("inner_value");
-    cjsonpp::JSONObject outer(cjsonpp::Object);
-    outer.set("inner_key", inner);
+    auto outer = cjsonpp::JSONObject();
+    ASSERT_TRUE(outer.try_set("inner_key", inner));
     auto obj = cjsonpp::JSONObject();
-    obj.set("outer_key", outer);
+    ASSERT_TRUE(obj.try_set("outer_key", outer));
     EXPECT_TRUE(obj.has("outer_key"));
-    cjsonpp::JSONObject retrievedOuter = obj.get("outer_key");
-    EXPECT_TRUE(retrievedOuter.has("inner_key"));
-    cjsonpp::JSONObject retrievedInner = retrievedOuter.get("inner_key");
-    EXPECT_EQ(retrievedInner.type(), cjsonpp::String);
-    EXPECT_STREQ(retrievedInner.obj()->valuestring, "inner_value");
+    const auto outer_res = obj.try_get("outer_key");
+    ASSERT_TRUE(outer_res.has_value());
+    const auto& retrieved_outer = outer_res.value();
+    EXPECT_TRUE(retrieved_outer.has("inner_key"));
+    const auto inner_res = retrieved_outer.try_get("inner_key");
+    ASSERT_TRUE(inner_res.has_value());
+    EXPECT_EQ(inner_res.value().type(), cjsonpp::String);
+    EXPECT_STREQ(inner_res.value().obj()->valuestring, "inner_value");
 }
-#endif
 
 /**
  * @brief Test case for serializing and deserializing a nested JSON object.
@@ -442,54 +463,27 @@ TEST_F(JSONObjectTest, SetAndGetNestedObject)
  * - Retrieve the outer object and verify it contains the inner object.
  * - Retrieve the inner object and verify its type and value.
  */
-#if 0 // TODO FIX
 TEST_F(JSONObjectTest, SerializeAndDeserializeNestedObject)
 {
     cjsonpp::JSONObject inner("inner_value");
-    cjsonpp::JSONObject outer(cjsonpp::Object);
-    outer.set("inner_key", inner);
+    auto outer = cjsonpp::JSONObject();
+    ASSERT_TRUE(outer.try_set("inner_key", inner));
     auto obj = cjsonpp::JSONObject();
-    obj.set("outer_key", outer);
+    ASSERT_TRUE(obj.try_set("outer_key", outer));
     std::string serialized = obj.print();
-    auto de_obj = cjsonpp::parse(serialized);
+    const auto parse_res = cjsonpp::parse_result(serialized);
+    ASSERT_TRUE(parse_res.has_value());
+    const auto& de_obj = parse_res.value();
     EXPECT_TRUE(de_obj.has("outer_key"));
-    cjsonpp::JSONObject retrievedOuter = de_obj.get("outer_key");
-    EXPECT_TRUE(retrievedOuter.has("inner_key"));
-    cjsonpp::JSONObject retrievedInner = retrievedOuter.get("inner_key");
-    EXPECT_EQ(retrievedInner.type(), cjsonpp::String);
-    EXPECT_STREQ(retrievedInner.obj()->valuestring, "inner_value");
+    const auto outer_res = de_obj.try_get("outer_key");
+    ASSERT_TRUE(outer_res.has_value());
+    const auto& retrieved_outer = outer_res.value();
+    EXPECT_TRUE(retrieved_outer.has("inner_key"));
+    const auto inner_res = retrieved_outer.try_get("inner_key");
+    ASSERT_TRUE(inner_res.has_value());
+    EXPECT_EQ(inner_res.value().type(), cjsonpp::String);
+    EXPECT_STREQ(inner_res.value().obj()->valuestring, "inner_value");
 }
-#endif
-
-/**
- * @brief Test case for parsing an invalid JSON string.
- *
- * This test verifies that parsing an invalid JSON string throws an exception.
- * It checks that the exception message is "Parse error".
- *
- * @test
- * - Parse an invalid JSON string.
- * - Verify that an exception is thrown with the message "Parse error".
- */
-#if 0 // TODO FIX
-TEST_F(JSONObjectTest, ParseInvalidJSONString)
-{
-    std::string invalidJsonString = R"({"key": "value", "number": 42)";
-    EXPECT_THROW(
-        {
-            try
-            {
-                auto de_obj = cjsonpp::parse(invalidJsonString);
-            }
-            catch (const std::exception& e)
-            {
-                EXPECT_STREQ(e.what(), "Parse error");
-                throw;
-            }
-        },
-        std::exception);
-}
-#endif
 
 /**
  * @brief Test case for removing a non-existent object item.
@@ -501,25 +495,13 @@ TEST_F(JSONObjectTest, ParseInvalidJSONString)
  * - Attempt to remove a non-existent item from the JSONObject.
  * - Verify that an exception is thrown with the message "No such item".
  */
-#if 0 // TODO FIX
 TEST_F(JSONObjectTest, RemoveNonExistentObjectItem)
 {
-    EXPECT_THROW(
-        {
-            try
-            {
-                auto obj = cjsonpp::JSONObject();
-                obj.remove("nonexistent");
-            }
-            catch (const std::exception& e)
-            {
-                EXPECT_STREQ(e.what(), "No such item");
-                throw;
-            }
-        },
-        std::exception);
+    auto obj = cjsonpp::JSONObject();
+    const auto remove_status = obj.try_remove("nonexistent");
+    ASSERT_FALSE(remove_status.has_value());
+    EXPECT_EQ(remove_status.error().code, cjsonpp::result_code::missing_item);
 }
-#endif
 
 /**
  * @brief Test case for removing a non-existent array item from a JSONObject.
@@ -529,25 +511,13 @@ TEST_F(JSONObjectTest, RemoveNonExistentObjectItem)
  *
  * @throws std::exception if the item does not exist in the array.
  */
-#if 0 // TODO FIX
 TEST_F(JSONObjectTest, RemoveNonExistentArrayItem)
 {
-    EXPECT_THROW(
-        {
-            try
-            {
-                auto obj = cjsonpp::arrayObject();
-                obj.remove(0);
-            }
-            catch (const std::exception& e)
-            {
-                EXPECT_STREQ(e.what(), "No such item");
-                throw;
-            }
-        },
-        std::exception);
+    auto obj = cjsonpp::arrayObject();
+    const auto remove_status = obj.try_remove(0);
+    ASSERT_FALSE(remove_status.has_value());
+    EXPECT_EQ(remove_status.error().code, cjsonpp::result_code::missing_item);
 }
-#endif
 
 /**
  * @brief Test case for setting an invalid type in a JSONObject.
@@ -563,26 +533,14 @@ TEST_F(JSONObjectTest, RemoveNonExistentArrayItem)
  *
  * @throws std::exception if the value type is invalid for the JSONObject.
  */
-#if 0 // TODO FIX
 TEST_F(JSONObjectTest, SetInvalidTypeInObject)
 {
-    EXPECT_THROW(
-        {
-            try
-            {
-                auto obj = cjsonpp::arrayObject();
-                cjsonpp::JSONObject value("test");
-                obj.set("key", value);
-            }
-            catch (const std::exception& e)
-            {
-                EXPECT_STREQ(e.what(), "Not an object type");
-                throw;
-            }
-        },
-        std::exception);
+    auto obj = cjsonpp::arrayObject();
+    cjsonpp::JSONObject value("test");
+    const auto set_status = obj.try_set("key", value);
+    ASSERT_FALSE(set_status.has_value());
+    EXPECT_EQ(set_status.error().code, cjsonpp::result_code::invalid_type);
 }
-#endif
 
 /**
  * @brief Test case for setting an invalid type in a JSONObject array.
@@ -598,23 +556,11 @@ TEST_F(JSONObjectTest, SetInvalidTypeInObject)
  *
  * @throws std::exception if the value type is invalid for the JSONObject array.
  */
-#if 0 // TODO FIX
 TEST_F(JSONObjectTest, SetInvalidTypeInArray)
 {
-    EXPECT_THROW(
-        {
-            try
-            {
-                auto obj = cjsonpp::JSONObject();
-                cjsonpp::JSONObject value("test");
-                obj.set(0, value);
-            }
-            catch (const std::exception& e)
-            {
-                EXPECT_STREQ(e.what(), "Not an array type");
-                throw;
-            }
-        },
-        std::exception);
+    auto obj = cjsonpp::JSONObject();
+    cjsonpp::JSONObject value("test");
+    const auto add_status = obj.try_add(value);
+    ASSERT_FALSE(add_status.has_value());
+    EXPECT_EQ(add_status.error().code, cjsonpp::result_code::invalid_type);
 }
-#endif

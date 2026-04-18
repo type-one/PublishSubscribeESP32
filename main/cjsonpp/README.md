@@ -1,66 +1,125 @@
-Type-safe thin C++ wrapper over cJSON library (header-only).
-Version 0.4
+Type-safe thin C++ wrapper over cJSON.
+
+Version 0.5 (result-based API)
 
 https://github.com/ancwrd1/cjsonpp
 
-When compiled with recent gcc compiler with c++11 support the following features are enabled:
-* initializer list for array object construction
-* default template parameters for constructor, get<> and asArray<> functions
-* std::shared_ptr
+This wrapper uses explicit result values for error handling.
+Public exception-style helpers are not part of the API anymore.
 
-if C++11 support is not compiled the std::tr1::shared_ptr implementation is used.
-Feel free to replace it with boost::shared_ptr if needed (see below _SHARED_PTR_IMPL macro)
+Core concepts
 
-Usage examples:
+- Parse with `parse_result(...)`
+- Read values with `try_get<T>(...)` and `try_as<T>()`
+- Write values with `try_set(...)`, `try_add(...)`, `try_remove(...)`
+- Errors are returned as `result_error` with:
+  - `code` (`result_code`)
+  - `detail` (type/index detail)
+  - `message` (human-readable text)
 
-	// parse and get value
-	JSONObject obj = cjsonpp::parse(jsonstr);
+Quick start
 
-	// JSONObject can be copied over
+```cpp
+#include <iostream>
+#include <string>
 
-	// get value of the named element
-	try {
-		std::cout << obj.get<int>("intval") << std::endl;
-		std::cout << obj.get<JSONObject>("intval").as<int>() << std::endl;
-	} catch (const JSONError& e) {
-		std::cerr << e.what() << '\n';
-	}
+#include "cjsonpp/cjsonpp.hpp"
 
-	// get array
-	std::vector<double> arr1 = obj.get("elems").asArray<double>();
-	std::list<std::string> arr2 = obj.get("strs").asArray<std::string, std::list>();
-
-	...
-	// construct object
-	JSONObject obj;
-	std::vector<int> v = {1, 2, 3, 4}; // c++11 only
-	obj.set("intval", 1234);
-	obj.set("arrval", v);
-	obj.set("doubleval", 100.1);
-	obj.set("nullval", cjsonpp::nullObject());
-
-	...
-	// another way of constructing array
-	JSONObject arr = cjsonpp::arrayObject();
-	arr.add("s1");
-	arr.add("s2");
-	JSONObject obj;
-	obj.set("arrval", arr);
-	std::cout << obj << std::endl;
-
-The following data types are supported with get<>("name") and as<>() functions:
-* int
-* int64_t
-* double
-* std::string
-* bool
-* JSONObject
-
-To add support for more data types add a template specialization for private static function as<>(cJSON*).
-Example:
-	
-	// Qt support
-	QString JSONObject::as<QString>(cJSON* obj)
+void parse_example(const std::string& json_text)
+{
+	auto parsed = cjsonpp::parse_result(json_text);
+	if (!parsed)
 	{
-		return QString::fromStdString(as<std::string>(obj));
+		std::cerr << "parse failed: " << parsed.error().message << "\n";
+		return;
 	}
+
+	const auto& obj = parsed.value();
+
+	auto int_value = obj.try_get<int>("intval");
+	if (int_value)
+	{
+		std::cout << "intval=" << int_value.value() << "\n";
+	}
+
+	auto nested = obj.try_get<cjsonpp::JSONObject>("nested");
+	if (nested)
+	{
+		auto nested_int = nested.value().try_get<int>("v");
+		if (nested_int)
+		{
+			std::cout << "nested.v=" << nested_int.value() << "\n";
+		}
+	}
+}
+```
+
+Constructing objects
+
+```cpp
+cjsonpp::JSONObject obj;
+std::vector<int> vec = { 1, 2, 3, 4 };
+
+obj.try_set("intval", 1234);
+obj.try_set("arrval", vec);
+obj.try_set("doubleval", 100.1);
+obj.try_set("nullval", cjsonpp::nullObject());
+```
+
+Constructing arrays
+
+```cpp
+cjsonpp::JSONObject arr = cjsonpp::arrayObject();
+arr.try_add("s1");
+arr.try_add("s2");
+
+cjsonpp::JSONObject obj;
+obj.try_set("arrval", arr);
+```
+
+Reading arrays
+
+```cpp
+auto arr_result = obj.try_get<cjsonpp::JSONObject>("arrval");
+if (arr_result)
+{
+	const auto& arr = arr_result.value();
+	const int count = cJSON_GetArraySize(arr.obj());
+	for (int idx = 0; idx < count; ++idx)
+	{
+		auto item = arr.try_get<std::string>(idx);
+		if (item)
+		{
+			std::cout << item.value() << "\n";
+		}
+	}
+}
+```
+
+Supported value types
+
+- int
+- int64_t
+- double
+- std::string
+- bool
+- JSONObject
+
+Extending type conversion
+
+To add support for custom value types, add a specialization of `JSONObject::as_result<T>(cJSON*)`.
+
+Example:
+
+```cpp
+template <>
+inline cjsonpp::cjsonpp_result<QString> cjsonpp::JSONObject::as_result<QString>(cJSON* obj) const
+{
+	auto str_result = as_result<std::string>(obj);
+	if (!str_result)
+	{
+		return tools::unexpected<cjsonpp::result_error> { str_result.error() };
+	}
+	return QString::fromStdString(str_result.value());
+}
+```
