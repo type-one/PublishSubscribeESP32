@@ -230,7 +230,20 @@ find_package(GTest 1.11.0 QUIET)
 if(GTest_FOUND)
   message("Google Test found")
 else()
-    message("Google Test fetch from release archive")
+    message(STATUS "Google Test: not found locally, fetching from release archive...")
+
+    # Once the archive is downloaded and extracted, skip the network check on
+    # every subsequent reconfigure. This is the primary cause of the slow
+    # cmake -B build . on DrvFs: without this flag CMake re-downloads and
+    # re-extracts ~800 kB on every clean configure (300-475 s observed).
+    # Delete the build/_deps/googletest-* directories to force a re-fetch.
+
+    set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
+
+    # Show curl download progress and extraction steps so the configure does
+    # not appear stuck during the first (cold) fetch.
+    
+    set(FETCHCONTENT_QUIET OFF)
 
     FetchContent_Declare(
     googletest
