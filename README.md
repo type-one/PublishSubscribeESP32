@@ -33,6 +33,11 @@ Goodies:
 
 [GitHub repository](https://github.com/type-one/PublishSubscribeESP32)
 
+AI/Agent guidance files:
+
+- [CLAUDE.md](CLAUDE.md)
+- [.github/copilot-instructions.md](.github/copilot-instructions.md)
+
 Third Parties used in the examples:
 
 - [bytepack](https://github.com/farukeryilmaz/bytepack) (v0.1.0)
