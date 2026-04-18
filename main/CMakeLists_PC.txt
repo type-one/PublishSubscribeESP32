@@ -226,11 +226,12 @@ if(Git_FOUND)
 endif()
 
 # https://cmake.org/cmake/help/latest/module/FindGTest.html
-find_package(GTest 1.11.0)
+find_package(GTest 1.11.0 QUIET)
 if(GTest_FOUND)
   message("Google Test found")
 else()
     message("Google Test fetch from release archive")
+
     FetchContent_Declare(
     googletest
     URL      https://github.com/google/googletest/archive/refs/tags/release-1.11.0.tar.gz
@@ -245,7 +246,27 @@ else()
     set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
     set(BUILD_GTEST ON CACHE BOOL "" FORCE)
 
+    # Suppress third-party deprecation noise from googletest's own CMake files.
+    if(DEFINED CACHE{CMAKE_WARN_DEPRECATED})
+        get_property(_saved_cmake_warn_deprecated CACHE CMAKE_WARN_DEPRECATED PROPERTY VALUE)
+        set(_had_cmake_warn_deprecated_cache TRUE)
+    else()
+        set(_saved_cmake_warn_deprecated OFF)
+        set(_had_cmake_warn_deprecated_cache FALSE)
+    endif()
+
+    set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+
     FetchContent_MakeAvailable(googletest)
+
+    if(_had_cmake_warn_deprecated_cache)
+        set(CMAKE_WARN_DEPRECATED ${_saved_cmake_warn_deprecated} CACHE BOOL "" FORCE)
+    else()
+        unset(CMAKE_WARN_DEPRECATED CACHE)
+    endif()
+    
+    unset(_saved_cmake_warn_deprecated)
+    unset(_had_cmake_warn_deprecated_cache)
 endif()
 
 if(TARGET GTest::gtest_main)
