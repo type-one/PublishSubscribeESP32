@@ -25,7 +25,6 @@
 #include <initializer_list>
 #include <memory>
 
-#define CJSONPP_NO_EXCEPTION
 #include "cJSON/cJSON.h"
 #include "cjsonpp/cjsonpp.hpp"
 

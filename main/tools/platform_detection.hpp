@@ -51,4 +51,8 @@
 #define FREERTOS_PLATFORM
 #endif
 
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
+#define CPP_EXCEPTIONS_ENABLED
+#endif
+
 #endif //  PLATFORM_DETECTION_HPP_

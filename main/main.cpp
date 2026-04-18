@@ -50,13 +50,14 @@
 #include <ranges>
 #endif
 
-#if !defined(FREERTOS_PLATFORM)
+#include "tools/platform_detection.hpp"
+
+#if defined(CPP_EXCEPTIONS_ENABLED)
 #include <exception>
 #endif
 
 #include "CException/CException.h"
 #include "bytepack/bytepack.hpp"
-#define CJSONPP_NO_EXCEPTION
 #include "cjsonpp/cjsonpp.hpp"
 
 #include "tools/async_observer.hpp"
@@ -69,7 +70,6 @@
 #include "tools/memory_pipe.hpp"
 #include "tools/non_copyable.hpp"
 #include "tools/periodic_task.hpp"
-#include "tools/platform_detection.hpp"
 #include "tools/platform_helpers.hpp"
 #include "tools/ring_buffer.hpp"
 #include "tools/ring_vector.hpp"
@@ -3825,6 +3825,7 @@ void launch_runner() noexcept
 //--------------------------------------------------------------------------------------------------------------------------------
 
 #if !defined(FREERTOS_PLATFORM)
+#if defined(CPP_EXCEPTIONS_ENABLED)
 void runner_except_catch()
 {
     try
@@ -3836,6 +3837,12 @@ void runner_except_catch()
         LOG_ERROR("Exception catched - %s", exc.what());
     }
 }
+#else
+void runner_no_except()
+{
+    runner();
+}
+#endif
 #endif
 
 #if defined(FREERTOS_PLATFORM)
@@ -3844,11 +3851,13 @@ extern "C" void app_main() noexcept
 int main() noexcept
 #endif
 {
-
 #if defined(FREERTOS_PLATFORM)
     launch_runner();
-#else
+#elif defined(CPP_EXCEPTIONS_ENABLED)
     runner_except_catch();
+    return 0;
+#else
+    runner_no_except();
     return 0;
 #endif
 }

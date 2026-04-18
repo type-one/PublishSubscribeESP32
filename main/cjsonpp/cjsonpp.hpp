@@ -33,14 +33,14 @@
 // modified for clang-tidy checks
 
 // clang-format off
-#if defined(CJSONPP_NO_EXCEPTION)
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
+#include <exception>
+#define CJSONPP_THROW(msg, value) throw std::runtime_error(std::string{msg} + " (" + std::to_string(value) + ")") /* NOLINT keep it */
+#else
 #include "tools/logger.hpp"
 #include "CException/CException.h"
 #define CJSONPP_THROW(msg, value) do { LOG_ERROR("%s (%d)", msg, static_cast<int>(value)); /* NOLINT keep it */ \
-                                       Throw(0); } while (false)                           /* NOLINT keep it*/
-#else
-#include <exception>
-#define CJSONPP_THROW(msg, value) throw std::runtime_error(std::string{msg} + " (" + std::to_string(value) + ")") /* NOLINT keep it */
+                                       Throw(0); } while (false)
 #endif
 // clang-format on
 

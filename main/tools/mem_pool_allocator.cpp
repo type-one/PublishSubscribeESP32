@@ -202,11 +202,11 @@ namespace
             return ptr;
         }
 
-#if !defined(FREERTOS_PLATFORM)
+#if defined(CPP_EXCEPTIONS_ENABLED)
         throw std::bad_alloc();
-#else
-        return nullptr; // NOLINT for freertos we return nullptr on allocation failure, for standard C++ we throw
 #endif
+
+        return nullptr;
     }
 
     void cached_delete(void* ptr, std::size_t size) noexcept
