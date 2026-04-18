@@ -291,80 +291,6 @@ namespace tools
             }
         }
 
-        /**
-         * @brief Delegate function to handle ISR (Interrupt Service Routine) work.
-         *
-         * This function is designed to be called from an ISR context. It enqueues the given work
-         * into the work queue and notifies the FreeRTOS task associated with this worker to handle
-         * the work. If the notification results in a higher priority task being woken, a context
-         * switch is requested.
-         *
-         * @param work The work to be enqueued, passed as an rvalue reference to a call_back object.
-         */
-        void isr_delegate(call_back&& work)
-        {
-            do_isr_delegate(std::move(work));
-        }
-
-        /**
-         * @brief Delegates ISR work using perfect forwarding.
-         */
-        template <typename UWork>
-#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<call_back, UWork>
-#endif
-        auto isr_delegate(UWork&& work)
-#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            -> typename std::enable_if<std::is_constructible<call_back, UWork>::value, void>::type
-#endif
-        {
-            do_isr_delegate(call_back(std::forward<UWork>(work)));
-        }
-
-        /**
-         * @brief Delegates a batch of ISR work callbacks from a generic range.
-         */
-        template <typename TRange
-#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    call_back,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
-#endif
-        >
-#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<call_back, std::ranges::range_value_t<TRange>>
-#endif
-        void isr_delegate_range(TRange&& range)
-        {
-            for (auto&& work : std::forward<TRange>(range))
-            {
-                do_isr_delegate(call_back(std::forward<decltype(work)>(work)));
-            }
-        }
-
-        /**
-         * @brief Delegates a batch of ISR work callbacks from an initializer-list.
-         */
-        template <typename U
-#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<call_back, const U&>::value>::type
-#endif
-        >
-#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<call_back, const U&>
-#endif
-        void isr_delegate_range(std::initializer_list<U> range)
-        {
-            for (const auto& work : range)
-            {
-                do_isr_delegate(call_back(work));
-            }
-        }
-
     private:
         void do_delegate(call_back&& work)
         {
@@ -379,20 +305,6 @@ namespace tools
             if (m_task_created)
             {
                 xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
-            }
-        }
-
-        void do_isr_delegate(call_back&& work)
-        {
-            // FreeRTOS platform
-
-            m_work_queue.isr_emplace(std::move(work));
-
-            if (m_task_created)
-            {
-                BaseType_t x_higher_priority_task_woken = pdFALSE;
-                xTaskNotifyFromISR(m_task, 0x01 /* BIT */, eSetBits, &x_higher_priority_task_woken);
-                portYIELD_FROM_ISR(x_higher_priority_task_woken);
             }
         }
 

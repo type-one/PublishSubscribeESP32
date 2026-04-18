@@ -417,48 +417,6 @@ TEST_F(WorkerTaskTest, DelegateRangeSupportsInitializerAndRange)
     EXPECT_EQ(context->computation_result, 6);
 }
 
-TEST_F(WorkerTaskTest, IsrDelegateRangeSupportsInitializerAndRange)
-{
-    {
-        tools::worker_task<TestContext> task(
-            [&](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
-            {
-                (void)task_name;
-                startup_called.store(true);
-                ctx->computation_result = 0;
-            },
-            context, "test_task", 4096);
-
-        const std::vector<tools::worker_task<TestContext>::call_back> callbacks = {
-            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
-            {
-                (void)task_name;
-                ctx->computation_result += 4;
-            },
-            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
-            {
-                (void)task_name;
-                ctx->computation_result += 5;
-            }
-        };
-
-        task.isr_delegate_range(callbacks);
-        task.isr_delegate_range({
-            tools::worker_task<TestContext>::call_back(
-                [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
-                {
-                    (void)task_name;
-                    ctx->computation_result += 6;
-                })
-        });
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(120));
-    }
-
-    EXPECT_TRUE(startup_called.load());
-    EXPECT_EQ(context->computation_result, 15);
-}
-
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 TEST(WorkerTaskCompileTimeChecks, PerfectForwardingConstraints)
 {
@@ -509,17 +467,10 @@ TEST(WorkerTaskCompileTimeChecks, RangeConstraints)
     {
         task.delegate_range(callbacks);
     });
-    static_assert(requires(worker_task_t& task, std::vector<callback_t>& callbacks)
-    {
-        task.isr_delegate_range(callbacks);
-    });
+
     static_assert(requires(worker_task_t& task)
     {
         task.delegate_range(std::initializer_list<callback_t> {});
-    });
-    static_assert(requires(worker_task_t& task)
-    {
-        task.isr_delegate_range(std::initializer_list<callback_t> {});
     });
 
     const auto transformed = std::views::iota(0, 2)
@@ -536,10 +487,6 @@ TEST(WorkerTaskCompileTimeChecks, RangeConstraints)
     static_assert(requires(worker_task_t& task)
     {
         task.delegate_range(transformed);
-    });
-    static_assert(requires(worker_task_t& task)
-    {
-        task.isr_delegate_range(transformed);
     });
 
     SUCCEED();
