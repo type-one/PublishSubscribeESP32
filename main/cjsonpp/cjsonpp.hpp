@@ -29,6 +29,7 @@
 #include <memory>
 
 #include "cJSON/cJSON.h"
+#include "cjsonpp/cjsonpp_result.hpp"
 
 // modified for clang-tidy checks
 
@@ -59,6 +60,22 @@ namespace cjsonpp
         Raw,
         Invalid
     };
+
+    /**
+     * @brief Create a cjsonpp error payload.
+     */
+    inline result_error make_error(result_code code_value, int detail_value, const char* message_text)
+    {
+        return result_error { code_value, detail_value, message_text };
+    }
+
+    /**
+     * @brief Convert a result error into the legacy throw/CException path.
+     */
+    [[noreturn]] inline void raise_error(const result_error& error_value)
+    {
+        CJSONPP_THROW(error_value.message.c_str(), error_value.detail);
+    }
 
 
     /**
@@ -103,7 +120,18 @@ namespace cjsonpp
 
         // get value (specialized below)
         template <typename T>
-        T as(cJSON* obj) const;
+        cjsonpp_result<T> as_result(cJSON* obj) const;
+
+        template <typename T>
+        T as(cJSON* obj) const
+        {
+            const auto result_value = as_result<T>(obj);
+            if (!result_value)
+            {
+                raise_error(result_value.error());
+            }
+            return result_value.value();
+        }
 
         HolderPtr obj_;
 
@@ -336,6 +364,15 @@ namespace cjsonpp
         }
 
         /**
+         * @brief Try to cast the current value to T without throwing.
+         */
+        template <typename T>
+        cjsonpp_result<T> try_as() const
+        {
+            return as_result<T>(obj_->o);
+        }
+
+        /**
          * @brief Converts the current JSON object to an array of JSON objects.
          *
          * This function checks if the current JSON object is of array type. If it is,
@@ -408,18 +445,33 @@ namespace cjsonpp
         template <typename T = JSONObject>
         [[nodiscard]] T get(const char* name) const
         {
+            const auto result_value = try_get<T>(name);
+            if (!result_value)
+            {
+                raise_error(result_value.error());
+            }
+            return result_value.value();
+        }
+
+        /**
+         * @brief Retrieves an item from an object by name without throwing.
+         */
+        template <typename T = JSONObject>
+        [[nodiscard]] cjsonpp_result<T> try_get(const char* name) const
+        {
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
-                CJSONPP_THROW("Not an object", (*obj_)->type & byte_mask);
+                return tools::unexpected<result_error> {
+                    make_error(result_code::invalid_type, (*obj_)->type & byte_mask, "Not an object") };
             }
 
             cJSON* item = cJSON_GetObjectItem(obj_->o, name);
             if (item == nullptr)
             {
-                CJSONPP_THROW("No such item", 0);
+                return tools::unexpected<result_error> { make_error(result_code::missing_item, 0, "No such item") };
             }
 
-            return as<T>(item);
+            return as_result<T>(item);
         }
 
         /**
@@ -435,6 +487,15 @@ namespace cjsonpp
         [[nodiscard]] JSONObject get(const std::string& value) const
         {
             return get<T>(value.c_str());
+        }
+
+        /**
+         * @brief Retrieves an item from an object by name without throwing.
+         */
+        template <typename T = JSONObject>
+        [[nodiscard]] cjsonpp_result<T> try_get(const std::string& value) const
+        {
+            return try_get<T>(value.c_str());
         }
 
         /**
@@ -469,18 +530,33 @@ namespace cjsonpp
         template <typename T = JSONObject>
         T get(int index) const
         {
+            const auto result_value = try_get<T>(index);
+            if (!result_value)
+            {
+                raise_error(result_value.error());
+            }
+            return result_value.value();
+        }
+
+        /**
+         * @brief Retrieves an item from an array by index without throwing.
+         */
+        template <typename T = JSONObject>
+        cjsonpp_result<T> try_get(int index) const
+        {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask);
+                return tools::unexpected<result_error> {
+                    make_error(result_code::invalid_type, (*obj_)->type & byte_mask, "Not an array type") };
             }
 
             cJSON* item = cJSON_GetArrayItem(obj_->o, index);
             if (item == nullptr)
             {
-                CJSONPP_THROW("No such item", 0);
+                return tools::unexpected<result_error> { make_error(result_code::missing_item, 0, "No such item") };
             }
 
-            return as<T>(item);
+            return as_result<T>(item);
         }
 
         /**
@@ -496,13 +572,28 @@ namespace cjsonpp
         template <typename T>
         void add(const T& value)
         {
+            const auto status_value = try_add(value);
+            if (!status_value)
+            {
+                raise_error(status_value.error());
+            }
+        }
+
+        /**
+         * @brief Adds a value to an array without throwing.
+         */
+        template <typename T>
+        cjsonpp_status try_add(const T& value)
+        {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                CJSONPP_THROW("Not an array type", (*obj_)->type & byte_mask);
+                return tools::unexpected<result_error> {
+                    make_error(result_code::invalid_type, (*obj_)->type & byte_mask, "Not an array type") };
             }
             JSONObject output(value);
             cJSON_AddItemReferenceToArray(obj_->o, output.obj_->o);
             refs_->insert(output);
+            return cjsonpp_status {};
         }
 
         /**
@@ -518,14 +609,29 @@ namespace cjsonpp
         template <typename T>
         void set(const char* name, const T& value)
         {
+            const auto status_value = try_set(name, value);
+            if (!status_value)
+            {
+                raise_error(status_value.error());
+            }
+        }
+
+        /**
+         * @brief Sets a key/value pair in an object without throwing.
+         */
+        template <typename T>
+        cjsonpp_status try_set(const char* name, const T& value)
+        {
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
-                CJSONPP_THROW("Not an object type", (*obj_)->type & byte_mask);
+                return tools::unexpected<result_error> {
+                    make_error(result_code::invalid_type, (*obj_)->type & byte_mask, "Not an object type") };
             }
 
             JSONObject output(value);
             cJSON_AddItemReferenceToObject(obj_->o, name, output.obj_->o);
             refs_->insert(output);
+            return cjsonpp_status {};
         }
 
         /**
@@ -541,6 +647,15 @@ namespace cjsonpp
         void set(const std::string& name, const T& value)
         {
             set(name.c_str(), value);
+        }
+
+        /**
+         * @brief Sets a key/value pair in an object without throwing.
+         */
+        template <typename T>
+        cjsonpp_status try_set(const std::string& name, const T& value)
+        {
+            return try_set(name.c_str(), value);
         }
 
 
@@ -560,6 +675,11 @@ namespace cjsonpp
         void remove(const char* name);
 
         /**
+         * @brief Removes from object an item with the specified name without throwing.
+         */
+        cjsonpp_status try_remove(const char* name);
+
+        /**
          * @brief Removes from object an item with the specified name.
          *
          * @param name The name of the item to remove as a std::string
@@ -567,12 +687,35 @@ namespace cjsonpp
         void remove(const std::string& name);
 
         /**
+         * @brief Removes from object an item with the specified name without throwing.
+         */
+        cjsonpp_status try_remove(const std::string& name)
+        {
+            return try_remove(name.c_str());
+        }
+
+        /**
          * @brief Removes an item from array at the specified index.
          *
          * @param index The index of the item to remove.
          */
         void remove(int index);
+
+        /**
+         * @brief Removes an item from array at the specified index without throwing.
+         */
+        cjsonpp_status try_remove(int index);
     };
+
+    /**
+     * @brief Parses a JSON string and returns a result instead of throwing.
+     */
+    cjsonpp_result<JSONObject> parse_result(const char* str);
+
+    /**
+     * @brief Parses a JSON string and returns a result instead of throwing.
+     */
+    cjsonpp_result<JSONObject> parse_result(const std::string& str);
 
     /**
      * @brief Parses a JSON string and returns a JSONObject.
@@ -614,11 +757,12 @@ namespace cjsonpp
      * @throws std::runtime_error (or CException) if the type of the cJSON object is not a number.
      */
     template <>
-    inline int JSONObject::as<int>(cJSON* obj) const
+    inline cjsonpp_result<int> JSONObject::as_result<int>(cJSON* obj) const
     {
         if ((obj->type & byte_mask) != cJSON_Number)
         {
-            CJSONPP_THROW("Bad value type", obj->type & byte_mask);
+            return tools::unexpected<result_error> {
+                make_error(result_code::invalid_type, obj->type & byte_mask, "Bad value type") };
         }
         return obj->valueint;
     }
@@ -635,11 +779,12 @@ namespace cjsonpp
      * @throws std::runtime_error (or CException) if the cJSON object is not of type number.
      */
     template <>
-    inline std::int64_t JSONObject::as<std::int64_t>(cJSON* obj) const
+    inline cjsonpp_result<std::int64_t> JSONObject::as_result<std::int64_t>(cJSON* obj) const
     {
         if ((obj->type & byte_mask) != cJSON_Number)
         {
-            CJSONPP_THROW("Not a number type", obj->type & byte_mask);
+            return tools::unexpected<result_error> {
+                make_error(result_code::invalid_type, obj->type & byte_mask, "Not a number type") };
         }
         return static_cast<std::int64_t>(obj->valuedouble);
     }
@@ -655,13 +800,14 @@ namespace cjsonpp
      * @throws std::runtime_error (or CException) if the cJSON object is not of string type.
      */
     template <>
-    inline std::string JSONObject::as<std::string>(cJSON* obj) const
+    inline cjsonpp_result<std::string> JSONObject::as_result<std::string>(cJSON* obj) const
     {
         if ((obj->type & byte_mask) != cJSON_String)
         {
-            CJSONPP_THROW("Not a string type", obj->type & byte_mask);
+            return tools::unexpected<result_error> {
+                make_error(result_code::invalid_type, obj->type & byte_mask, "Not a string type") };
         }
-        return obj->valuestring;
+        return cjsonpp_result<std::string> { std::string { obj->valuestring != nullptr ? obj->valuestring : "" } };
     }
 
     /**
@@ -676,11 +822,12 @@ namespace cjsonpp
      * @throws std::runtime_error (or CException) if the cJSON object is not of type number.
      */
     template <>
-    inline double JSONObject::as<double>(cJSON* obj) const
+    inline cjsonpp_result<double> JSONObject::as_result<double>(cJSON* obj) const
     {
         if ((obj->type & byte_mask) != cJSON_Number)
         {
-            CJSONPP_THROW("Not a number type", obj->type & byte_mask);
+            return tools::unexpected<result_error> {
+                make_error(result_code::invalid_type, obj->type & byte_mask, "Not a number type") };
         }
         return obj->valuedouble;
     }
@@ -697,7 +844,7 @@ namespace cjsonpp
      * @throws std::runtime_error (or CException) if the cJSON object is not of boolean type.
      */
     template <>
-    inline bool JSONObject::as<bool>(cJSON* obj) const
+    inline cjsonpp_result<bool> JSONObject::as_result<bool>(cJSON* obj) const
     {
         bool result = false;
         if ((obj->type & byte_mask) == cJSON_True)
@@ -710,7 +857,8 @@ namespace cjsonpp
         }
         else
         {
-            CJSONPP_THROW("Not a boolean type", obj->type & byte_mask);
+            return tools::unexpected<result_error> {
+                make_error(result_code::invalid_type, obj->type & byte_mask, "Not a boolean type") };
         }
 
         return result;
@@ -725,9 +873,9 @@ namespace cjsonpp
      * @return JSONObject instance representing the cJSON object.
      */
     template <>
-    inline JSONObject JSONObject::as<JSONObject>(cJSON* obj) const
+    inline cjsonpp_result<JSONObject> JSONObject::as_result<JSONObject>(cJSON* obj) const
     {
-        return { *this, obj, false };
+        return cjsonpp_result<JSONObject> { JSONObject { *this, obj, false } };
     }
 
 

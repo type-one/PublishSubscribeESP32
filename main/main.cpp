@@ -2442,7 +2442,14 @@ void test_json()
     {
         // create object from string literal
         std::string jsonstr = R"({ "happy": true, "pi": 3.141 })";
-        cjsonpp::JSONObject obj = cjsonpp::parse(jsonstr);
+        auto parse_result = cjsonpp::parse_result(jsonstr);
+        if (!parse_result)
+        {
+            LOG_ERROR("json parse failed: %s", parse_result.error().message.c_str());
+            return;
+        }
+
+        cjsonpp::JSONObject obj = parse_result.value();
 
         const auto str = obj.print();
         std::printf("%s\n", str.c_str());
@@ -2493,25 +2500,64 @@ void test_queued_json_data()
             break;
         }
 
-        cjsonpp::JSONObject json = cjsonpp::parse(data.value());
+        auto parse_result = cjsonpp::parse_result(data.value());
+        if (!parse_result)
+        {
+            LOG_ERROR("queue json parse failed: %s", parse_result.error().message.c_str());
+            continue;
+        }
 
-        const auto discriminant = json.get<std::string>("msg_type");
+        cjsonpp::JSONObject json = parse_result.value();
+
+        const auto discriminant_result = json.try_get<std::string>("msg_type");
+        if (!discriminant_result)
+        {
+            LOG_ERROR("missing discriminant: %s", discriminant_result.error().message.c_str());
+            continue;
+        }
+
+        const auto discriminant = discriminant_result.value();
 
         if (discriminant == "sensor")
         {
-            const auto name = json.get<std::string>("sensor_name");
-            const auto temp = json.get<double>("temp");
-            const auto activity = json.get<bool>("activity");
-            const auto& obj = json.get("answer");
-            const auto answer = obj.get<int>("everything");
+            const auto name_result = json.try_get<std::string>("sensor_name");
+            const auto temp_result = json.try_get<double>("temp");
+            const auto activity_result = json.try_get<bool>("activity");
+            const auto answer_obj_result = json.try_get<cjsonpp::JSONObject>("answer");
+            if (!name_result || !temp_result || !activity_result || !answer_obj_result)
+            {
+                LOG_ERROR("sensor payload invalid");
+                continue;
+            }
+
+            const auto answer_result = answer_obj_result.value().try_get<int>("everything");
+            if (!answer_result)
+            {
+                LOG_ERROR("sensor answer invalid: %s", answer_result.error().message.c_str());
+                continue;
+            }
+
+            const auto name = name_result.value();
+            const auto temp = temp_result.value();
+            const auto activity = activity_result.value();
+            const auto answer = answer_result.value();
             std::printf(
                 "sensor: %s - temp %f - %s - answer (%d)\n", name.c_str(), temp, activity ? "on" : "off", answer);
         }
         else if (discriminant == "time")
         {
-            const auto time_date = json.get<std::string>("yyyy_mm_dd");
-            const auto time_clock = json.get<std::string>("hh_mm_ss");
-            const auto time_zone = json.get<std::string>("time_zone");
+            const auto time_date_result = json.try_get<std::string>("yyyy_mm_dd");
+            const auto time_clock_result = json.try_get<std::string>("hh_mm_ss");
+            const auto time_zone_result = json.try_get<std::string>("time_zone");
+            if (!time_date_result || !time_clock_result || !time_zone_result)
+            {
+                LOG_ERROR("time payload invalid");
+                continue;
+            }
+
+            const auto time_date = time_date_result.value();
+            const auto time_clock = time_clock_result.value();
+            const auto time_zone = time_zone_result.value();
             std::printf("time: %s - %s - %s\n", time_date.c_str(), time_clock.c_str(), time_zone.c_str());
         }
     }

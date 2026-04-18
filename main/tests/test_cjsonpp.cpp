@@ -159,6 +159,31 @@ TEST_F(JSONObjectTest, ParseJSONString)
 }
 
 /**
+ * @brief Test case for parsing a valid JSON string using the result API.
+ */
+TEST_F(JSONObjectTest, ParseJSONStringResultApi)
+{
+    std::string jsonString = R"({"key": "value", "number": 42})";
+    auto parse_result = cjsonpp::parse_result(jsonString);
+    ASSERT_TRUE(parse_result.has_value());
+    const auto& obj = parse_result.value();
+    EXPECT_EQ(obj.type(), cjsonpp::Object);
+    EXPECT_TRUE(obj.has("key"));
+    EXPECT_TRUE(obj.has("number"));
+}
+
+/**
+ * @brief Test case for parsing an invalid JSON string using the result API.
+ */
+TEST_F(JSONObjectTest, ParseInvalidJSONStringResultApi)
+{
+    std::string invalid_json = R"({"key": "value", "number": 42)";
+    auto parse_result = cjsonpp::parse_result(invalid_json);
+    ASSERT_FALSE(parse_result.has_value());
+    EXPECT_EQ(parse_result.error().code, cjsonpp::result_code::parse_error);
+}
+
+/**
  * @brief Test case for setting and removing an object item in JSONObject.
  *
  * This test case verifies the functionality of setting an object item with a key
@@ -321,6 +346,17 @@ TEST_F(JSONObjectTest, ParseAndCheckNestedJSON)
     EXPECT_TRUE(inner.has("key"));
     EXPECT_EQ(inner.get("key").type(), cjsonpp::String);
     EXPECT_STREQ(inner.get("key").obj()->valuestring, "value");
+}
+
+/**
+ * @brief Test case for try_get result behavior on missing keys.
+ */
+TEST_F(JSONObjectTest, TryGetMissingItemResultApi)
+{
+    auto obj = cjsonpp::JSONObject();
+    auto key_result = obj.try_get<int>("missing");
+    ASSERT_FALSE(key_result.has_value());
+    EXPECT_EQ(key_result.error().code, cjsonpp::result_code::missing_item);
 }
 
 /**
