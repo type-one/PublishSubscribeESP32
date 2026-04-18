@@ -264,7 +264,7 @@ else()
     else()
         unset(CMAKE_WARN_DEPRECATED CACHE)
     endif()
-    
+
     unset(_saved_cmake_warn_deprecated)
     unset(_had_cmake_warn_deprecated_cache)
 endif()
@@ -321,6 +321,26 @@ if(TARGET ${RUN_TESTS_TARGET})
     message(WARNING "Target publish_subscribe_tests already exists. Using ${RUN_TESTS_TARGET} in this CMake list to avoid solution project-name collisions.")
 endif()
 add_executable(${RUN_TESTS_TARGET} ${TEST_SOURCES})
+
+# Disable clang-tidy for the test target: it runs on every TU and can triple
+# per-file compile time. Static analysis of production code is enough.
+set_target_properties(${RUN_TESTS_TARGET} PROPERTIES CXX_CLANG_TIDY "")
+
+# Precompiled header: gtest/gtest.h and the STL headers used by most test files
+# are parsed once and reused across all 23 TUs instead of being re-parsed each time.
+target_precompile_headers(${RUN_TESTS_TARGET} PRIVATE
+    <gtest/gtest.h>
+    <atomic>
+    <chrono>
+    <cstddef>
+    <cstdint>
+    <functional>
+    <memory>
+    <string>
+    <thread>
+    <utility>
+    <vector>
+)
 
 # Link Google Test and threads in a platform-portable way
 target_link_libraries(${RUN_TESTS_TARGET} PRIVATE framework_modules project_options ${GTEST_MAIN_TARGET} Threads::Threads)
