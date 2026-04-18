@@ -36,6 +36,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <future>
 #include <memory>
 #include <thread>
 #include <utility>
@@ -219,29 +220,51 @@ TEST_F(TimerTest, TestTwoArgumentAdd)
  * 1. Initializes a counter to zero.
  * 2. Adds a timer with a 100000 microseconds interval, a callback function that increments the counter, and a repeat
  * count of 10000.
- * 3. Sleeps for 125 milliseconds.
- * 4. Removes the timer.
- * 5. Checks if the counter has been incremented 3 times.
+ * 3. Waits until the callback has been invoked 3 times and removes the timer from the callback.
+ * 4. Checks if the counter has been incremented 3 times.
  * 6. Resets the counter to zero.
  * 7. Adds a timer with a 100 milliseconds interval, a callback function that increments the counter, and a repeat count
  * of 10000 microseconds.
- * 8. Sleeps for 135 milliseconds.
- * 9. Removes the timer.
- * 10. Checks if the counter has been incremented 4 times.
+ * 8. Waits until the callback has been invoked 4 times and removes the timer from the callback.
+ * 9. Checks if the counter has been incremented 4 times.
  */
 TEST_F(TimerTest, TestThreeArgumentAdd)
 {
     std::atomic<std::size_t> count { 0 };
 
-    auto id = timer->add(100000, [&](CppTime::timer_id) { count.fetch_add(1U); }, 10000);
-    std::this_thread::sleep_for(milliseconds(125));
-    timer->remove(id);
+    std::promise<void> first_done;
+    auto first_done_future = first_done.get_future();
+    timer->add(
+        100000,
+        [&](CppTime::timer_id fired_id)
+        {
+            const auto new_count = count.fetch_add(1U) + 1U;
+            if (new_count == 3U)
+            {
+                timer->remove(fired_id);
+                first_done.set_value();
+            }
+        },
+        10000);
+    EXPECT_EQ(first_done_future.wait_for(milliseconds(500)), std::future_status::ready);
     EXPECT_EQ(count.load(), 3U);
 
     count.store(0U);
-    id = timer->add(milliseconds(100), [&](CppTime::timer_id) { count.fetch_add(1U); }, microseconds(10000));
-    std::this_thread::sleep_for(milliseconds(135));
-    timer->remove(id);
+    std::promise<void> second_done;
+    auto second_done_future = second_done.get_future();
+    timer->add(
+        milliseconds(100),
+        [&](CppTime::timer_id fired_id)
+        {
+            const auto new_count = count.fetch_add(1U) + 1U;
+            if (new_count == 4U)
+            {
+                timer->remove(fired_id);
+                second_done.set_value();
+            }
+        },
+        microseconds(10000));
+    EXPECT_EQ(second_done_future.wait_for(milliseconds(500)), std::future_status::ready);
     EXPECT_EQ(count.load(), 4U);
 }
 
