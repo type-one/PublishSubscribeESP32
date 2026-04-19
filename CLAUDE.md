@@ -175,6 +175,42 @@ This file defines repository-specific guidance for AI coding agents.
   - comments that duplicate what the code already says clearly.
   - lambdas nested three levels deep with multiple captures.
 
+## Concurrency and Platform Abstractions
+
+- Do not use `std::mutex`, `std::condition_variable`, or `std::thread` directly in application or framework code.
+  Use the task and synchronisation abstractions in `main/tools/` instead:
+  - `tools::generic_task`, `tools::worker_task`, `tools::periodic_task`, `tools::data_task` for threaded execution.
+  - `tools::critical_section` for mutual exclusion.
+  - `tools::sync_object` for signalling and waiting.
+- Methods prefixed `isr_` in `main/tools/` are interrupt-safe variants. Only call them from within an actual ISR context.
+  The sole exception is Google Test mocks that simulate ISR behaviour: tests may call `isr_` methods directly to exercise interrupt paths.
+
+## Design Patterns and Architecture
+
+### Finite State Machines
+
+- Model FSM states as a `std::variant` of distinct state structs.
+- Dispatch events and update state via `std::visit` with the overload pattern (`tools::detail::overload`).
+- Each `[state, event]` combination is handled by a dedicated `on_event(state, event)` overload; unhandled combinations use a templated fallback that logs an error and keeps the current state.
+- Each state's entry/update logic is handled by a dedicated `on_state(state)` overload.
+- See the `traffic_light_fsm` in `main/main.cpp` as the reference implementation.
+
+### Messages and Events
+
+- Group related messages, commands, or events into a `std::variant`.
+- Parse and dispatch incoming variants with `std::visit` and per-alternative overloads or lambdas; avoid `if`/`else if` chains on type-tags or discriminant strings.
+- Prefer `enum class` or structs with named fields for the alternative types so the type itself carries semantic meaning.
+
+### Publish/Subscribe Hub Architecture
+
+- The recommended top-level structure uses three hubs held as `std::shared_ptr` members of the shared context passed to all tasks:
+  - **data_hub**: publishes sensor readings and measurements. A data value is itself a `std::variant` covering the relevant value types for the system (e.g. `float`/`fpm` fixed-point, `int`, bitmask, `std::string`).
+  - **commands_hub**: publishes commands directed at components. Command alternatives are `enum class` values or structs.
+  - **events_hub**: publishes system events (state changes, errors, notifications). Event alternatives follow the same struct/enum-class convention.
+- Any task component can be a `tools::sync_observer` or `tools::async_observer` on any hub.
+- The shared context may also carry a `tools::sync_dictionary` of `std::variant` values for keyed telemetry or configuration that any component can read and write.
+- Components react to incoming variants via `std::visit`, invoking focused private methods per alternative — never a monolithic handler.
+
 ## Error Handling Model
 
 - Newly introduced classes should be exception-free by design.
