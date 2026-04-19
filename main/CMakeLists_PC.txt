@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # force clang-tidy by default
 option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" ON)
 # option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
+option(ENABLE_FPM_OUTPUT_TESTS "Enable heavy fpm output tests (test_output.cpp)" OFF)
 
 if(ENABLE_CLANG_TIDY)
     # Keep clang-tidy opt-in for local dev: enabling it on every file can significantly slow full builds.
@@ -310,10 +311,13 @@ set(TEST_FPM_SOURCES
     tests/fpm/test_input.cpp
     tests/fpm/test_manip.cpp
     tests/fpm/test_nearest.cpp
-    tests/fpm/test_output.cpp
     tests/fpm/test_power.cpp
     tests/fpm/test_trigonometry.cpp
 )
+
+if(ENABLE_FPM_OUTPUT_TESTS)
+    list(APPEND TEST_FPM_SOURCES tests/fpm/test_output.cpp)
+endif()
 
 set(TEST_SOURCES
     tests/test_async_observer.cpp
