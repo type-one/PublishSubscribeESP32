@@ -41,6 +41,7 @@ AI/Agent guidance files:
 Third Parties used in the examples:
 
 - [bytepack](https://github.com/farukeryilmaz/bytepack) (v0.1.0)
+- [fpm](https://github.com/MikeLankamp/fpm) (master b46537f, header-only fixed-point math library, MIT license)
 - [cjsonpp](https://github.com/ancwrd1/cjsonpp) (master 71d876f)
 - [cJSON](https://github.com/DaveGamble/cJSON) (v1.7.18)
 - [CException](https://github.com/ThrowTheSwitch/CException) (v1.3.4)

@@ -297,6 +297,24 @@ enable_testing()
 ################################
 
 # Add your test files here
+set(TEST_FPM_SOURCES
+    tests/fpm/test_arithmetic.cpp
+    tests/fpm/test_arithmetic_int.cpp
+    tests/fpm/test_basic_math.cpp
+    tests/fpm/test_classification.cpp
+    tests/fpm/test_constants.cpp
+    tests/fpm/test_conversion.cpp
+    tests/fpm/test_customizations.cpp
+    tests/fpm/test_detail.cpp
+    tests/fpm/test_from.cpp
+    tests/fpm/test_input.cpp
+    tests/fpm/test_manip.cpp
+    tests/fpm/test_nearest.cpp
+    tests/fpm/test_output.cpp
+    tests/fpm/test_power.cpp
+    tests/fpm/test_trigonometry.cpp
+)
+
 set(TEST_SOURCES
     tests/test_async_observer.cpp
     tests/test_bytepack.cpp
@@ -321,6 +339,7 @@ set(TEST_SOURCES
     tests/test_sync_ring_vector.cpp
     tests/test_timer_scheduler.cpp
     tests/test_worker_task.cpp
+    ${TEST_FPM_SOURCES}
     # Add more test files as needed
 )
 

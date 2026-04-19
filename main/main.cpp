@@ -59,6 +59,8 @@
 #include "CException/CException.h"
 #include "bytepack/bytepack.hpp"
 #include "cjsonpp/cjsonpp.hpp"
+#include "fpm/fixed.hpp"
+#include "fpm/math.hpp"
 
 #include "tools/async_observer.hpp"
 #include "tools/data_task.hpp"
@@ -2665,6 +2667,63 @@ void test_packing_unpacking_json_data()
 
 //--------------------------------------------------------------------------------------------------------------------------------
 
+void test_fpm()
+{
+    LOG_INFO("-- fpm fixed-point math --");
+    print_stats();
+
+    using fixed_distance = fpm::fixed_24_8;
+    using fixed_angle = fpm::fixed_16_16;
+    using fixed_math = fpm::fixed<std::int32_t, std::int64_t, 12>;
+
+    const fixed_distance width(3.5);
+    const fixed_distance height(7.25);
+    const auto perimeter = fixed_distance(2) * (width + height);
+    const auto area = width * height;
+    const auto ratio = width / height;
+
+    std::printf(
+        "arithmetic: width=%.6f height=%.6f perimeter=%.6f area=%.6f ratio=%.6f\n",
+        static_cast<double>(width),
+        static_cast<double>(height),
+        static_cast<double>(perimeter),
+        static_cast<double>(area),
+        static_cast<double>(ratio));
+
+    const auto explicit_fixed = fixed_angle::from_fixed_point<4>(18);
+    const auto raw_fixed = fixed_angle::from_raw_value(0x00018000);
+
+    std::printf(
+        "conversion: from_fixed_point<4>(18)=%.6f raw=0x%08x from_raw_value(0x00018000)=%.6f\n",
+        static_cast<double>(explicit_fixed),
+        static_cast<unsigned int>(explicit_fixed.raw_value()),
+        static_cast<double>(raw_fixed));
+
+    std::printf(
+        "constants: pi=%.6f half_pi=%.6f two_pi=%.6f e=%.6f\n",
+        static_cast<double>(fixed_angle::pi()),
+        static_cast<double>(fixed_angle::half_pi()),
+        static_cast<double>(fixed_angle::two_pi()),
+        static_cast<double>(fixed_angle::e()));
+
+    const fixed_math angle = fixed_math::pi() / fixed_math(6);
+    const auto sine = fpm::sin(angle);
+    const auto cosine = fpm::cos(angle);
+    const auto hypotenuse = fpm::sqrt(fixed_math(3) * fixed_math(3) + fixed_math(4) * fixed_math(4));
+    const auto wrapped = fpm::remainder(fixed_distance(9.5), fixed_distance(2));
+    const auto exponent = fpm::pow(fixed_math(2), fixed_math(3.5));
+
+    std::printf(
+        "math: sin(pi/6)=%.6f cos(pi/6)=%.6f sqrt(3^2+4^2)=%.6f remainder(9.5,2)=%.6f pow(2,3.5)=%.6f\n",
+        static_cast<double>(sine),
+        static_cast<double>(cosine),
+        static_cast<double>(hypotenuse),
+        static_cast<double>(wrapped),
+        static_cast<double>(exponent));
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
 // clang-format off
 
 // https://www.cppstories.com/2023/finite-state-machines-variant-cpp/
@@ -3797,6 +3856,7 @@ void runner()
 
     test_json();
     test_queued_json_data();
+    test_fpm();
 
     test_packing_unpacking_json_data();
 
