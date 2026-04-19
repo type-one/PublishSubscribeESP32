@@ -102,9 +102,11 @@ This file defines repository-specific guidance for AI coding agents.
   - in `.cpp` files, do not rely on headers transitively included by the corresponding `.hpp`.
   - favor forward declarations in headers whenever possible to reduce coupling and rebuild cost.
 - Documentation:
-  - Use Doxygen comments for classes and methods, consistent with `main/tools/*` examples.
-  - prefer block-style Doxygen comments using `/*! ... */`.
-  - do not introduce `///` Doxygen comments.
+  - Each `.hpp` and `.cpp` file must start with a Doxygen file header using `/** @file ... */` with `@file`, `@brief`, `@author`, and `@date` tags, consistent with `main/tools/*` examples.
+  - Place Doxygen comments in `.hpp` files, not in `.cpp` files. Do not duplicate documentation between the declaration and the definition.
+  - Document all public classes, enums, methods, and non-obvious members in the `.hpp`.
+  - Use block-style Doxygen comments using `/** ... */` with `@brief`, `@param`, `@return`, and `@tparam` tags.
+  - Do not use `///` Doxygen comments.
 
 ## Standard Library Usage
 

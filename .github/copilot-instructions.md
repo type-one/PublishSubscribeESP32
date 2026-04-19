@@ -230,12 +230,14 @@ Fallback guidance:
 - Do not rely on implicit or transitive includes in `.cpp` or `.hpp` files.
 - In a `.cpp` file, include what is used directly rather than relying on headers already included by the matching `.hpp`.
 - Favor forward declarations in headers whenever possible, as long as they do not obscure correctness or required completeness.
+- Each `.hpp` and `.cpp` file must begin with a Doxygen file header block using `@file`, `@brief`, `@author`, and `@date` tags, as used in `main/tools/*`.
+- Place Doxygen comments in `.hpp` files. Do not duplicate documentation in `.cpp` files.
 - Use Doxygen comments for:
   - classes
-  - public methods
+  - public methods, enums, and non-obvious members
   - non-obvious behavior and constraints
-- Prefer block Doxygen comments using `/*! ... */` rather than `///`.
-- Mirror the tone and granularity already used in `main/tools/*`.
+- Use block Doxygen comments `/** ... */` with `@brief`, `@param`, `@return`, and `@tparam` tags, as used in `main/tools/*`.
+- Do not use `///` Doxygen comments.
 
 ## Error Handling Requirements
 
