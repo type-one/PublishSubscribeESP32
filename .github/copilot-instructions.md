@@ -32,6 +32,13 @@ Fallback guidance:
 - Follow repository `.clang-format` and `.clang-tidy` (root files are authoritative).
 - Use snake_case naming for functions/methods/variables.
 - Prefix class members with `m_`.
+- Enforce constness whenever possible:
+  - prefer `const` methods,
+  - prefer `const auto` for intermediate computations,
+  - use `constexpr` whenever values or computations can be made compile-time.
+- Include style:
+  - use `#include "..."` for headers from this project,
+  - use `#include <...>` for STL, POSIX, FreeRTOS, ESP32, and other system/platform headers.
 - If a class has private members, include an explicit `private:` section.
 - Avoid `protected:` sections unless explicitly required by the design.
 - For code changes, run formatting and static analysis on modified files before finalizing.
@@ -99,6 +106,10 @@ Fallback guidance:
 - Avoid deeply nested lambdas: extract named helper lambdas or free functions instead of nesting captures inside captures.
 - Prefer named lambdas stored in a local variable over immediately-invoked anonymous lambdas when the logic is non-trivial.
 - Avoid boolean parameter traps: prefer named enums or separate overloads over `bool` parameters that control behavior.
+- Avoid complex or obfuscated logical expressions with more than roughly 5 conditions, especially when conditions contain computed arguments or lambdas.
+- Do not compress too much logic into a single statement or line; split the work into intermediate variables, named lambdas, helper functions, or early-return branches when that improves readability.
+- Free functions in anonymous namespaces are a good default for file-local reusable logic; promote them to shared helpers when multiple components reuse them.
+- Keep cyclomatic complexity at a reasonable level.
 
 ### Good vs Bad (Clean Code)
 
@@ -122,6 +133,9 @@ Fallback guidance:
   - `tools::sync_object` for signalling and waiting.
 - Methods prefixed `isr_` in `main/tools/` are interrupt-safe variants. Only call them from within an actual ISR context.
   The sole exception is Google Test mocks that simulate ISR behaviour: tests may call `isr_` methods directly to exercise interrupt paths.
+- From an ISR, only hand off data to a `tools::data_task` or to a lock-free ring buffer stored in the shared context.
+- ISR code must be short and critical: gather the data, enqueue it, and return. Do not perform complex processing there.
+- The receiving data task should typically publish the received data on the data hub.
 
 ## Design Patterns and Architecture
 
@@ -199,10 +213,14 @@ Fallback guidance:
 
 - New `.cpp` files should include the project banner/header style used by files under `main/tools/`.
 - Non-templated code should be split between `.hpp` (declarations only, no inline implementation bodies) and `.cpp` (definitions).
+- Do not rely on implicit or transitive includes in `.cpp` or `.hpp` files.
+- In a `.cpp` file, include what is used directly rather than relying on headers already included by the matching `.hpp`.
+- Favor forward declarations in headers whenever possible, as long as they do not obscure correctness or required completeness.
 - Use Doxygen comments for:
   - classes
   - public methods
   - non-obvious behavior and constraints
+- Prefer block Doxygen comments using `/*! ... */` rather than `///`.
 - Mirror the tone and granularity already used in `main/tools/*`.
 
 ## Error Handling Requirements

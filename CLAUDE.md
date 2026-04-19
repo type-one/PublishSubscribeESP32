@@ -84,14 +84,27 @@ This file defines repository-specific guidance for AI coding agents.
 - Naming:
   - snake_case for functions, variables, and methods.
   - class member variables must use `m_` prefix.
+- Constness:
+  - enforce constness whenever possible.
+  - prefer `const` methods, `const auto` for intermediate computations, and `constexpr` whenever the value or computation can be made compile-time.
+- Includes:
+  - use `#include "..."` for files from this project.
+  - use `#include <...>` for system and platform headers such as STL, POSIX, FreeRTOS, and ESP32 SDK headers.
 - Class layout:
   - If class has private members, use an explicit `private:` section.
   - Avoid `protected:` sections unless explicitly required by the design.
 - File structure:
   - New `.cpp` files should include the standard project banner/header style used in `main/tools/*`.
   - Non-templated code should use a split layout: declarations in `.hpp` (no inline implementation body), definitions in `.cpp`.
+- Header hygiene:
+  - do not rely on implicit includes in `.cpp` or `.hpp` files.
+  - include every header needed directly, even if it currently arrives through another project header.
+  - in `.cpp` files, do not rely on headers transitively included by the corresponding `.hpp`.
+  - favor forward declarations in headers whenever possible to reduce coupling and rebuild cost.
 - Documentation:
   - Use Doxygen comments for classes and methods, consistent with `main/tools/*` examples.
+  - prefer block-style Doxygen comments using `/*! ... */`.
+  - do not introduce `///` Doxygen comments.
 
 ## Standard Library Usage
 
@@ -161,6 +174,10 @@ This file defines repository-specific guidance for AI coding agents.
 - Avoid deeply nested lambdas: extract named helper lambdas or free functions instead of nesting captures inside captures.
 - Prefer named lambdas stored in a local variable over immediately-invoked anonymous lambdas when the logic is non-trivial.
 - Avoid boolean parameter traps: prefer named enums or separate overloads over `bool` parameters that control behavior.
+- Avoid complex or obfuscated logical expressions with more than roughly 5 conditions, especially when conditions contain computed arguments, nested calls, or lambdas.
+- Do not force too much logic into a single statement or line; use intermediate variables, helper lambdas, helper functions, and early returns when they improve readability.
+- Free functions in anonymous namespaces are preferred for local reusable logic; if such logic is reused across files or components, promote it to a shared helper.
+- Keep cyclomatic complexity at a reasonable level.
 
 ### Good vs Bad (Clean Code)
 
@@ -184,6 +201,9 @@ This file defines repository-specific guidance for AI coding agents.
   - `tools::sync_object` for signalling and waiting.
 - Methods prefixed `isr_` in `main/tools/` are interrupt-safe variants. Only call them from within an actual ISR context.
   The sole exception is Google Test mocks that simulate ISR behaviour: tests may call `isr_` methods directly to exercise interrupt paths.
+- From an ISR, only push data into a `tools::data_task` or into a lock-free ring buffer stored in the shared context.
+- ISR code must stay minimal: capture or enqueue the data and return; do not perform complex processing, publication, parsing, allocation-heavy work, or higher-level business logic there.
+- The receiving data task should typically publish the received data on the data hub.
 
 ## Design Patterns and Architecture
 
