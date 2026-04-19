@@ -108,13 +108,20 @@ This file defines repository-specific guidance for AI coding agents.
 
 ## Standard Library Usage
 
+- Prefer modern C++ standard-library facilities over C-style techniques whenever they fit the platform constraints.
 - Prefer STL containers (`std::vector`, `std::array`, `std::map`, `std::unordered_map`, `std::string`, …) and the facilities in `main/tools/` over custom data structures.
+- Prefer `std::string` / `std::string_view` over raw C strings when ownership and lifetime are clear.
 - Use `<algorithm>` functions (`std::find`, `std::transform`, `std::accumulate`, `std::sort`, …) instead of hand-written loops whenever the intent becomes clearer.
+- Prefer range-based `for` loops over index-based loops when indexing is not part of the logic.
+- Prefer `auto` where it removes repetitive type spelling without hiding meaning.
+- Prefer `constexpr` variables and functions over macros for compile-time constants and computations.
+- Prefer brace initialization when it improves clarity and avoids narrowing.
 - In C++20 code, prefer `<ranges>` pipelines (`std::views::filter`, `std::views::transform`, `std::ranges::sort`, …) for expressive, composable data processing.
 - Always provide a C++17-compatible fallback using `<algorithm>` when `<ranges>` or range adaptors are used:
   - Guard with `#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))`.
   - Supply the equivalent `<algorithm>` implementation in the `#else` branch.
 - Do not re-implement what the STL already provides correctly and portably.
+- Avoid raw `new` / `delete`, C-style arrays, and similar manual resource-management patterns when RAII types or standard containers are suitable.
 - When the STL is unavailable or insufficient on a target platform, reach for the helpers in `main/tools/` before writing new infrastructure.
 
 ## Template API Design
@@ -165,12 +172,19 @@ This file defines repository-specific guidance for AI coding agents.
 
 ## Clean Code Policy
 
+- Follow standard conventions and keep solutions as simple as possible.
+- Apply the boy-scout rule: leave modified code cleaner than you found it.
+- Prefer fixing the root cause over adding layered workarounds.
 - Names must be meaningful and reveal intent: prefer `elapsed_time_ms` over `t`, `sensor_reading` over `val`.
 - Avoid abbreviations unless they are universally understood in the domain (e.g., `buf`, `idx`, `ctx`).
+- Prefer searchable names and named constants over magic numbers.
 - Comments must be brief and explain *why*, not *what* — the code itself must be readable enough to explain what.
 - Do not add comments that merely restate the code (`// increment counter` above `++counter` is noise).
 - Each class must have a single, clearly stated responsibility. Split classes that grow beyond one concern.
 - Methods must be short and focused: a method that needs a comment to describe each of its phases should be split.
+- Prefer explanatory intermediate variables when they make intent easier to read.
+- Encapsulate boundary conditions instead of spreading special cases across many call sites.
+- Prefer positive conditionals over negative conditionals when that improves readability.
 - Avoid deeply nested lambdas: extract named helper lambdas or free functions instead of nesting captures inside captures.
 - Prefer named lambdas stored in a local variable over immediately-invoked anonymous lambdas when the logic is non-trivial.
 - Avoid boolean parameter traps: prefer named enums or separate overloads over `bool` parameters that control behavior.
