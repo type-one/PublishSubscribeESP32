@@ -7,6 +7,7 @@ using Q = fpm::fixed_24_8;
 TEST(conversion, construction)
 {
     P x;
+    EXPECT_EQ(P(0), x);
 }
 
 TEST(conversion, copy)
@@ -19,7 +20,7 @@ TEST(conversion, copy)
 
     // Copy assignment
     P z = x;
-    EXPECT_EQ(P(12), y);
+    EXPECT_EQ(P(12), z);
 }
 
 TEST(conversion, move)
@@ -32,7 +33,7 @@ TEST(conversion, move)
 
     // Move assignment
     P z = std::move(x);
-    EXPECT_EQ(P(12), y);
+    EXPECT_EQ(P(12), z);
 }
 
 TEST(conversion, floats)

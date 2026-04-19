@@ -1,7 +1,8 @@
 #ifndef FPM_TESTS_COMMON_HPP
 #define FPM_TESTS_COMMON_HPP
 
-#include <fpm/fixed.hpp>
+#include "fpm/fixed.hpp"
+
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <ostream>

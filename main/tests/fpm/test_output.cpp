@@ -1,5 +1,6 @@
 #include "common.hpp"
-#include <fpm/ios.hpp>
+#include "fpm/ios.hpp"
+
 #include <sstream>
 #include <tuple>
 #include <utility>
@@ -41,6 +42,7 @@ class output : public ::testing::TestWithParam<Flags>
 protected:
     bool is_test_valid(const std::ios_base& stream, double value) const
     {
+        (void)value;
         const auto floatfield = stream.flags() & std::ios::floatfield;
 
 #if defined(__GLIBCXX__ )
@@ -48,7 +50,8 @@ protected:
         // and---even worse---applies the grouping through the "0x" prefix. This produces
         // interesting results such as "0,x1.8p+3" instead of "0x1.8p+3" with a grouping
         // of "\002", or "0,x,1.8p+3" with a grouping of "\001".
-        const auto& numpunct = std::use_facet<std::numpunct<char>>(stream.getloc());
+        const auto locale = stream.getloc();
+        const auto& numpunct = std::use_facet<std::numpunct<char>>(locale);
         if (floatfield == (std::ios::fixed | std::ios::scientific) && !numpunct.grouping().empty())
         {
             return false;

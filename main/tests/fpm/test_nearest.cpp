@@ -1,5 +1,5 @@
 #include "common.hpp"
-#include <fpm/math.hpp>
+#include "fpm/math.hpp"
 
 TEST(nearest, round)
 {
@@ -75,4 +75,3 @@ TEST(nearest, rint)
     EXPECT_EQ(P(-4), rint(P(-3.5)));
     EXPECT_EQ(P( 0), rint(P( 0)));
 }
-

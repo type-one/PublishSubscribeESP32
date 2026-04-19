@@ -1,5 +1,5 @@
 #include "common.hpp"
-#include <fpm/math.hpp>
+#include "fpm/math.hpp"
 
 TEST(classification, fpclassify)
 {
@@ -162,4 +162,3 @@ TEST(classification, isunordered)
     EXPECT_FALSE(isunordered(P(0), P(-1)));
     EXPECT_FALSE(isunordered(P(0), P(0)));
 }
-

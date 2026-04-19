@@ -2674,7 +2674,8 @@ void test_fpm()
 
     using fixed_distance = fpm::fixed_24_8;
     using fixed_angle = fpm::fixed_16_16;
-    using fixed_math = fpm::fixed<std::int32_t, std::int64_t, 12>;
+    static constexpr unsigned int fixed_math_fraction_bits = 12U;
+    using fixed_math = fpm::fixed<std::int32_t, std::int64_t, fixed_math_fraction_bits>;
 
     const fixed_distance width(3.5);
     const fixed_distance height(7.25);

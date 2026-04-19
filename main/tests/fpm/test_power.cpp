@@ -1,5 +1,5 @@
 #include "common.hpp"
-#include <fpm/math.hpp>
+#include "fpm/math.hpp"
 
 TEST(power, exp)
 {

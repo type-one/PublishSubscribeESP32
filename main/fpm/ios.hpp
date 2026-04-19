@@ -21,8 +21,9 @@ std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& os, fixed<B, I,
     const auto showpoint = ((os.flags() & std::ios_base::showpoint) != 0);
     const auto adjustfield = (os.flags() & std::ios_base::adjustfield);
     const auto width = os.width();
-    const auto& ctype = std::use_facet<std::ctype<CharT>>(os.getloc());
-    const auto& numpunct = std::use_facet<std::numpunct<CharT>>(os.getloc());
+    const auto locale = os.getloc();
+    const auto& ctype = std::use_facet<std::ctype<CharT>>(locale);
+    const auto& numpunct = std::use_facet<std::numpunct<CharT>>(locale);
 
     auto floatfield = (os.flags() & std::ios_base::floatfield);
     auto precision = os.precision();
@@ -473,8 +474,9 @@ std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>&
         return is;
     }
 
-    const auto& ctype = std::use_facet<std::ctype<CharT>>(is.getloc());
-    const auto& numpunct = std::use_facet<std::numpunct<CharT>>(is.getloc());
+    const auto locale = is.getloc();
+    const auto& ctype = std::use_facet<std::ctype<CharT>>(locale);
+    const auto& numpunct = std::use_facet<std::numpunct<CharT>>(locale);
 
     bool thousands_separator_allowed = false;
     const bool supports_thousands_separators = !numpunct.grouping().empty();
@@ -590,7 +592,7 @@ std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>&
             } else if (ch >= 'A' && ch <= 'F') {
                 val = ch - 'A' + 10;
             }
-            if (val < 0 || val >= base) {
+            if (val >= base) {
                 break;
             }
             significand.push_back(val);
