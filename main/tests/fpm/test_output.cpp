@@ -4,6 +4,7 @@
 #include <sstream>
 #include <tuple>
 #include <utility>
+#include <vector>
 #include <cfenv>
 
 using ::testing::Combine;
@@ -35,17 +36,12 @@ namespace
         char m_thousands_sep;
         std::string m_grouping;
     };
-}
 
-class output : public ::testing::TestWithParam<Flags>
-{
-protected:
-    bool is_test_valid(const std::ios_base& stream, double value) const
+    auto is_output_test_valid(const std::ios_base& stream, double value) -> bool
     {
-        (void)value;
         const auto floatfield = stream.flags() & std::ios::floatfield;
 
-#if defined(__GLIBCXX__ )
+#if defined(__GLIBCXX__)
         // stdlibc++ seems to have a bug where it applies thousands grouping in hexadecimal mode,
         // and---even worse---applies the grouping through the "0x" prefix. This produces
         // interesting results such as "0,x1.8p+3" instead of "0x1.8p+3" with a grouping
@@ -78,6 +74,37 @@ protected:
         return true;
     }
 
+    auto is_output_test_valid_for_all_values(const std::ios_base& stream) -> bool
+    {
+        if (!is_output_test_valid(stream, 0.0))
+        {
+            return false;
+        }
+
+#if !defined(_MSC_VER)
+        if (!is_output_test_valid(stream, 1.125)
+            || !is_output_test_valid(stream, -1.125)
+            || !is_output_test_valid(stream, 0.125)
+            || !is_output_test_valid(stream, -0.125)
+            || !is_output_test_valid(stream, 1.0 / 1024.0)
+            || !is_output_test_valid(stream, -1.0 / 1024.0))
+        {
+            return false;
+        }
+#endif
+
+        return true;
+    }
+}
+
+class output : public ::testing::TestWithParam<Flags>
+{
+protected:
+    bool is_test_valid(const std::ios_base& stream, double value) const
+    {
+        return is_output_test_valid(stream, value);
+    }
+
     void test(double value) const
     {
         using P = fpm::fixed_16_16;
@@ -87,7 +114,11 @@ protected:
 
         if (!is_test_valid(ss_float, value))
         {
-            GTEST_SKIP() << "Skipping test due to invalid test combination";
+            if (!m_skip_reported)
+            {
+                m_skip_reported = true;
+                GTEST_SKIP() << "Skipping test due to invalid test combination";
+            }
             return;
         }
 
@@ -106,6 +137,8 @@ protected:
     }
 
 private:
+    mutable bool m_skip_reported = false;
+
     std::stringstream create_stream() const
     {
         std::stringstream ss;
@@ -165,17 +198,76 @@ TEST_P(output, integers)
 
 static const std::locale s_fake_locale(std::locale(""), new fake_numpunct(',', '.', "\001\002"));
 
+namespace
+{
+    auto make_output_flags_params() -> std::vector<Flags>
+    {
+        std::vector<Flags> params;
+
+        const auto adjust_flags_values = {fmtflags(0), std::ios::left, std::ios::right, std::ios::internal};
+        const auto floatfield_values = {fmtflags(0), std::ios::scientific, std::ios::fixed,
+            std::ios::scientific | std::ios::fixed};
+        const auto showpoint_values = {fmtflags(0), std::ios::showpoint};
+        const auto uppercase_values = {fmtflags(0), std::ios::uppercase};
+        const auto precision_values = {std::streamsize(0), std::streamsize(1), std::streamsize(5), std::streamsize(29),
+            std::streamsize(128)};
+        const auto width_values = {0, 1, 10, 2000};
+        const auto fill_values = {' ', '*', '0'};
+        const auto locale_values = {std::locale("C"), std::locale(""), s_fake_locale};
+
+        for (const auto adjust_flags : adjust_flags_values)
+        {
+            for (const auto floatfield : floatfield_values)
+            {
+                for (const auto showpoint : showpoint_values)
+                {
+                    for (const auto uppercase : uppercase_values)
+                    {
+                        for (const auto precision : precision_values)
+                        {
+                            for (const auto width : width_values)
+                            {
+                                for (const auto fill : fill_values)
+                                {
+                                    for (const auto& locale : locale_values)
+                                    {
+                                        std::stringstream stream;
+                                        stream.setf(adjust_flags | floatfield | showpoint | uppercase);
+                                        stream.precision(precision);
+                                        stream.width(width);
+                                        stream.fill(fill);
+                                        stream.imbue(locale);
+
+                                        if (!is_output_test_valid_for_all_values(stream))
+                                        {
+                                            continue;
+                                        }
+
+                                        params.emplace_back(
+                                            adjust_flags,
+                                            floatfield,
+                                            showpoint,
+                                            uppercase,
+                                            precision,
+                                            width,
+                                            fill,
+                                            locale
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return params;
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(output_flags, output,
-    Combine(
-        Values(0, std::ios::left, std::ios::right, std::ios::internal),
-        Values(0, std::ios::scientific, std::ios::fixed, std::ios::scientific | std::ios::fixed),
-        Values(0, std::ios::showpoint),
-        Values(0, std::ios::uppercase),
-        Values(0, 1, 5, 29, 128), // Precision
-        Values(0, 1, 10, 2000), // Width
-        Values(' ', '*', '0'), // Fill
-        Values(std::locale("C"), std::locale(""), s_fake_locale) // Locale
-    )
+    ::testing::ValuesIn(make_output_flags_params())
 );
 
 using GroupingFlags = ::testing::tuple<fmtflags, std::string>;
