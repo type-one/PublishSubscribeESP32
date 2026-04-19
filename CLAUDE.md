@@ -93,6 +93,17 @@ This file defines repository-specific guidance for AI coding agents.
 - Documentation:
   - Use Doxygen comments for classes and methods, consistent with `main/tools/*` examples.
 
+## Standard Library Usage
+
+- Prefer STL containers (`std::vector`, `std::array`, `std::map`, `std::unordered_map`, `std::string`, …) and the facilities in `main/tools/` over custom data structures.
+- Use `<algorithm>` functions (`std::find`, `std::transform`, `std::accumulate`, `std::sort`, …) instead of hand-written loops whenever the intent becomes clearer.
+- In C++20 code, prefer `<ranges>` pipelines (`std::views::filter`, `std::views::transform`, `std::ranges::sort`, …) for expressive, composable data processing.
+- Always provide a C++17-compatible fallback using `<algorithm>` when `<ranges>` or range adaptors are used:
+  - Guard with `#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))`.
+  - Supply the equivalent `<algorithm>` implementation in the `#else` branch.
+- Do not re-implement what the STL already provides correctly and portably.
+- When the STL is unavailable or insufficient on a target platform, reach for the helpers in `main/tools/` before writing new infrastructure.
+
 ## Template API Design
 
 - In templated APIs, prefer the same pattern used in `main/tools/*.hpp`:
@@ -139,6 +150,31 @@ This file defines repository-specific guidance for AI coding agents.
 - Singleton pattern is not allowed unless explicitly justified by a narrow, concrete requirement.
 - Global variables are not allowed unless explicitly justified by a narrow, concrete requirement.
 
+## Clean Code Policy
+
+- Names must be meaningful and reveal intent: prefer `elapsed_time_ms` over `t`, `sensor_reading` over `val`.
+- Avoid abbreviations unless they are universally understood in the domain (e.g., `buf`, `idx`, `ctx`).
+- Comments must be brief and explain *why*, not *what* — the code itself must be readable enough to explain what.
+- Do not add comments that merely restate the code (`// increment counter` above `++counter` is noise).
+- Each class must have a single, clearly stated responsibility. Split classes that grow beyond one concern.
+- Methods must be short and focused: a method that needs a comment to describe each of its phases should be split.
+- Avoid deeply nested lambdas: extract named helper lambdas or free functions instead of nesting captures inside captures.
+- Prefer named lambdas stored in a local variable over immediately-invoked anonymous lambdas when the logic is non-trivial.
+- Avoid boolean parameter traps: prefer named enums or separate overloads over `bool` parameters that control behavior.
+
+### Good vs Bad (Clean Code)
+
+- Good:
+  - names that make the reader's intent obvious without a comment.
+  - short methods with one clear job.
+  - a comment that explains a non-obvious constraint or algorithm decision.
+  - lambdas kept to a single, obvious expression or extracted to a named variable.
+- Bad:
+  - single-letter or cryptic variable names outside tight mathematical loops.
+  - methods longer than ~40 lines that mix concerns.
+  - comments that duplicate what the code already says clearly.
+  - lambdas nested three levels deep with multiple captures.
+
 ## Error Handling Model
 
 - Newly introduced classes should be exception-free by design.
@@ -168,3 +204,4 @@ This file defines repository-specific guidance for AI coding agents.
 5. Are Doxygen comments and file header style present?
 6. Are tests added/updated in Google Test?
 7. Do `.clang-format` and `.clang-tidy` expectations remain satisfied?
+8. Are names meaningful, comments brief and justified, methods short, and lambdas non-nested?
