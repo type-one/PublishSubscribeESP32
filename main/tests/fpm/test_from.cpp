@@ -16,13 +16,13 @@ TEST(from, fixed_point)
     );
     //-0.5
     EXPECT_EQ(P::from_raw_value(0xffff'8100),
-              P::from_fixed_point<8>(0xff'ff'ff'ff'ff'ff'ff'81)
+              P::from_fixed_point<8>(-(1ll << 7) + 1ll)
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000),
-              P::from_fixed_point<8>(0xff'ff'ff'ff'ff'ff'ff'80)
+              P::from_fixed_point<8>(-(1ll << 7))
     );
     EXPECT_EQ(P::from_raw_value(0xffff'7f00),
-              P::from_fixed_point<8>(0xff'ff'ff'ff'ff'ff'ff'7f)
+              P::from_fixed_point<8>(-(1ll << 7) - 1ll)
     );
 
     //0.5
@@ -55,31 +55,31 @@ TEST(from, fixed_point)
     );
     //-0.5
     EXPECT_EQ(P::from_raw_value(0xffff'8000+1),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll+4ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll) + 4ll)
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000+1),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll+3ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll) + 3ll)
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll+2ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll) + 2ll)
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll+1ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll) + 1ll)
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll))
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll-1ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll) - 1ll)
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000-1),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll-2ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll) - 2ll)
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000-1),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll-3ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll) - 3ll)
     );
     EXPECT_EQ(P::from_raw_value(0xffff'8000-1),
-              P::from_fixed_point<18>(0xffff'ffff'fffe'0000ll-4ll)
+              P::from_fixed_point<18>(-(0x2'00'00ll) - 4ll)
     );
 }
 

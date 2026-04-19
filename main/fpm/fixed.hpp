@@ -47,7 +47,10 @@ class fixed
     }
 
 public:
-    fixed() noexcept = default;
+    constexpr fixed() noexcept
+        : m_value(0)
+    {
+    }
 
     // Converts an integral number to the fixed-point type.
     // Like static_cast, this truncates bits that don't fit.
@@ -304,7 +307,7 @@ public:
     }
 
 private:
-    BaseType m_value;
+    BaseType m_value = 0;
 };
 
 //
