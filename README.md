@@ -30,6 +30,8 @@ Goodies:
 - C++20 calendar day test
 - simple timer helper using 3rdparty (Michael Egli - MIT license) for standard implementation and using FreeRTOS timer for FreeRTOS platform
 - custom pool allocator for global new/new[]/delete/delete[]
+- `tools::expected`: lightweight result type for exception-free APIs, carrying either a value or a structured error
+- fixed-point arithmetic using header-only 3rd party `fpm` library (Mike Lankamp - MIT license)
 
 [GitHub repository](https://github.com/type-one/PublishSubscribeESP32)
 
