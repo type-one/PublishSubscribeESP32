@@ -218,7 +218,7 @@ namespace tools
          * @brief Destructor for the periodic_task class.
          *
          * This destructor stops the periodic task by setting the m_stop_task flag to true.
-         * If the task was created, it suspends and deletes the FreeRTOS task.
+         * If the task was created, it waits for the task to self-terminate.
          */
         ~periodic_task()
         {
@@ -228,8 +228,11 @@ namespace tools
 
             if (m_task_created)
             {
-                vTaskSuspend(m_task);
-                vTaskDelete(m_task);
+                constexpr TickType_t wait_tick = 1;
+                while (!m_task_stopped.load())
+                {
+                    vTaskDelay(wait_tick);
+                }
             }
         }
 
@@ -296,7 +299,8 @@ namespace tools
                 instance->m_periodic_routine(instance->m_context, task_name);
             }
 
-            vTaskSuspend(NULL);
+            instance->m_task_stopped.store(true);
+            vTaskDelete(nullptr);
         }
 
         call_back m_startup_routine;
@@ -307,5 +311,6 @@ namespace tools
 
         TaskHandle_t m_task = {};
         bool m_task_created = false;
+        std::atomic_bool m_task_stopped = false;
     };
 }

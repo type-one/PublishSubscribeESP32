@@ -196,8 +196,12 @@ namespace tools
             if (m_task_created)
             {
                 xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
-                vTaskSuspend(m_task);
-                vTaskDelete(m_task);
+
+                constexpr TickType_t wait_tick = 1;
+                while (!m_task_stopped.load())
+                {
+                    vTaskDelay(wait_tick);
+                }
             }
         }
 
@@ -357,7 +361,8 @@ namespace tools
                 }
             } // run loop
 
-            vTaskSuspend(NULL);
+            instance->m_task_stopped.store(true);
+            vTaskDelete(nullptr);
         }
 
         call_back m_startup_routine;
@@ -365,6 +370,7 @@ namespace tools
         std::shared_ptr<Context> m_context;
 
         std::atomic_bool m_stop_task = false;
+        std::atomic_bool m_task_stopped = false;
 
         TaskHandle_t m_task = {};
         bool m_task_created = false;

@@ -181,15 +181,18 @@ namespace tools
         /**
          * @brief Destructor for the generic_task class.
          *
-         * This destructor suspends and deletes the FreeRTOS task if it was created.
+         * This destructor waits for the FreeRTOS task to self-terminate before returning.
          */
         ~generic_task()
         {
             // FreeRTOS platform
             if (m_task_created)
             {
-                vTaskSuspend(m_task);
-                vTaskDelete(m_task);
+                constexpr TickType_t wait_tick = 1;
+                while (!m_task_stopped.load())
+                {
+                    vTaskDelay(wait_tick);
+                }
             }
         }
 
@@ -229,7 +232,8 @@ namespace tools
             // execute given function
             instance->m_routine(instance->m_context, task_name);
 
-            vTaskSuspend(NULL);
+            instance->m_task_stopped.store(true);
+            vTaskDelete(nullptr);
         }
 
         call_back m_routine;
@@ -237,5 +241,6 @@ namespace tools
 
         TaskHandle_t m_task = {};
         bool m_task_created = false;
+        std::atomic_bool m_task_stopped = false;
     };
 }

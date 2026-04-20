@@ -236,7 +236,7 @@ namespace tools
          *
          * This destructor stops the task by setting the m_stop_task flag to true.
          * If the data queue is not null, it sends a dummy value to the queue to unblock any waiting operations.
-         * If the task was created, it suspends and deletes the task.
+         * If the task was created, it waits for the task to self-terminate.
          */
         ~data_task()
         {
@@ -252,8 +252,11 @@ namespace tools
 
             if (m_task_created)
             {
-                vTaskSuspend(m_task);
-                vTaskDelete(m_task);
+                constexpr TickType_t wait_tick = 1;
+                while (!m_task_stopped.load())
+                {
+                    vTaskDelay(wait_tick);
+                }
             }
         }
 
@@ -353,7 +356,8 @@ namespace tools
                 }
             } // run loop
 
-            vTaskSuspend(NULL);
+            instance->m_task_stopped.store(true);
+            vTaskDelete(nullptr);
         }
 
         call_back m_startup_routine;
@@ -365,6 +369,7 @@ namespace tools
 
         TaskHandle_t m_task = {};
         bool m_task_created = false;
+        std::atomic_bool m_task_stopped = false;
 
         std::chrono::duration<std::uint64_t, std::micro> m_data_timeout;
     };
