@@ -43,6 +43,52 @@ Fallback guidance:
 - Avoid `protected:` sections unless explicitly required by the design.
 - For code changes, run formatting and static analysis on modified files before finalizing.
 
+### Processed .clang-format Rules
+
+- Base style: WebKit.
+- C++ formatting target: C++20 syntax.
+- Indentation: 4 spaces, no tabs (`UseTab: Never`).
+- Maximum line length: 120 columns.
+- Braces: Allman style.
+- Template declarations: always break.
+- Namespace indentation: All.
+- Case labels are indented.
+- Trailing comments should be aligned with one leading space.
+- Space before assignment operators is required.
+- Keep at most 2 consecutive empty lines.
+- Do not compress short constructs onto one line:
+  - short `if`
+  - short loops
+  - short functions
+
+### Processed .clang-tidy Rules
+
+- Enabled groups:
+  - `clang-diagnostic-*`
+  - `clang-analyzer-*`
+  - `modernize-*`
+  - `performance-*`
+  - `readability-*`
+  - `bugprone-*`
+  - `fuchsia-*`
+  - `cppcoreguidelines-*`
+- Treat all warnings as errors (`WarningsAsErrors: *`).
+- Header-focused analysis filter: `.hpp`.
+- Explicitly disabled checks:
+  - `modernize-use-trailing-return-type`
+  - `modernize-type-traits`
+  - `modernize-use-constraints`
+  - `performance-unnecessary-copy-initialization`
+  - `cppcoreguidelines-avoid-do-while`
+  - `cppcoreguidelines-pro-type-vararg`
+  - `cppcoreguidelines-pro-bounds-array-to-pointer-decay`
+  - `cppcoreguidelines-pro-bounds-pointer-arithmetic`
+  - `cppcoreguidelines-pro-type-reinterpret-cast`
+  - `bugprone-suspicious-include`
+  - `fuchsia-default-arguments-calls`
+  - `fuchsia-overloaded-operator`
+  - `readability-function-cognitive-complexity`
+
 ## Standard Library Usage
 
 - Prefer modern C++ standard-library facilities over C-style techniques whenever they fit the platform constraints.
@@ -70,10 +116,11 @@ Fallback guidance:
 
 ## Object Lifetime and API Signatures
 
+- Use RAII for resource management (memory, locks, file handles, timers, and other acquire/release lifecycles).
 - For class ownership semantics:
   - Apply the Rule of Five where needed,
   - or inherit from `tools::non_copyable` when copy/move must be disallowed.
-- Use smart pointers when applicable and encode ownership intent (`std::unique_ptr` for sole ownership, `std::shared_ptr` for shared ownership).
+- Use smart pointers when applicable and encode ownership intent (`std::unique_ptr` for unique ownership, `std::shared_ptr` for shared ownership).
 - Avoid raw pointers for ownership; allow raw pointers/references only for justified non-owning access.
 - Function/method parameter policy:
   - use pass-by-value for simple/scalar types,
@@ -101,6 +148,8 @@ Fallback guidance:
 - Respect information hiding and encapsulation.
 - Avoid inheritance exposure patterns that leak internals.
 - Respect Liskov substitution principle in polymorphic APIs.
+- Singleton pattern is not allowed unless explicitly justified by a narrow, concrete requirement.
+- Global variables are not allowed unless explicitly justified by a narrow, concrete requirement.
 
 ## Clean Code Policy
 
@@ -148,7 +197,7 @@ Fallback guidance:
 - Methods prefixed `isr_` in `main/tools/` are interrupt-safe variants. Only call them from within an actual ISR context.
   The sole exception is Google Test mocks that simulate ISR behaviour: tests may call `isr_` methods directly to exercise interrupt paths.
 - From an ISR, only hand off data to a `tools::data_task` or to a lock-free ring buffer stored in the shared context.
-- ISR code must be short and critical: gather the data, enqueue it, and return. Do not perform complex processing there.
+- ISR code must stay minimal: capture or enqueue the data and return; do not perform complex processing, publication, parsing, allocation-heavy work, or higher-level business logic there.
 - The receiving data task should typically publish the received data on the data hub.
 
 ## Design Patterns and Architecture
@@ -176,52 +225,6 @@ Fallback guidance:
 - Any task component can be a `tools::sync_observer` or `tools::async_observer` on any hub.
 - The shared context may also carry a `tools::sync_dictionary` of `std::variant` values for keyed telemetry or configuration that any component can read and write.
 - Components react to incoming variants via `std::visit`, invoking focused private methods per alternative — never a monolithic handler.
-
-### Processed .clang-format Rules
-
-- Base style: WebKit.
-- C++ formatting target: C++20 syntax.
-- Indentation: 4 spaces, no tabs (`UseTab: Never`).
-- Maximum line length: 120 columns.
-- Braces: Allman style.
-- Template declarations: always break.
-- Namespace indentation: All.
-- Case labels are indented.
-- Trailing comments should be aligned with one leading space.
-- Space before assignment operators is required.
-- Keep at most 2 consecutive empty lines.
-- Do not compress short constructs onto one line:
-  - short `if`
-  - short loops
-  - short functions
-
-### Processed .clang-tidy Rules
-
-- Enabled groups:
-  - `clang-diagnostic-*`
-  - `clang-analyzer-*`
-  - `modernize-*`
-  - `performance-*`
-  - `readability-*`
-  - `bugprone-*`
-  - `fuchsia-*`
-  - `cppcoreguidelines-*`
-- Treat all warnings as errors (`WarningsAsErrors: *`).
-- Header-focused analysis filter: `.hpp`.
-- Explicitly disabled checks:
-  - `modernize-use-trailing-return-type`
-  - `modernize-type-traits`
-  - `modernize-use-constraints`
-  - `performance-unnecessary-copy-initialization`
-  - `cppcoreguidelines-avoid-do-while`
-  - `cppcoreguidelines-pro-type-vararg`
-  - `cppcoreguidelines-pro-bounds-array-to-pointer-decay`
-  - `cppcoreguidelines-pro-bounds-pointer-arithmetic`
-  - `cppcoreguidelines-pro-type-reinterpret-cast`
-  - `bugprone-suspicious-include`
-  - `fuchsia-default-arguments-calls`
-  - `fuchsia-overloaded-operator`
-  - `readability-function-cognitive-complexity`
 
 ## Header and Documentation Conventions
 

@@ -7,6 +7,7 @@ This file defines repository-specific guidance for AI coding agents.
 - Core framework reference code is under `main/tools/`.
 - Third-party code is under folders such as `main/cJSON/`, `main/cjsonpp/`, `main/CException/`, `main/uzlib/`, `main/bytepack/`, `main/cpptime/`.
 - Prefer implementing features and fixes in first-party framework code, not in third-party folders, unless explicitly requested.
+- When unsure whether a folder is third-party, ask before making large edits.
 
 ## Language and Standards
 
@@ -259,6 +260,7 @@ This file defines repository-specific guidance for AI coding agents.
 - Unit tests are written with Google Test.
 - Add or update tests with every functional change.
 - Prefer behavior-focused tests (success + failure paths) for result-returning APIs.
+- For result-based APIs, assert both `.has_value()` and error payload semantics.
 
 ## Change Strategy
 
@@ -266,6 +268,15 @@ This file defines repository-specific guidance for AI coding agents.
 - Preserve public behavior unless the task explicitly requires API changes.
 - Avoid broad refactors in third-party code.
 - Update docs when API behavior or usage patterns change.
+
+## Preferred Contribution Pattern
+
+1. Read nearby reference implementation in `main/tools/`.
+2. Implement minimal, localized change.
+3. Keep naming/style/doc conventions consistent.
+4. Add/update Google Tests.
+5. Verify no conflicts with `.clang-tidy` and `.clang-format`.
+6. Update docs if API usage changed.
 
 ## Practical Checklist for New Code
 
