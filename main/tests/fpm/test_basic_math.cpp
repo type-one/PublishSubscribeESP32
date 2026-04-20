@@ -1,6 +1,16 @@
+/**
+ * @file test_basic_math.cpp
+ * @brief Tests basic math functions for `fpm::fixed`: `abs`, `fmod`, `remainder`, and `remquo`.
+ * @author Mike Lankamp
+ * @date May 2019
+ */
+
 #include "common.hpp"
 #include "fpm/math.hpp"
 
+/**
+ * @brief Verifies absolute value returns the non-negative magnitude.
+ */
 TEST(basic_math, abs)
 {
     using P = fpm::fixed_24_8;
@@ -11,6 +21,9 @@ TEST(basic_math, abs)
     EXPECT_EQ(P(1), abs(P(1)));
 }
 
+/**
+ * @brief Verifies floating-point modulo remainder.
+ */
 TEST(basic_math, fmod)
 {
     using P = fpm::fixed_24_8;
@@ -21,6 +34,9 @@ TEST(basic_math, fmod)
     EXPECT_EQ(P(-1.5), fmod(P(-9.5), P(-2)));
 }
 
+/**
+ * @brief Verifies IEEE remainder with midpoint tie-breaking.
+ */
 TEST(basic_math, remainder)
 {
     using P = fpm::fixed_24_8;
@@ -48,6 +64,9 @@ TEST(basic_math, remainder)
     EXPECT_EQ(P(0), remainder(P(0), P(1)));
 }
 
+/**
+ * @brief Verifies remainder-with-quotient, including sign and quotient bits.
+ */
 TEST(basic_math, remquo)
 {
     // remquo must return at least 3 bits of quotient

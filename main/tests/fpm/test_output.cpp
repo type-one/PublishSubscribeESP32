@@ -1,3 +1,11 @@
+/**
+ * @file test_output.cpp
+ * @brief Tests stream output (`operator<<`) formatting for `fpm::fixed`, covering all
+ *        format flags, precisions, widths, fill characters, and locales.
+ * @author Mike Lankamp
+ * @date October 2019
+ */
+
 #include "common.hpp"
 #include "fpm/ios.hpp"
 
@@ -151,6 +159,9 @@ private:
     }
 };
 
+/**
+ * @brief Verifies formatting of small fixed-point values across output flag combinations.
+ */
 TEST_P(output, small_numbers)
 {
     test(0.0);
@@ -169,6 +180,9 @@ TEST_P(output, small_numbers)
 #endif
 }
 
+/**
+ * @brief Verifies formatting of large fixed-point values across output flag combinations.
+ */
 TEST_P(output, large_numbers)
 {
     test(16782.0 + 1.0 / 1024.0);
@@ -179,6 +193,9 @@ TEST_P(output, large_numbers)
     test(10000);
 }
 
+/**
+ * @brief Verifies formatting of integral fixed-point values across output flag combinations.
+ */
 TEST_P(output, integers)
 {
     test(0);
@@ -306,6 +323,9 @@ protected:
     }
 };
 
+/**
+ * @brief Verifies locale-specific digit grouping in formatted output.
+ */
 TEST_P(output_grouping, grouping)
 {
     test(1);
@@ -347,6 +367,9 @@ protected:
     }
 };
 
+/**
+ * @brief Verifies decimal increment rounding during output formatting.
+ */
 TEST_F(output_rounding, increment_rounding)
 {
     test(9.9, 0);
@@ -359,6 +382,9 @@ TEST_F(output_rounding, increment_rounding)
     test(-9.9995, 3);
 }
 
+/**
+ * @brief Verifies tie-breaking rounding behavior during output.
+ */
 TEST_F(output_rounding, tie_rounding)
 {
     test(0.5, 0);
@@ -380,6 +406,9 @@ TEST_F(output_rounding, tie_rounding)
     test(-0.0009765625, 7);
 }
 
+/**
+ * @brief Verifies scientific-format rounding behavior.
+ */
 TEST_F(output_rounding, scientific_rounding)
 {
     test(0.25, 0, std::ios::scientific);
@@ -413,6 +442,9 @@ protected:
     }
 };
 
+/**
+ * @brief Verifies output formatting near representable type limits.
+ */
 TEST_F(output_specific, type_limit)
 {
     using F4 = fpm::fixed<std::int8_t, std::int16_t, 4>;

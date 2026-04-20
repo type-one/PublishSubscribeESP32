@@ -1,5 +1,16 @@
+/**
+ * @file test_arithmetic.cpp
+ * @brief Tests arithmetic operators for `fpm::fixed`: negation, addition, subtraction,
+ *        multiplication, division, and rounding behavior.
+ * @author Mike Lankamp
+ * @date February 2019
+ */
+
 #include "common.hpp"
 
+/**
+ * @brief Verifies unary negation for fixed-point values.
+ */
 TEST(arithmethic, negation)
 {
     using P = fpm::fixed_24_8;
@@ -8,6 +19,9 @@ TEST(arithmethic, negation)
     EXPECT_EQ(P( 13.125), -P(-13.125));
 }
 
+/**
+ * @brief Verifies addition of two fixed-point values.
+ */
 TEST(arithmethic, addition)
 {
     using P = fpm::fixed_24_8;
@@ -15,6 +29,9 @@ TEST(arithmethic, addition)
     EXPECT_EQ(P(10.75), P(3.5) + P(7.25));
 }
 
+/**
+ * @brief Verifies subtraction of two fixed-point values.
+ */
 TEST(arithmethic, subtraction)
 {
     using P = fpm::fixed_24_8;
@@ -22,6 +39,9 @@ TEST(arithmethic, subtraction)
     EXPECT_EQ(P(-3.75), P(3.5) - P(7.25));
 }
 
+/**
+ * @brief Verifies multiplication of two fixed-point values.
+ */
 TEST(arithmethic, multiplication)
 {
     using P = fpm::fixed_24_8;
@@ -29,6 +49,9 @@ TEST(arithmethic, multiplication)
     EXPECT_EQ(P(-25.375), P(3.5) * P(-7.25));
 }
 
+/**
+ * @brief Verifies division of two fixed-point values.
+ */
 TEST(arithmethic, division)
 {
     using P = fpm::fixed_24_8;
@@ -43,6 +66,9 @@ TEST(arithmethic, division)
 #endif
 }
 
+/**
+ * @brief Verifies division across a range of values.
+ */
 TEST(arithmethic, division_range)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -52,6 +78,9 @@ TEST(arithmethic, division_range)
     EXPECT_EQ(P(32), P(256) / P(8));
 }
 
+/**
+ * @brief Verifies correct rounding behavior for multiplication.
+ */
 TEST(arithmetic, multiplication_rounding)
 {
     // Using 1 bit of fractional precision to test rounding
@@ -64,6 +93,9 @@ TEST(arithmetic, multiplication_rounding)
     EXPECT_EQ(Q(0.0), Q(0.5) * Q(0.5));
 }
 
+/**
+ * @brief Verifies correct rounding behavior for division.
+ */
 TEST(arithmetic, division_rounding)
 {
     // Using 1 bit of fractional precision to test rounding

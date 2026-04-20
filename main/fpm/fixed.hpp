@@ -1,3 +1,10 @@
+/**
+ * @file fixed.hpp
+ * @brief Core fixed-point number type `fpm::fixed` and predefined type aliases.
+ * @author Mike Lankamp
+ * @date 2018
+ */
+
 #ifndef FPM_FIXED_HPP
 #define FPM_FIXED_HPP
 
@@ -16,6 +23,14 @@ namespace fpm
 //! \tparam IntermediateType the integer type used to store intermediate results during calculations.
 //! \tparam FractionBits     the number of bits of the BaseType used to store the fraction
 //! \tparam EnableRounding   enable rounding of LSB for multiplication, division, and type conversion
+/**
+ * @brief Fixed-point number type with configurable base type, intermediate type, and fraction bits.
+ *
+ * @tparam BaseType        Underlying signed integer storage type (e.g. `std::int32_t`).
+ * @tparam IntermediateType Wider integer used for intermediate calculations (e.g. `std::int64_t`).
+ * @tparam FractionBits   Number of bits devoted to the fractional part.
+ * @tparam EnableRounding When `true` (default), rounding is applied during construction and arithmetic.
+ */
 template <typename BaseType, typename IntermediateType, unsigned int FractionBits, bool EnableRounding = true>
 class fixed
 {
@@ -36,10 +51,12 @@ class fixed
     // is incorrect (flips from positive to negative), so we must extend the size to IntermediateType.
     static constexpr IntermediateType FRACTION_MULT = IntermediateType(1) << FractionBits;
 
+    /** @brief Tag type used to disambiguate raw-value construction. */
     struct raw_construct_tag
     {
     };
 
+    /** @brief Constructs from a raw underlying value; internal use only. */
     constexpr fixed(BaseType raw_value_value, raw_construct_tag raw_tag) noexcept
         : m_value(raw_value_value)
     {
@@ -47,6 +64,7 @@ class fixed
     }
 
 public:
+    /** @brief Default-constructs a zero-valued fixed-point number. */
     constexpr fixed() noexcept
         : m_value(0)
     {
@@ -54,6 +72,11 @@ public:
 
     // Converts an integral number to the fixed-point type.
     // Like static_cast, this truncates bits that don't fit.
+    /**
+     * @brief Constructs from an integral value.
+     * @tparam T Integral type.
+     * @param value Integer to convert.
+     */
     template <typename T, typename std::enable_if<std::is_integral<T>::value>::type* = nullptr>
     constexpr explicit fixed(T input_value) noexcept
         : m_value(static_cast<BaseType>(input_value * FRACTION_MULT))
@@ -62,6 +85,11 @@ public:
 
     // Converts a floating-point number to the fixed-point type.
     // Like static_cast, this truncates bits that don't fit.
+    /**
+     * @brief Constructs from a floating-point value, with optional rounding.
+     * @tparam T Floating-point type.
+     * @param value Float to convert.
+     */
     template <typename T, typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
     constexpr explicit fixed(T input_value) noexcept
         : m_value(0)
@@ -89,6 +117,11 @@ public:
     }
 
     // Explicit conversion to a floating-point type
+    /**
+     * @brief Constructs from a floating-point value, with optional rounding.
+     * @tparam T Floating-point type.
+     * @param value Float to convert.
+     */
     template <typename T, typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
     constexpr explicit operator T() const noexcept
     {
@@ -96,6 +129,11 @@ public:
     }
 
     // Explicit conversion to an integral type
+    /**
+     * @brief Constructs from an integral value.
+     * @tparam T Integral type.
+     * @param value Integer to convert.
+     */
     template <typename T, typename std::enable_if<std::is_integral<T>::value>::type* = nullptr>
     constexpr explicit operator T() const noexcept
     {
@@ -142,6 +180,11 @@ public:
 
     // Constructs a fixed-point number from its raw underlying value.
     // Do not use this unless you know what you're doing.
+    /**
+     * @brief Constructs a fixed-point value from a raw underlying integer.
+     * @param value Raw integer bits.
+     * @return Fixed-point number whose raw representation equals `value`.
+     */
     static constexpr fixed from_raw_value(BaseType value) noexcept
     {
         return fixed(value, raw_construct_tag {});
@@ -198,21 +241,25 @@ public:
     static constexpr std::int64_t k_e_scaled = 6267931151224907085LL;
     static constexpr std::int64_t k_pi_scaled = 7244019458077122842LL;
 
+    /** @brief Returns the fixed-point representation of Euler's number e. */
     static constexpr fixed e()
     {
         return from_fixed_point<k_e_fraction_bits>(k_e_scaled);
     }
 
+    /** @brief Returns the fixed-point representation of pi. */
     static constexpr fixed pi()
     {
         return from_fixed_point<k_pi_fraction_bits>(k_pi_scaled);
     }
 
+    /** @brief Returns the fixed-point representation of pi/2. */
     static constexpr fixed half_pi()
     {
         return from_fixed_point<k_half_pi_fraction_bits>(k_pi_scaled);
     }
 
+    /** @brief Returns the fixed-point representation of 2*pi. */
     static constexpr fixed two_pi()
     {
         return from_fixed_point<k_two_pi_fraction_bits>(k_pi_scaled);
@@ -222,17 +269,20 @@ public:
     // Arithmetic member operators
     //
 
+    /** @brief Unary negation. */
     constexpr fixed operator-() const noexcept
     {
         return fixed::from_raw_value(-m_value);
     }
 
+    /** @brief Adds a fixed-point value in place. */
     fixed& operator+=(const fixed& rhs_value) noexcept
     {
         m_value += rhs_value.m_value;
         return *this;
     }
 
+    /** @brief Adds an integral value in place. */
     template <typename IntType, typename std::enable_if<std::is_integral<IntType>::value>::type* = nullptr>
     fixed& operator+=(IntType rhs_value) noexcept
     {
@@ -240,12 +290,14 @@ public:
         return *this;
     }
 
+    /** @brief Subtracts a fixed-point value in place. */
     fixed& operator-=(const fixed& rhs_value) noexcept
     {
         m_value -= rhs_value.m_value;
         return *this;
     }
 
+    /** @brief Subtracts an integral value in place. */
     template <typename IntType, typename std::enable_if<std::is_integral<IntType>::value>::type* = nullptr>
     fixed& operator-=(IntType rhs_value) noexcept
     {
@@ -253,6 +305,7 @@ public:
         return *this;
     }
 
+    /** @brief Multiplies by a fixed-point value in place. */
     fixed& operator*=(const fixed& rhs_value) noexcept
     {
         if constexpr (EnableRounding)
@@ -272,6 +325,7 @@ public:
         return *this;
     }
 
+    /** @brief Multiplies by an integral value in place. */
     template <typename IntType, typename std::enable_if<std::is_integral<IntType>::value>::type* = nullptr>
     fixed& operator*=(IntType rhs_value) noexcept
     {
@@ -279,6 +333,7 @@ public:
         return *this;
     }
 
+    /** @brief Divides by a fixed-point value in place. */
     fixed& operator/=(const fixed& rhs_value) noexcept
     {
         assert(rhs_value.m_value != 0);
@@ -298,6 +353,7 @@ public:
         return *this;
     }
 
+    /** @brief Divides by an integral value in place. */
     template <typename IntType, typename std::enable_if<std::is_integral<IntType>::value>::type* = nullptr>
     fixed& operator/=(IntType rhs_value) noexcept
     {
@@ -318,14 +374,23 @@ static constexpr unsigned int k_fraction_bits_16_16 = 16U;
 static constexpr unsigned int k_fraction_bits_24_8 = 8U;
 static constexpr unsigned int k_fraction_bits_8_24 = 24U;
 
+/** @brief Convenience alias: 16 integral bits, 16 fractional bits (signed 32-bit). */
 using fixed_16_16 = fixed<std::int32_t, std::int64_t, k_fraction_bits_16_16>;
+/** @brief Convenience alias: 24 integral bits, 8 fractional bits (signed 32-bit). */
 using fixed_24_8 = fixed<std::int32_t, std::int64_t, k_fraction_bits_24_8>;
+/** @brief Convenience alias: 8 integral bits, 24 fractional bits (signed 32-bit). */
 using fixed_8_24 = fixed<std::int32_t, std::int64_t, k_fraction_bits_8_24>;
 
 //
 // Addition
 //
 
+/**
+ * @brief Fixed-point addition operator.
+ * @param lhs_value Left operand.
+ * @param rhs_value Right operand.
+ * @return Result of addition.
+ */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> operator+(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
@@ -350,6 +415,12 @@ constexpr fixed<B, I, F, R> operator+(T lhs_value, const fixed<B, I, F, R>& rhs_
 // Subtraction
 //
 
+/**
+ * @brief Fixed-point subtraction operator.
+ * @param lhs_value Left operand.
+ * @param rhs_value Right operand.
+ * @return Result of subtraction.
+ */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> operator-(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
@@ -374,6 +445,12 @@ constexpr fixed<B, I, F, R> operator-(T lhs_value, const fixed<B, I, F, R>& rhs_
 // Multiplication
 //
 
+/**
+ * @brief Fixed-point multiplication operator.
+ * @param lhs_value Left operand.
+ * @param rhs_value Right operand.
+ * @return Result of multiplication.
+ */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> operator*(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
@@ -398,6 +475,12 @@ constexpr fixed<B, I, F, R> operator*(T lhs_value, const fixed<B, I, F, R>& rhs_
 // Division
 //
 
+/**
+ * @brief Fixed-point division operator.
+ * @param lhs_value Left operand.
+ * @param rhs_value Right operand.
+ * @return Result of division.
+ */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> operator/(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
@@ -422,36 +505,42 @@ constexpr fixed<B, I, F, R> operator/(T lhs_value, const fixed<B, I, F, R>& rhs_
 // Comparison operators
 //
 
+/** @brief Fixed-point equality comparison. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool operator==(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
     return lhs_value.raw_value() == rhs_value.raw_value();
 }
 
+/** @brief Fixed-point inequality comparison. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool operator!=(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
     return lhs_value.raw_value() != rhs_value.raw_value();
 }
 
+/** @brief Fixed-point less-than comparison. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool operator<(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
     return lhs_value.raw_value() < rhs_value.raw_value();
 }
 
+/** @brief Fixed-point greater-than comparison. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool operator>(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
     return lhs_value.raw_value() > rhs_value.raw_value();
 }
 
+/** @brief Fixed-point less-than-or-equal comparison. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool operator<=(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
     return lhs_value.raw_value() <= rhs_value.raw_value();
 }
 
+/** @brief Fixed-point greater-than-or-equal comparison. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool operator>=(const fixed<B, I, F, R>& lhs_value, const fixed<B, I, F, R>& rhs_value) noexcept
 {
@@ -466,6 +555,7 @@ static constexpr int k_scale_shift_bits = 24;
 static constexpr int k_rounding_bias = 1;
 
 // Number of base-10 digits required to fully represent a number of bits
+/** @brief Returns the number of base-10 digits needed to represent `bit_count` binary digits. */
 static constexpr int max_digits10(int bit_count)
 {
     // 8.24 fixed-point equivalent of (int)ceil(bits * std::log10(2));
@@ -476,6 +566,7 @@ static constexpr int max_digits10(int bit_count)
 }
 
 // Number of base-10 digits that can be fully represented by a number of bits
+/** @brief Returns the number of base-10 digits fully representable by `bit_count` binary digits. */
 static constexpr int digits10(int bit_count)
 {
     // 8.24 fixed-point equivalent of (int)(bits * std::log10(2));
@@ -490,6 +581,7 @@ namespace std
 {
 
 template <typename B, typename I, unsigned int F, bool R>
+/** @brief `std::hash` specialization for `fpm::fixed` types. */
 struct hash<fpm::fixed<B, I, F, R>>
 {
     using argument_type = fpm::fixed<B, I, F, R>;
@@ -505,6 +597,7 @@ private:
 };
 
 template <typename B, typename I, unsigned int F, bool R>
+/** @brief `std::numeric_limits` specialization providing fixed-point type properties. */
 struct numeric_limits<fpm::fixed<B, I, F, R>>
 {
     static constexpr bool is_specialized = true;
@@ -577,6 +670,10 @@ struct numeric_limits<fpm::fixed<B, I, F, R>>
 namespace fpm
 {
 template <typename T>
+/**
+ * @brief Type trait that is `std::true_type` for `fpm::fixed` specializations.
+ * @tparam T Type to test.
+ */
 struct is_fixed : std::false_type
 {
 };

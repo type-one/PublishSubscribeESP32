@@ -1,3 +1,11 @@
+/**
+ * @file math.hpp
+ * @brief Mathematical functions for `fpm::fixed`: classification, rounding, exponential,
+ *        logarithm, power, and trigonometric functions.
+ * @author Mike Lankamp
+ * @date May 2019
+ */
+
 #ifndef FPM_MATH_HPP
 #define FPM_MATH_HPP
 
@@ -20,6 +28,7 @@ namespace detail
 static constexpr int k_bits_per_byte = 8;
 
 // Returns the index of the most-signifcant set bit
+/** @brief Returns the bit position of the highest set bit in `value`. */
 inline long find_highest_bit(unsigned long long value) noexcept
 {
     assert(value != 0);
@@ -49,12 +58,14 @@ inline long find_highest_bit(unsigned long long value) noexcept
 // Classification methods
 //
 
+/** @brief Returns the floating-point classification of a fixed-point value (FP_ZERO or FP_NORMAL). */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr int fpclassify(fixed<B, I, F, R> input_value) noexcept
 {
     return (input_value.raw_value() == 0) ? FP_ZERO : FP_NORMAL;
 }
 
+/** @brief Returns `true`; fixed-point numbers are always finite. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool isfinite(fixed<B, I, F, R> input_value) noexcept
 {
@@ -62,6 +73,7 @@ constexpr bool isfinite(fixed<B, I, F, R> input_value) noexcept
     return true;
 }
 
+/** @brief Returns `false`; fixed-point numbers are never infinite. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool isinf(fixed<B, I, F, R> input_value) noexcept
 {
@@ -69,6 +81,7 @@ constexpr bool isinf(fixed<B, I, F, R> input_value) noexcept
     return false;
 }
 
+/** @brief Returns `false`; fixed-point numbers are never NaN. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool isnan(fixed<B, I, F, R> input_value) noexcept
 {
@@ -76,48 +89,56 @@ constexpr bool isnan(fixed<B, I, F, R> input_value) noexcept
     return false;
 }
 
+/** @brief Returns `true` when the value is non-zero (fixed-point has no subnormals). */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool isnormal(fixed<B, I, F, R> input_value) noexcept
 {
     return input_value.raw_value() != 0;
 }
 
+/** @brief Returns `true` when the value is negative. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool signbit(fixed<B, I, F, R> input_value) noexcept
 {
     return input_value.raw_value() < 0;
 }
 
+/** @brief Returns `true` when `x > y` (always ordered for fixed-point). */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool isgreater(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> rhs_value) noexcept
 {
     return lhs_value > rhs_value;
 }
 
+/** @brief Returns `true` when `x >= y`. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool isgreaterequal(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> rhs_value) noexcept
 {
     return lhs_value >= rhs_value;
 }
 
+/** @brief Returns `true` when `x < y`. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool isless(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> rhs_value) noexcept
 {
     return lhs_value < rhs_value;
 }
 
+/** @brief Returns `true` when `x <= y`. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool islessequal(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> rhs_value) noexcept
 {
     return lhs_value <= rhs_value;
 }
 
+/** @brief Returns `true` when `x < y` or `x > y`. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool islessgreater(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> rhs_value) noexcept
 {
     return lhs_value != rhs_value;
 }
 
+/** @brief Returns `false`; fixed-point comparisons are always ordered. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr bool isunordered(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> rhs_value) noexcept
 {
@@ -181,6 +202,7 @@ fixed<B, I, F, R> nearbyint(fixed<B, I, F, R> input_value) noexcept
     return fixed<B, I, F, R>::from_raw_value(value * FRAC);
 }
 
+/** @brief Rounds to the nearest integer using tie-to-even (banker's rounding). */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> rint(fixed<B, I, F, R> input_value) noexcept
 {
@@ -191,12 +213,14 @@ constexpr fixed<B, I, F, R> rint(fixed<B, I, F, R> input_value) noexcept
 //
 // Mathematical functions
 //
+/** @brief Returns the absolute value. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> abs(fixed<B, I, F, R> input_value) noexcept
 {
     return (input_value >= fixed<B, I, F, R>{0}) ? input_value : -input_value;
 }
 
+/** @brief Returns the floating-point remainder of `x / y`. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> fmod(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> rhs_value) noexcept
 {
@@ -205,6 +229,7 @@ constexpr fixed<B, I, F, R> fmod(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> 
     fixed<B, I, F, R>::from_raw_value(lhs_value.raw_value() % rhs_value.raw_value());
 }
 
+/** @brief Returns the IEEE remainder of `x / y` (tie rounds to even). */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> remainder(fixed<B, I, F, R> lhs_value, fixed<B, I, F, R> rhs_value) noexcept
 {
@@ -234,6 +259,7 @@ constexpr fixed<B, I, F, R> copysign(fixed<B, I, F, R> lhs_value, fixed<C, J, G,
     (rhs_value >= fixed<C, J, G, S>{0}) ? lhs_value : -lhs_value;
 }
 
+/** @brief Returns the next representable value from `x` toward `y`. */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> nextafter(fixed<B, I, F, R> from_value, fixed<B, I, F, R> to_value) noexcept
 {
@@ -250,6 +276,7 @@ constexpr fixed<B, I, F, R> nextafter(fixed<B, I, F, R> from_value, fixed<B, I, 
     return fixed<B, I, F, R>::from_raw_value(from_value.raw_value() - 1);
 }
 
+/** @brief Returns the next representable value from `x` toward `y` (identical to `nextafter` for fixed-point). */
 template <typename B, typename I, unsigned int F, bool R>
 constexpr fixed<B, I, F, R> nexttoward(fixed<B, I, F, R> from_value, fixed<B, I, F, R> to_value) noexcept
 {

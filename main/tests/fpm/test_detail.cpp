@@ -1,6 +1,16 @@
+/**
+ * @file test_detail.cpp
+ * @brief Tests the `fpm::detail::find_highest_bit` helper used internally by math functions.
+ * @author Mike Lankamp
+ * @date May 2019
+ */
+
 #include "common.hpp"
 #include "fpm/math.hpp"
 
+/**
+ * @brief Verifies find_highest_bit returns the position of the most significant set bit.
+ */
 TEST(detail, find_highest_bit)
 {
     EXPECT_EQ(0, fpm::detail::find_highest_bit(1));

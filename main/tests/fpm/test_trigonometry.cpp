@@ -1,6 +1,17 @@
+/**
+ * @file test_trigonometry.cpp
+ * @brief Tests trigonometric functions for `fpm::fixed`: `sin`, `cos`, `tan`, `asin`,
+ *        `acos`, `atan`, and `atan2`.
+ * @author Mike Lankamp
+ * @date February 2019
+ */
+
 #include "common.hpp"
 #include "fpm/math.hpp"
 
+/**
+ * @brief Verifies sine accuracy against the standard-library reference implementation.
+ */
 TEST(trigonometry, sin)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 16>;
@@ -17,6 +28,9 @@ TEST(trigonometry, sin)
     }
 }
 
+/**
+ * @brief Verifies cosine accuracy including boundary-value behavior.
+ */
 TEST(trigonometry, cos)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 16>;
@@ -48,6 +62,9 @@ TEST(trigonometry, cos)
     }
 }
 
+/**
+ * @brief Verifies tangent accuracy against the standard-library reference implementation.
+ */
 TEST(trigonometry, tan)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 16>;
@@ -88,6 +105,9 @@ TEST(trigonometry, tan)
 #endif
 }
 
+/**
+ * @brief Verifies arctangent accuracy against the standard-library reference implementation.
+ */
 TEST(trigonometry, atan)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -111,6 +131,9 @@ TEST(trigonometry, atan)
     }
 }
 
+/**
+ * @brief Verifies arcsine accuracy against the standard-library reference implementation.
+ */
 TEST(trigonometry, asin)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -126,6 +149,9 @@ TEST(trigonometry, asin)
     }
 }
 
+/**
+ * @brief Verifies arccosine accuracy against the standard-library reference implementation.
+ */
 TEST(trigonometry, acos)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -141,6 +167,9 @@ TEST(trigonometry, acos)
     }
 }
 
+/**
+ * @brief Verifies quadrant-aware arctangent accuracy against the standard-library reference implementation.
+ */
 TEST(trigonometry, atan2)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -165,6 +194,9 @@ TEST(trigonometry, atan2)
 
 // Naively, atan2(y, x) does y / x which would overflow for near-zero x with Q16.16.
 // Test that we've got protections in place for this.
+/**
+ * @brief Verifies atan2 accuracy when the x component is near zero.
+ */
 TEST(trigonometry, atan2_near_zero)
 {
     constexpr auto MAX_ERROR_PERC = 0.025;

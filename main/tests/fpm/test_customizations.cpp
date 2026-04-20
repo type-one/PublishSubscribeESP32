@@ -1,3 +1,11 @@
+/**
+ * @file test_customizations.cpp
+ * @brief Tests customization points for `fpm::fixed`: `std::swap`, `std::hash`, and
+ *        `std::numeric_limits` across all predefined fixed-point typedefs.
+ * @author Mike Lankamp
+ * @date February 2020
+ */
+
 #include "common.hpp"
 
 template <typename T>
@@ -9,6 +17,9 @@ using FixedTypes = ::testing::Types<fpm::fixed_16_16, fpm::fixed_24_8, fpm::fixe
 
 TYPED_TEST_SUITE(customizations, FixedTypes);
 
+/**
+ * @brief Verifies std::swap exchanges two fixed-point values.
+ */
 TYPED_TEST(customizations, swap)
 {
     using std::swap;
@@ -20,6 +31,9 @@ TYPED_TEST(customizations, swap)
     EXPECT_EQ(P{1}, y);
 }
 
+/**
+ * @brief Verifies std::hash produces stable, distinct hashes for different values.
+ */
 TYPED_TEST(customizations, hash)
 {
     using P = TypeParam;
@@ -83,6 +97,9 @@ struct Limits<fpm::fixed_8_24>
     static constexpr fpm::fixed_8_24 max() noexcept { return fpm::fixed_8_24::from_raw_value( 2147483647); }
 };
 
+/**
+ * @brief Verifies std::numeric_limits reports the correct fixed-point properties.
+ */
 TYPED_TEST(customizations, numeric_limits)
 {
     using L = std::numeric_limits<TypeParam>;
@@ -121,6 +138,9 @@ TYPED_TEST(customizations, numeric_limits)
 }
 
 // Verify that a a type with a single integral bit works correctly
+/**
+ * @brief Verifies numeric_limits behavior for types with a single integral bit.
+ */
 TEST(customizations, numeric_limits_edge)
 {
     using Q15 = fpm::fixed<std::int16_t, std::int32_t, 15>;

@@ -1,3 +1,11 @@
+/**
+ * @file test_input.cpp
+ * @brief Tests stream input (`operator>>`) parsing for `fpm::fixed` types, covering all
+ *        notation forms, locale handling, error detection, and edge cases.
+ * @author Mike Lankamp
+ * @date October 2019
+ */
+
 #include "common.hpp"
 #include "fpm/ios.hpp"
 #include <sstream>
@@ -86,6 +94,9 @@ namespace
     };
 }
 
+/**
+ * @brief Verifies parsing of integral input forms.
+ */
 TEST_F(input, integers)
 {
     using P = fpm::fixed_16_16;
@@ -102,6 +113,9 @@ TEST_F(input, integers)
     test_conversion("-12795", P(-12795));
 }
 
+/**
+ * @brief Verifies parsing of fixed decimal notation.
+ */
 TEST_F(input, fixed_notation)
 {
     using P = fpm::fixed_16_16;
@@ -126,6 +140,9 @@ TEST_F(input, fixed_notation)
     test_conversion("-1467.0125", P(-1467.0125));
 }
 
+/**
+ * @brief Verifies parsing of scientific notation.
+ */
 TEST_F(input, scientific_notation)
 {
     using P = fpm::fixed_16_16;
@@ -149,6 +166,9 @@ TEST_F(input, scientific_notation)
     test_conversion("-9.765625e-4", P(-0.0009765625));
 }
 
+/**
+ * @brief Verifies parsing of hexadecimal floating-point notation.
+ */
 TEST_F(input, hexfloat_notation)
 {
     using P = fpm::fixed_16_16;
@@ -169,6 +189,9 @@ TEST_F(input, hexfloat_notation)
     test_conversion("-0x1.bcdP-3", P(-0.217193603515625));
 }
 
+/**
+ * @brief Verifies locale-specific decimal-point handling.
+ */
 TEST_F(input, decimal_point)
 {
     using P = fpm::fixed_16_16;
@@ -181,6 +204,9 @@ TEST_F(input, decimal_point)
     test_conversion("1\'234", P(1.234));
 }
 
+/**
+ * @brief Verifies locale-specific thousands-separator handling.
+ */
 TEST_F(input, thousands_separator)
 {
     using P = fpm::fixed_16_16;
@@ -201,6 +227,9 @@ TEST_F(input, thousands_separator)
     test_conversion("12\'345.67", P(12345.67));
 }
 
+/**
+ * @brief Verifies extraction stops when the stream is already in a bad state.
+ */
 TEST_F(input, fails_on_badbit)
 {
     using P = fpm::fixed_16_16;
@@ -213,6 +242,9 @@ TEST_F(input, fails_on_badbit)
     EXPECT_THROW(ss >> x, std::ios::failure);
 }
 
+/**
+ * @brief Verifies extraction handles end-of-file correctly.
+ */
 TEST_F(input, handles_eof)
 {
     using P = fpm::fixed_16_16;
@@ -225,12 +257,18 @@ TEST_F(input, handles_eof)
     EXPECT_THROW(ss >> x, std::ios::failure);
 }
 
+/**
+ * @brief Verifies leading whitespace is skipped during extraction.
+ */
 TEST_F(input, skips_whitespace)
 {
     using P = fpm::fixed_16_16;
     test_conversion("   \t\r\n\v\f    1.125E+2", P(112.5));
 }
 
+/**
+ * @brief Verifies parsing stops cleanly at trailing non-numeric characters.
+ */
 TEST_F(input, ignored_remainder)
 {
     using P = fpm::fixed_16_16;
@@ -247,6 +285,9 @@ TEST_F(input, ignored_remainder)
     test_conversion("1f", P(1), "f");
 }
 
+/**
+ * @brief Verifies invalid inputs are rejected and the stream failbit is set.
+ */
 TEST_F(input, incorrect_inputs)
 {
     // Empty sequence
@@ -274,6 +315,9 @@ TEST_F(input, incorrect_inputs)
     test_invalid_conversion("-+1", "+1");
 }
 
+/**
+ * @brief Verifies overflow during parsing is detected.
+ */
 TEST_F(input, overflow)
 {
     using P = fpm::fixed_16_16;
@@ -288,6 +332,9 @@ TEST_F(input, overflow)
     test_conversion("-1000000000000000000000000000000000000000000000", std::numeric_limits<P>::min());
 }
 
+/**
+ * @brief Verifies parsing behavior for infinity-like spellings.
+ */
 TEST_F(input, infinity)
 {
     using P = fpm::fixed_16_16;

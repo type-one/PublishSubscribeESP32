@@ -1,7 +1,18 @@
+/**
+ * @file test_from.cpp
+ * @brief Tests `from_fixed_point` and `from_custom_fraction` construction with rounding,
+ *        covering both positive and negative values.
+ * @author Mike Lankamp
+ * @date February 2020
+ */
+
 #include "common.hpp"
 
 using P = fpm::fixed_16_16;
 
+/**
+ * @brief Verifies from_fixed_point round-trips fixed-point values with correct rounding.
+ */
 TEST(from, fixed_point)
 {
     //0.5
@@ -83,6 +94,9 @@ TEST(from, fixed_point)
     );
 }
 
+/**
+ * @brief Verifies from_custom_fraction constructs from explicit integer and fractional parts.
+ */
 TEST(from, custom_fraction)
 {
     //0.5

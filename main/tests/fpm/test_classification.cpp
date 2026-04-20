@@ -1,6 +1,17 @@
+/**
+ * @file test_classification.cpp
+ * @brief Tests numeric classification functions for `fpm::fixed`: `fpclassify`, `isfinite`,
+ *        `isinf`, `isnan`, `isnormal`, `signbit`, and ordered-comparison predicates.
+ * @author Mike Lankamp
+ * @date April 2019
+ */
+
 #include "common.hpp"
 #include "fpm/math.hpp"
 
+/**
+ * @brief Verifies fpclassify returns FP_NORMAL for non-zero and FP_ZERO for zero.
+ */
 TEST(classification, fpclassify)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -10,6 +21,9 @@ TEST(classification, fpclassify)
     EXPECT_EQ(FP_ZERO, fpclassify(P(0)));
 }
 
+/**
+ * @brief Verifies fixed-point values are always finite.
+ */
 TEST(classification, isfinite)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -19,6 +33,9 @@ TEST(classification, isfinite)
     EXPECT_TRUE(isfinite(P(0)));
 }
 
+/**
+ * @brief Verifies fixed-point values never report infinity.
+ */
 TEST(classification, isinf)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -28,6 +45,9 @@ TEST(classification, isinf)
     EXPECT_FALSE(isinf(P(0)));
 }
 
+/**
+ * @brief Verifies fixed-point values never report NaN.
+ */
 TEST(classification, isnan)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -37,6 +57,9 @@ TEST(classification, isnan)
     EXPECT_FALSE(isnan(P(0)));
 }
 
+/**
+ * @brief Verifies zero is not normal and non-zero values are normal.
+ */
 TEST(classification, isnormal)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -46,6 +69,9 @@ TEST(classification, isnormal)
     EXPECT_FALSE(isnormal(P(0)));
 }
 
+/**
+ * @brief Verifies sign-bit detection for positive, negative, and zero values.
+ */
 TEST(classification, signbit)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -55,6 +81,9 @@ TEST(classification, signbit)
     EXPECT_FALSE(signbit(P(0)));
 }
 
+/**
+ * @brief Verifies isgreater comparisons across positive, negative, and fractional values.
+ */
 TEST(classification, isgreater)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -73,6 +102,9 @@ TEST(classification, isgreater)
     EXPECT_FALSE(isgreater(P(0), P(0)));
 }
 
+/**
+ * @brief Verifies isgreaterequal comparisons.
+ */
 TEST(classification, isgreaterequal)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -91,6 +123,9 @@ TEST(classification, isgreaterequal)
     EXPECT_TRUE(isgreaterequal(P(0), P(0)));
 }
 
+/**
+ * @brief Verifies isless comparisons.
+ */
 TEST(classification, isless)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -109,6 +144,9 @@ TEST(classification, isless)
     EXPECT_FALSE(isless(P(0), P(0)));
 }
 
+/**
+ * @brief Verifies islessequal comparisons.
+ */
 TEST(classification, islessequal)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -127,6 +165,9 @@ TEST(classification, islessequal)
     EXPECT_TRUE(islessequal(P(0), P(0)));
 }
 
+/**
+ * @brief Verifies ordered-and-unequal comparisons via islessgreater.
+ */
 TEST(classification, islessgreater)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;
@@ -145,6 +186,9 @@ TEST(classification, islessgreater)
     EXPECT_FALSE(islessgreater(P(0), P(0)));
 }
 
+/**
+ * @brief Verifies fixed-point comparisons are never unordered.
+ */
 TEST(classification, isunordered)
 {
     using P = fpm::fixed<std::int32_t, std::int64_t, 12>;

@@ -1,3 +1,11 @@
+/**
+ * @file ios.hpp
+ * @brief Stream I/O operators (`operator<<` and `operator>>`) for `fpm::fixed` types,
+ *        supporting all format flags, precision, width, fill, and locale.
+ * @author Mike Lankamp
+ * @date October 2019
+ */
+
 #ifndef FPM_IOS_HPP
 #define FPM_IOS_HPP
 
@@ -14,6 +22,13 @@
 namespace fpm
 {
 
+/**
+ * @brief Writes a fixed-point value to an output stream using the stream's format flags.
+ * @tparam CharT Character type of the stream.
+ * @param os Output stream.
+ * @param x  Fixed-point value to write.
+ * @return The same output stream.
+ */
 template <typename CharT, typename B, typename I, unsigned int F, bool R>
 std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& os, fixed<B, I, F, R> x) noexcept
 {
@@ -465,6 +480,14 @@ std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& os, fixed<B, I,
 }
 
 
+/**
+ * @brief Reads a fixed-point value from an input stream.
+ * @tparam CharT   Character type of the stream.
+ * @tparam Traits  Character traits.
+ * @param is Input stream.
+ * @param x  Fixed-point value to read into.
+ * @return The same input stream.
+ */
 template <typename CharT, class Traits, typename B, typename I, unsigned int F, bool R>
 std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is, fixed<B, I, F, R>& x)
 {

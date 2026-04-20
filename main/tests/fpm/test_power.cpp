@@ -1,6 +1,17 @@
+/**
+ * @file test_power.cpp
+ * @brief Tests power, exponential, and logarithmic functions for `fpm::fixed`: `exp`, `exp2`,
+ *        `expm1`, `log`, `log2`, `log10`, `log1p`, `pow`, `sqrt`, and `cbrt`.
+ * @author Mike Lankamp
+ * @date February 2019
+ */
+
 #include "common.hpp"
 #include "fpm/math.hpp"
 
+/**
+ * @brief Verifies exp against the standard-library reference implementation.
+ */
 TEST(power, exp)
 {
     // For several values, verify that fpm::exp is close to std::exp.
@@ -17,6 +28,9 @@ TEST(power, exp)
     }
 }
 
+/**
+ * @brief Verifies exp2 against the standard-library reference implementation.
+ */
 TEST(power, exp2)
 {
     // For several values, verify that fpm::exp2 is close to std::exp2.
@@ -33,6 +47,9 @@ TEST(power, exp2)
     }
 }
 
+/**
+ * @brief Verifies expm1 against the standard-library reference implementation.
+ */
 TEST(power, expm1)
 {
     // For several values, verify that fpm::expm1 is close to std::expm1.
@@ -49,6 +66,9 @@ TEST(power, expm1)
     }
 }
 
+/**
+ * @brief Verifies natural logarithm against the standard-library reference implementation.
+ */
 TEST(power, log)
 {
     // For several values, verify that fpm::log is close to std::log.
@@ -79,6 +99,9 @@ TEST(power, log)
 #endif
 }
 
+/**
+ * @brief Verifies base-2 logarithm against the standard-library reference implementation.
+ */
 TEST(power, log2)
 {
     // For several values, verify that fpm::log2 is close to std::log2.
@@ -109,6 +132,9 @@ TEST(power, log2)
 #endif
 }
 
+/**
+ * @brief Verifies base-10 logarithm against the standard-library reference implementation.
+ */
 TEST(power, log10)
 {
     // For several values, verify that fpm::log10 is close to std::log10exp.
@@ -139,6 +165,9 @@ TEST(power, log10)
 #endif
 }
 
+/**
+ * @brief Verifies log1p against the standard-library reference implementation.
+ */
 TEST(power, log1p)
 {
     // For several values, verify that fpm::log1p is close to std::log1p.
@@ -169,6 +198,9 @@ TEST(power, log1p)
 #endif
 }
 
+/**
+ * @brief Verifies fixed-point exponentiation with fractional exponents.
+ */
 TEST(power, pow)
 {
     // For several combinations of x and y, verify that fpm::pow is close to std::pow.
@@ -221,6 +253,9 @@ TEST(power, pow)
 #endif
 }
 
+/**
+ * @brief Verifies fixed-point exponentiation with integral exponents.
+ */
 TEST(power, pow_int)
 {
     // For several combinations of x and y, verify that fpm::pow is close to std::pow.
@@ -264,6 +299,9 @@ TEST(power, pow_int)
 #endif
 }
 
+/**
+ * @brief Verifies square-root accuracy for the default fixed-point format.
+ */
 TEST(power, sqrt)
 {
     // For several values, verify that fpm::sqrt is close to std::sqrt.
@@ -293,6 +331,9 @@ TEST(power, sqrt)
 #endif
 }
 
+/**
+ * @brief Verifies square-root accuracy for the high-fraction fixed-point format.
+ */
 TEST(power, sqrt_24)
 {
     // High-precision test of sqrt
@@ -311,6 +352,9 @@ TEST(power, sqrt_24)
 
 }
 
+/**
+ * @brief Verifies cube-root accuracy for the default fixed-point format.
+ */
 TEST(power, cbrt)
 {
     // For several values, verify that fpm::cbrt is close to std::cbrt.
@@ -337,6 +381,9 @@ TEST(power, cbrt)
     }
 }
 
+/**
+ * @brief Verifies cube-root accuracy for the high-fraction fixed-point format.
+ */
 TEST(power, cbrt_24)
 {
     // High-precision test of cbrt
