@@ -3733,7 +3733,7 @@ void test_hardware_timer_interrupt()
 namespace
 {
     constexpr std::size_t ALLOC_MAX_SIZE = 512;
-    constexpr std::size_t ALLOC_ITERATIONS = 10000;
+    constexpr std::size_t ALLOC_ITERATIONS = 100000;
 
     struct alloc_data
     {
@@ -3878,8 +3878,7 @@ void runner()
     
     test_allocator_stress();
 
-#if defined(USE_MEM_POOL_ALLOCATOR) && !defined(FREERTOS_PLATFORM)
-    // note: on FreeRTOS target we don't really need to free up our memory at the end
+#if defined(USE_MEM_POOL_ALLOCATOR)
     std::printf("Destroy mem pool allocator\n");
     destroy_mem_pool_allocator();
 #endif
