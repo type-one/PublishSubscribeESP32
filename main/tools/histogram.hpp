@@ -430,8 +430,11 @@ namespace tools
             double result = 0.0;
             if ((standard_deviation > 0.0) && (montecarlo_samples > 0))
             {
-                std::random_device rand_dev;
-                std::mt19937 generator(rand_dev());
+                // static: mt19937 state is 2496 bytes — keeping it off the caller's stack.
+                // Initialized once at first call; continuing the sequence across calls
+                // also improves Monte Carlo quality compared to re-seeding every time.
+                static std::random_device rand_dev;
+                static std::mt19937 generator(rand_dev());
 
                 if constexpr (std::is_integral<T>::value)
                 {
