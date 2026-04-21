@@ -183,7 +183,8 @@ namespace tools
      * @param period The period duration for the scheduling in microseconds.
      * @return true if the scheduling was successfully set, false otherwise.
      */
-    static bool set_earliest_deadline_scheduling(std::chrono::high_resolution_clock::time_point start_time,
+    [[maybe_unused]] static inline bool set_earliest_deadline_scheduling(
+        std::chrono::high_resolution_clock::time_point start_time,
         const std::chrono::duration<std::uint64_t, std::micro>& period)
     {
         // Earliest Deadline scheduling if can run as root
@@ -250,7 +251,8 @@ namespace tools
  * @param period The period of the task in microseconds.
  * @return true if the scheduling was successfully set, false otherwise.
  */
-static bool set_earliest_deadline_scheduling(std::chrono::high_resolution_clock::time_point start_time,
+[[maybe_unused]] static inline bool set_earliest_deadline_scheduling(
+    std::chrono::high_resolution_clock::time_point start_time,
     const std::chrono::duration<std::uint64_t, std::micro>& period)
 {
     (void)start_time;
