@@ -35,6 +35,10 @@
 
 namespace
 {
+constexpr const int meaning_of_life_answer = 42;
+constexpr const double sample_object_value = 42.99;
+constexpr const double indoor_temperature_c = 19.47;
+
 void test_json()
 {
     LOG_INFO("-- json serialization/deserialization --");
@@ -59,11 +63,11 @@ void test_json()
         std::vector<int> val = { 0, 1, 2 };
         obj.set("list", val);
 
-        obj2.set("everything", 42);
+        obj2.set("everything", meaning_of_life_answer);
         obj.set("answer", obj2);
 
         obj3.set("currency", "USD");
-        obj4.set("value", 42.99);
+        obj4.set("value", sample_object_value);
 
         cjsonpp::JSONObject arr = cjsonpp::arrayObject();
         arr.add(obj3);
@@ -104,11 +108,11 @@ void test_queued_json_data()
         cjsonpp::JSONObject json = {};
         json.set("msg_type", "sensor");
         json.set("sensor_name", "indoor_temperature");
-        json.set("temp", 19.47);
+        json.set("temp", indoor_temperature_c);
         json.set("activity", true);
 
         cjsonpp::JSONObject json_answer = {};
-        json_answer.set("everything", 42);
+        json_answer.set("everything", meaning_of_life_answer);
         json.set("answer", json_answer);
 
         std::printf("%s\n", json.print(true).c_str());

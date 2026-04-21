@@ -151,9 +151,19 @@ void test_smp_tasks_lock_free_ring_buffer()
     tools::sleep_for(wait_tasks_ms);
 }
 
-static tools::memory_pipe::static_buffer_holder static_buf_holder = {};
 constexpr const std::size_t static_storage_size = 1000U;
-static std::array<std::uint8_t, static_storage_size> static_storage = {};
+
+tools::memory_pipe::static_buffer_holder& get_static_buf_holder()
+{
+    static tools::memory_pipe::static_buffer_holder static_buf_holder = {};
+    return static_buf_holder;
+}
+
+std::array<std::uint8_t, static_storage_size>& get_static_storage()
+{
+    static std::array<std::uint8_t, static_storage_size> static_storage = {};
+    return static_storage;
+}
 
 /** @brief Shared context owning the memory pipe used for SMP chunk transfer examples. */
 struct smp_mem_task_context
@@ -161,7 +171,7 @@ struct smp_mem_task_context
     tools::memory_pipe m_to_worker_pipe;
 
     explicit smp_mem_task_context(std::size_t to_size)
-        : m_to_worker_pipe(to_size, static_storage.data(), &static_buf_holder)
+        : m_to_worker_pipe(to_size, get_static_storage().data(), &get_static_buf_holder())
     {
     }
 };
@@ -180,6 +190,9 @@ void test_smp_tasks_memory_pipe()
         (void)context;
         (void)task_name;
     };
+
+    auto& static_buf_holder = get_static_buf_holder();
+    auto& static_storage = get_static_storage();
 
     std::memset(&static_buf_holder, 0, sizeof(static_buf_holder));
     // Reinitialize static memory-pipe bookkeeping before each run.

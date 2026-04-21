@@ -63,6 +63,11 @@ public:
     my_observer() = default;
     ~my_observer() override = default;
 
+    my_observer(const my_observer&) = delete;
+    my_observer& operator=(const my_observer&) = delete;
+    my_observer(my_observer&&) = delete;
+    my_observer& operator=(my_observer&&) = delete;
+
     /**
      * @brief Synchronously handles an incoming event by printing the topic, event description, and origin.
      * @param topic The topic on which the event was published.
@@ -78,7 +83,7 @@ public:
 
 using base_async_observer = tools::async_observer<my_topic, my_event, tools::sync_ring_vector>;
 
-static constexpr const std::size_t base_async_observer_queue_depth = 256U;
+constexpr const std::size_t base_async_observer_queue_depth = 256U;
 class my_async_observer : public base_async_observer
 {
 public:
@@ -88,6 +93,11 @@ public:
         , m_task_loop([this]() { handle_events(); })
     {
     }
+
+    my_async_observer(const my_async_observer&) = delete;
+    my_async_observer& operator=(const my_async_observer&) = delete;
+    my_async_observer(my_async_observer&&) = delete;
+    my_async_observer& operator=(my_async_observer&&) = delete;
 
     /** @brief Signals the background thread to stop and waits for it to join. */
     ~my_async_observer() override
@@ -153,8 +163,6 @@ public:
         : base_subject(name)
     {
     }
-
-    ~my_subject() override = default;
 
     /**
      * @brief Logs the outgoing event and then delegates to the base-class publish mechanism.
@@ -274,7 +282,7 @@ struct my_generic_task_context
 
 using my_generic_task = tools::generic_task<my_generic_task_context>;
 
-static void generic_function(const std::shared_ptr<my_generic_task_context>& context, const std::string& task_name)
+void generic_function(const std::shared_ptr<my_generic_task_context>& context, const std::string& task_name)
 {
     std::printf("starting generic task %s\n", task_name.c_str());
 
@@ -480,6 +488,11 @@ public:
     my_collector() = default;
     ~my_collector() override = default;
 
+    my_collector(const my_collector&) = delete;
+    my_collector& operator=(const my_collector&) = delete;
+    my_collector(my_collector&&) = delete;
+    my_collector& operator=(my_collector&&) = delete;
+
     /**
      * @brief Accumulates a numerical sample from the event description into the internal histogram.
      * @param topic Topic of the incoming event (unused).
@@ -497,6 +510,9 @@ public:
     /** @brief Prints histogram statistics: top value, average, median, variance, standard deviation, and Gaussian metrics. */
     void display_stats()
     {
+        constexpr const double gaussian_lower_bound_ratio = 0.5;
+        constexpr const int gaussian_steps = 100;
+
         auto top = m_histogram.top();
         std::printf("\nvalue %f appears %d times\n", top, m_histogram.top_occurence());
         auto avg = m_histogram.average();
@@ -507,8 +523,9 @@ public:
         auto std_deviation = m_histogram.standard_deviation(variance);
         std::printf("standard deviation is %f\n", std_deviation);
         std::printf("gaussian density of %f is %f\n", top, m_histogram.gaussian_density(top, avg, std_deviation));
-        std::printf("gaussian probability of [%f, %f] is %f\n", 0.5 * top, top,
-            m_histogram.gaussian_probability(0.5 * top, top, avg, std_deviation, 100));
+        std::printf("gaussian probability of [%f, %f] is %f\n", gaussian_lower_bound_ratio * top, top,
+            m_histogram.gaussian_probability(
+                gaussian_lower_bound_ratio * top, top, avg, std_deviation, gaussian_steps));
     }
 
 private:

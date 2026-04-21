@@ -35,6 +35,13 @@
 
 namespace
 {
+constexpr const double sample_value_1 = 5.6;
+constexpr const double sample_value_2 = 7.2;
+constexpr const double sample_value_3 = 1.2;
+constexpr const double sample_value_4 = 9.1;
+constexpr const double sample_value_5 = 10.1;
+constexpr const double sample_value_6 = 7.5;
+
 /** @brief Demonstrates push_range, pop_range, front, and pop operations on a @c tools::ring_buffer. */
 void test_ring_buffer()
 {
@@ -370,12 +377,12 @@ void test_ring_buffer_iteration()
         constexpr const std::size_t queue_size = 64U;
         auto val_queue = std::make_unique<tools::ring_buffer<double, queue_size>>();
 
-        val_queue->emplace(5.6);
-        val_queue->emplace(7.2);
-        val_queue->emplace(1.2);
-        val_queue->emplace(9.1);
-        val_queue->emplace(10.1);
-        val_queue->emplace(7.5);
+        val_queue->emplace(sample_value_1);
+        val_queue->emplace(sample_value_2);
+        val_queue->emplace(sample_value_3);
+        val_queue->emplace(sample_value_4);
+        val_queue->emplace(sample_value_5);
+        val_queue->emplace(sample_value_6);
 
         std::printf("content\n");
 
@@ -529,12 +536,12 @@ void test_ring_vector_iteration()
         constexpr const std::size_t array_size = 64U;
         auto val_queue = std::make_unique<tools::ring_vector<double>>(array_size);
 
-        val_queue->emplace(5.6);
-        val_queue->emplace(7.2);
-        val_queue->emplace(1.2);
-        val_queue->emplace(9.1);
-        val_queue->emplace(10.1);
-        val_queue->emplace(7.5);
+        val_queue->emplace(sample_value_1);
+        val_queue->emplace(sample_value_2);
+        val_queue->emplace(sample_value_3);
+        val_queue->emplace(sample_value_4);
+        val_queue->emplace(sample_value_5);
+        val_queue->emplace(sample_value_6);
 
         std::printf("content\n");
 

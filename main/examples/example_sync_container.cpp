@@ -42,6 +42,11 @@ void test_lock_free_ring_buffer()
     print_stats();
 
     constexpr const std::size_t queue_size_pow2 = 3U;
+    constexpr const std::uint8_t val_overflow_probe_1 = 5U;
+    constexpr const std::uint8_t val_overflow_probe_2 = 6U;
+    constexpr const std::uint8_t val_overflow_probe_3 = 7U;
+    constexpr const std::uint8_t val_overflow_probe_4 = 8U;
+
     auto str_queue = std::make_unique<tools::lock_free_ring_buffer<std::uint8_t, queue_size_pow2>>();
     bool result = false;
 
@@ -72,16 +77,16 @@ void test_lock_free_ring_buffer()
 
     std::printf("expect success - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(5U);
+    result = str_queue->push(val_overflow_probe_1);
     std::printf("expect success - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(6U);
+    result = str_queue->push(val_overflow_probe_2);
     std::printf("expect success - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(7U);
+    result = str_queue->push(val_overflow_probe_3);
     std::printf("expect success - %s\n", result ? "success" : "failure");
 
-    result = str_queue->push(8U);
+    result = str_queue->push(val_overflow_probe_4);
     std::printf("expect failure - %s\n", result ? "success" : "failure");
 
     result = str_queue->pop(val);

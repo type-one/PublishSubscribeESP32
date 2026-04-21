@@ -41,13 +41,18 @@ void test_calendar_day()
 {
     LOG_INFO("calendar time and day");
 
+    constexpr const int moon_landing_year = 1969;
+    constexpr const unsigned moon_landing_month = 7U;
+    constexpr const unsigned moon_landing_day = 21U;
+
     auto now = std::chrono::system_clock::now();
     auto current_date = std::chrono::year_month_day(std::chrono::floor<std::chrono::days>(now));
     auto current_year = current_date.year();
 
     std::printf("The current year is %d\n", static_cast<int>(current_year));
 
-    auto moon_landing = std::chrono::year(1969) / std::chrono::month(7) / std::chrono::day(21);
+    auto moon_landing = std::chrono::year(moon_landing_year) / std::chrono::month(moon_landing_month)
+        / std::chrono::day(moon_landing_day);
 
     current_date = std::chrono::year_month_day(
         std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now()));

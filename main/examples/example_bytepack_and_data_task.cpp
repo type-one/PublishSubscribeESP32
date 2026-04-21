@@ -45,6 +45,16 @@ enum class message_type : std::uint8_t
     aggregat = 4
 };
 
+constexpr const double sensor1_cpu_temperature_c = 45.2;
+constexpr const double sensor1_gpu_temperature_c = 51.72;
+constexpr const double sensor1_room_temperature_c = 21.5;
+constexpr const double sensor2_cpu_temperature_c = 17.2;
+constexpr const double sensor2_gpu_temperature_c = 34.7;
+constexpr const double sensor2_room_temperature_c = 18.3;
+constexpr const double aggregate_value_1 = 0.7;
+constexpr const double aggregate_value_2 = 1.5;
+constexpr const double aggregate_value_3 = 2.1;
+constexpr const double aggregate_value_4 = -0.5;
 /** @brief Sensor payload carrying CPU, GPU, and room temperature readings with bytepack serialization support. */
 struct temperature_sensor
 {
@@ -112,7 +122,7 @@ void test_queued_bytepack_data()
 
     free_text message1 = { "jojo rabbit" };
     manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" }, { 'A', 'Z' } };
-    temperature_sensor message3 = { 45.2, 51.72, 21.5 };
+    temperature_sensor message3 = { sensor1_cpu_temperature_c, sensor1_gpu_temperature_c, sensor1_room_temperature_c };
 
     constexpr const std::size_t buffer_size = 1024U;
     std::vector<std::uint8_t> buffer(buffer_size);
@@ -260,11 +270,12 @@ void test_aggregated_bytepack_data()
     print_stats();
 
     aggregated_info aggr = {};
-    aggr.m_dictionary = { { "sensor1", { 45.2, 51.72, 21.5 } }, { "sensor2", { 17.2, 34.7, 18.3 } } };
+    aggr.m_dictionary = { { "sensor1", { sensor1_cpu_temperature_c, sensor1_gpu_temperature_c, sensor1_room_temperature_c } },
+        { "sensor2", { sensor2_cpu_temperature_c, sensor2_gpu_temperature_c, sensor2_room_temperature_c } } };
     aggr.m_list = { { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" }, { 'A', 'Z' } },
         { { "AMD" }, { "HTX-7788-22-5" }, { "12/05/07" }, { 'B', 'Z' } } };
     aggr.m_status = false;
-    aggr.m_values = { 0.7, 1.5, 2.1, -0.5 };
+    aggr.m_values = { aggregate_value_1, aggregate_value_2, aggregate_value_3, aggregate_value_4 };
 
     auto sens = aggr.m_dictionary.find("sensor2");
     std::printf(
@@ -395,7 +406,7 @@ void test_bytepack_data_task()
         (void)context;
         std::printf("periodic %s\n", task_name.c_str());
 
-        temperature_sensor message1 = { 45.2, 51.72, 21.5 };
+        temperature_sensor message1 = { sensor1_cpu_temperature_c, sensor1_gpu_temperature_c, sensor1_room_temperature_c };
         manufacturing_info message2 = { { "NVidia" }, { "HTX-4589-22-1" }, { "24/05/02" }, { 'A', 'Z' } };
         free_text message3 = { "jojo rabbit" };
 

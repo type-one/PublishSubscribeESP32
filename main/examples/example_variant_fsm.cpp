@@ -98,6 +98,10 @@ class traffic_light_fsm : tools::non_copyable
 public:
     traffic_light_fsm() = default;
     ~traffic_light_fsm() = default;
+    traffic_light_fsm(const traffic_light_fsm&) = delete;
+    traffic_light_fsm& operator=(const traffic_light_fsm&) = delete;
+    traffic_light_fsm(traffic_light_fsm&&) = delete;
+    traffic_light_fsm& operator=(traffic_light_fsm&&) = delete;
 
     /** @brief Resets the FSM to the @c off state and marks it as entering that state. */
     void start();
