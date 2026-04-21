@@ -238,7 +238,7 @@ namespace cjsonpp
     }
 
     // remove item from object without throwing
-    cjsonpp_status JSONObject::try_remove(const char* name)
+    cjsonpp_status JSONObject::remove(const char* name)
     {
         constexpr const int mask = 0xff;
         if (((*obj_)->type & mask) != cJSON_Object)
@@ -264,7 +264,7 @@ namespace cjsonpp
     }
 
     // remove item from array without throwing
-    cjsonpp_status JSONObject::try_remove(int index)
+    cjsonpp_status JSONObject::remove(int index)
     {
         constexpr const int mask = 0xff;
         if (((*obj_)->type & mask) != cJSON_Array)

@@ -203,9 +203,9 @@ TEST_F(JSONObjectTest, SetAndRemoveObjectItem)
 {
     auto obj = cjsonpp::JSONObject();
     cjsonpp::JSONObject value("test");
-    ASSERT_TRUE(obj.try_set("key", value));
+    ASSERT_TRUE(obj.set("key", value));
     EXPECT_TRUE(obj.has("key"));
-    ASSERT_TRUE(obj.try_remove("key"));
+    ASSERT_TRUE(obj.remove("key"));
     EXPECT_FALSE(obj.has("key"));
 }
 
@@ -225,9 +225,9 @@ TEST_F(JSONObjectTest, AddArrayItem)
 {
     auto obj = cjsonpp::arrayObject();
     cjsonpp::JSONObject value("test");
-    ASSERT_TRUE(obj.try_add(value));
+    ASSERT_TRUE(obj.add(value));
     EXPECT_EQ(obj.type(), cjsonpp::Array);
-    const auto item_res = obj.try_get(0);
+    const auto item_res = obj.get(0);
     ASSERT_TRUE(item_res.has_value());
     EXPECT_EQ(item_res.value().type(), cjsonpp::String);
 }
@@ -351,27 +351,27 @@ TEST_F(JSONObjectTest, ParseAndCheckNestedJSON)
     const auto& obj = parse_res.value();
     EXPECT_EQ(obj.type(), cjsonpp::Object);
     EXPECT_TRUE(obj.has("outer"));
-    const auto outer_res = obj.try_get("outer");
+    const auto outer_res = obj.get("outer");
     ASSERT_TRUE(outer_res.has_value());
     const auto& outer = outer_res.value();
     EXPECT_TRUE(outer.has("inner"));
-    const auto inner_res = outer.try_get("inner");
+    const auto inner_res = outer.get("inner");
     ASSERT_TRUE(inner_res.has_value());
     const auto& inner = inner_res.value();
     EXPECT_TRUE(inner.has("key"));
-    const auto key_res = inner.try_get("key");
+    const auto key_res = inner.get("key");
     ASSERT_TRUE(key_res.has_value());
     EXPECT_EQ(key_res.value().type(), cjsonpp::String);
     EXPECT_STREQ(key_res.value().obj()->valuestring, "value");
 }
 
 /**
- * @brief Test case for try_get result behavior on missing keys.
+ * @brief Test case for get result behavior on missing keys.
  */
 TEST_F(JSONObjectTest, TryGetMissingItemResultApi)
 {
     auto obj = cjsonpp::JSONObject();
-    auto key_result = obj.try_get<int>("missing");
+    auto key_result = obj.get<int>("missing");
     ASSERT_FALSE(key_result.has_value());
     EXPECT_EQ(key_result.error().code, cjsonpp::result_code::missing_item);
 }
@@ -398,7 +398,7 @@ TEST_F(JSONObjectTest, ParseAndCheckArrayInJSON)
     const auto& obj = parse_res.value();
     EXPECT_EQ(obj.type(), cjsonpp::Object);
     EXPECT_TRUE(obj.has("array"));
-    const auto array_res = obj.try_get("array");
+    const auto array_res = obj.get("array");
     ASSERT_TRUE(array_res.has_value());
     const auto& array = array_res.value();
     EXPECT_EQ(array.type(), cjsonpp::Array);
@@ -407,7 +407,7 @@ TEST_F(JSONObjectTest, ParseAndCheckArrayInJSON)
     EXPECT_EQ(cJSON_GetArraySize(array.obj()), expected_size);
     for (int idx = 0; idx < expected_size; ++idx)
     {
-        const auto item_res = array.try_get<int>(idx);
+        const auto item_res = array.get<int>(idx);
         ASSERT_TRUE(item_res.has_value());
         EXPECT_EQ(item_res.value(), idx + 1);
     }
@@ -432,15 +432,15 @@ TEST_F(JSONObjectTest, SetAndGetNestedObject)
 {
     cjsonpp::JSONObject inner("inner_value");
     auto outer = cjsonpp::JSONObject();
-    ASSERT_TRUE(outer.try_set("inner_key", inner));
+    ASSERT_TRUE(outer.set("inner_key", inner));
     auto obj = cjsonpp::JSONObject();
-    ASSERT_TRUE(obj.try_set("outer_key", outer));
+    ASSERT_TRUE(obj.set("outer_key", outer));
     EXPECT_TRUE(obj.has("outer_key"));
-    const auto outer_res = obj.try_get("outer_key");
+    const auto outer_res = obj.get("outer_key");
     ASSERT_TRUE(outer_res.has_value());
     const auto& retrieved_outer = outer_res.value();
     EXPECT_TRUE(retrieved_outer.has("inner_key"));
-    const auto inner_res = retrieved_outer.try_get("inner_key");
+    const auto inner_res = retrieved_outer.get("inner_key");
     ASSERT_TRUE(inner_res.has_value());
     EXPECT_EQ(inner_res.value().type(), cjsonpp::String);
     EXPECT_STREQ(inner_res.value().obj()->valuestring, "inner_value");
@@ -467,19 +467,19 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeNestedObject)
 {
     cjsonpp::JSONObject inner("inner_value");
     auto outer = cjsonpp::JSONObject();
-    ASSERT_TRUE(outer.try_set("inner_key", inner));
+    ASSERT_TRUE(outer.set("inner_key", inner));
     auto obj = cjsonpp::JSONObject();
-    ASSERT_TRUE(obj.try_set("outer_key", outer));
+    ASSERT_TRUE(obj.set("outer_key", outer));
     std::string serialized = obj.print();
     const auto parse_res = cjsonpp::parse_result(serialized);
     ASSERT_TRUE(parse_res.has_value());
     const auto& de_obj = parse_res.value();
     EXPECT_TRUE(de_obj.has("outer_key"));
-    const auto outer_res = de_obj.try_get("outer_key");
+    const auto outer_res = de_obj.get("outer_key");
     ASSERT_TRUE(outer_res.has_value());
     const auto& retrieved_outer = outer_res.value();
     EXPECT_TRUE(retrieved_outer.has("inner_key"));
-    const auto inner_res = retrieved_outer.try_get("inner_key");
+    const auto inner_res = retrieved_outer.get("inner_key");
     ASSERT_TRUE(inner_res.has_value());
     EXPECT_EQ(inner_res.value().type(), cjsonpp::String);
     EXPECT_STREQ(inner_res.value().obj()->valuestring, "inner_value");
@@ -498,7 +498,7 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeNestedObject)
 TEST_F(JSONObjectTest, RemoveNonExistentObjectItem)
 {
     auto obj = cjsonpp::JSONObject();
-    const auto remove_status = obj.try_remove("nonexistent");
+    const auto remove_status = obj.remove("nonexistent");
     ASSERT_FALSE(remove_status.has_value());
     EXPECT_EQ(remove_status.error().code, cjsonpp::result_code::missing_item);
 }
@@ -514,7 +514,7 @@ TEST_F(JSONObjectTest, RemoveNonExistentObjectItem)
 TEST_F(JSONObjectTest, RemoveNonExistentArrayItem)
 {
     auto obj = cjsonpp::arrayObject();
-    const auto remove_status = obj.try_remove(0);
+    const auto remove_status = obj.remove(0);
     ASSERT_FALSE(remove_status.has_value());
     EXPECT_EQ(remove_status.error().code, cjsonpp::result_code::missing_item);
 }
@@ -537,7 +537,7 @@ TEST_F(JSONObjectTest, SetInvalidTypeInObject)
 {
     auto obj = cjsonpp::arrayObject();
     cjsonpp::JSONObject value("test");
-    const auto set_status = obj.try_set("key", value);
+    const auto set_status = obj.set("key", value);
     ASSERT_FALSE(set_status.has_value());
     EXPECT_EQ(set_status.error().code, cjsonpp::result_code::invalid_type);
 }
@@ -560,7 +560,7 @@ TEST_F(JSONObjectTest, SetInvalidTypeInArray)
 {
     auto obj = cjsonpp::JSONObject();
     cjsonpp::JSONObject value("test");
-    const auto add_status = obj.try_add(value);
+    const auto add_status = obj.add(value);
     ASSERT_FALSE(add_status.has_value());
     EXPECT_EQ(add_status.error().code, cjsonpp::result_code::invalid_type);
 }

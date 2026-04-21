@@ -51,25 +51,25 @@ void test_json()
 #else
         constexpr const double number_pi = 3.141592;
 #endif
-        obj.try_set("pi", number_pi);
-        obj.try_set("happy", true);
-        obj.try_set("name", "Niels");
-        obj.try_set("nothing", cjsonpp::nullObject());
+        obj.set("pi", number_pi);
+        obj.set("happy", true);
+        obj.set("name", "Niels");
+        obj.set("nothing", cjsonpp::nullObject());
 
         std::vector<int> val = { 0, 1, 2 };
-        obj.try_set("list", val);
+        obj.set("list", val);
 
-        obj2.try_set("everything", 42);
-        obj.try_set("answer", obj2);
+        obj2.set("everything", 42);
+        obj.set("answer", obj2);
 
-        obj3.try_set("currency", "USD");
-        obj4.try_set("value", 42.99);
+        obj3.set("currency", "USD");
+        obj4.set("value", 42.99);
 
         cjsonpp::JSONObject arr = cjsonpp::arrayObject();
-        arr.try_add(obj3);
-        arr.try_add(obj4);
+        arr.add(obj3);
+        arr.add(obj4);
 
-        obj.try_set("object", arr);
+        obj.set("object", arr);
 
         const auto str = obj.print();
         std::printf("%s\n", str.c_str());
@@ -102,14 +102,14 @@ void test_queued_json_data()
 
     {
         cjsonpp::JSONObject json = {};
-        json.try_set("msg_type", "sensor");
-        json.try_set("sensor_name", "indoor_temperature");
-        json.try_set("temp", 19.47);
-        json.try_set("activity", true);
+        json.set("msg_type", "sensor");
+        json.set("sensor_name", "indoor_temperature");
+        json.set("temp", 19.47);
+        json.set("activity", true);
 
         cjsonpp::JSONObject json_answer = {};
-        json_answer.try_set("everything", 42);
-        json.try_set("answer", json_answer);
+        json_answer.set("everything", 42);
+        json.set("answer", json_answer);
 
         std::printf("%s\n", json.print(true).c_str());
         data_queue->emplace(json.print(false));
@@ -117,10 +117,10 @@ void test_queued_json_data()
 
     {
         cjsonpp::JSONObject json = {};
-        json.try_set("msg_type", "time");
-        json.try_set("yyyy_mm_dd", "2025/01/13");
-        json.try_set("hh_mm_ss", "23:05:12");
-        json.try_set("time_zone", "GMT+2");
+        json.set("msg_type", "time");
+        json.set("yyyy_mm_dd", "2025/01/13");
+        json.set("hh_mm_ss", "23:05:12");
+        json.set("time_zone", "GMT+2");
 
         std::printf("%s\n", json.print(true).c_str());
         data_queue->emplace(json.print(false));
@@ -144,7 +144,7 @@ void test_queued_json_data()
 
         cjsonpp::JSONObject json = parse_result.value();
 
-        const auto discriminant_result = json.try_get<std::string>("msg_type");
+        const auto discriminant_result = json.get<std::string>("msg_type");
         if (!discriminant_result)
         {
             LOG_ERROR("missing discriminant: %s", discriminant_result.error().message.c_str());
@@ -156,17 +156,17 @@ void test_queued_json_data()
         // Route by discriminant just like a production message bus consumer.
         if (discriminant == "sensor")
         {
-            const auto name_result = json.try_get<std::string>("sensor_name");
-            const auto temp_result = json.try_get<double>("temp");
-            const auto activity_result = json.try_get<bool>("activity");
-            const auto answer_obj_result = json.try_get<cjsonpp::JSONObject>("answer");
+            const auto name_result = json.get<std::string>("sensor_name");
+            const auto temp_result = json.get<double>("temp");
+            const auto activity_result = json.get<bool>("activity");
+            const auto answer_obj_result = json.get<cjsonpp::JSONObject>("answer");
             if (!name_result || !temp_result || !activity_result || !answer_obj_result)
             {
                 LOG_ERROR("sensor payload invalid");
                 continue;
             }
 
-            const auto answer_result = answer_obj_result.value().try_get<int>("everything");
+            const auto answer_result = answer_obj_result.value().get<int>("everything");
             if (!answer_result)
             {
                 LOG_ERROR("sensor answer invalid: %s", answer_result.error().message.c_str());
@@ -181,9 +181,9 @@ void test_queued_json_data()
         }
         else if (discriminant == "time")
         {
-            const auto time_date_result = json.try_get<std::string>("yyyy_mm_dd");
-            const auto time_clock_result = json.try_get<std::string>("hh_mm_ss");
-            const auto time_zone_result = json.try_get<std::string>("time_zone");
+            const auto time_date_result = json.get<std::string>("yyyy_mm_dd");
+            const auto time_clock_result = json.get<std::string>("hh_mm_ss");
+            const auto time_zone_result = json.get<std::string>("time_zone");
             if (!time_date_result || !time_clock_result || !time_zone_result)
             {
                 LOG_ERROR("time payload invalid");

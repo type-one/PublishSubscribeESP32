@@ -232,7 +232,7 @@ namespace cjsonpp
         {
             for (auto itr = elems.begin(); itr != elems.end(); ++itr)
             {
-                try_add(*itr);
+                add(*itr);
             }
         }
 
@@ -252,7 +252,7 @@ namespace cjsonpp
         {
             for (auto& itr : elems)
             {
-                try_add(itr);
+                add(itr);
             }
         }
 
@@ -273,7 +273,7 @@ namespace cjsonpp
         {
             for (auto itr = elems.begin(); itr != elems.end(); ++itr)
             {
-                try_add(*itr);
+                add(*itr);
             }
         }
 
@@ -321,7 +321,7 @@ namespace cjsonpp
          * @brief Try to cast the current value to T without throwing.
          */
         template <typename T>
-        cjsonpp_result<T> try_as() const
+        cjsonpp_result<T> as() const
         {
             return as_result<T>(obj_->o);
         }
@@ -330,7 +330,7 @@ namespace cjsonpp
          * @brief Retrieves an item from an object by name without throwing.
          */
         template <typename T = JSONObject>
-        [[nodiscard]] cjsonpp_result<T> try_get(const char* name) const
+        [[nodiscard]] cjsonpp_result<T> get(const char* name) const
         {
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
@@ -351,9 +351,9 @@ namespace cjsonpp
          * @brief Retrieves an item from an object by name without throwing.
          */
         template <typename T = JSONObject>
-        [[nodiscard]] cjsonpp_result<T> try_get(const std::string& value) const
+        [[nodiscard]] cjsonpp_result<T> get(const std::string& value) const
         {
-            return try_get<T>(value.c_str());
+            return get<T>(value.c_str());
         }
 
         /**
@@ -376,7 +376,7 @@ namespace cjsonpp
          * @brief Retrieves an item from an array by index without throwing.
          */
         template <typename T = JSONObject>
-        cjsonpp_result<T> try_get(int index) const
+        cjsonpp_result<T> get(int index) const
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
@@ -397,7 +397,7 @@ namespace cjsonpp
          * @brief Adds a value to an array without throwing.
          */
         template <typename T>
-        cjsonpp_status try_add(const T& value)
+        cjsonpp_status add(const T& value)
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
@@ -414,7 +414,7 @@ namespace cjsonpp
          * @brief Sets a key/value pair in an object without throwing.
          */
         template <typename T>
-        cjsonpp_status try_set(const char* name, const T& value)
+        cjsonpp_status set(const char* name, const T& value)
         {
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
@@ -432,27 +432,27 @@ namespace cjsonpp
          * @brief Sets a key/value pair in an object without throwing.
          */
         template <typename T>
-        cjsonpp_status try_set(const std::string& name, const T& value)
+        cjsonpp_status set(const std::string& name, const T& value)
         {
-            return try_set(name.c_str(), value);
+            return set(name.c_str(), value);
         }
 
         /**
          * @brief Removes from object an item with the specified name without throwing.
          */
-        cjsonpp_status try_remove(const char* name);
+        cjsonpp_status remove(const char* name);
 
         /**
          * @brief Removes from object an item with the specified name without throwing.
          */
-        cjsonpp_status try_remove(const std::string& name)
+        cjsonpp_status remove(const std::string& name)
         {
-            return try_remove(name.c_str());
+            return remove(name.c_str());
         }
         /**
          * @brief Removes an item from array at the specified index without throwing.
          */
-        cjsonpp_status try_remove(int index);
+        cjsonpp_status remove(int index);
     };
 
     /**
@@ -607,7 +607,7 @@ namespace cjsonpp
     /**
      * @brief Converts a JSONObject to an array and outputs each element to the given output iterator.
      *
-     * Ex: asArray<JSONObject>(jsonArrayObject, std::back_inserter(vectorToFill));
+     * Ex: as_array<JSONObject>(jsonArrayObject, std::back_inserter(vectorToFill));
      *
      * @tparam T The type of the elements in the JSONObject.
      * @tparam TOutputIterator The type of the output iterator.
@@ -615,7 +615,7 @@ namespace cjsonpp
      * @param output The output iterator where the elements of the array will be stored.
      */
     template <class T, class TOutputIterator>
-    inline void asArray(const JSONObject& data, TOutputIterator output)
+    inline void as_array(const JSONObject& data, TOutputIterator output)
     {
         cJSON* current = cJSON_GetArrayItem(data.obj(), 0);
         while (current)
