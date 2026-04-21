@@ -187,6 +187,10 @@ set(TARGET_TOOLS_SRC
         tools/timer_scheduler.cpp
 )
 
+file(GLOB TARGET_EXAMPLES_SRC
+    examples/*.cpp
+)
+
 set(TARGET_SRC
         "${TARGET_TOOLS_SRC}"
         "${TARGET_CEXCEPTION_SRC}"
@@ -203,8 +207,7 @@ endif()
 add_library(framework_modules STATIC "${TARGET_H}" "${TARGET_SRC}")
 target_include_directories(framework_modules PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(framework_modules PUBLIC project_options)
-
-add_executable(publish_subscribe main.cpp)   
+add_executable(publish_subscribe main.cpp "${TARGET_EXAMPLES_SRC}")
 target_link_libraries(publish_subscribe PRIVATE framework_modules project_options Threads::Threads)
 
 if(LINUX) 

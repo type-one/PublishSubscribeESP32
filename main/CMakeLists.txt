@@ -47,8 +47,13 @@ set(TARGET_TOOLS_SRC
         tools/timer_scheduler.cpp
 )
 
+file(GLOB TARGET_EXAMPLES_SRC
+        examples/*.cpp
+)
+
 set(TARGET_SRC
         main.cpp
+        "${TARGET_EXAMPLES_SRC}"
         "${TARGET_TOOLS_SRC}"
         "${TARGET_CEXCEPTION_SRC}"
         "${TARGET_CJSON_SRC}"
