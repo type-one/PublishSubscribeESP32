@@ -87,7 +87,7 @@ void test_allocator_stress()
 
     auto context = std::make_shared<smp_task_context>();
 
-    constexpr const std::size_t task_stack_size = 2048U;
+    constexpr const std::size_t task_stack_size = 4096U;
     constexpr const int core1 = 1;
 
     worker_task1 task1(startup, context, "worker_task1", task_stack_size, core1, tools::base_task::default_priority);

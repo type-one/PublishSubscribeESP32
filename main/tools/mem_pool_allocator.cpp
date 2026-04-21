@@ -30,18 +30,7 @@
 // 3. This notice may not be removed or altered from any source distribution.  //
 //-----------------------------------------------------------------------------//
 
-#if defined(FREERTOS_PLATFORM)
-
-// mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
-// note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
-
-// uncomment to use mem pool allocator instead of regular heap allocation (requires C++ 20 or above)
-#define USE_MEM_POOL_ALLOCATOR
-
-// uncomment to warmup the mem pool with pre-allocated chunks of memory
-// #define USE_MEM_POOL_ALLOCATOR_WARMUP
-
-#endif
+// USE_MEM_POOL_ALLOCATOR and USE_MEM_POOL_ALLOCATOR_WARMUP are configured via compile definitions.
 
 #if defined(USE_MEM_POOL_ALLOCATOR)
 

@@ -12,6 +12,21 @@ if(CMAKE_CXX_STANDARD GREATER_EQUAL 20)
     message(STATUS "C++20 or newer is supported/enabled")
 endif()
 
+# mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
+# note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
+option(ENABLE_MEM_POOL_ALLOCATOR "Enable custom mem pool allocator" ON)
+option(ENABLE_MEM_POOL_ALLOCATOR_WARMUP "Warm up mem pool allocator with pre-allocated chunks" OFF)
+
+set(TARGET_COMPILE_DEFINITIONS)
+
+if(ENABLE_MEM_POOL_ALLOCATOR)
+    list(APPEND TARGET_COMPILE_DEFINITIONS USE_MEM_POOL_ALLOCATOR)
+endif()
+
+if(ENABLE_MEM_POOL_ALLOCATOR_WARMUP)
+    list(APPEND TARGET_COMPILE_DEFINITIONS USE_MEM_POOL_ALLOCATOR_WARMUP)
+endif()
+
 # Local header files here ONLY
 file(GLOB_RECURSE TARGET_H
     *.h
@@ -63,3 +78,7 @@ set(TARGET_SRC
 set(TARGET_INCLUDE_DIR .)
 
 idf_component_register(SRCS "${TARGET_SRC}" "${TARGET_H}" INCLUDE_DIRS "${TARGET_INCLUDE_DIR}")
+
+if(NOT CMAKE_BUILD_EARLY_EXPANSION AND TARGET_COMPILE_DEFINITIONS)
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE ${TARGET_COMPILE_DEFINITIONS})
+endif()
