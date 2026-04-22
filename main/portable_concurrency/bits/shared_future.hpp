@@ -28,6 +28,7 @@
 #endif
 #include "utils.h"
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces,readability-braces-around-statements,readability-identifier-length,cppcoreguidelines-rvalue-reference-param-not-moved)
 namespace portable_concurrency {
 inline namespace cxx14_v1 {
 
@@ -233,7 +234,7 @@ shared_future<T>::shared_future(
 
 #if defined(PC_HAS_COROUTINES)
 template <typename T> bool shared_future<T>::await_ready() const noexcept {
-  return is_ready();
+  return state_ && state_->continuations().executed();
 }
 
 template <typename T>
@@ -244,23 +245,24 @@ shared_future<T>::await_resume() const {
 
 template <typename T>
 void shared_future<T>::await_suspend(detail::coroutine_handle<> handle) const {
-  state_->push(std::move(handle));
+  state_->push(handle);
 }
 #endif
 
 namespace detail {
 
 template <typename T>
-std::shared_ptr<future_state<T>> &state_of(shared_future<T> &f) {
-  return f.state_;
+std::shared_ptr<future_state<T>> &state_of(shared_future<T> &shared_value) {
+  return shared_value.state_;
 }
 
 template <typename T>
-std::shared_ptr<future_state<T>> state_of(shared_future<T> &&f) {
-  return f.state_;
+std::shared_ptr<future_state<T>> state_of(shared_future<T> &&shared_value) {
+  return std::move(shared_value.state_);
 }
 
 } // namespace detail
 
 } // namespace cxx14_v1
 } // namespace portable_concurrency
+// NOLINTEND(modernize-concat-nested-namespaces,readability-braces-around-statements,readability-identifier-length,cppcoreguidelines-rvalue-reference-param-not-moved)

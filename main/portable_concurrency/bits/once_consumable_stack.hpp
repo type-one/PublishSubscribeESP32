@@ -24,6 +24,7 @@
 
 #include "once_consumable_stack.h"
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces,readability-braces-around-statements,readability-identifier-length,readability-named-parameter,modernize-use-equals-default,cppcoreguidelines-pro-type-const-cast)
 namespace portable_concurrency {
 inline namespace cxx14_v1 {
 namespace detail {
@@ -70,12 +71,10 @@ forward_list_iterator<T> begin(forward_list<T> &list) noexcept {
   return {list};
 }
 
-template <typename T> forward_list_iterator<T> end(forward_list<T> &) noexcept {
+template <typename T>
+forward_list_iterator<T> end(forward_list<T> & /*unused*/) noexcept {
   return {};
 }
-
-template <typename T>
-once_consumable_stack<T>::once_consumable_stack() noexcept {}
 
 template <typename T> once_consumable_stack<T>::~once_consumable_stack() {
   // Create temporary forward_list which can destroy all nodes properly. Nobody
@@ -132,3 +131,4 @@ once_consumable_stack<T>::consumed_marker() const noexcept {
 } // namespace detail
 } // namespace cxx14_v1
 } // namespace portable_concurrency
+// NOLINTEND(modernize-concat-nested-namespaces,readability-braces-around-statements,readability-identifier-length,readability-named-parameter,modernize-use-equals-default,cppcoreguidelines-pro-type-const-cast)

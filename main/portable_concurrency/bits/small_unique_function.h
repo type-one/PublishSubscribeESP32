@@ -22,6 +22,7 @@
 #include <cstddef>
 #include <type_traits>
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces,bugprone-forwarding-reference-overload)
 namespace portable_concurrency {
 inline namespace cxx14_v1 {
 namespace detail {
@@ -43,7 +44,10 @@ public:
   small_unique_function() noexcept;
   small_unique_function(std::nullptr_t) noexcept;
 
-  template <typename F> small_unique_function(F &&f);
+  template <typename F,
+            typename = std::enable_if_t<!std::is_same_v<std::decay_t<F>,
+                                                        small_unique_function>>>
+  small_unique_function(F &&f);
 
   ~small_unique_function();
 
@@ -59,7 +63,7 @@ public:
   explicit operator bool() const noexcept { return vtbl_ != nullptr; }
 
 private:
-  mutable small_buffer buffer_;
+  mutable small_buffer buffer_{};
   const callable_vtbl<R, A...> *vtbl_ = nullptr;
 };
 
@@ -68,3 +72,4 @@ extern template class small_unique_function<void()>;
 } // namespace detail
 } // namespace cxx14_v1
 } // namespace portable_concurrency
+// NOLINTEND(modernize-concat-nested-namespaces,bugprone-forwarding-reference-overload)

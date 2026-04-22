@@ -25,12 +25,14 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <stdexcept>
 #include <thread>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "coro.h"
 #include "execution.h"
 #include "tools/critical_section.hpp"
 #include "tools/cond_var.hpp"
@@ -376,6 +378,26 @@ public:
 
   explicit operator bool() const noexcept { return is_awaiten(); }
 
+#if defined(PC_HAS_COROUTINES)
+  ::portable_concurrency::detail::suspend_never initial_suspend() const noexcept { return {}; }
+  ::portable_concurrency::detail::suspend_never final_suspend() const noexcept { return {}; }
+  auto get_return_object() { return get_future(); }
+
+  void unhandled_exception() {
+    if constexpr (std::is_same_v<E, result_error>) {
+      set_error(result_error::execution_failure);
+    } else {
+      std::terminate();
+    }
+  }
+
+  template <typename U = T>
+    requires (!std::is_void_v<U>)
+  void return_value(U value) {
+    set_value(std::move(value));
+  }
+#endif
+
 private:
   detail::result_state_ptr<T, E> get_state() const {
     if (state_) {
@@ -446,6 +468,10 @@ public:
   using error_type = E;
   using result_type = expected<T, E>;
 
+#if defined(PC_HAS_COROUTINES)
+  using promise_type = promise_result<T, E>;
+#endif
+
   future_result() = default;
 
   explicit future_result(detail::result_state_ptr<T, E> state) : state_(std::move(state)) {}
@@ -483,6 +509,33 @@ public:
     std::lock_guard<tools::critical_section> guard(state_->mutex_);
     return state_->ready_;
   }
+
+#if defined(PC_HAS_COROUTINES)
+  [[nodiscard]] bool await_ready() const noexcept {
+    return !state_ || is_ready();
+  }
+
+  auto await_resume() {
+    auto result = get_result();
+    if (!result.has_value()) {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+      throw std::runtime_error("future_result await_resume failed");
+#else
+      std::terminate();
+#endif
+    }
+
+    if constexpr (std::is_void_v<T>) {
+      return;
+    } else {
+      return std::move(result).value();
+    }
+  }
+
+  void await_suspend(::portable_concurrency::detail::coroutine_handle<> handle) {
+    subscribe([handle]() mutable { handle.resume(); });
+  }
+#endif
 
   result_type get_result() {
     if (!state_) {

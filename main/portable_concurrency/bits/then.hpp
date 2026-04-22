@@ -25,6 +25,7 @@
 #include "shared_state.h"
 #include "utils.h"
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces,readability-identifier-length,readability-braces-around-statements,cppcoreguidelines-rvalue-reference-param-not-moved)
 namespace portable_concurrency {
 inline namespace cxx14_v1 {
 namespace detail {
@@ -263,3 +264,4 @@ auto make_then_state(continuations_stack &subscriptions, E &&exec, F &&f) {
 } // namespace detail
 } // namespace cxx14_v1
 } // namespace portable_concurrency
+// NOLINTEND(modernize-concat-nested-namespaces,readability-identifier-length,readability-braces-around-statements,cppcoreguidelines-rvalue-reference-param-not-moved)

@@ -25,6 +25,7 @@
 #include "small_unique_function.hpp"
 #include "unique_function.h"
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces,readability-identifier-length,readability-named-parameter,readability-braces-around-statements,cppcoreguidelines-missing-std-forward)
 namespace portable_concurrency {
 inline namespace cxx14_v1 {
 
@@ -90,3 +91,4 @@ unique_function<R(A...)>::operator detail::small_unique_function<R(A...)> &&()
 
 } // namespace cxx14_v1
 } // namespace portable_concurrency
+// NOLINTEND(modernize-concat-nested-namespaces,readability-identifier-length,readability-named-parameter,readability-braces-around-statements,cppcoreguidelines-missing-std-forward)

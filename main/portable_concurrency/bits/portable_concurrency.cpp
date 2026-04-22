@@ -37,6 +37,7 @@
 #include "when_all.h"
 #include "when_any.h"
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces,cppcoreguidelines-rvalue-reference-param-not-moved)
 namespace portable_concurrency {
 inline namespace cxx14_v1 {
 namespace detail {
@@ -53,31 +54,33 @@ template class small_unique_function<void()>;
 template struct forward_list_deleter<continuation>;
 template class once_consumable_stack<continuation>;
 
-void continuations_stack::push(continuation &&cnt) {
-  if (!stack_.push(cnt))
-    cnt();
+void continuations_stack::push(continuation &&continuation_fn) {
+  if (!stack_.push(continuation_fn)) {
+    continuation_fn();
+  }
 }
 
 void continuations_stack::execute() {
   auto continuations = stack_.consume();
-  for (auto &cnt : continuations)
-    cnt();
+  for (auto &continuation_fn : continuations) {
+    continuation_fn();
+  }
 }
 
 bool continuations_stack::executed() const { return stack_.is_consumed(); }
 
 void wait(future_state_base &state) {
   tools::critical_section mtx;
-  tools::cond_var cv;
+  tools::cond_var condition_variable;
   bool ready = false;
   state.push([&] {
     std::lock_guard<tools::critical_section> guard{mtx};
     ready = true;
-    cv.notify_one();
+    condition_variable.notify_one();
   });
 
-  std::unique_lock<tools::critical_section> lk{mtx};
-  cv.wait(lk, [&] { return ready; });
+  std::unique_lock<tools::critical_section> lock{mtx};
+  condition_variable.wait(lock, [&] { return ready; });
 }
 
 template class closable_queue<unique_function<void()>>;
@@ -116,6 +119,7 @@ void future_state_base::push(continuation &&cnt) {
 }
 
 } // namespace detail
+// NOLINTEND(modernize-concat-nested-namespaces,cppcoreguidelines-rvalue-reference-param-not-moved)
 
 namespace {
 
@@ -127,8 +131,13 @@ void process_queue(
   const std::atomic<bool> &stopped
 ) noexcept {
   unique_function<void()> task;
-  while (!stopped.load(std::memory_order_relaxed) && queue.pop(task))
-    task();
+  while (!stopped.load(std::memory_order_relaxed) && queue.pop(task)) {
+    try {
+      task();
+    } catch (...) {
+      std::terminate();
+    }
+  }
 }
 
 } // namespace
@@ -150,8 +159,9 @@ void latch::count_down_and_wait() {
     return;
   }
   cv_.wait(lock, [this] { return counter_ == 0; });
-  if (--waiters_ == 0)
+  if (--waiters_ == 0) {
     cv_.notify_one();
+  }
 }
 
 void latch::count_down(ptrdiff_t n) {
@@ -160,8 +170,9 @@ void latch::count_down(ptrdiff_t n) {
     assert(counter_ >= n);
     assert(n >= 0);
     counter_ -= n;
-    if (counter_ > 0)
+    if (counter_ > 0) {
       return;
+    }
   }
   cv_.notify_all();
 }
@@ -175,17 +186,19 @@ void latch::wait() const {
   std::unique_lock<tools::critical_section> lock{mutex_};
   ++waiters_;
   cv_.wait(lock, [this] { return counter_ == 0; });
-  if (--waiters_ == 0)
+  if (--waiters_ == 0) {
     cv_.notify_one();
+  }
 }
 
 template <> void future<void>::get() {
-  if (!state_)
+  if (!state_) {
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     throw std::future_error(std::future_errc::no_state);
 #else
     std::terminate();
 #endif
+  }
   wait();
   auto state = std::move(state_);
   state->value_ref();
@@ -193,12 +206,13 @@ template <> void future<void>::get() {
 
 template <>
 typename shared_future<void>::get_result_type shared_future<void>::get() const {
-  if (!state_)
+  if (!state_) {
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     throw std::future_error(std::future_errc::no_state);
 #else
     std::terminate();
 #endif
+  }
   wait();
   state_->value_ref();
 }
@@ -218,8 +232,9 @@ future<when_any_result<std::tuple<>>> when_any() {
 
 static_thread_pool::static_thread_pool(std::size_t num_threads) {
   threads_.reserve(num_threads);
-  while (num_threads-- > 0)
-    threads_.push_back(std::thread{&static_thread_pool::attach, this});
+  while (num_threads-- > 0) {
+    threads_.emplace_back(&static_thread_pool::attach, this);
+  }
 }
 
 static_thread_pool::~static_thread_pool() {
@@ -241,7 +256,7 @@ void static_thread_pool::attach() {
   cv_.notify_all();
 }
 
-void static_thread_pool::stop() { 
+void static_thread_pool::stop() {
   stopped_.store(true, std::memory_order_relaxed);
   queue_.close();
 }
@@ -249,8 +264,9 @@ void static_thread_pool::stop() {
 void static_thread_pool::wait() {
   queue_.close();
   for (auto &thread : threads_) {
-    if (thread.joinable())
+    if (thread.joinable()) {
       thread.join();
+    }
   }
   threads_.clear();
 }

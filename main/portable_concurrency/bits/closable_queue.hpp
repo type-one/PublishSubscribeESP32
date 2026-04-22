@@ -20,6 +20,7 @@
 
 #include "closable_queue.h"
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace portable_concurrency {
 inline namespace cxx14_v1 {
 namespace detail {
@@ -27,8 +28,9 @@ namespace detail {
 template <typename T> bool closable_queue<T>::pop(T &dest) {
   std::unique_lock<tools::critical_section> lock(mutex_);
   cv_.wait(lock, [this]() { return closed_ || !queue_.empty(); });
-  if (closed_ && queue_.empty())
+  if (closed_ && queue_.empty()) {
     return false;
+  }
   std::swap(dest, queue_.front());
   queue_.pop();
   return true;
@@ -36,8 +38,9 @@ template <typename T> bool closable_queue<T>::pop(T &dest) {
 
 template <typename T> void closable_queue<T>::push(T &&val) {
   std::lock_guard<tools::critical_section> guard(mutex_);
-  if (closed_)
+  if (closed_) {
     return;
+  }
   queue_.emplace(std::move(val));
   cv_.notify_one();
 }
@@ -51,3 +54,4 @@ template <typename T> void closable_queue<T>::close() {
 } // namespace detail
 } // namespace cxx14_v1
 } // namespace portable_concurrency
+// NOLINTEND(modernize-concat-nested-namespaces)

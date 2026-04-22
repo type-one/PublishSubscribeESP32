@@ -99,7 +99,7 @@ forward_list<T> allocate_list_node(T &&val, const Alloc &alloc) {
  */
 template <typename T> class once_consumable_stack {
 public:
-  once_consumable_stack() noexcept;
+  once_consumable_stack() noexcept = default;
   ~once_consumable_stack();
 
   /**

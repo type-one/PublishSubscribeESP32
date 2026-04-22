@@ -25,6 +25,7 @@
 #include "small_unique_function.h"
 #include "voidify.h"
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces,bugprone-easily-swappable-parameters,readability-identifier-length,fuchsia-trailing-return,readability-named-parameter,cppcoreguidelines-pro-type-member-init,readability-braces-around-statements)
 namespace portable_concurrency {
 inline namespace cxx14_v1 {
 namespace detail {
@@ -93,8 +94,8 @@ struct is_null_comparable<
     : std::true_type {};
 
 template <typename T>
-auto is_null(const T &) noexcept
-    -> std::enable_if_t<!is_null_comparable<T>::value, bool> {
+std::enable_if_t<!is_null_comparable<T>::value, bool>
+is_null(const T & /*unused*/) noexcept {
   return false;
 }
 
@@ -120,7 +121,7 @@ small_unique_function<R(A...)>::small_unique_function(std::nullptr_t) noexcept {
 }
 
 template <typename R, typename... A>
-template <typename F>
+template <typename F, typename>
 small_unique_function<R(A...)>::small_unique_function(F &&f) {
   static_assert(is_storable_t<std::decay_t<F>>::value,
                 "Can't embed object into small_unique_function");
@@ -165,3 +166,4 @@ R small_unique_function<R(A...)>::operator()(A... args) const {
 } // namespace detail
 } // namespace cxx14_v1
 } // namespace portable_concurrency
+// NOLINTEND(modernize-concat-nested-namespaces,bugprone-easily-swappable-parameters,readability-identifier-length,fuchsia-trailing-return,readability-named-parameter,cppcoreguidelines-pro-type-member-init,readability-braces-around-statements)
