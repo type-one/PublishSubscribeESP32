@@ -1,3 +1,21 @@
+/**
+ * @file algo_adapters.h
+ * @brief Portable concurrency component.
+ * @author Sergey Vidyuk
+ * @date 2019-06-21
+ * @license https://creativecommons.org/publicdomain/zero/1.0/
+ * @see https://creativecommons.org/publicdomain/zero/1.0/
+ */
+
+//-----------------------------------------------------------------------------//
+// Portable Concurrency Framework                                              //
+// Original author: Sergey Vidyuk                                              //
+// Original date: 2019-06-21                                                   //
+// https://github.com/VestniK/portable_concurrency                            //
+// Public Domain (CC0 1.0)                                                    //
+// https://creativecommons.org/publicdomain/zero/1.0/                         //
+//-----------------------------------------------------------------------------//
+
 #pragma once
 
 #include <portable_concurrency/bits/future.h>

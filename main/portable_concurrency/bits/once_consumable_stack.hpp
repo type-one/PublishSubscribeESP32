@@ -1,3 +1,21 @@
+/**
+ * @file once_consumable_stack.hpp
+ * @brief Portable concurrency component.
+ * @author Sergey Vidyuk
+ * @date 2018-01-30
+ * @license https://creativecommons.org/publicdomain/zero/1.0/
+ * @see https://creativecommons.org/publicdomain/zero/1.0/
+ */
+
+//-----------------------------------------------------------------------------//
+// Portable Concurrency Framework                                              //
+// Original author: Sergey Vidyuk                                              //
+// Original date: 2018-01-30                                                   //
+// https://github.com/VestniK/portable_concurrency                            //
+// Public Domain (CC0 1.0)                                                    //
+// https://creativecommons.org/publicdomain/zero/1.0/                         //
+//-----------------------------------------------------------------------------//
+
 #pragma once
 
 #include <cassert>
