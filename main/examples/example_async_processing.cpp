@@ -62,7 +62,28 @@ namespace
         std::atomic<int> call_count { 0 };
     };
 
+    struct periodic_feed_context
+    {
+        std::atomic<int> submitted_samples { 0 };
+        std::atomic<int> completed_samples { 0 };
+        std::atomic<int> failed_samples { 0 };
+        std::atomic<std::int64_t> aggregated_output { 0 };
+        std::vector<portable_concurrency::v2::future_result<int>> pending_results;
+    };
+
+    class async_processing_worker_model
+    {
+    public:
+        [[nodiscard]] static int process_sample(int sample_value)
+        {
+            constexpr int sample_multiplier = 2;
+            constexpr int sample_offset = 1;
+            return (sample_value * sample_multiplier) + sample_offset;
+        }
+    };
+
     using async_worker = tools::worker_task<async_context>;
+    using periodic_feed_task = tools::periodic_task<periodic_feed_context>;
 
     /** @brief Factory that creates a named @c async_worker with a minimal stack. */
     std::unique_ptr<async_worker> make_async_worker(
@@ -103,6 +124,13 @@ namespace
         const int base = co_await upstream;
         context->call_count.fetch_add(1);
         co_return base + offset;
+    }
+
+    portable_concurrency::v2::future_result<int> schedule_and_process_sample(
+        async_worker& worker, const std::shared_ptr<async_processing_worker_model>& processor, int sample_value)
+    {
+        co_await worker.schedule();
+        co_return processor->process_sample(sample_value);
     }
 #endif // ASYNC_EXAMPLE_HAS_COROUTINES && WORKER_TASK_HAS_PC_ASYNC
 
@@ -653,6 +681,191 @@ namespace
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Example 13: periodic task feeds async worker stress flow (no coroutine)
+
+    /**
+     * @brief Stresses async dispatch by using a periodic producer that feeds a
+     *        worker class through @c delegate_async_v2.
+     */
+    void test_periodic_feeds_worker_stress_no_coroutines()
+    {
+        LOG_INFO("-- v2: periodic -> worker stress (no coroutine) --");
+        print_stats();
+
+        using namespace portable_concurrency::v2;
+
+        constexpr int target_sample_count = 40;
+        constexpr std::size_t periodic_stack_size = 4096U;
+        constexpr auto periodic_interval = std::chrono::milliseconds(2);
+        constexpr auto completion_timeout = std::chrono::seconds(3);
+        constexpr auto wait_poll_interval = std::chrono::milliseconds(5);
+
+        auto async_worker_context = std::make_shared<async_context>();
+        auto worker = make_async_worker(async_worker_context, "v2_periodic_feed_worker");
+        auto feed_context = std::make_shared<periodic_feed_context>();
+        auto processor = std::make_shared<async_processing_worker_model>();
+        feed_context->pending_results.reserve(static_cast<std::size_t>(target_sample_count));
+
+        auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) {};
+        auto* worker_ptr = worker.get();
+
+        auto periodic = [worker_ptr, processor](const std::shared_ptr<periodic_feed_context>& local_context, const std::string&)
+        {
+            int submitted_index = local_context->submitted_samples.load();
+            const int target_value = target_sample_count;
+            while ((submitted_index < target_value)
+                && !local_context->submitted_samples.compare_exchange_weak(submitted_index, submitted_index + 1))
+            {
+            }
+
+            if (submitted_index >= target_value)
+            {
+                return;
+            }
+
+            auto chained = worker_ptr
+                               ->delegate_async_v2(
+                                   [processor](const std::shared_ptr<async_context>& local_async_context,
+                                       const std::string&,
+                                       int sample_value)
+                                   {
+                                       local_async_context->call_count.fetch_add(1);
+                                       return processor->process_sample(sample_value);
+                                   },
+                                   submitted_index)
+                               .then_value([local_context](int processed_value)
+                               {
+                                   local_context->completed_samples.fetch_add(1);
+                                   local_context->aggregated_output.fetch_add(processed_value);
+                                   return processed_value;
+                               })
+                               .then_error([local_context](result_error)
+                               {
+                                   local_context->failed_samples.fetch_add(1);
+                                   return -1;
+                               });
+
+            local_context->pending_results.emplace_back(std::move(chained));
+        };
+
+        {
+            periodic_feed_task producer(
+                std::move(startup), std::move(periodic), feed_context, "v2_periodic_feed_producer", periodic_interval, periodic_stack_size);
+
+            const auto deadline = std::chrono::steady_clock::now() + completion_timeout;
+            while ((std::chrono::steady_clock::now() < deadline)
+                && (feed_context->completed_samples.load() < target_sample_count)
+                && (feed_context->failed_samples.load() == 0))
+            {
+                std::this_thread::sleep_for(wait_poll_interval);
+            }
+        }
+
+        std::printf("periodic feed (no coroutine): submitted=%d completed=%d failed=%d worker_calls=%d\n",
+            feed_context->submitted_samples.load(),
+            feed_context->completed_samples.load(),
+            feed_context->failed_samples.load(),
+            async_worker_context->call_count.load());
+
+        const std::int64_t expected_sum
+            = static_cast<std::int64_t>(target_sample_count) * static_cast<std::int64_t>(target_sample_count);
+        std::printf("periodic feed (no coroutine): aggregated=%" PRId64 " expected=%" PRId64 "\n",
+            feed_context->aggregated_output.load(),
+            expected_sum);
+    }
+
+#if defined(ASYNC_EXAMPLE_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
+    // -----------------------------------------------------------------------
+    // Example 14: periodic task feeds worker via coroutine schedule()
+
+    /**
+     * @brief Stresses async dispatch with coroutines by letting a periodic
+     *        producer launch schedule()-based coroutine jobs.
+     */
+    void test_periodic_feeds_worker_stress_coroutines()
+    {
+        LOG_INFO("-- v2: periodic -> worker stress (coroutine) --");
+        print_stats();
+
+        using namespace portable_concurrency::v2;
+
+        constexpr int target_sample_count = 40;
+        constexpr std::size_t periodic_stack_size = 4096U;
+        constexpr auto periodic_interval = std::chrono::milliseconds(2);
+        constexpr auto completion_timeout = std::chrono::seconds(3);
+        constexpr auto wait_poll_interval = std::chrono::milliseconds(5);
+
+        auto async_worker_context = std::make_shared<async_context>();
+        auto worker = make_async_worker(async_worker_context, "v2_periodic_feed_coro_worker");
+        auto feed_context = std::make_shared<periodic_feed_context>();
+        auto processor = std::make_shared<async_processing_worker_model>();
+        feed_context->pending_results.reserve(static_cast<std::size_t>(target_sample_count));
+
+        auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) {};
+        auto* worker_ptr = worker.get();
+
+        auto periodic = [worker_ptr, processor](const std::shared_ptr<periodic_feed_context>& local_context, const std::string&)
+        {
+            int submitted_index = local_context->submitted_samples.load();
+            const int target_value = target_sample_count;
+            while ((submitted_index < target_value)
+                && !local_context->submitted_samples.compare_exchange_weak(submitted_index, submitted_index + 1))
+            {
+            }
+
+            if (submitted_index >= target_value)
+            {
+                return;
+            }
+
+            auto chained = schedule_and_process_sample(*worker_ptr, processor, submitted_index)
+                               .then_value([local_context](int processed_value)
+                               {
+                                   local_context->completed_samples.fetch_add(1);
+                                   local_context->aggregated_output.fetch_add(processed_value);
+                                   return processed_value;
+                               })
+                               .then_error([local_context](result_error)
+                               {
+                                   local_context->failed_samples.fetch_add(1);
+                                   return -1;
+                               });
+
+            local_context->pending_results.emplace_back(std::move(chained));
+        };
+
+        {
+            periodic_feed_task producer(std::move(startup),
+                std::move(periodic),
+                feed_context,
+                "v2_periodic_feed_coro_producer",
+                periodic_interval,
+                periodic_stack_size);
+
+            const auto deadline = std::chrono::steady_clock::now() + completion_timeout;
+            while ((std::chrono::steady_clock::now() < deadline)
+                && (feed_context->completed_samples.load() < target_sample_count)
+                && (feed_context->failed_samples.load() == 0))
+            {
+                std::this_thread::sleep_for(wait_poll_interval);
+            }
+        }
+
+        std::printf("periodic feed (coroutine): submitted=%d completed=%d failed=%d worker_calls=%d\n",
+            feed_context->submitted_samples.load(),
+            feed_context->completed_samples.load(),
+            feed_context->failed_samples.load(),
+            async_worker_context->call_count.load());
+
+        const std::int64_t expected_sum
+            = static_cast<std::int64_t>(target_sample_count) * static_cast<std::int64_t>(target_sample_count);
+        std::printf("periodic feed (coroutine): aggregated=%" PRId64 " expected=%" PRId64 "\n",
+            feed_context->aggregated_output.load(),
+            expected_sum);
+    }
+#endif
+
 } // namespace
 
 void run_example_async_processing()
@@ -670,8 +883,10 @@ void run_example_async_processing()
     test_when_all_gather();
     test_timeout_detection();
     test_timeout_and_cancellation();
+    test_periodic_feeds_worker_stress_no_coroutines();
 
 #if defined(ASYNC_EXAMPLE_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
     test_coroutine_schedule_and_await();
+    test_periodic_feeds_worker_stress_coroutines();
 #endif
 }

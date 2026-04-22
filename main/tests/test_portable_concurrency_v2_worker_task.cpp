@@ -15,13 +15,16 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
 #include "portable_concurrency/bits/coro.h"
 #include "portable_concurrency/p_future_v2.hpp"
+#include "tools/periodic_task.hpp"
 #include "tools/worker_task.hpp"
 
 #if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines) || (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
@@ -34,7 +37,26 @@ struct worker_v2_context {
     std::atomic<int> loop_counter { 0 };
 };
 
+struct periodic_stress_context {
+    std::atomic<int> submitted_jobs { 0 };
+    std::atomic<int> completed_jobs { 0 };
+    std::atomic<int> failed_jobs { 0 };
+    std::atomic<std::int64_t> processed_sum { 0 };
+    std::vector<portable_concurrency::v2::future_result<int>> scheduled_results;
+};
+
+class stress_worker_processor {
+public:
+    int process_sample(int input_value) const
+    {
+        constexpr int sample_multiplier = 2;
+        constexpr int sample_offset = 1;
+        return (input_value * sample_multiplier) + sample_offset;
+    }
+};
+
 using worker_v2_task = tools::worker_task<worker_v2_context>;
+using periodic_stress_task = tools::periodic_task<periodic_stress_context>;
 
 std::unique_ptr<worker_v2_task> make_worker_v2_task(
     const std::shared_ptr<worker_v2_context>& context, const std::string& name)
@@ -62,6 +84,13 @@ portable_concurrency::v2::future_result<int> coroutine_v2_await_future_job(
     const int upstream_value = co_await upstream;
     context->loop_counter.fetch_add(1);
     co_return upstream_value + 5;
+}
+
+portable_concurrency::v2::future_result<int> coroutine_process_sample_on_worker(
+    worker_v2_task& worker, const std::shared_ptr<stress_worker_processor>& processor, int input_value)
+{
+    co_await worker.schedule();
+    co_return processor->process_sample(input_value);
 }
 #endif
 
@@ -155,6 +184,98 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PromiseResultManualFulfillment)
     EXPECT_EQ(context->loop_counter.load(), 1);
 }
 
+TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCoroutines)
+{
+    using namespace portable_concurrency::v2;
+
+    constexpr int target_job_count = 80;
+    constexpr std::size_t periodic_stack_size = 4096U;
+    constexpr auto periodic_interval = std::chrono::milliseconds(2);
+    constexpr auto wait_poll_interval = std::chrono::milliseconds(5);
+    constexpr auto completion_timeout = std::chrono::seconds(5);
+
+    auto worker_context = std::make_shared<worker_v2_context>();
+    auto worker = make_worker_v2_task(worker_context, "v2_periodic_stress_worker");
+    auto stress_context = std::make_shared<periodic_stress_context>();
+    auto processor = std::make_shared<stress_worker_processor>();
+    stress_context->scheduled_results.reserve(static_cast<std::size_t>(target_job_count));
+
+    auto startup = [](const std::shared_ptr<periodic_stress_context>&, const std::string&) {};
+    auto* worker_ptr = worker.get();
+
+    auto periodic = [worker_ptr, processor](const std::shared_ptr<periodic_stress_context>& local_context, const std::string&)
+    {
+        int submitted_index = local_context->submitted_jobs.load();
+        const int target_value = target_job_count;
+        while ((submitted_index < target_value)
+            && !local_context->submitted_jobs.compare_exchange_weak(submitted_index, submitted_index + 1))
+        {
+        }
+
+        if (submitted_index >= target_value)
+        {
+            return;
+        }
+
+        auto chained = worker_ptr
+                           ->delegate_async_v2(
+                               [processor](const std::shared_ptr<worker_v2_context>& worker_ctx,
+                                   const std::string&,
+                                   int input_value)
+                               {
+                                   worker_ctx->loop_counter.fetch_add(1);
+                                   return processor->process_sample(input_value);
+                               },
+                               submitted_index)
+                           .then_value([local_context](int processed_value)
+                           {
+                               local_context->completed_jobs.fetch_add(1);
+                               local_context->processed_sum.fetch_add(processed_value);
+                               return processed_value;
+                           })
+                           .then_error([local_context](result_error)
+                           {
+                               local_context->failed_jobs.fetch_add(1);
+                               return -1;
+                           });
+
+        local_context->scheduled_results.emplace_back(std::move(chained));
+    };
+
+    {
+        periodic_stress_task producer(
+            std::move(startup), std::move(periodic), stress_context, "v2_periodic_stress_producer", periodic_interval, periodic_stack_size);
+
+        const auto deadline = std::chrono::steady_clock::now() + completion_timeout;
+        while ((std::chrono::steady_clock::now() < deadline)
+            && ((stress_context->completed_jobs.load() < target_job_count) || (stress_context->failed_jobs.load() > 0)))
+        {
+            if (stress_context->failed_jobs.load() > 0)
+            {
+                break;
+            }
+            std::this_thread::sleep_for(wait_poll_interval);
+        }
+    }
+
+    ASSERT_EQ(stress_context->submitted_jobs.load(), target_job_count);
+    ASSERT_EQ(stress_context->failed_jobs.load(), 0);
+    ASSERT_EQ(stress_context->completed_jobs.load(), target_job_count);
+    ASSERT_EQ(static_cast<int>(stress_context->scheduled_results.size()), target_job_count);
+
+    for (auto& scheduled_future : stress_context->scheduled_results)
+    {
+        const auto result = scheduled_future.get_result();
+        ASSERT_TRUE(result.has_value());
+        ASSERT_GT(result.value(), 0);
+    }
+
+    const std::int64_t expected_sum
+        = static_cast<std::int64_t>(target_job_count) * static_cast<std::int64_t>(target_job_count);
+    EXPECT_EQ(stress_context->processed_sum.load(), expected_sum);
+    EXPECT_EQ(worker_context->loop_counter.load(), target_job_count);
+}
+
 #if defined(PS_PC_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
 TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineScheduleFlow)
 {
@@ -191,5 +312,92 @@ TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineAwaitsFutureResult)
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result.value(), 25);
     EXPECT_EQ(context->loop_counter.load(), 2);
+}
+
+TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCoroutines)
+{
+    using namespace portable_concurrency::v2;
+
+    constexpr int target_job_count = 80;
+    constexpr std::size_t periodic_stack_size = 4096U;
+    constexpr auto periodic_interval = std::chrono::milliseconds(2);
+    constexpr auto wait_poll_interval = std::chrono::milliseconds(5);
+    constexpr auto completion_timeout = std::chrono::seconds(5);
+
+    auto worker_context = std::make_shared<worker_v2_context>();
+    auto worker = make_worker_v2_task(worker_context, "v2_periodic_coro_stress_worker");
+    auto stress_context = std::make_shared<periodic_stress_context>();
+    auto processor = std::make_shared<stress_worker_processor>();
+    stress_context->scheduled_results.reserve(static_cast<std::size_t>(target_job_count));
+
+    auto startup = [](const std::shared_ptr<periodic_stress_context>&, const std::string&) {};
+    auto* worker_ptr = worker.get();
+
+    auto periodic = [worker_ptr, processor](const std::shared_ptr<periodic_stress_context>& local_context, const std::string&)
+    {
+        int submitted_index = local_context->submitted_jobs.load();
+        const int target_value = target_job_count;
+        while ((submitted_index < target_value)
+            && !local_context->submitted_jobs.compare_exchange_weak(submitted_index, submitted_index + 1))
+        {
+        }
+
+        if (submitted_index >= target_value)
+        {
+            return;
+        }
+
+        auto chained = coroutine_process_sample_on_worker(*worker_ptr, processor, submitted_index)
+                           .then_value([local_context](int processed_value)
+                           {
+                               local_context->completed_jobs.fetch_add(1);
+                               local_context->processed_sum.fetch_add(processed_value);
+                               return processed_value;
+                           })
+                           .then_error([local_context](result_error)
+                           {
+                               local_context->failed_jobs.fetch_add(1);
+                               return -1;
+                           });
+
+        local_context->scheduled_results.emplace_back(std::move(chained));
+    };
+
+    {
+        periodic_stress_task producer(std::move(startup),
+            std::move(periodic),
+            stress_context,
+            "v2_periodic_coro_stress_producer",
+            periodic_interval,
+            periodic_stack_size);
+
+        const auto deadline = std::chrono::steady_clock::now() + completion_timeout;
+        while ((std::chrono::steady_clock::now() < deadline)
+            && ((stress_context->completed_jobs.load() < target_job_count) || (stress_context->failed_jobs.load() > 0)))
+        {
+            if (stress_context->failed_jobs.load() > 0)
+            {
+                break;
+            }
+            std::this_thread::sleep_for(wait_poll_interval);
+        }
+    }
+
+    ASSERT_EQ(stress_context->submitted_jobs.load(), target_job_count);
+    ASSERT_EQ(stress_context->failed_jobs.load(), 0);
+    ASSERT_EQ(stress_context->completed_jobs.load(), target_job_count);
+    ASSERT_EQ(static_cast<int>(stress_context->scheduled_results.size()), target_job_count);
+
+    for (auto& scheduled_future : stress_context->scheduled_results)
+    {
+        const auto result = scheduled_future.get_result();
+        ASSERT_TRUE(result.has_value());
+        ASSERT_GT(result.value(), 0);
+    }
+
+    const std::int64_t expected_sum
+        = static_cast<std::int64_t>(target_job_count) * static_cast<std::int64_t>(target_job_count);
+    EXPECT_EQ(stress_context->processed_sum.load(), expected_sum);
+    EXPECT_EQ(worker_context->loop_counter.load(), target_job_count);
 }
 #endif
