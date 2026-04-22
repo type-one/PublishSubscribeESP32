@@ -10,12 +10,12 @@ namespace {
 namespace test {
 
 template <typename Future> struct future_notify : ::testing::Test {
-  future_notify() { std::tie(promise, future) = pc::make_promise<int>(); }
+  future_notify() { std::tie(promise, future) = pco::make_promise<int>(); }
 
-  pc::promise<int> promise;
+  pco::promise<int> promise;
   Future future;
 };
-using futures = ::testing::Types<pc::future<int>, pc::shared_future<int>>;
+using futures = ::testing::Types<pco::future<int>, pco::shared_future<int>>;
 TYPED_TEST_SUITE(future_notify, futures);
 
 /**
@@ -96,8 +96,8 @@ TYPED_TEST(future_notify, is_not_called_if_future_destroyed_before_being_set) {
  */
 TYPED_TEST(future_notify, is_called_for_task_running_asyncroniusly) {
   std::atomic<bool> called{false};
-  pc::latch latch{2};
-  this->future = pc::async(g_future_tests_env, [&latch] {
+  pco::latch latch{2};
+  this->future = pco::async(g_future_tests_env, [&latch] {
     latch.count_down_and_wait();
     return 45;
   });

@@ -31,7 +31,7 @@ TYPED_TEST_SUITE_P(SharedFutureDeprecatedTests);
  * \brief Verifies default constructed is invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, default_constructed_is_invalid) {
-  pc::shared_future<TypeParam> future;
+  pco::shared_future<TypeParam> future;
   EXPECT_FALSE(future.valid());
 }
 
@@ -39,7 +39,7 @@ TYPED_TEST_P(SharedFutureTests, default_constructed_is_invalid) {
  * \brief Verifies obtained from promise is valid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, obtained_from_promise_is_valid) {
-  pc::promise<TypeParam> promise;
+  pco::promise<TypeParam> promise;
   auto future = promise.get_future().share();
   EXPECT_TRUE(future.valid());
 }
@@ -48,9 +48,9 @@ TYPED_TEST_P(SharedFutureTests, obtained_from_promise_is_valid) {
  * \brief Verifies copy constructed from invalid is invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, copy_constructed_from_invalid_is_invalid) {
-  pc::shared_future<TypeParam> sf1;
+  pco::shared_future<TypeParam> sf1;
   ASSERT_FALSE(sf1.valid());
-  pc::shared_future<TypeParam> sf2 = sf1;
+  pco::shared_future<TypeParam> sf2 = sf1;
   EXPECT_FALSE(sf1.valid());
   EXPECT_FALSE(sf2.valid());
 }
@@ -59,8 +59,8 @@ TYPED_TEST_P(SharedFutureTests, copy_constructed_from_invalid_is_invalid) {
  * \brief Verifies copy assigned from invalid is invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, copy_assigned_from_invalid_is_invalid) {
-  pc::shared_future<TypeParam> sf1;
-  pc::shared_future<TypeParam> sf2;
+  pco::shared_future<TypeParam> sf1;
+  pco::shared_future<TypeParam> sf2;
   ASSERT_FALSE(sf1.valid());
   ASSERT_FALSE(sf2.valid());
 
@@ -73,10 +73,10 @@ TYPED_TEST_P(SharedFutureTests, copy_assigned_from_invalid_is_invalid) {
  * \brief Verifies copy constructed from valid is valid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, copy_constructed_from_valid_is_valid) {
-  pc::promise<TypeParam> p;
-  pc::shared_future<TypeParam> sf1 = p.get_future();
+  pco::promise<TypeParam> p;
+  pco::shared_future<TypeParam> sf1 = p.get_future();
   ASSERT_TRUE(sf1.valid());
-  pc::shared_future<TypeParam> sf2 = sf1;
+  pco::shared_future<TypeParam> sf2 = sf1;
   EXPECT_TRUE(sf1.valid());
   EXPECT_TRUE(sf2.valid());
 }
@@ -85,9 +85,9 @@ TYPED_TEST_P(SharedFutureTests, copy_constructed_from_valid_is_valid) {
  * \brief Verifies copy assigned from valid is valid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, copy_assigned_from_valid_is_valid) {
-  pc::promise<TypeParam> p;
-  pc::shared_future<TypeParam> sf1 = p.get_future();
-  pc::shared_future<TypeParam> sf2;
+  pco::promise<TypeParam> p;
+  pco::shared_future<TypeParam> sf1 = p.get_future();
+  pco::shared_future<TypeParam> sf2;
   ASSERT_TRUE(sf1.valid());
   ASSERT_FALSE(sf2.valid());
 
@@ -100,10 +100,10 @@ TYPED_TEST_P(SharedFutureTests, copy_assigned_from_valid_is_valid) {
  * \brief Verifies moved to constructor is invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, moved_to_constructor_is_invalid) {
-  pc::promise<TypeParam> promise;
-  pc::shared_future<TypeParam> future = promise.get_future().share();
+  pco::promise<TypeParam> promise;
+  pco::shared_future<TypeParam> future = promise.get_future().share();
   EXPECT_TRUE(future.valid());
-  pc::shared_future<TypeParam> another_future{std::move(future)};
+  pco::shared_future<TypeParam> another_future{std::move(future)};
   EXPECT_FALSE(future.valid());
   EXPECT_TRUE(another_future.valid());
 }
@@ -112,10 +112,10 @@ TYPED_TEST_P(SharedFutureTests, moved_to_constructor_is_invalid) {
  * \brief Verifies moved to assigment to invalid is invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, moved_to_assigment_to_invalid_is_invalid) {
-  pc::promise<TypeParam> promise;
-  pc::shared_future<TypeParam> future = promise.get_future().share();
+  pco::promise<TypeParam> promise;
+  pco::shared_future<TypeParam> future = promise.get_future().share();
   EXPECT_TRUE(future.valid());
-  pc::shared_future<TypeParam> another_future;
+  pco::shared_future<TypeParam> another_future;
   EXPECT_FALSE(another_future.valid());
   another_future = std::move(future);
   EXPECT_FALSE(future.valid());
@@ -126,10 +126,10 @@ TYPED_TEST_P(SharedFutureTests, moved_to_assigment_to_invalid_is_invalid) {
  * \brief Verifies moved to assigment to valid is invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, moved_to_assigment_to_valid_is_invalid) {
-  pc::promise<TypeParam> promise1;
-  pc::promise<TypeParam> promise2;
-  pc::shared_future<TypeParam> future1 = promise1.get_future().share();
-  pc::shared_future<TypeParam> future2 = promise2.get_future().share();
+  pco::promise<TypeParam> promise1;
+  pco::promise<TypeParam> promise2;
+  pco::shared_future<TypeParam> future1 = promise1.get_future().share();
+  pco::shared_future<TypeParam> future2 = promise2.get_future().share();
   EXPECT_TRUE(future1.valid());
   EXPECT_TRUE(future2.valid());
 
@@ -142,9 +142,9 @@ TYPED_TEST_P(SharedFutureTests, moved_to_assigment_to_valid_is_invalid) {
  * \brief Verifies move constructed from invalid future for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, move_constructed_from_invalid_future) {
-  pc::future<TypeParam> f;
+  pco::future<TypeParam> f;
   ASSERT_FALSE(f.valid());
-  pc::shared_future<TypeParam> sf(std::move(f));
+  pco::shared_future<TypeParam> sf(std::move(f));
   EXPECT_FALSE(sf.valid());
   EXPECT_FALSE(f.valid());
 }
@@ -153,10 +153,10 @@ TYPED_TEST_P(SharedFutureTests, move_constructed_from_invalid_future) {
  * \brief Verifies move constructed from valid future for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, move_constructed_from_valid_future) {
-  pc::promise<TypeParam> p;
+  pco::promise<TypeParam> p;
   auto f = p.get_future();
   ASSERT_TRUE(f.valid());
-  pc::shared_future<TypeParam> sf(std::move(f));
+  pco::shared_future<TypeParam> sf(std::move(f));
   EXPECT_TRUE(sf.valid());
   EXPECT_FALSE(f.valid());
 }
@@ -165,9 +165,9 @@ TYPED_TEST_P(SharedFutureTests, move_constructed_from_valid_future) {
  * \brief Verifies share of invalid is invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, share_of_invalid_is_invalid) {
-  pc::future<TypeParam> future;
+  pco::future<TypeParam> future;
   ASSERT_FALSE(future.valid());
-  pc::shared_future<TypeParam> shared = future.share();
+  pco::shared_future<TypeParam> shared = future.share();
   EXPECT_FALSE(shared.valid());
 }
 
@@ -175,8 +175,8 @@ TYPED_TEST_P(SharedFutureTests, share_of_invalid_is_invalid) {
  * \brief Verifies is ready on nonready for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, is_ready_on_nonready) {
-  pc::promise<TypeParam> promise;
-  pc::shared_future<TypeParam> future = promise.get_future().share();
+  pco::promise<TypeParam> promise;
+  pco::shared_future<TypeParam> future = promise.get_future().share();
   EXPECT_FALSE(future.is_ready());
 }
 
@@ -184,8 +184,8 @@ TYPED_TEST_P(SharedFutureTests, is_ready_on_nonready) {
  * \brief Verifies is ready on future with value for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, is_ready_on_future_with_value) {
-  pc::promise<TypeParam> promise;
-  pc::shared_future<TypeParam> future = promise.get_future().share();
+  pco::promise<TypeParam> promise;
+  pco::shared_future<TypeParam> future = promise.get_future().share();
   set_promise_value<TypeParam>(promise);
   EXPECT_TRUE(future.is_ready());
 }
@@ -194,8 +194,8 @@ TYPED_TEST_P(SharedFutureTests, is_ready_on_future_with_value) {
  * \brief Verifies is ready on future with error for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, is_ready_on_future_with_error) {
-  pc::promise<TypeParam> promise;
-  pc::shared_future<TypeParam> future = promise.get_future().share();
+  pco::promise<TypeParam> promise;
+  pco::shared_future<TypeParam> future = promise.get_future().share();
   promise.set_exception(
       std::make_exception_ptr(std::runtime_error("test error")));
   EXPECT_TRUE(future.is_ready());
@@ -205,13 +205,13 @@ TYPED_TEST_P(SharedFutureTests, is_ready_on_future_with_error) {
  * \brief Verifies get on invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, get_on_invalid) {
-  pc::shared_future<TypeParam> future;
+  pco::shared_future<TypeParam> future;
   ASSERT_FALSE(future.valid());
   EXPECT_FUTURE_ERROR(future.get(), std::future_errc::no_state);
 }
 
 template <typename T> void test_retrieve_shared_future_result() {
-  const pc::shared_future<T> future =
+  const pco::shared_future<T> future =
       set_value_in_other_thread<T>(25ms).share();
   ASSERT_TRUE(future.valid());
 
@@ -266,7 +266,7 @@ TYPED_TEST_P(SharedFutureTests, retrieve_exception) {
 }
 
 template <typename T> void test_retrieve_shared_future_result_twice() {
-  pc::shared_future<T> sf1 = set_value_in_other_thread<T>(25ms);
+  pco::shared_future<T> sf1 = set_value_in_other_thread<T>(25ms);
   auto sf2 = sf1;
   ASSERT_TRUE(sf1.valid());
   ASSERT_TRUE(sf2.valid());
@@ -288,7 +288,7 @@ TYPED_TEST_P(SharedFutureTests, retreive_result_from_several_futures) {
  * \brief Verifies retreive exception from several futures for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, retreive_exception_from_several_futures) {
-  pc::shared_future<TypeParam> sf1 = set_error_in_other_thread<TypeParam>(
+  pco::shared_future<TypeParam> sf1 = set_error_in_other_thread<TypeParam>(
       25ms, std::runtime_error("test error"));
   auto sf2 = sf1;
   ASSERT_TRUE(sf1.valid());
@@ -304,7 +304,7 @@ TYPED_TEST_P(SharedFutureTests, retreive_exception_from_several_futures) {
  * \brief Verifies wait on invalid for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, wait_on_invalid) {
-  pc::shared_future<TypeParam> future;
+  pco::shared_future<TypeParam> future;
   ASSERT_FALSE(future.valid());
 
   EXPECT_FUTURE_ERROR(future.wait(), std::future_errc::no_state);
@@ -315,7 +315,7 @@ TYPED_TEST_P(SharedFutureTests, wait_on_invalid) {
  * \brief Verifies wait for on invalid for shared future deprecated.
  */
 TYPED_TEST_P(SharedFutureDeprecatedTests, wait_for_on_invalid) {
-  pc::shared_future<TypeParam> future;
+  pco::shared_future<TypeParam> future;
   ASSERT_FALSE(future.valid());
 
   EXPECT_FUTURE_ERROR(future.wait_for(5s), std::future_errc::no_state);
@@ -325,7 +325,7 @@ TYPED_TEST_P(SharedFutureDeprecatedTests, wait_for_on_invalid) {
  * \brief Verifies wait until on invalid for shared future deprecated.
  */
 TYPED_TEST_P(SharedFutureDeprecatedTests, wait_until_on_invalid) {
-  pc::shared_future<TypeParam> future;
+  pco::shared_future<TypeParam> future;
   ASSERT_FALSE(future.valid());
 
   EXPECT_FUTURE_ERROR(future.wait_until(sys_clock::now() + 5s),
@@ -337,7 +337,7 @@ TYPED_TEST_P(SharedFutureDeprecatedTests, wait_until_on_invalid) {
  * \brief Verifies wait on ready value for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, wait_on_ready_value) {
-  pc::promise<TypeParam> promise;
+  pco::promise<TypeParam> promise;
   auto future = promise.get_future().share();
   set_promise_value<TypeParam>(promise);
   ASSERT_TRUE(future.valid());
@@ -348,11 +348,11 @@ TYPED_TEST_P(SharedFutureTests, wait_on_ready_value) {
   EXPECT_TRUE(future.is_ready());
 
 #if !defined(PC_NO_DEPRECATED)
-  EXPECT_EQ(pc::future_status::ready, future.wait_for(5s));
+  EXPECT_EQ(pco::future_status::ready, future.wait_for(5s));
   EXPECT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 
-  EXPECT_EQ(pc::future_status::ready, future.wait_until(sys_clock::now() + 5s));
+  EXPECT_EQ(pco::future_status::ready, future.wait_until(sys_clock::now() + 5s));
   EXPECT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 #endif
@@ -362,7 +362,7 @@ TYPED_TEST_P(SharedFutureTests, wait_on_ready_value) {
  * \brief Verifies wait on ready error for shared future.
  */
 TYPED_TEST_P(SharedFutureTests, wait_on_ready_error) {
-  pc::promise<TypeParam> promise;
+  pco::promise<TypeParam> promise;
   auto future = promise.get_future().share();
   promise.set_exception(
       std::make_exception_ptr(std::runtime_error("test error")));
@@ -374,11 +374,11 @@ TYPED_TEST_P(SharedFutureTests, wait_on_ready_error) {
   EXPECT_TRUE(future.is_ready());
 
 #if !defined(PC_NO_DEPRECATED)
-  EXPECT_EQ(pc::future_status::ready, future.wait_for(5s));
+  EXPECT_EQ(pco::future_status::ready, future.wait_for(5s));
   EXPECT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 
-  EXPECT_EQ(pc::future_status::ready, future.wait_until(sys_clock::now() + 5s));
+  EXPECT_EQ(pco::future_status::ready, future.wait_until(sys_clock::now() + 5s));
   EXPECT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 #endif
@@ -389,16 +389,16 @@ TYPED_TEST_P(SharedFutureTests, wait_on_ready_error) {
  * \brief Verifies wait timeout for shared future deprecated.
  */
 TYPED_TEST_P(SharedFutureDeprecatedTests, wait_timeout) {
-  pc::promise<TypeParam> promise;
+  pco::promise<TypeParam> promise;
   auto future = promise.get_future().share();
   ASSERT_TRUE(future.valid());
   ASSERT_FALSE(future.is_ready());
 
-  EXPECT_EQ(pc::future_status::timeout, future.wait_for(5ms));
+  EXPECT_EQ(pco::future_status::timeout, future.wait_for(5ms));
   EXPECT_TRUE(future.valid());
   EXPECT_FALSE(future.is_ready());
 
-  EXPECT_EQ(pc::future_status::timeout,
+  EXPECT_EQ(pco::future_status::timeout,
             future.wait_until(hires_clock::now() + 5ms));
   EXPECT_TRUE(future.valid());
   EXPECT_FALSE(future.is_ready());

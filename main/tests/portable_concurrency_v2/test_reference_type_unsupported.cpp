@@ -7,14 +7,14 @@
  * The following behaviors differ from v1 by design and are **not parity defects**.
  *
  * ### 1. Reference return types are unsupported
- * v1 supports `pc::future<T&>` and `pc::promise<T&>` with reference semantics.
+ * v1 supports `pco::future<T&>` and `pco::promise<T&>` with reference semantics.
  * v2 enforces `static_assert(!std::is_reference_v<T>)` on `future_result<T,E>`,
  * `shared_result<T,E>`, and `packaged_task_result<T(...)>` to avoid lifetime and
  * move-semantics complexity in async contexts.
  * Workaround: use `std::reference_wrapper<T>` or pointers.
  *
  * ### 2. Allocator-extended constructor for promise_result is not supported
- * v1 `pc::promise<T>` accepts `(std::allocator_arg_t, Allocator)` constructor.
+ * v1 `pco::promise<T>` accepts `(std::allocator_arg_t, Allocator)` constructor.
  * v2 `promise_result<T,E>` does not provide this overload; custom allocation is
  * out of scope for the no-exceptions embedded target. Verified by
  * `PromiseResultTest.allocator_constructor_is_not_supported`.

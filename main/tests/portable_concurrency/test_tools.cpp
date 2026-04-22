@@ -8,7 +8,7 @@ future_tests_env *g_future_tests_env = static_cast<future_tests_env *>(
 
 future_tests_env::future_tests_env(size_t threads_num) : pool_{threads_num} {
   tids_.reserve(threads_num);
-  pc::latch latch{static_cast<ptrdiff_t>(threads_num)};
+  pco::latch latch{static_cast<ptrdiff_t>(threads_num)};
   std::mutex mtx;
   while (threads_num-- > 0) {
     post(pool_.executor(), [this, &latch, &mtx] {
@@ -35,7 +35,7 @@ void future_tests_env::wait_current_tasks() {
         "wait_current_tasks from worker thread"};
   }
 
-  pc::latch latch{static_cast<ptrdiff_t>(tids_.size())};
+  pco::latch latch{static_cast<ptrdiff_t>(tids_.size())};
   for (size_t i = 0; i < tids_.size(); ++i)
     post(pool_.executor(), [&latch] { latch.count_down_and_wait(); });
   latch.wait();
@@ -54,7 +54,7 @@ std::ostream &operator<<(std::ostream &out,
              << reinterpret_cast<std::uintptr_t>(&printable.value);
 }
 
-void expect_future_exception(pc::future<void> &future,
+void expect_future_exception(pco::future<void> &future,
                              const std::string &what) {
   try {
     future.get();
@@ -68,7 +68,7 @@ void expect_future_exception(pc::future<void> &future,
   }
 }
 
-void expect_future_exception(const pc::shared_future<void> &future,
+void expect_future_exception(const pco::shared_future<void> &future,
                              const std::string &what) {
   try {
     future.get();

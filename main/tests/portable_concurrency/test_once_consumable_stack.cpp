@@ -14,7 +14,7 @@
 
 using namespace std::literals;
 
-template <typename T> using stack = pc::detail::once_consumable_stack<T>;
+template <typename T> using stack = pco::detail::once_consumable_stack<T>;
 
 namespace {
 
@@ -23,7 +23,7 @@ struct record {
   size_t task_id;
 };
 
-record producer(stack<record> &records_stack, pc::latch &latch,
+record producer(stack<record> &records_stack, pco::latch &latch,
                 size_t task_id) {
   latch.count_down_and_wait();
   record rec = {0, task_id};
@@ -60,13 +60,13 @@ template <typename It>
  */
 TEST(OnceConsumableQueueTests, concurrent_push_until_consume) {
   stack<record> records_stack;
-  pc::latch latch{
+  pco::latch latch{
       static_cast<ptrdiff_t>(g_future_tests_env->threads_count() + 1)};
 
-  std::vector<pc::future<record>> futures;
+  std::vector<pco::future<record>> futures;
   futures.reserve(g_future_tests_env->threads_count());
   for (size_t i = 0; i < g_future_tests_env->threads_count(); ++i) {
-    auto task = pc::packaged_task<record(stack<record> &, pc::latch &, size_t)>{
+    auto task = pco::packaged_task<record(stack<record> &, pco::latch &, size_t)>{
         producer};
     futures.push_back(task.get_future());
     g_future_tests_env->run_async(std::move(task), std::ref(records_stack),

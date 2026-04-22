@@ -12,32 +12,32 @@ namespace test {
 
 struct SharedFutureThenUnwrap : future_test {
   SharedFutureThenUnwrap() {
-    std::tie(promise, future) = pc::make_promise<int>();
+    std::tie(promise, future) = pco::make_promise<int>();
   }
-  pc::promise<int> promise;
-  pc::shared_future<int> future;
+  pco::promise<int> promise;
+  pco::shared_future<int> future;
 };
 
 /**
  * \brief Verifies shared_future::then unwraps an inner future result.
  */
 TEST_F(SharedFutureThenUnwrap, future_unwrapped) {
-  pc::promise<void> inner_promise;
+  pco::promise<void> inner_promise;
   auto cnt_f = future.then(
       [inner_future = inner_promise.get_future()](
-          pc::shared_future<int>) mutable { return std::move(inner_future); });
-  static_assert(std::is_same<decltype(cnt_f), pc::future<void>>::value, "");
+          pco::shared_future<int>) mutable { return std::move(inner_future); });
+  static_assert(std::is_same<decltype(cnt_f), pco::future<void>>::value, "");
 }
 
 /**
  * \brief Verifies shared_future::then unwraps an inner shared_future result.
  */
 TEST_F(SharedFutureThenUnwrap, shared_future_unwrapped) {
-  pc::promise<void> inner_promise;
+  pco::promise<void> inner_promise;
   auto cnt_f = future.then(
       [inner_future = inner_promise.get_future().share()](
-          pc::shared_future<int>) mutable { return std::move(inner_future); });
-  static_assert(std::is_same<decltype(cnt_f), pc::shared_future<void>>::value,
+          pco::shared_future<int>) mutable { return std::move(inner_future); });
+  static_assert(std::is_same<decltype(cnt_f), pco::shared_future<void>>::value,
                 "");
 }
 
@@ -45,9 +45,9 @@ TEST_F(SharedFutureThenUnwrap, shared_future_unwrapped) {
  * \brief Verifies the returned future stays pending until the inner future is fulfilled.
  */
 TEST_F(SharedFutureThenUnwrap, result_is_not_ready_after_continuation_call) {
-  pc::promise<void> inner_promise;
-  pc::future<void> cnt_f = future.then(
-      [&](pc::shared_future<int>) { return inner_promise.get_future(); });
+  pco::promise<void> inner_promise;
+  pco::future<void> cnt_f = future.then(
+      [&](pco::shared_future<int>) { return inner_promise.get_future(); });
   promise.set_value(42);
   EXPECT_FALSE(cnt_f.is_ready());
 }
@@ -57,9 +57,9 @@ TEST_F(SharedFutureThenUnwrap, result_is_not_ready_after_continuation_call) {
  */
 TEST_F(SharedFutureThenUnwrap,
        result_is_ready_after_continuation_result_becomes_ready) {
-  pc::promise<void> inner_promise;
-  pc::future<void> cnt_f = future.then(
-      [&](pc::shared_future<int>) { return inner_promise.get_future(); });
+  pco::promise<void> inner_promise;
+  pco::future<void> cnt_f = future.then(
+      [&](pco::shared_future<int>) { return inner_promise.get_future(); });
   promise.set_value(42);
   inner_promise.set_value();
   EXPECT_TRUE(cnt_f.is_ready());
@@ -69,9 +69,9 @@ TEST_F(SharedFutureThenUnwrap,
  * \brief Verifies errors from the inner future propagate through the unwrapped result.
  */
 TEST_F(SharedFutureThenUnwrap, result_propagates_inner_future_error) {
-  pc::promise<void> inner_promise;
-  pc::future<void> cnt_f = future.then(
-      [&](pc::shared_future<int>) { return inner_promise.get_future(); });
+  pco::promise<void> inner_promise;
+  pco::future<void> cnt_f = future.then(
+      [&](pco::shared_future<int>) { return inner_promise.get_future(); });
   promise.set_value(42);
   inner_promise.set_exception(
       std::make_exception_ptr(std::runtime_error{"Ooups"}));
@@ -83,8 +83,8 @@ TEST_F(SharedFutureThenUnwrap, result_propagates_inner_future_error) {
  */
 TEST_F(SharedFutureThenUnwrap,
        exception_from_unwrapped_continuation_propagated_to_result) {
-  pc::future<std::unique_ptr<int>> cnt_f = future.then(
-      [](pc::shared_future<int>) -> pc::future<std::unique_ptr<int>> {
+  pco::future<std::unique_ptr<int>> cnt_f = future.then(
+      [](pco::shared_future<int>) -> pco::future<std::unique_ptr<int>> {
         throw std::runtime_error("Ooups");
       });
   promise.set_value(42);
@@ -95,9 +95,9 @@ TEST_F(SharedFutureThenUnwrap,
  * \brief Verifies an unwrapping shared_future continuation can run on a specific executor.
  */
 TEST_F(SharedFutureThenUnwrap, run_continuation_on_specific_executor) {
-  pc::future<std::thread::id> cnt_f =
-      future.then(g_future_tests_env, [](pc::shared_future<int>) {
-        return pc::make_ready_future(std::this_thread::get_id());
+  pco::future<std::thread::id> cnt_f =
+      future.then(g_future_tests_env, [](pco::shared_future<int>) {
+        return pco::make_ready_future(std::this_thread::get_id());
       });
   promise.set_value(42);
   EXPECT_TRUE(g_future_tests_env->uses_thread(cnt_f.get()));
@@ -108,10 +108,10 @@ TEST_F(SharedFutureThenUnwrap, run_continuation_on_specific_executor) {
  */
 TEST_F(SharedFutureThenUnwrap,
        shared_future_and_unwrapped_shared_future_access_same_storage) {
-  pc::promise<std::string> inner_promise;
-  pc::shared_future<std::string> inner_future = inner_promise.get_future();
-  pc::shared_future<std::string> cnt_f = future.then(
-      [inner_future](pc::shared_future<int>) { return inner_future; });
+  pco::promise<std::string> inner_promise;
+  pco::shared_future<std::string> inner_future = inner_promise.get_future();
+  pco::shared_future<std::string> cnt_f = future.then(
+      [inner_future](pco::shared_future<int>) { return inner_future; });
 
   promise.set_value(42);
   inner_promise.set_value("qwe");

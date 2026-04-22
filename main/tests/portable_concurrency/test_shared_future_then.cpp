@@ -13,12 +13,12 @@ namespace portable_concurrency {
 namespace {
 namespace test {
 
-std::string stringify(pc::shared_future<int> f) { return to_string(f.get()); }
+std::string stringify(pco::shared_future<int> f) { return to_string(f.get()); }
 
 struct SharedFutureThen : future_test {
-  SharedFutureThen() { std::tie(promise, future) = pc::make_promise<int>(); }
-  pc::promise<int> promise;
-  pc::shared_future<int> future;
+  SharedFutureThen() { std::tie(promise, future) = pco::make_promise<int>(); }
+  pco::promise<int> promise;
+  pco::shared_future<int> future;
   std::string stringified_value = "42";
 };
 
@@ -26,7 +26,7 @@ struct SharedFutureThen : future_test {
  * \brief Verifies src future remains valid for shared future then.
  */
 TEST_F(SharedFutureThen, src_future_remains_valid) {
-  auto cnt_future = future.then([](pc::shared_future<int>) {});
+  auto cnt_future = future.then([](pco::shared_future<int>) {});
   EXPECT_TRUE(future.valid());
 }
 
@@ -36,7 +36,7 @@ TEST_F(SharedFutureThen, src_future_remains_valid) {
 TEST_F(SharedFutureThen, contunuation_receives_shared_future) {
   auto cnt_future = future.then([](auto &&f) {
     static_assert(
-        std::is_same<std::decay_t<decltype(f)>, pc::shared_future<int>>::value,
+        std::is_same<std::decay_t<decltype(f)>, pco::shared_future<int>>::value,
         "");
   });
 }
@@ -45,7 +45,7 @@ TEST_F(SharedFutureThen, contunuation_receives_shared_future) {
  * \brief Verifies returned future is valid for shared future then.
  */
 TEST_F(SharedFutureThen, returned_future_is_valid) {
-  auto cnt_future = future.then([](pc::shared_future<int>) {});
+  auto cnt_future = future.then([](pco::shared_future<int>) {});
   EXPECT_TRUE(cnt_future.valid());
 }
 
@@ -54,7 +54,7 @@ TEST_F(SharedFutureThen, returned_future_is_valid) {
  */
 TEST_F(SharedFutureThen,
        returned_future_is_not_ready_for_not_ready_source_future) {
-  auto cnt_future = future.then([](pc::shared_future<int>) {});
+  auto cnt_future = future.then([](pco::shared_future<int>) {});
   EXPECT_FALSE(cnt_future.is_ready());
 }
 
@@ -63,7 +63,7 @@ TEST_F(SharedFutureThen,
  */
 TEST_F(SharedFutureThen, returned_future_is_ready_for_ready_source_future) {
   set_promise_value(promise);
-  auto cnt_future = future.then([](pc::shared_future<int>) {});
+  auto cnt_future = future.then([](pco::shared_future<int>) {});
   EXPECT_TRUE(cnt_future.is_ready());
 }
 
@@ -72,7 +72,7 @@ TEST_F(SharedFutureThen, returned_future_is_ready_for_ready_source_future) {
  */
 TEST_F(SharedFutureThen,
        returned_future_becomes_ready_when_source_becomes_ready) {
-  auto cnt_future = future.then([](pc::shared_future<int>) {});
+  auto cnt_future = future.then([](pco::shared_future<int>) {});
   set_promise_value(promise);
   EXPECT_TRUE(cnt_future.is_ready());
 }
@@ -84,7 +84,7 @@ TEST_F(SharedFutureThen, continuation_is_executed_once_for_ready_source) {
   set_promise_value(promise);
   unsigned cnt_exec_count = 0;
   auto cnt_future =
-      future.then([&](pc::shared_future<int>) { ++cnt_exec_count; });
+      future.then([&](pco::shared_future<int>) { ++cnt_exec_count; });
   EXPECT_EQ(cnt_exec_count, 1u);
 }
 
@@ -95,7 +95,7 @@ TEST_F(SharedFutureThen,
        continuation_is_executed_once_when_source_becomes_ready) {
   unsigned cnt_exec_count = 0;
   auto cnt_future =
-      future.then([&](pc::shared_future<int>) { ++cnt_exec_count; });
+      future.then([&](pco::shared_future<int>) { ++cnt_exec_count; });
   promise.set_value(42);
   EXPECT_EQ(cnt_exec_count, 1u);
 }
@@ -106,7 +106,7 @@ TEST_F(SharedFutureThen,
 TEST_F(SharedFutureThen, continuation_arg_is_ready_for_ready_source) {
   promise.set_value(42);
   auto cnt_future =
-      future.then([](pc::shared_future<int> f) { return f.is_ready(); });
+      future.then([](pco::shared_future<int> f) { return f.is_ready(); });
   EXPECT_TRUE(cnt_future.get());
 }
 
@@ -115,7 +115,7 @@ TEST_F(SharedFutureThen, continuation_arg_is_ready_for_ready_source) {
  */
 TEST_F(SharedFutureThen, continuation_arg_is_ready_for_not_ready_source) {
   auto cnt_future =
-      future.then([](pc::shared_future<int> f) { return f.is_ready(); });
+      future.then([](pco::shared_future<int> f) { return f.is_ready(); });
   promise.set_value(42);
   EXPECT_TRUE(cnt_future.get());
 }
@@ -125,7 +125,7 @@ TEST_F(SharedFutureThen, continuation_arg_is_ready_for_not_ready_source) {
  */
 TEST_F(SharedFutureThen,
        exception_from_continuation_delivered_to_returned_future) {
-  pc::future<bool> cnt_f = future.then([](pc::shared_future<int>) -> bool {
+  pco::future<bool> cnt_f = future.then([](pco::shared_future<int>) -> bool {
     throw std::runtime_error("continuation error");
   });
   promise.set_value(42);
@@ -137,8 +137,8 @@ TEST_F(SharedFutureThen,
  */
 TEST_F(SharedFutureThen,
        value_is_delivered_to_continuation_for_not_ready_source) {
-  pc::future<void> cnt_f =
-      future.then([](pc::shared_future<int> f) { EXPECT_EQ(f.get(), 42); });
+  pco::future<void> cnt_f =
+      future.then([](pco::shared_future<int> f) { EXPECT_EQ(f.get(), 42); });
   promise.set_value(42);
   cnt_f.get();
 }
@@ -148,8 +148,8 @@ TEST_F(SharedFutureThen,
  */
 TEST_F(SharedFutureThen, value_is_delivered_to_continuation_for_ready_source) {
   promise.set_value(42);
-  pc::future<void> cnt_f =
-      future.then([](pc::shared_future<int> f) { EXPECT_EQ(f.get(), 42); });
+  pco::future<void> cnt_f =
+      future.then([](pco::shared_future<int> f) { EXPECT_EQ(f.get(), 42); });
   cnt_f.get();
 }
 
@@ -157,7 +157,7 @@ TEST_F(SharedFutureThen, value_is_delivered_to_continuation_for_ready_source) {
  * \brief Verifies result of continuation delivered to returned future for shared future then.
  */
 TEST_F(SharedFutureThen, result_of_continuation_delivered_to_returned_future) {
-  pc::future<std::string> cnt_f = future.then(stringify);
+  pco::future<std::string> cnt_f = future.then(stringify);
   promise.set_value(42);
 
   EXPECT_EQ(cnt_f.get(), "42");
@@ -169,7 +169,7 @@ TEST_F(SharedFutureThen, result_of_continuation_delivered_to_returned_future) {
 TEST_F(SharedFutureThen,
        result_of_continuation_delivered_to_returned_future_for_ready_future) {
   promise.set_value(42);
-  pc::future<std::string> cnt_f = future.then(stringify);
+  pco::future<std::string> cnt_f = future.then(stringify);
 
   EXPECT_EQ(cnt_f.get(), "42");
 }
@@ -179,9 +179,9 @@ TEST_F(SharedFutureThen,
  */
 TEST_F(SharedFutureThen,
        result_of_continuation_delivered_to_returned_future_for_async_future) {
-  pc::shared_future<int> f = set_value_in_other_thread<int>(25ms);
+  pco::shared_future<int> f = set_value_in_other_thread<int>(25ms);
 
-  pc::future<std::string> cnt_f = f.then(stringify);
+  pco::future<std::string> cnt_f = f.then(stringify);
   EXPECT_EQ(cnt_f.get(), this->stringified_value);
 }
 
@@ -189,11 +189,11 @@ TEST_F(SharedFutureThen,
  * \brief Verifies exception to continuation for shared future then.
  */
 TEST_F(SharedFutureThen, exception_to_continuation) {
-  pc::shared_future<int> f =
+  pco::shared_future<int> f =
       set_error_in_other_thread<int>(25ms, std::runtime_error("test error"));
 
-  pc::future<std::string> string_f =
-      f.then([](pc::shared_future<int> ready_f) -> std::string {
+  pco::future<std::string> string_f =
+      f.then([](pco::shared_future<int> ready_f) -> std::string {
         EXPECT_RUNTIME_ERROR(ready_f, "test error");
         return "Exception delivered";
       });
@@ -205,11 +205,11 @@ TEST_F(SharedFutureThen, exception_to_continuation) {
  * \brief Verifies exception to ready continuation for shared future then.
  */
 TEST_F(SharedFutureThen, exception_to_ready_continuation) {
-  pc::shared_future<int> f =
-      pc::make_exceptional_future<int>(std::runtime_error("test error"));
+  pco::shared_future<int> f =
+      pco::make_exceptional_future<int>(std::runtime_error("test error"));
 
-  pc::future<std::string> string_f =
-      f.then([](pc::shared_future<int> ready_f) -> std::string {
+  pco::future<std::string> string_f =
+      f.then([](pco::shared_future<int> ready_f) -> std::string {
         EXPECT_RUNTIME_ERROR(ready_f, "test error");
         return "Exception delivered";
       });
@@ -221,8 +221,8 @@ TEST_F(SharedFutureThen, exception_to_ready_continuation) {
  * \brief Verifies run continuation on specific executor for shared future then.
  */
 TEST_F(SharedFutureThen, run_continuation_on_specific_executor) {
-  pc::future<std::thread::id> cnt_f =
-      future.then(g_future_tests_env, [](pc::shared_future<int>) {
+  pco::future<std::thread::id> cnt_f =
+      future.then(g_future_tests_env, [](pco::shared_future<int>) {
         return std::this_thread::get_id();
       });
   set_promise_value(promise);
@@ -234,10 +234,10 @@ TEST_F(SharedFutureThen, run_continuation_on_specific_executor) {
  */
 TEST_F(SharedFutureThen, all_of_multiple_continuations_are_invoked) {
   bool executed1 = false, executed2 = false;
-  pc::future<void> cnt_f1 =
-      future.then([&executed1](pc::shared_future<int>) { executed1 = true; });
-  pc::future<void> cnt_f2 =
-      future.then([&executed2](pc::shared_future<int>) { executed2 = true; });
+  pco::future<void> cnt_f1 =
+      future.then([&executed1](pco::shared_future<int>) { executed1 = true; });
+  pco::future<void> cnt_f2 =
+      future.then([&executed2](pco::shared_future<int>) { executed2 = true; });
   promise.set_value(123);
 
   EXPECT_TRUE(executed1);
@@ -252,7 +252,7 @@ TEST_F(SharedFutureThen, desroys_continuation_after_invocation) {
   std::weak_ptr<int> wp = sp;
   auto cnt_f =
       future.then([sp = std::exchange(sp, nullptr)](
-                      pc::shared_future<int> val) { return val.get() + *sp; });
+                      pco::shared_future<int> val) { return val.get() + *sp; });
   promise.set_value(100);
   EXPECT_TRUE(wp.expired());
 }

@@ -45,12 +45,12 @@ struct future_get_t {
  * futures into collection of values. For example:
  * ```
  * auto tasks = run_many_tasks();
- * pc::future<std::vector<int>> = pc::when_all(tasks.begin(), tasks.end())
- *   .next([](std::vector<pc::future<int>> futures){
+ * pco::future<std::vector<int>> = pco::when_all(tasks.begin(), tasks.end())
+ *   .next([](std::vector<pco::future<int>> futures){
  *     std::vector<int> results;
  *     results.reserve(futuers.size());
  *     std::transform(futures.begin(), futures.end(),
- * std::back_inserter(results), pc::future_get); return results;
+ * std::back_inserter(results), pco::future_get); return results;
  *   })
  * ```
  */

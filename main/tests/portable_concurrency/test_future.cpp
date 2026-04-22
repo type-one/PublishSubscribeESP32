@@ -24,7 +24,7 @@ struct future : ::testing::Test {};
  * \brief Verifies default constructed is invalid for future.
  */
 TEST_F(future, default_constructed_is_invalid) {
-  pc::future<void> future;
+  pco::future<void> future;
   EXPECT_FALSE(future.valid());
 }
 
@@ -32,8 +32,8 @@ TEST_F(future, default_constructed_is_invalid) {
  * \brief Verifies obtained from promise is valid for future.
  */
 TEST_F(future, obtained_from_promise_is_valid) {
-  pc::promise<int> p;
-  pc::future<int> future = p.get_future();
+  pco::promise<int> p;
+  pco::future<int> future = p.get_future();
   EXPECT_TRUE(future.valid());
 }
 
@@ -41,9 +41,9 @@ TEST_F(future, obtained_from_promise_is_valid) {
  * \brief Verifies moved to constructor is invalid for future.
  */
 TEST_F(future, moved_to_constructor_is_invalid) {
-  pc::promise<std::string> p;
-  pc::future<std::string> future = p.get_future();
-  pc::future<std::string> another_future{std::move(future)};
+  pco::promise<std::string> p;
+  pco::future<std::string> future = p.get_future();
+  pco::future<std::string> another_future{std::move(future)};
   EXPECT_FALSE(future.valid());
 }
 
@@ -51,9 +51,9 @@ TEST_F(future, moved_to_constructor_is_invalid) {
  * \brief Verifies move constructed from valid is valid for future.
  */
 TEST_F(future, move_constructed_from_valid_is_valid) {
-  pc::promise<std::string &> p;
-  pc::future<std::string &> future = p.get_future();
-  pc::future<std::string &> another_future{std::move(future)};
+  pco::promise<std::string &> p;
+  pco::future<std::string &> future = p.get_future();
+  pco::future<std::string &> another_future{std::move(future)};
   EXPECT_TRUE(another_future.valid());
 }
 
@@ -61,9 +61,9 @@ TEST_F(future, move_constructed_from_valid_is_valid) {
  * \brief Verifies moved to assigment to invalid is invalid for future.
  */
 TEST_F(future, moved_to_assigment_to_invalid_is_invalid) {
-  pc::promise<std::unique_ptr<int>> p;
-  pc::future<std::unique_ptr<int>> src_future = p.get_future();
-  pc::future<std::unique_ptr<int>> dst_future;
+  pco::promise<std::unique_ptr<int>> p;
+  pco::future<std::unique_ptr<int>> src_future = p.get_future();
+  pco::future<std::unique_ptr<int>> dst_future;
   dst_future = std::move(src_future);
   EXPECT_FALSE(src_future.valid());
 }
@@ -72,9 +72,9 @@ TEST_F(future, moved_to_assigment_to_invalid_is_invalid) {
  * \brief Verifies invalid move assigned from valid is valid for future.
  */
 TEST_F(future, invalid_move_assigned_from_valid_is_valid) {
-  pc::promise<std::unique_ptr<int>> p;
-  pc::future<std::unique_ptr<int>> src_future = p.get_future();
-  pc::future<std::unique_ptr<int>> dst_future;
+  pco::promise<std::unique_ptr<int>> p;
+  pco::future<std::unique_ptr<int>> src_future = p.get_future();
+  pco::future<std::unique_ptr<int>> dst_future;
   dst_future = std::move(src_future);
   EXPECT_TRUE(dst_future.valid());
 }
@@ -83,8 +83,8 @@ TEST_F(future, invalid_move_assigned_from_valid_is_valid) {
  * \brief Verifies moved to assigment to valid is invalid for future.
  */
 TEST_F(future, moved_to_assigment_to_valid_is_invalid) {
-  pc::promise<int &> p[2];
-  pc::future<int &> future[] = {p[0].get_future(), p[1].get_future()};
+  pco::promise<int &> p[2];
+  pco::future<int &> future[] = {p[0].get_future(), p[1].get_future()};
 
   future[1] = std::move(future[0]);
   EXPECT_TRUE(future[1].valid());
@@ -94,8 +94,8 @@ TEST_F(future, moved_to_assigment_to_valid_is_invalid) {
  * \brief Verifies valid move assigned with another valid is valid for future.
  */
 TEST_F(future, valid_move_assigned_with_another_valid_is_valid) {
-  pc::promise<int &> p[2];
-  pc::future<int &> future[] = {p[0].get_future(), p[1].get_future()};
+  pco::promise<int &> p[2];
+  pco::future<int &> future[] = {p[0].get_future(), p[1].get_future()};
 
   future[1] = std::move(future[0]);
   EXPECT_FALSE(future[0].valid());
@@ -105,9 +105,9 @@ TEST_F(future, valid_move_assigned_with_another_valid_is_valid) {
  * \brief Verifies share invalidates future for future.
  */
 TEST_F(future, share_invalidates_future) {
-  pc::promise<std::string> p;
-  pc::future<std::string> future = p.get_future();
-  pc::shared_future<std::string> shared = future.share();
+  pco::promise<std::string> p;
+  pco::future<std::string> future = p.get_future();
+  pco::shared_future<std::string> shared = future.share();
   EXPECT_FALSE(future.valid());
 }
 
@@ -115,9 +115,9 @@ TEST_F(future, share_invalidates_future) {
  * \brief Verifies share returns valid shared future for future.
  */
 TEST_F(future, share_returns_valid_shared_future) {
-  pc::promise<std::string> p;
-  pc::future<std::string> future = p.get_future();
-  pc::shared_future<std::string> shared = future.share();
+  pco::promise<std::string> p;
+  pco::future<std::string> future = p.get_future();
+  pco::shared_future<std::string> shared = future.share();
   EXPECT_TRUE(shared.valid());
 }
 
@@ -125,13 +125,13 @@ TEST_F(future, share_returns_valid_shared_future) {
  * \brief Verifies is ready return false on nonready for future.
  */
 TEST_F(future, is_ready_return_false_on_nonready) {
-  pc::promise<void> p;
-  pc::future<void> future = p.get_future();
+  pco::promise<void> p;
+  pco::future<void> future = p.get_future();
   EXPECT_FALSE(future.is_ready());
 }
 
 template <typename T> struct FutureTests : ::testing::Test {
-  pc::promise<T> promise[2];
+  pco::promise<T> promise[2];
 };
 TYPED_TEST_CASE(FutureTests, TestTypes);
 
@@ -158,7 +158,7 @@ TYPED_TEST(FutureTests, is_ready_on_future_with_error) {
  * \brief Verifies get on invalid for future.
  */
 TYPED_TEST(FutureTests, get_on_invalid) {
-  pc::future<TypeParam> future;
+  pco::future<TypeParam> future;
   EXPECT_FUTURE_ERROR(future.get(), std::future_errc::no_state);
 }
 
@@ -217,7 +217,7 @@ TYPED_TEST(FutureTests, retrieve_exception) {
  * \brief Verifies wait on invalid for future.
  */
 TYPED_TEST(FutureTests, wait_on_invalid) {
-  pc::future<TypeParam> future;
+  pco::future<TypeParam> future;
   ASSERT_FALSE(future.valid());
 
   EXPECT_FUTURE_ERROR(future.wait(), std::future_errc::no_state);
@@ -228,7 +228,7 @@ TYPED_TEST(FutureTests, wait_on_invalid) {
  * \brief Verifies wait for on invalid for future.
  */
 TYPED_TEST(FutureTests, wait_for_on_invalid) {
-  pc::future<TypeParam> future;
+  pco::future<TypeParam> future;
   ASSERT_FALSE(future.valid());
 
   EXPECT_FUTURE_ERROR(future.wait_for(5s), std::future_errc::no_state);
@@ -238,7 +238,7 @@ TYPED_TEST(FutureTests, wait_for_on_invalid) {
  * \brief Verifies wait until on invalid for future.
  */
 TYPED_TEST(FutureTests, wait_until_on_invalid) {
-  pc::future<TypeParam> future;
+  pco::future<TypeParam> future;
   ASSERT_FALSE(future.valid());
 
   EXPECT_FUTURE_ERROR(future.wait_until(sys_clock::now() + 5s),
@@ -260,11 +260,11 @@ TYPED_TEST(FutureTests, wait_on_ready_value) {
   EXPECT_TRUE(future.is_ready());
 
 #if !defined(PC_NO_DEPRECATED)
-  EXPECT_EQ(pc::future_status::ready, future.wait_for(5s));
+  EXPECT_EQ(pco::future_status::ready, future.wait_for(5s));
   EXPECT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 
-  EXPECT_EQ(pc::future_status::ready, future.wait_until(sys_clock::now() + 5s));
+  EXPECT_EQ(pco::future_status::ready, future.wait_until(sys_clock::now() + 5s));
   EXPECT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 #endif
@@ -285,11 +285,11 @@ TYPED_TEST(FutureTests, wait_on_ready_error) {
   EXPECT_TRUE(future.is_ready());
 
 #if !defined(PC_NO_DEPRECATED)
-  EXPECT_EQ(pc::future_status::ready, future.wait_for(5s));
+  EXPECT_EQ(pco::future_status::ready, future.wait_for(5s));
   EXPECT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 
-  EXPECT_EQ(pc::future_status::ready, future.wait_until(sys_clock::now() + 5s));
+  EXPECT_EQ(pco::future_status::ready, future.wait_until(sys_clock::now() + 5s));
   EXPECT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 #endif
@@ -304,11 +304,11 @@ TYPED_TEST(FutureTests, wait_timeout) {
   ASSERT_TRUE(future.valid());
   ASSERT_FALSE(future.is_ready());
 
-  EXPECT_EQ(pc::future_status::timeout, future.wait_for(5ms));
+  EXPECT_EQ(pco::future_status::timeout, future.wait_for(5ms));
   EXPECT_TRUE(future.valid());
   EXPECT_FALSE(future.is_ready());
 
-  EXPECT_EQ(pc::future_status::timeout,
+  EXPECT_EQ(pco::future_status::timeout,
             future.wait_until(hires_clock::now() + 5ms));
   EXPECT_TRUE(future.valid());
   EXPECT_FALSE(future.is_ready());
@@ -407,30 +407,30 @@ template <typename T> void test_ready_future_maker() {
 } // = delete; in C++ but not in clang++
 
 template <> void test_ready_future_maker<int>() {
-  auto future = pc::make_ready_future(42);
+  auto future = pco::make_ready_future(42);
   ASSERT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
   EXPECT_EQ(42, future.get());
 }
 
 template <> void test_ready_future_maker<std::string>() {
-  auto future = pc::make_ready_future(std::string{"hello"});
+  auto future = pco::make_ready_future(std::string{"hello"});
   ASSERT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
   EXPECT_EQ(future.get(), "hello");
 }
 
 template <> void test_ready_future_maker<std::unique_ptr<int>>() {
-  auto future = pc::make_ready_future(std::make_unique<int>(42));
+  auto future = pco::make_ready_future(std::make_unique<int>(42));
   ASSERT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
   EXPECT_EQ(42, *future.get());
 }
 
 template <> void test_ready_future_maker<future_tests_env &>() {
-  auto future = pc::make_ready_future(std::ref(*g_future_tests_env));
+  auto future = pco::make_ready_future(std::ref(*g_future_tests_env));
   static_assert(
-      std::is_same<decltype(future), pc::future<future_tests_env &>>::value,
+      std::is_same<decltype(future), pco::future<future_tests_env &>>::value,
       "Incorrect future type");
   ASSERT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
@@ -438,7 +438,7 @@ template <> void test_ready_future_maker<future_tests_env &>() {
 }
 
 template <> void test_ready_future_maker<void>() {
-  auto future = pc::make_ready_future();
+  auto future = pco::make_ready_future();
   ASSERT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
   EXPECT_NO_THROW(future.get());
@@ -456,7 +456,7 @@ TYPED_TEST(FutureTests, ready_future_maker) {
  */
 TYPED_TEST(FutureTests, error_future_maker_from_exception_val) {
   auto future =
-      pc::make_exceptional_future<TypeParam>(std::runtime_error("test error"));
+      pco::make_exceptional_future<TypeParam>(std::runtime_error("test error"));
   ASSERT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());
 
@@ -468,11 +468,11 @@ TYPED_TEST(FutureTests, error_future_maker_from_exception_val) {
  * \brief Verifies error future maker from caught exception for future.
  */
 TYPED_TEST(FutureTests, error_future_maker_from_caught_exception) {
-  pc::future<TypeParam> future;
+  pco::future<TypeParam> future;
   try {
     throw std::runtime_error("test error");
   } catch (...) {
-    future = pc::make_exceptional_future<TypeParam>(std::current_exception());
+    future = pco::make_exceptional_future<TypeParam>(std::current_exception());
   }
   ASSERT_TRUE(future.valid());
   EXPECT_TRUE(future.is_ready());

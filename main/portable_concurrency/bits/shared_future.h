@@ -62,11 +62,11 @@ public:
 
 #if !defined(PC_NO_DEPRECATED)
   template <typename Rep, typename Period>
-  [[deprecated("Use pc::timed_waiter instead")]] future_status
+  [[deprecated("Use pco::timed_waiter instead")]] future_status
   wait_for(const std::chrono::duration<Rep, Period> &rel_time) const;
 
   template <typename Clock, typename Duration>
-  [[deprecated("Use pc::timed_waiter instead")]] future_status
+  [[deprecated("Use pco::timed_waiter instead")]] future_status
   wait_until(const std::chrono::time_point<Clock, Duration> &abs_time) const;
 #endif
 

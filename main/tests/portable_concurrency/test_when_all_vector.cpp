@@ -15,13 +15,13 @@ namespace {
  * \brief Verifies empty sequence for when all vector.
  */
 TEST(WhenAllVectorTest, empty_sequence) {
-  std::list<pc::future<int>> empty;
-  auto f = pc::when_all(empty.begin(), empty.end());
+  std::list<pco::future<int>> empty;
+  auto f = pco::when_all(empty.begin(), empty.end());
 
   ASSERT_TRUE(f.valid());
   ASSERT_TRUE(f.is_ready());
 
-  std::vector<pc::future<int>> res = f.get();
+  std::vector<pco::future<int>> res = f.get();
   EXPECT_EQ(res.size(), 0u);
 }
 
@@ -29,9 +29,9 @@ TEST(WhenAllVectorTest, empty_sequence) {
  * \brief Verifies single future for when all vector.
  */
 TEST(WhenAllVectorTest, single_future) {
-  pc::promise<std::string> p;
+  pco::promise<std::string> p;
   auto raw_f = p.get_future();
-  auto f = pc::when_all(&raw_f, &raw_f + 1);
+  auto f = pco::when_all(&raw_f, &raw_f + 1);
   ASSERT_TRUE(f.valid());
   EXPECT_FALSE(raw_f.valid());
   EXPECT_FALSE(f.is_ready());
@@ -51,9 +51,9 @@ TEST(WhenAllVectorTest, single_future) {
  * \brief Verifies single shared future for when all vector.
  */
 TEST(WhenAllVectorTest, single_shared_future) {
-  pc::promise<std::unique_ptr<int>> p;
+  pco::promise<std::unique_ptr<int>> p;
   auto raw_f = p.get_future().share();
-  auto f = pc::when_all(&raw_f, &raw_f + 1);
+  auto f = pco::when_all(&raw_f, &raw_f + 1);
   ASSERT_TRUE(f.valid());
   EXPECT_TRUE(raw_f.valid());
   EXPECT_FALSE(f.is_ready());
@@ -73,8 +73,8 @@ TEST(WhenAllVectorTest, single_shared_future) {
  * \brief Verifies single ready future for when all vector.
  */
 TEST(WhenAllVectorTest, single_ready_future) {
-  auto raw_f = pc::make_ready_future(123);
-  auto f = pc::when_all(&raw_f, &raw_f + 1);
+  auto raw_f = pco::make_ready_future(123);
+  auto f = pco::when_all(&raw_f, &raw_f + 1);
   ASSERT_TRUE(f.valid());
   EXPECT_FALSE(raw_f.valid());
   ASSERT_TRUE(f.is_ready());
@@ -91,8 +91,8 @@ TEST(WhenAllVectorTest, single_ready_future) {
  * \brief Verifies single ready shared future for when all vector.
  */
 TEST(WhenAllVectorTest, single_ready_shared_future) {
-  auto raw_f = pc::make_ready_future(123).share();
-  auto f = pc::when_all(&raw_f, &raw_f + 1);
+  auto raw_f = pco::make_ready_future(123).share();
+  auto f = pco::when_all(&raw_f, &raw_f + 1);
   ASSERT_TRUE(f.valid());
   EXPECT_TRUE(raw_f.valid());
   ASSERT_TRUE(f.is_ready());
@@ -109,9 +109,9 @@ TEST(WhenAllVectorTest, single_ready_shared_future) {
  * \brief Verifies single error future for when all vector.
  */
 TEST(WhenAllVectorTest, single_error_future) {
-  auto raw_f = pc::make_exceptional_future<future_tests_env &>(
+  auto raw_f = pco::make_exceptional_future<future_tests_env &>(
       std::runtime_error("panic"));
-  auto f = pc::when_all(&raw_f, &raw_f + 1);
+  auto f = pco::when_all(&raw_f, &raw_f + 1);
   ASSERT_TRUE(f.valid());
   EXPECT_FALSE(raw_f.valid());
   ASSERT_TRUE(f.is_ready());
@@ -128,10 +128,10 @@ TEST(WhenAllVectorTest, single_error_future) {
  * \brief Verifies single error shared future for when all vector.
  */
 TEST(WhenAllVectorTest, single_error_shared_future) {
-  auto raw_f = pc::make_exceptional_future<future_tests_env &>(
+  auto raw_f = pco::make_exceptional_future<future_tests_env &>(
                    std::runtime_error("panic"))
                    .share();
-  auto f = pc::when_all(&raw_f, &raw_f + 1);
+  auto f = pco::when_all(&raw_f, &raw_f + 1);
   ASSERT_TRUE(f.valid());
   EXPECT_TRUE(raw_f.valid());
   ASSERT_TRUE(f.is_ready());
@@ -148,13 +148,13 @@ TEST(WhenAllVectorTest, single_error_shared_future) {
  * \brief Verifies multiple futures for when all vector.
  */
 TEST(WhenAllVectorTest, multiple_futures) {
-  pc::promise<int> ps[5];
-  pc::future<int> fs[5];
+  pco::promise<int> ps[5];
+  pco::future<int> fs[5];
 
   std::transform(std::begin(ps), std::end(ps), std::begin(fs),
                  get_promise_future);
 
-  auto f = pc::when_all(std::begin(fs), std::end(fs));
+  auto f = pco::when_all(std::begin(fs), std::end(fs));
   ASSERT_TRUE(f.valid());
   EXPECT_FALSE(f.is_ready());
   for (const auto &fi : fs)
@@ -180,13 +180,13 @@ TEST(WhenAllVectorTest, multiple_futures) {
  * \brief Verifies multiple shared futures for when all vector.
  */
 TEST(WhenAllVectorTest, multiple_shared_futures) {
-  pc::promise<std::string> ps[5];
-  pc::shared_future<std::string> fs[5];
+  pco::promise<std::string> ps[5];
+  pco::shared_future<std::string> fs[5];
 
   std::transform(std::begin(ps), std::end(ps), std::begin(fs),
                  get_promise_future);
 
-  auto f = pc::when_all(std::begin(fs), std::end(fs));
+  auto f = pco::when_all(std::begin(fs), std::end(fs));
   ASSERT_TRUE(f.valid());
   EXPECT_FALSE(f.is_ready());
   for (const auto &fi : fs)
@@ -212,15 +212,15 @@ TEST(WhenAllVectorTest, multiple_shared_futures) {
  * \brief Verifies multiple futures one initionally ready for when all vector.
  */
 TEST(WhenAllVectorTest, multiple_futures_one_initionally_ready) {
-  pc::promise<void> ps[5];
-  pc::future<void> fs[5];
+  pco::promise<void> ps[5];
+  pco::future<void> fs[5];
 
   std::transform(std::begin(ps), std::end(ps), std::begin(fs),
                  get_promise_future);
   ps[1].set_value();
   ASSERT_TRUE(fs[1].is_ready());
 
-  auto f = pc::when_all(std::begin(fs), std::end(fs));
+  auto f = pco::when_all(std::begin(fs), std::end(fs));
   ASSERT_TRUE(f.valid());
 
   for (std::size_t pos : {4, 0, 3, 2}) {
@@ -243,15 +243,15 @@ TEST(WhenAllVectorTest, multiple_futures_one_initionally_ready) {
  */
 TEST(WhenAllVectorTest, multiple_shared_futures_one_initionally_ready) {
   int some_vars[5] = {5, 4, 3, 2, 1};
-  pc::promise<int &> ps[5];
-  pc::shared_future<int &> fs[5];
+  pco::promise<int &> ps[5];
+  pco::shared_future<int &> fs[5];
 
   std::transform(std::begin(ps), std::end(ps), std::begin(fs),
                  get_promise_future);
   ps[0].set_value(some_vars[0]);
   ASSERT_TRUE(fs[0].is_ready());
 
-  auto f = pc::when_all(std::begin(fs), std::end(fs));
+  auto f = pco::when_all(std::begin(fs), std::end(fs));
   ASSERT_TRUE(f.valid());
   for (std::size_t pos : {4, 1, 3, 2}) {
     EXPECT_FALSE(f.is_ready());
@@ -273,15 +273,15 @@ TEST(WhenAllVectorTest, multiple_shared_futures_one_initionally_ready) {
  * \brief Verifies multiple futures one initionally error for when all vector.
  */
 TEST(WhenAllVectorTest, multiple_futures_one_initionally_error) {
-  pc::promise<std::unique_ptr<int>> ps[5];
-  pc::future<std::unique_ptr<int>> fs[5];
+  pco::promise<std::unique_ptr<int>> ps[5];
+  pco::future<std::unique_ptr<int>> fs[5];
 
   std::transform(std::begin(ps), std::end(ps), std::begin(fs),
                  get_promise_future);
   ps[4].set_exception(std::make_exception_ptr(std::runtime_error("epic fail")));
   ASSERT_TRUE(fs[4].is_ready());
 
-  auto f = pc::when_all(std::begin(fs), std::end(fs));
+  auto f = pco::when_all(std::begin(fs), std::end(fs));
   ASSERT_TRUE(f.valid());
 
   for (std::size_t pos : {0, 1, 3, 2}) {
@@ -306,15 +306,15 @@ TEST(WhenAllVectorTest, multiple_futures_one_initionally_error) {
  * \brief Verifies multiple shared futures one initionally error for when all vector.
  */
 TEST(WhenAllVectorTest, multiple_shared_futures_one_initionally_error) {
-  pc::promise<std::size_t> ps[5];
-  pc::shared_future<std::size_t> fs[5];
+  pco::promise<std::size_t> ps[5];
+  pco::shared_future<std::size_t> fs[5];
 
   std::transform(std::begin(ps), std::end(ps), std::begin(fs),
                  get_promise_future);
   ps[4].set_exception(std::make_exception_ptr(std::runtime_error("epic fail")));
   ASSERT_TRUE(fs[4].is_ready());
 
-  auto f = pc::when_all(std::begin(fs), std::end(fs));
+  auto f = pco::when_all(std::begin(fs), std::end(fs));
   ASSERT_TRUE(f.valid());
 
   for (std::size_t pos : {0, 1, 3, 2}) {
@@ -340,16 +340,16 @@ TEST(WhenAllVectorTest, multiple_shared_futures_one_initionally_error) {
  * \brief Verifies futures becomes ready concurrently for when all vector.
  */
 TEST(WhenAllVectorTest, futures_becomes_ready_concurrently) {
-  pc::promise<std::size_t> ps[3];
-  pc::shared_future<std::size_t> fs[3];
+  pco::promise<std::size_t> ps[3];
+  pco::shared_future<std::size_t> fs[3];
 
   std::transform(std::begin(ps), std::end(ps), std::begin(fs),
                  get_promise_future);
-  auto f = pc::when_all(std::begin(fs), std::end(fs));
+  auto f = pco::when_all(std::begin(fs), std::end(fs));
   ASSERT_TRUE(f.valid());
   EXPECT_FALSE(f.is_ready());
 
-  pc::latch latch{4};
+  pco::latch latch{4};
   std::size_t idx = 0;
   for (auto &p : ps) {
     g_future_tests_env->run_async(
@@ -373,16 +373,16 @@ TEST(WhenAllVectorTest, futures_becomes_ready_concurrently) {
  * \brief Verifies is immediatelly ready on empty arg for when all on vector.
  */
 TEST(when_all_on_vector, is_immediatelly_ready_on_empty_arg) {
-  EXPECT_TRUE(pc::when_all(std::vector<pc::future<int>>{}).is_ready());
+  EXPECT_TRUE(pco::when_all(std::vector<pco::future<int>>{}).is_ready());
 }
 
 /**
  * \brief Verifies is immediatelly ready on vector of ready futures for when all on vector.
  */
 TEST(when_all_on_vector, is_immediatelly_ready_on_vector_of_ready_futures) {
-  EXPECT_TRUE(pc::when_all(std::vector<pc::shared_future<int>>{
-                               {pc::make_ready_future(42),
-                                pc::make_ready_future(100500)}})
+  EXPECT_TRUE(pco::when_all(std::vector<pco::shared_future<int>>{
+                               {pco::make_ready_future(42),
+                                pco::make_ready_future(100500)}})
                   .is_ready());
 }
 
@@ -390,24 +390,24 @@ TEST(when_all_on_vector, is_immediatelly_ready_on_vector_of_ready_futures) {
  * \brief Verifies is not ready on vector with not ready futures for when all on vector.
  */
 TEST(when_all_on_vector, is_not_ready_on_vector_with_not_ready_futures) {
-  pc::promise<int> p;
-  std::vector<pc::future<int>> futures;
-  futures.push_back(pc::make_ready_future(42));
+  pco::promise<int> p;
+  std::vector<pco::future<int>> futures;
+  futures.push_back(pco::make_ready_future(42));
   futures.push_back(p.get_future());
-  EXPECT_FALSE(pc::when_all(std::move(futures)).is_ready());
+  EXPECT_FALSE(pco::when_all(std::move(futures)).is_ready());
 }
 
 /**
  * \brief Verifies contains vector of ready futures when becomes ready for when all on vector.
  */
 TEST(when_all_on_vector, contains_vector_of_ready_futures_when_becomes_ready) {
-  std::vector<pc::future<int>> futures;
-  futures.push_back(pc::async(g_future_tests_env, [] { return 42; }));
-  futures.push_back(pc::async(g_future_tests_env, [] { return 100500; }));
-  EXPECT_TRUE(pc::when_all(std::move(futures))
-                  .next([](std::vector<pc::future<int>> futures) {
+  std::vector<pco::future<int>> futures;
+  futures.push_back(pco::async(g_future_tests_env, [] { return 42; }));
+  futures.push_back(pco::async(g_future_tests_env, [] { return 100500; }));
+  EXPECT_TRUE(pco::when_all(std::move(futures))
+                  .next([](std::vector<pco::future<int>> futures) {
                     return std::all_of(futures.begin(), futures.end(),
-                                       pc::future_ready);
+                                       pco::future_ready);
                   })
                   .get());
 }
@@ -416,13 +416,13 @@ TEST(when_all_on_vector, contains_vector_of_ready_futures_when_becomes_ready) {
  * \brief Verifies reuses buffer of passed argument for when all on vector.
  */
 TEST(when_all_on_vector, reuses_buffer_of_passed_argument) {
-  std::vector<pc::future<int>> futures;
+  std::vector<pco::future<int>> futures;
   futures.reserve(2);
   const auto *buf_ptr = futures.data();
-  futures.push_back(pc::async(g_future_tests_env, [] { return 42; }));
-  futures.push_back(pc::async(g_future_tests_env, [] { return 100500; }));
-  EXPECT_TRUE(pc::when_all(std::move(futures))
-                  .next([buf_ptr](std::vector<pc::future<int>> futures) {
+  futures.push_back(pco::async(g_future_tests_env, [] { return 42; }));
+  futures.push_back(pco::async(g_future_tests_env, [] { return 100500; }));
+  EXPECT_TRUE(pco::when_all(std::move(futures))
+                  .next([buf_ptr](std::vector<pco::future<int>> futures) {
                     return futures.data() == buf_ptr;
                   })
                   .get());
@@ -433,13 +433,13 @@ TEST(when_all_on_vector, reuses_buffer_of_passed_argument) {
  */
 TEST(when_all_on_vector, works_with_vector_using_custom_allocator) {
   static_arena<> arena;
-  arena_vector<pc::future<int>> futures{{arena}};
+  arena_vector<pco::future<int>> futures{{arena}};
   futures.reserve(2);
   const auto *buf_ptr = futures.data();
-  futures.push_back(pc::async(g_future_tests_env, [] { return 42; }));
-  futures.push_back(pc::async(g_future_tests_env, [] { return 100500; }));
-  EXPECT_TRUE(pc::when_all(std::move(futures))
-                  .next([buf_ptr](arena_vector<pc::future<int>> futures) {
+  futures.push_back(pco::async(g_future_tests_env, [] { return 42; }));
+  futures.push_back(pco::async(g_future_tests_env, [] { return 100500; }));
+  EXPECT_TRUE(pco::when_all(std::move(futures))
+                  .next([buf_ptr](arena_vector<pco::future<int>> futures) {
                     return futures.data() == buf_ptr;
                   })
                   .get());
@@ -450,15 +450,15 @@ TEST(when_all_on_vector, works_with_vector_using_custom_allocator) {
  */
 TEST(when_all_on_vector, preserves_order_of_futures) {
   static_arena<> arena;
-  arena_vector<pc::future<int>> futures{{arena}};
+  arena_vector<pco::future<int>> futures{{arena}};
   futures.reserve(2);
-  futures.push_back(pc::async(g_future_tests_env, [] { return 42; }));
-  futures.push_back(pc::async(g_future_tests_env, [] { return 100500; }));
-  auto results = pc::when_all(std::move(futures))
-                     .next([](arena_vector<pc::future<int>> futures) {
+  futures.push_back(pco::async(g_future_tests_env, [] { return 42; }));
+  futures.push_back(pco::async(g_future_tests_env, [] { return 100500; }));
+  auto results = pco::when_all(std::move(futures))
+                     .next([](arena_vector<pco::future<int>> futures) {
                        arena_vector<int> res{futures.get_allocator()};
                        std::transform(futures.begin(), futures.end(),
-                                      std::back_inserter(res), pc::future_get);
+                                      std::back_inserter(res), pco::future_get);
                        return res;
                      })
                      .get();

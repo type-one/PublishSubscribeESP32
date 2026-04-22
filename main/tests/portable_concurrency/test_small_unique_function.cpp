@@ -16,7 +16,7 @@ struct small_unique_function : ::testing::Test {};
  * \brief Verifies default constructed is null for small unique function.
  */
 TEST_F(small_unique_function, default_constructed_is_null) {
-  pc::detail::small_unique_function<int()> func;
+  pco::detail::small_unique_function<int()> func;
   EXPECT_FALSE(func);
 }
 
@@ -24,7 +24,7 @@ TEST_F(small_unique_function, default_constructed_is_null) {
  * \brief Verifies wrapps func pointer for small unique function.
  */
 TEST_F(small_unique_function, wrapps_func_pointer) {
-  pc::detail::small_unique_function<size_t(const char *)> foo = std::strlen;
+  pco::detail::small_unique_function<size_t(const char *)> foo = std::strlen;
   EXPECT_EQ(foo("hello"), 5u);
 }
 
@@ -41,7 +41,7 @@ TEST_F(small_unique_function, wrapps_member_func_pointer) {
     }
   } large;
 
-  pc::detail::small_unique_function<void(large_t &, int, int)> foo =
+  pco::detail::small_unique_function<void(large_t &, int, int)> foo =
       &large_t::fill;
   foo(large, 0, 1);
   EXPECT_EQ(large.arr[0], 0);
@@ -58,7 +58,7 @@ TEST_F(small_unique_function, wrapps_refference_wrapper) {
     size_t operator()() const { return arr.size(); }
   } large;
 
-  pc::detail::small_unique_function<size_t()> foo = std::ref(large);
+  pco::detail::small_unique_function<size_t()> foo = std::ref(large);
   EXPECT_EQ(foo(), 128u);
 }
 
@@ -66,11 +66,11 @@ TEST_F(small_unique_function, wrapps_refference_wrapper) {
  * \brief Verifies wrapps packaged task for small unique function.
  */
 TEST_F(small_unique_function, wrapps_packaged_task) {
-  pc::packaged_task<size_t(const std::string &)> task{
+  pco::packaged_task<size_t(const std::string &)> task{
       [](const std::string &str) { return str.size(); }};
   auto future = task.get_future();
 
-  pc::detail::small_unique_function<void(const std::string &)> foo =
+  pco::detail::small_unique_function<void(const std::string &)> foo =
       std::move(task);
   foo("hello");
   ASSERT_TRUE(future.is_ready());
@@ -87,7 +87,7 @@ TEST_F(small_unique_function, lamda_with_this_as_only_capture) {
       return [this](int a) { return a * x; };
     }
   } obj;
-  pc::detail::small_unique_function<int(int)> f = obj.foo();
+  pco::detail::small_unique_function<int(int)> f = obj.foo();
   EXPECT_TRUE(f);
 }
 
@@ -95,7 +95,7 @@ TEST_F(small_unique_function, lamda_with_this_as_only_capture) {
  * \brief Verifies const object can be invoked for small unique function.
  */
 TEST_F(small_unique_function, const_object_can_be_invoked) {
-  const pc::detail::small_unique_function<int(int)> f = [m = 0](int x) mutable {
+  const pco::detail::small_unique_function<int(int)> f = [m = 0](int x) mutable {
     return x * (++m);
   };
   EXPECT_EQ(f(2), 2);

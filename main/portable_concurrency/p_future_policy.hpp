@@ -32,30 +32,30 @@
  *   #include "portable_concurrency/p_future_policy.hpp"
  *
  *   // Create a typed future in whichever mode is active:
- *   pc::future_t<int> fut = pc::make_async_default(exec, []{ return 42; });
+ *   pco::future_t<int> fut = pco::make_async_default(exec, []{ return 42; });
  *
  *   // Inspect the active policy at compile time:
- *   static_assert(pc::uses_v2_policy == true);  // when v2 is selected
+ *   static_assert(pco::uses_v2_policy == true);  // when v2 is selected
  *
  * When PORTABLE_CONCURRENCY_V2_DEFAULT is defined:
- *   - pc::future_t<T>               -> pc::v2::future_result<T, pc::v2::result_error>
- *   - pc::shared_future_t<T>        -> pc::v2::shared_result<T, pc::v2::result_error>
- *   - pc::promise_t<T>              -> pc::v2::promise_result<T, pc::v2::result_error>
- *   - pc::make_async_default(...)   -> pc::v2::async_result(...)
- *   - pc::make_ready_default(...)   -> pc::v2::make_ready_result(...)
- *   - pc::make_error_default<T>(e)  -> pc::v2::make_error_result<T>(e)
- *   - pc::active_async_policy       -> pc::async_policy_v2_tag
- *   - pc::uses_v2_policy            == true
+ *   - pco::future_t<T>               -> pco::v2::future_result<T, pco::v2::result_error>
+ *   - pco::shared_future_t<T>        -> pco::v2::shared_result<T, pco::v2::result_error>
+ *   - pco::promise_t<T>              -> pco::v2::promise_result<T, pco::v2::result_error>
+ *   - pco::make_async_default(...)   -> pco::v2::async_result(...)
+ *   - pco::make_ready_default(...)   -> pco::v2::make_ready_result(...)
+ *   - pco::make_error_default<T>(e)  -> pco::v2::make_error_result<T>(e)
+ *   - pco::active_async_policy       -> pco::async_policy_v2_tag
+ *   - pco::uses_v2_policy            == true
  *
  * When PORTABLE_CONCURRENCY_V2_DEFAULT is NOT defined (default):
- *   - pc::future_t<T>               -> pc::future<T>
- *   - pc::shared_future_t<T>        -> pc::shared_future<T>
- *   - pc::promise_t<T>              -> pc::promise<T>
- *   - pc::make_async_default(...)   -> pc::async(...)
- *   - pc::make_ready_default(...)   -> pc::make_ready_future(...)
- *   - pc::make_error_default<T>(e)  -> pc::make_exceptional_future<T>(e)
- *   - pc::active_async_policy       -> pc::async_policy_v1_tag
- *   - pc::uses_v2_policy            == false
+ *   - pco::future_t<T>               -> pco::future<T>
+ *   - pco::shared_future_t<T>        -> pco::shared_future<T>
+ *   - pco::promise_t<T>              -> pco::promise<T>
+ *   - pco::make_async_default(...)   -> pco::async(...)
+ *   - pco::make_ready_default(...)   -> pco::make_ready_future(...)
+ *   - pco::make_error_default<T>(e)  -> pco::make_exceptional_future<T>(e)
+ *   - pco::active_async_policy       -> pco::async_policy_v1_tag
+ *   - pco::uses_v2_policy            == false
  *   - Requires exception support (__EXCEPTIONS / _CPPUNWIND)
  */
 

@@ -15,7 +15,7 @@ TEST(ThreadPool, should_execute_function_in_another_thread) {
   std::mutex mtx;
   std::condition_variable cv;
 
-  pc::static_thread_pool pool{1};
+  pco::static_thread_pool pool{1};
   post(pool.executor(), [&] {
     {
       std::lock_guard<std::mutex> lk{mtx};
@@ -34,10 +34,10 @@ TEST(ThreadPool, should_execute_function_in_another_thread) {
 TEST(ThreadPool, processes_all_queued_tasks_when_waited_on) {
   static constexpr size_t task_count = 1;
 
-  pc::static_thread_pool pool{1};
+  pco::static_thread_pool pool{1};
 
   std::atomic<size_t> processed_tasks_count{0};
-  pc::latch latch{2};
+  pco::latch latch{2};
 
   post(pool.executor(), [&latch] {
     latch.count_down_and_wait();
@@ -61,11 +61,11 @@ TEST(ThreadPool, processes_all_queued_tasks_when_waited_on) {
 TEST(ThreadPool, abandons_unprocessed_tasks_when_stopped) {
   static constexpr size_t task_count = 1;
 
-  pc::static_thread_pool pool{1};
+  pco::static_thread_pool pool{1};
 
   std::atomic<size_t> processed_tasks_count{0};
-  pc::latch latch_before_stop{2};
-  pc::latch latch_after_stop{2};
+  pco::latch latch_before_stop{2};
+  pco::latch latch_after_stop{2};
 
   post(pool.executor(), [&latch_before_stop, &latch_after_stop] {
     latch_before_stop.count_down_and_wait();

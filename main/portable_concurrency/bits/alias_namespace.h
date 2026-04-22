@@ -26,10 +26,10 @@ namespace portable_concurrency {}
 
 #if PORTABLE_CONCURRENCY_ALIAS_NS
 /**
- * @namespace pc
+ * @namespace pco
  * @brief Shortcut for the library public namespace `portable_concurrency`.
  */
-namespace pc = portable_concurrency;
+namespace pco = portable_concurrency;
 #endif
 
 /**
@@ -37,5 +37,5 @@ namespace pc = portable_concurrency;
  * @brief The library public namespace.
  *
  * This namespace name is long and too verbose. There is an alias namespace @ref
- * pc provided which simplifies this library usage.
+ * pco provided which simplifies this library usage.
  */

@@ -39,11 +39,11 @@
 TEST(AsyncPolicyTest, CompileTimePolicyTagIsCorrect)
 {
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
-    static_assert(pc::uses_v2_policy, "Expected v2 policy when PORTABLE_CONCURRENCY_V2_DEFAULT is defined");
-    static_assert(std::is_same_v<pc::active_async_policy, pc::async_policy_v2_tag>, "Expected v2 tag type");
+    static_assert(pco::uses_v2_policy, "Expected v2 policy when PORTABLE_CONCURRENCY_V2_DEFAULT is defined");
+    static_assert(std::is_same_v<pco::active_async_policy, pco::async_policy_v2_tag>, "Expected v2 tag type");
 #else
-    static_assert(!pc::uses_v2_policy, "Expected v1 policy when PORTABLE_CONCURRENCY_V2_DEFAULT is not defined");
-    static_assert(std::is_same_v<pc::active_async_policy, pc::async_policy_v1_tag>, "Expected v1 tag type");
+    static_assert(!pco::uses_v2_policy, "Expected v1 policy when PORTABLE_CONCURRENCY_V2_DEFAULT is not defined");
+    static_assert(std::is_same_v<pco::active_async_policy, pco::async_policy_v1_tag>, "Expected v1 tag type");
 #endif
     SUCCEED();
 }
@@ -55,11 +55,11 @@ TEST(AsyncPolicyTest, FutureTAliasResolvesCorrectlyForInt)
 {
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
     static_assert(
-        std::is_same_v<pc::future_t<int>, pc::v2::future_result<int, pc::v2::result_error>>,
+        std::is_same_v<pco::future_t<int>, pco::v2::future_result<int, pco::v2::result_error>>,
         "future_t<int> must alias future_result<int, result_error> in v2 mode");
 #else
     static_assert(
-        std::is_same_v<pc::future_t<int>, pc::future<int>>,
+        std::is_same_v<pco::future_t<int>, pco::future<int>>,
         "future_t<int> must alias future<int> in v1 mode");
 #endif
     SUCCEED();
@@ -72,11 +72,11 @@ TEST(AsyncPolicyTest, PromiseTAliasResolvesCorrectlyForInt)
 {
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
     static_assert(
-        std::is_same_v<pc::promise_t<int>, pc::v2::promise_result<int, pc::v2::result_error>>,
+        std::is_same_v<pco::promise_t<int>, pco::v2::promise_result<int, pco::v2::result_error>>,
         "promise_t<int> must alias promise_result<int, result_error> in v2 mode");
 #else
     static_assert(
-        std::is_same_v<pc::promise_t<int>, pc::promise<int>>,
+        std::is_same_v<pco::promise_t<int>, pco::promise<int>>,
         "promise_t<int> must alias promise<int> in v1 mode");
 #endif
     SUCCEED();
@@ -89,11 +89,11 @@ TEST(AsyncPolicyTest, SharedFutureTAliasResolvesCorrectlyForInt)
 {
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
     static_assert(
-        std::is_same_v<pc::shared_future_t<int>, pc::v2::shared_result<int, pc::v2::result_error>>,
+        std::is_same_v<pco::shared_future_t<int>, pco::v2::shared_result<int, pco::v2::result_error>>,
         "shared_future_t<int> must alias shared_result<int, result_error> in v2 mode");
 #else
     static_assert(
-        std::is_same_v<pc::shared_future_t<int>, pc::shared_future<int>>,
+        std::is_same_v<pco::shared_future_t<int>, pco::shared_future<int>>,
         "shared_future_t<int> must alias shared_future<int> in v1 mode");
 #endif
     SUCCEED();
@@ -108,11 +108,11 @@ TEST(AsyncPolicyTest, SharedFutureTAliasResolvesCorrectlyForInt)
  */
 TEST(AsyncPolicyTest, MakeAsyncDefaultIntReturnsCorrectValue)
 {
-    auto fut = pc::make_async_default(pc::inplace_executor, []() { return 42; });
+    auto fut = pco::make_async_default(pco::inplace_executor, []() { return 42; });
 
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
     auto result = std::move(fut)
-                      .then_error([](pc::v2::result_error)
+                      .then_error([](pco::v2::result_error)
                       {
                           return -1;
                       })
@@ -134,7 +134,7 @@ TEST(AsyncPolicyTest, MakeAsyncDefaultIntReturnsCorrectValue)
 TEST(AsyncPolicyTest, MakeAsyncDefaultVoidCompletesWithoutError)
 {
     bool executed = false;
-    auto fut = pc::make_async_default(pc::inplace_executor, [&executed]() { executed = true; });
+    auto fut = pco::make_async_default(pco::inplace_executor, [&executed]() { executed = true; });
 
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
     auto result = fut.get_result();
@@ -151,7 +151,7 @@ TEST(AsyncPolicyTest, MakeAsyncDefaultVoidCompletesWithoutError)
  */
 TEST(AsyncPolicyTest, MakeAsyncDefaultForwardsArgument)
 {
-    auto fut = pc::make_async_default(pc::inplace_executor,
+    auto fut = pco::make_async_default(pco::inplace_executor,
         [](int x) { return x * 2; }, 21);
 
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
@@ -174,7 +174,7 @@ TEST(AsyncPolicyTest, PromiseTRoundTripDeliversValue)
 {
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
     // v2: promise_result uses get_future() (not deprecated in v2 API)
-    pc::promise_t<int> p;
+    pco::promise_t<int> p;
     auto fut = p.get_future();
     p.set_value(99);
 
@@ -183,7 +183,7 @@ TEST(AsyncPolicyTest, PromiseTRoundTripDeliversValue)
     EXPECT_EQ(result.value(), 99);
 #else
     // v1: use make_promise to avoid the deprecated promise::get_future() overload
-    auto [p, fut] = pc::make_promise<int>();
+    auto [p, fut] = pco::make_promise<int>();
     p.set_value(99);
 
     EXPECT_EQ(fut.get(), 99);
@@ -195,7 +195,7 @@ TEST(AsyncPolicyTest, PromiseTRoundTripDeliversValue)
  */
 TEST(AsyncPolicyTest, MakeReadyDefaultValueFactoryReturnsReadyResult)
 {
-    auto fut = pc::make_ready_default(123);
+    auto fut = pco::make_ready_default(123);
 
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
     auto result = fut.get_result();
@@ -211,7 +211,7 @@ TEST(AsyncPolicyTest, MakeReadyDefaultValueFactoryReturnsReadyResult)
  */
 TEST(AsyncPolicyTest, MakeReadyDefaultVoidFactoryCompletes)
 {
-    auto fut = pc::make_ready_default();
+    auto fut = pco::make_ready_default();
 
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
     auto result = fut.get_result();
@@ -227,13 +227,13 @@ TEST(AsyncPolicyTest, MakeReadyDefaultVoidFactoryCompletes)
 TEST(AsyncPolicyTest, MakeErrorDefaultFactoryPropagatesFailure)
 {
 #ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
-    auto fut = pc::make_error_default<int>(pc::v2::result_error::broken_promise);
+    auto fut = pco::make_error_default<int>(pco::v2::result_error::broken_promise);
     auto result = fut.get_result();
 
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), pc::v2::result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::v2::result_error::broken_promise);
 #else
-    auto fut = pc::make_error_default<int>(std::runtime_error("policy bridge error"));
+    auto fut = pco::make_error_default<int>(std::runtime_error("policy bridge error"));
     EXPECT_THROW(fut.get(), std::runtime_error);
 #endif
 }

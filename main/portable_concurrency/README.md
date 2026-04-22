@@ -17,30 +17,30 @@
 
  * Execcutor aware
    ```cpp
-   pc::static_thread_pool pool{5};
-   pc::future<int> answer = pc::async(pool.executor(), [] {return 42;});
+   pco::static_thread_pool pool{5};
+   pco::future<int> answer = pco::async(pool.executor(), [] {return 42;});
    ```
  * Designed to work with user provided executors
    ```cpp
    namespace portable_concurrency {
    template<> struct is_executor<QThreadPool*>: std::true_type {};
    }
-   void post(QThreadPool*, pc::unique_function<void()>);
+   void post(QThreadPool*, pco::unique_function<void()>);
    
-   pc::future<int> answer = pc::async(QThreadPool::globalInstance(), [] {return 42;});
+   pco::future<int> answer = pco::async(QThreadPool::globalInstance(), [] {return 42;});
    ```
  * Continuations support
    ```cpp
-   pc::static_thread_pool pool{5};
+   pco::static_thread_pool pool{5};
    asio::io_context io;
-   pc::future<rapidjson::Document> res = pc::async(io.get_executor(), receive_document)
+   pco::future<rapidjson::Document> res = pco::async(io.get_executor(), receive_document)
      .next(pool.executor(), parse_document);
    ```
  * `when_all`/`when_any` composition of futures
    ```cpp
-   pc::future<rapidjson::Document> res = pc::when_any(
-     pc::async(pool.executor(), fetch_from_cache),
-     pc::async(io.get_executor(), receive_from_network)
+   pco::future<rapidjson::Document> res = pco::when_any(
+     pco::async(pool.executor(), fetch_from_cache),
+     pco::async(io.get_executor(), receive_from_network)
    ).next([](auto when_any_res) {
      switch(when_any_res.index) {
        case 0: return std::get<0>(when_any_res.futures);
@@ -51,11 +51,11 @@
  * `future<future<T>>` transparently unwrapped to `future<T>`
  * `future<shared_future<T>>` transparently unwrapped to `shred_future<T>`
  * Automatic task cancelation:
-   * Not yet started functions passed to `pc::async`/`pc::packaged_task` or attached to intermediate futures as continuations
+   * Not yet started functions passed to `pco::async`/`pco::packaged_task` or attached to intermediate futures as continuations
      may not be executed at all if `future` or all `shared_future`'s on the result of continuations chain are destroyed.
    * `future::detach()` and `shared_future::detach()` functions allows to destroy future without cancelation of any tasks.
      ```cpp
-     auto future = pc::async(pool.executor(), important_calculation)
+     auto future = pco::async(pool.executor(), important_calculation)
        .next(io.get_executor(), important_io)
        .detach()
        .next(pool.executor(), not_so_important_calculations);
@@ -67,8 +67,8 @@
      via future destruction.
    * Additional `then` overload to check if task is canceled from the continuations function
      ```cpp
-     pc::future<std::string> res = pc::async(pool.executor(), [] {return 42;})
-       .then([](pc::promise<std::string> p, pc::future<int> f) {
+     pco::future<std::string> res = pco::async(pool.executor(), [] {return 42;})
+       .then([](pco::promise<std::string> p, pco::future<int> f) {
          std::string res;
          while (has_work_to_do()) {
            do_next_step(res, f);

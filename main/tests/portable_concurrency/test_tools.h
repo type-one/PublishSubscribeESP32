@@ -31,7 +31,7 @@ public:
 
   template <typename F, typename... A> void run_async(F &&f, A &&...a) {
     post(pool_.executor(),
-         pc::detail::make_task(std::forward<F>(f), std::forward<A>(a)...));
+         pco::detail::make_task(std::forward<F>(f), std::forward<A>(a)...));
   }
 
   size_t threads_count() const { return tids_.size(); }
@@ -39,7 +39,7 @@ public:
   void wait_current_tasks();
 
 private:
-  pc::static_thread_pool pool_;
+  pco::static_thread_pool pool_;
   std::vector<std::thread::id> tids_;
 };
 
@@ -73,7 +73,7 @@ std::ostream &operator<<(std::ostream &out,
                          const printable<future_tests_env &> &printable);
 
 template <typename T>
-void expect_future_exception(pc::future<T> &future, const std::string &what) {
+void expect_future_exception(pco::future<T> &future, const std::string &what) {
   try {
     T unexpected_res = future.get();
     ADD_FAILURE() << "Value " << printable<T>{unexpected_res}
@@ -88,7 +88,7 @@ void expect_future_exception(pc::future<T> &future, const std::string &what) {
 }
 
 template <typename T>
-void expect_future_exception(const pc::shared_future<T> &future,
+void expect_future_exception(const pco::shared_future<T> &future,
                              const std::string &what) {
   try {
     const T &unexpected_res = future.get();
@@ -103,8 +103,8 @@ void expect_future_exception(const pc::shared_future<T> &future,
   }
 }
 
-void expect_future_exception(pc::future<void> &future, const std::string &what);
-void expect_future_exception(const pc::shared_future<void> &future,
+void expect_future_exception(pco::future<void> &future, const std::string &what);
+void expect_future_exception(const pco::shared_future<void> &future,
                              const std::string &what);
 
 #define EXPECT_RUNTIME_ERROR(future, what) expect_future_exception(future, what)

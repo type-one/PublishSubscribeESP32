@@ -179,7 +179,7 @@ public:
   }
 
 #if !defined(PC_NO_DEPRECATED)
-  [[deprecated("Use pc::make_promise instead")]] future<T> get_future() {
+  [[deprecated("Use pco::make_promise instead")]] future<T> get_future() {
     return common_.get_future();
   }
 #endif
@@ -234,7 +234,7 @@ public:
   }
 
 #if !defined(PC_NO_DEPRECATED)
-  [[deprecated("Use pc::make_promise instead")]] future<T &> get_future() {
+  [[deprecated("Use pco::make_promise instead")]] future<T &> get_future() {
     return common_.get_future();
   }
 #endif
@@ -281,7 +281,7 @@ public:
   }
 
 #if !defined(PC_NO_DEPRECATED)
-  [[deprecated("Use pc::make_promise instead")]] future<void> get_future() {
+  [[deprecated("Use pco::make_promise instead")]] future<void> get_future() {
     return common_.get_future();
   }
 #endif

@@ -19,45 +19,45 @@ TYPED_TEST_CASE(PromiseTest, TestTypes);
 namespace tests {
 
 template <typename T> void get_future_twice() {
-  pc::promise<T> p;
-  pc::future<T> f1, f2;
+  pco::promise<T> p;
+  pco::future<T> f1, f2;
   EXPECT_NO_THROW(f1 = p.get_future());
   EXPECT_FUTURE_ERROR(f2 = p.get_future(),
                       std::future_errc::future_already_retrieved);
 }
 
 template <typename T> void set_val_on_promise_without_future() {
-  pc::promise<T> p;
+  pco::promise<T> p;
   EXPECT_NO_THROW(p.set_value(some_value<T>()));
 }
 
 template <> void set_val_on_promise_without_future<void>() {
-  pc::promise<void> p;
+  pco::promise<void> p;
   EXPECT_NO_THROW(p.set_value());
 }
 
 template <typename T> void set_err_on_promise_without_future() {
-  pc::promise<T> p;
+  pco::promise<T> p;
   EXPECT_NO_THROW(
       p.set_exception(std::make_exception_ptr(std::runtime_error("error"))));
 }
 
 template <typename T> void set_value_twice_without_future() {
-  pc::promise<T> p;
+  pco::promise<T> p;
   EXPECT_NO_THROW(p.set_value(some_value<T>()));
   EXPECT_FUTURE_ERROR(p.set_value(some_value<T>()),
                       std::future_errc::promise_already_satisfied);
 }
 
 template <> void set_value_twice_without_future<void>() {
-  pc::promise<void> p;
+  pco::promise<void> p;
   EXPECT_NO_THROW(p.set_value());
   EXPECT_FUTURE_ERROR(p.set_value(),
                       std::future_errc::promise_already_satisfied);
 }
 
 template <typename T> void set_value_twice_with_future() {
-  pc::promise<T> p;
+  pco::promise<T> p;
   auto f = p.get_future();
 
   EXPECT_NO_THROW(p.set_value(some_value<T>()));
@@ -71,7 +71,7 @@ template <typename T> void set_value_twice_with_future() {
 }
 
 template <> void set_value_twice_with_future<void>() {
-  pc::promise<void> p;
+  pco::promise<void> p;
   auto f = p.get_future();
 
   EXPECT_NO_THROW(p.set_value());
@@ -88,7 +88,7 @@ template <typename T> void set_value_twice_with_future_using_allocator() {
   static_arena<4096> arena;
   arena_allocator<std::decay_t<T>, static_arena<4096>> alloc(arena);
 
-  pc::promise<T> p(std::allocator_arg, alloc);
+  pco::promise<T> p(std::allocator_arg, alloc);
   auto f = p.get_future();
 
   EXPECT_NO_THROW(p.set_value(some_value<T>()));
@@ -107,7 +107,7 @@ template <> void set_value_twice_with_future_using_allocator<void>() {
   static_arena<4096> arena;
   arena_allocator<void, static_arena<4096>> alloc(arena);
 
-  pc::promise<void> p(std::allocator_arg, alloc);
+  pco::promise<void> p(std::allocator_arg, alloc);
   auto f = p.get_future();
 
   EXPECT_NO_THROW(p.set_value());
@@ -123,7 +123,7 @@ template <> void set_value_twice_with_future_using_allocator<void>() {
 }
 
 template <typename T> void set_value_twice_after_value_taken() {
-  pc::promise<T> p;
+  pco::promise<T> p;
   auto f = p.get_future();
 
   EXPECT_NO_THROW(p.set_value(some_value<T>()));
@@ -138,7 +138,7 @@ template <typename T> void set_value_twice_after_value_taken() {
 }
 
 template <> void set_value_twice_after_value_taken<void>() {
-  pc::promise<void> p;
+  pco::promise<void> p;
   auto f = p.get_future();
 
   EXPECT_NO_THROW(p.set_value());
@@ -204,9 +204,9 @@ TYPED_TEST(PromiseTest, DISABLED_set_value_twice_after_value_taken) {
  * \brief Verifies can retreive value set before get future for promise.
  */
 TYPED_TEST(PromiseTest, can_retreive_value_set_before_get_future) {
-  pc::promise<TypeParam> promise;
+  pco::promise<TypeParam> promise;
   set_promise_value(promise);
-  pc::future<TypeParam> future = promise.get_future();
+  pco::future<TypeParam> future = promise.get_future();
   EXPECT_SOME_VALUE(future);
 }
 
@@ -214,8 +214,8 @@ TYPED_TEST(PromiseTest, can_retreive_value_set_before_get_future) {
  * \brief Verifies moved from throws no state on get future for promise.
  */
 TYPED_TEST(PromiseTest, moved_from_throws_no_state_on_get_future) {
-  pc::promise<TypeParam> promise;
-  pc::promise<TypeParam> another_promise{std::move(promise)};
+  pco::promise<TypeParam> promise;
+  pco::promise<TypeParam> another_promise{std::move(promise)};
   EXPECT_FUTURE_ERROR(promise.get_future(), std::future_errc::no_state);
 }
 
@@ -223,8 +223,8 @@ TYPED_TEST(PromiseTest, moved_from_throws_no_state_on_get_future) {
  * \brief Verifies moved from throws no state on set exception for promise.
  */
 TYPED_TEST(PromiseTest, moved_from_throws_no_state_on_set_exception) {
-  pc::promise<TypeParam> promise;
-  pc::promise<TypeParam> another_promise{std::move(promise)};
+  pco::promise<TypeParam> promise;
+  pco::promise<TypeParam> another_promise{std::move(promise)};
   EXPECT_FUTURE_ERROR(promise.set_exception(
                           std::make_exception_ptr(std::runtime_error{"Ooups"})),
                       std::future_errc::no_state);
@@ -234,8 +234,8 @@ TYPED_TEST(PromiseTest, moved_from_throws_no_state_on_set_exception) {
  * \brief Verifies moved from throws no state on set value for promise.
  */
 TYPED_TEST(PromiseTest, moved_from_throws_no_state_on_set_value) {
-  pc::promise<TypeParam> promise;
-  pc::promise<TypeParam> another_promise{std::move(promise)};
+  pco::promise<TypeParam> promise;
+  pco::promise<TypeParam> another_promise{std::move(promise)};
   EXPECT_FUTURE_ERROR(set_promise_value(promise), std::future_errc::no_state);
 }
 
@@ -243,9 +243,9 @@ TYPED_TEST(PromiseTest, moved_from_throws_no_state_on_set_value) {
  * \brief Verifies make promise creates valid promise and future for promise.
  */
 TYPED_TEST(PromiseTest, make_promise_creates_valid_promise_and_future) {
-  pc::promise<TypeParam> promise;
+  pco::promise<TypeParam> promise;
   {
-    auto promise_and_future = pc::make_promise<TypeParam>();
+    auto promise_and_future = pco::make_promise<TypeParam>();
     promise = std::move(promise_and_future.first);
     EXPECT_TRUE(promise.is_awaiten());
   }
@@ -256,7 +256,7 @@ TYPED_TEST(PromiseTest, make_promise_creates_valid_promise_and_future) {
  * \brief Verifies is awaiten returns true before get future call for promise.
  */
 TEST(Promise, is_awaiten_returns_true_before_get_future_call) {
-  pc::promise<void> p;
+  pco::promise<void> p;
   EXPECT_TRUE(p.is_awaiten());
 }
 
