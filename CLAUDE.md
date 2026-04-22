@@ -84,7 +84,9 @@ This file defines repository-specific guidance for AI coding agents.
 
 - Naming:
   - snake_case for functions, variables, and methods.
+  - variable and parameter names should be at least 3 characters (except conventional loop indices in tiny local scopes).
   - class member variables must use `m_` prefix.
+- Avoid magic numbers; introduce named constants (prefer `constexpr`) instead of raw numeric literals.
 - Constness:
   - enforce constness whenever possible.
   - prefer `const` methods, `const auto` for intermediate computations, and `constexpr` whenever the value or computation can be made compile-time.
