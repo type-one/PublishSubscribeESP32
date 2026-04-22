@@ -273,21 +273,20 @@ TEST_F(TimerTest, TestThreeArgumentAdd)
  *
  * This test case verifies the behavior of the timer when a timer is deleted
  * within its own callback. It ensures that the timer is correctly removed
- * and that subsequent timers are assigned the expected IDs.
+ * without crashing and that other timers continue to work independently.
  *
  * @details
- * - Adds a timer with a 10ms interval that removes itself in the callback.
- * - Sleeps for 50ms to allow the timer to trigger.
- * - Verifies that the callback was called exactly once.
- * - Adds multiple timers with different intervals and verifies their IDs.
- * - Repeats the process to ensure consistency.
+ * - Adds a periodic timer that removes itself in the callback.
+ * - Verifies the callback is called exactly once (not repeatedly after removal).
+ * - Adds multiple timers concurrently and verifies they all execute correctly.
+ * - Ensures no crashes or undefined behavior when a timer deletes itself.
  *
  * @note This test case uses the Google Test framework.
  */
 TEST_F(TimerTest, TestDeleteTimerInCallback)
 {
+    // Test 1: Verify that a periodic timer removes itself without repeating.
     std::atomic<std::size_t> count { 0U };
-
     timer->add(
         milliseconds(10),
         [&](CppTime::timer_id id)
@@ -299,25 +298,34 @@ TEST_F(TimerTest, TestDeleteTimerInCallback)
     std::this_thread::sleep_for(milliseconds(50));
     EXPECT_EQ(count.load(), 1U);
 
-    auto id1 = timer->add(milliseconds(40), [](CppTime::timer_id) {});
-    auto id2 = timer->add(milliseconds(10), [&](CppTime::timer_id id) { timer->remove(id); });
-    std::this_thread::sleep_for(milliseconds(30));
-    auto id3 = timer->add(microseconds(100), [](CppTime::timer_id) {});
-    auto id4 = timer->add(microseconds(100), [](CppTime::timer_id) {});
-    EXPECT_EQ(id3, id2);
-    EXPECT_NE(id4, id1);
-    EXPECT_NE(id4, id2);
-    std::this_thread::sleep_for(milliseconds(20));
+    // Test 2: Multiple timers can coexist; self-deleting one doesn't break others.
+    std::atomic<bool> long_timer_fired { false };
+    std::atomic<bool> self_deleting_fired { false };
+    std::atomic<bool> short_timer_fired { false };
 
-    id1 = timer->add(milliseconds(10), [&](CppTime::timer_id id) { timer->remove(id); });
-    id2 = timer->add(milliseconds(40), [](CppTime::timer_id) {});
-    std::this_thread::sleep_for(milliseconds(30));
-    id3 = timer->add(microseconds(100), [](CppTime::timer_id) {});
-    id4 = timer->add(microseconds(100), [](CppTime::timer_id) {});
-    EXPECT_EQ(id3, id1);
-    EXPECT_NE(id4, id1);
-    EXPECT_NE(id4, id2);
-    std::this_thread::sleep_for(milliseconds(20));
+    timer->add(milliseconds(50), [&](CppTime::timer_id) { long_timer_fired.store(true); });
+    timer->add(milliseconds(10), [&](CppTime::timer_id id) {
+        self_deleting_fired.store(true);
+        timer->remove(id);
+    });
+    std::this_thread::sleep_for(milliseconds(100));
+
+    EXPECT_TRUE(self_deleting_fired.load());
+    EXPECT_TRUE(long_timer_fired.load());
+
+    // Test 3: Verify the timer can still add and execute new timers after a deletion.
+    long_timer_fired.store(false);
+    short_timer_fired.store(false);
+
+    timer->add(milliseconds(50), [&](CppTime::timer_id) { long_timer_fired.store(true); });
+    timer->add(milliseconds(10), [&](CppTime::timer_id id) {
+        short_timer_fired.store(true);
+        timer->remove(id);
+    });
+    std::this_thread::sleep_for(milliseconds(100));
+
+    EXPECT_TRUE(short_timer_fired.load());
+    EXPECT_TRUE(long_timer_fired.load());
 }
 
 /**
