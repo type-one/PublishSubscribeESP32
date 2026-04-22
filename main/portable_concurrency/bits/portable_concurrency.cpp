@@ -132,11 +132,15 @@ void process_queue(
 ) noexcept {
   unique_function<void()> task;
   while (!stopped.load(std::memory_order_relaxed) && queue.pop(task)) {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     try {
       task();
     } catch (...) {
       std::terminate();
     }
+#else
+    task();
+#endif
   }
 }
 

@@ -60,6 +60,7 @@ auto decorate_unique_then(UnwrappableContinuation<F, future<T>> &&f,
                           std::shared_ptr<future_state<T>> &&parent) {
   return [f = std::forward<F>(f), parent = std::move(parent)](
              std::shared_ptr<shared_state<R>> &&state) mutable {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     try {
       shared_state<R>::unwrap(
           state, state_of(this_ns::invoke(std::move(f),
@@ -67,6 +68,11 @@ auto decorate_unique_then(UnwrappableContinuation<F, future<T>> &&f,
     } catch (...) {
       state->set_exception(std::current_exception());
     }
+#else
+    shared_state<R>::unwrap(
+        state, state_of(this_ns::invoke(std::move(f),
+                                        future<T>{std::move(parent)})));
+#endif
   };
 }
 
@@ -86,6 +92,7 @@ auto decorate_shared_then(UnwrappableContinuation<F, shared_future<T>> &&f,
   return [f = std::forward<F>(f),
           parent = std::shared_ptr<future_state<T>>{parent}](
              std::shared_ptr<shared_state<R>> &&state) mutable {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     try {
       shared_state<R>::unwrap(
           state, state_of(this_ns::invoke(
@@ -93,6 +100,11 @@ auto decorate_shared_then(UnwrappableContinuation<F, shared_future<T>> &&f,
     } catch (...) {
       state->set_exception(std::current_exception());
     }
+#else
+    shared_state<R>::unwrap(
+        state, state_of(this_ns::invoke(
+                   std::move(f), shared_future<T>{std::move(parent)})));
+#endif
   };
 }
 
@@ -118,6 +130,7 @@ auto decorate_unique_next(UnwrappableContinuation<F, T> &&f,
       state->set_exception(std::move(error));
       return;
     }
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     try {
       shared_state<R>::unwrap(
           state, state_of(this_ns::invoke(std::move(f),
@@ -125,6 +138,11 @@ auto decorate_unique_next(UnwrappableContinuation<F, T> &&f,
     } catch (...) {
       state->set_exception(std::current_exception());
     }
+#else
+    shared_state<R>::unwrap(
+        state, state_of(this_ns::invoke(std::move(f),
+                                        std::move(parent->value_ref()))));
+#endif
   };
 }
 
@@ -151,6 +169,7 @@ auto decorate_shared_next(UnwrappableContinuation<F, cref_t<T>> &&f,
       state->set_exception(std::move(error));
       return;
     }
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     try {
       shared_state<R>::unwrap(
           state,
@@ -159,6 +178,12 @@ auto decorate_shared_next(UnwrappableContinuation<F, cref_t<T>> &&f,
     } catch (...) {
       state->set_exception(std::current_exception());
     }
+#else
+    shared_state<R>::unwrap(
+        state,
+        state_of(this_ns::invoke(
+            std::move(f), static_cast<cref_t<T>>(parent->value_ref()))));
+#endif
   };
 }
 
@@ -184,11 +209,15 @@ auto decorate_void_next(UnwrappableContinuation<F, void> &&f,
       state->set_exception(std::move(error));
       return;
     }
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     try {
       shared_state<R>::unwrap(state, state_of(this_ns::invoke(std::move(f))));
     } catch (...) {
       state->set_exception(std::current_exception());
     }
+#else
+    shared_state<R>::unwrap(state, state_of(this_ns::invoke(std::move(f))));
+#endif
   };
 }
 

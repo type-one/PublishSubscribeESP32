@@ -230,6 +230,7 @@ TEST_F(input, thousands_separator)
 /**
  * @brief Verifies extraction stops when the stream is already in a bad state.
  */
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
 TEST_F(input, fails_on_badbit)
 {
     using P = fpm::fixed_16_16;
@@ -241,10 +242,12 @@ TEST_F(input, fails_on_badbit)
     P x;
     EXPECT_THROW(ss >> x, std::ios::failure);
 }
+#endif
 
 /**
  * @brief Verifies extraction handles end-of-file correctly.
  */
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
 TEST_F(input, handles_eof)
 {
     using P = fpm::fixed_16_16;
@@ -256,6 +259,7 @@ TEST_F(input, handles_eof)
     P x;
     EXPECT_THROW(ss >> x, std::ios::failure);
 }
+#endif
 
 /**
  * @brief Verifies leading whitespace is skipped during extraction.
