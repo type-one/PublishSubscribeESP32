@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -200,6 +201,41 @@ TEST(PackagedTaskResultTest, invoke_with_rvalue_reference_argument)
     auto result = future.get_result();
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result.value(), 42);
+}
+
+TEST(PackagedTaskResultTest, return_reference_wrapper_preserves_reference_semantics)
+{
+    int value = 11;
+    packaged_task_result<std::reference_wrapper<int>()> task([&value]() {
+        return std::ref(value);
+    });
+
+    auto future = task.get_future();
+    task();
+
+    auto result = future.get_result();
+    ASSERT_TRUE(result.has_value());
+
+    result.value().get() = 77;
+    EXPECT_EQ(value, 77);
+}
+
+TEST(PackagedTaskResultTest, accepts_reference_wrapper_argument)
+{
+    int value = 10;
+    packaged_task_result<int(std::reference_wrapper<int>)> task(
+        [](std::reference_wrapper<int> wrapped) {
+            wrapped.get() += 5;
+            return wrapped.get();
+        });
+
+    auto future = task.get_future();
+    task(std::ref(value));
+
+    auto result = future.get_result();
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), 15);
+    EXPECT_EQ(value, 15);
 }
 
 // -- Callable destruction timing ---------------------------------------------

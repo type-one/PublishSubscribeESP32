@@ -50,6 +50,18 @@
    ```
  * `future<future<T>>` transparently unwrapped to `future<T>`
  * `future<shared_future<T>>` transparently unwrapped to `shred_future<T>`
+ * v2 reference-return workaround via `std::reference_wrapper<T>`
+   ```cpp
+   int value = 42;
+   pco::v2::packaged_task_result<std::reference_wrapper<int>()> task([&value]() {
+     return std::ref(value);
+   });
+
+   auto f = task.get_future();
+   task();
+   auto r = f.get_result();
+   r.value().get() = 77; // updates `value`
+   ```
  * Automatic task cancelation:
    * Not yet started functions passed to `pco::async`/`pco::packaged_task` or attached to intermediate futures as continuations
      may not be executed at all if `future` or all `shared_future`'s on the result of continuations chain are destroyed.
