@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 #include "portable_concurrency/p_execution.hpp"
-#include "portable_concurrency/p_future_v2.hpp"
+#include "portable_concurrency/p_future.hpp"
 
 namespace
 {

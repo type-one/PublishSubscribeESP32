@@ -186,12 +186,7 @@ set(TARGET_TOOLS_SRC
 )
 
 set(TARGET_PORTABLE_CONCURRENCY_SRC
-        portable_concurrency/bits/portable_concurrency.cpp
-)
-
-set_source_files_properties(
-    portable_concurrency/bits/portable_concurrency.cpp
-    PROPERTIES COMPILE_DEFINITIONS PORTABLE_CONCURRENCY_ALLOW_V1_HEADERS
+    portable_concurrency/bits/portable_concurrency_runtime.cpp
 )
 
 file(GLOB TARGET_EXAMPLES_SRC
@@ -426,4 +421,6 @@ add_custom_target(
     DEPENDS ${RUN_TESTS_TARGET}
 )
 
-gtest_discover_tests(${RUN_TESTS_TARGET})
+# On WSL/DrvFs, POST_BUILD discovery can race with the linker and fail with
+# transient "Text file busy" or "executable does not exist" errors.
+gtest_discover_tests(${RUN_TESTS_TARGET} DISCOVERY_MODE PRE_TEST)

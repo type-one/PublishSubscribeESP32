@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "portable_concurrency/p_future_v2.hpp"
+#include "portable_concurrency/p_future.hpp"
 
 namespace
 {

@@ -27,7 +27,10 @@
  * Result-oriented future API (v2): routes all future creation to the v2 API.
  * Exception support is not required.
  *
- * Usage:
+ * Preferred usage:
+ *   #include "portable_concurrency/p_future.hpp"
+ *
+ * Advanced/policy-only usage:
  *   #include "portable_concurrency/p_future_policy.hpp"
  *
  *   // Create a typed future using the v2 result-based API:

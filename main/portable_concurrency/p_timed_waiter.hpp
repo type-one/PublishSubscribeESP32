@@ -18,6 +18,10 @@
 
 #pragma once
 
+#if defined(PORTABLE_CONCURRENCY_V1_API_FROZEN)
+#error "portable_concurrency timed_waiter is deprecated with v1 freeze. Migrate to future_result/shared_result wait_for or wait_until via portable_concurrency/p_future.hpp."
+#endif
+
 /**
  * @defgroup timed_waiter_hdr <portable_concurrency/timed_waiter>
  * @headerfile portable_concurrency/timed_waiter
@@ -25,5 +29,4 @@
  * Class allowing to wait for futures with timeout
  */
 
-#include "bits/alias_namespace.h"
 #include "bits/timed_waiter.h"

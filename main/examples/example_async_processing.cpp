@@ -44,7 +44,7 @@
 
 #include "portable_concurrency/bits/coro.h"
 #include "portable_concurrency/p_execution.hpp"
-#include "portable_concurrency/p_future_v2.hpp"
+#include "portable_concurrency/p_future.hpp"
 
 #if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines) \
     || (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))

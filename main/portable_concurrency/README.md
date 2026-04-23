@@ -1,101 +1,48 @@
 # portable_concurrency
 
-[Original GitHub repository](https://github.com/VestniK/portable_concurrency)
+Result-based async/future API for this repository.
 
-[![CC0 licensed](http://i.creativecommons.org/p/zero/1.0/88x31.png)](https://creativecommons.org/publicdomain/zero/1.0/)
+## Public API Surface
 
-[![Code documented](https://codedocs.xyz/doxygen/doxygen.svg)](https://vestnik.github.io/portable_concurrency/)
+Use these headers:
 
-`std::future` done right. Simple to use portable implementation of the future/promise API inspired by the 
-[C++ Extensions for Concurrency TS](https://wg21.link/p0159) and some parts of [A Unified Executors Proposal for C++](https://wg21.link/p0443).
+- `portable_concurrency/p_future.hpp` (primary unified entrypoint)
+- `portable_concurrency/p_future_policy.hpp` (policy aliases/helpers)
+- `portable_concurrency/p_execution.hpp`
+- `portable_concurrency/p_thread_pool.hpp`
+- `portable_concurrency/p_latch.hpp`
+- `portable_concurrency/p_functional.hpp`
+- `portable_concurrency/p_functional_fwd.hpp`
 
- * Minimum requred C++ standard: C++14
- * The only public dependency: standard library.
- * The only build dependency: gtest
+## Migration Status
 
-## Key features
+- The legacy v1 future/promise API is frozen and not supported for new code.
+- Build wiring no longer compiles the legacy v1 future stack translation unit.
+- Runtime primitives required by thread pool/latch remain available.
 
- * Execcutor aware
-   ```cpp
-   pco::static_thread_pool pool{5};
-   pco::future<int> answer = pco::async(pool.executor(), [] {return 42;});
-   ```
- * Designed to work with user provided executors
-   ```cpp
-   namespace portable_concurrency {
-   template<> struct is_executor<QThreadPool*>: std::true_type {};
-   }
-   void post(QThreadPool*, pco::unique_function<void()>);
-   
-   pco::future<int> answer = pco::async(QThreadPool::globalInstance(), [] {return 42;});
-   ```
- * Continuations support
-   ```cpp
-   pco::static_thread_pool pool{5};
-   asio::io_context io;
-   pco::future<rapidjson::Document> res = pco::async(io.get_executor(), receive_document)
-     .next(pool.executor(), parse_document);
-   ```
- * `when_all`/`when_any` composition of futures
-   ```cpp
-   pco::future<rapidjson::Document> res = pco::when_any(
-     pco::async(pool.executor(), fetch_from_cache),
-     pco::async(io.get_executor(), receive_from_network)
-   ).next([](auto when_any_res) {
-     switch(when_any_res.index) {
-       case 0: return std::get<0>(when_any_res.futures);
-       case 1: return std::get<1>(when_any_res.futures);
-     }
-   }); 
-   ```
- * `future<future<T>>` transparently unwrapped to `future<T>`
- * `future<shared_future<T>>` transparently unwrapped to `shred_future<T>`
- * v2 reference-return workaround via `std::reference_wrapper<T>`
-   ```cpp
-   int value = 42;
-   pco::v2::packaged_task_result<std::reference_wrapper<int>()> task([&value]() {
-     return std::ref(value);
-   });
+## Include Guidance
 
-   auto f = task.get_future();
-   task();
-   auto r = f.get_result();
-   r.value().get() = 77; // updates `value`
-   ```
- * Automatic task cancelation:
-   * Not yet started functions passed to `pco::async`/`pco::packaged_task` or attached to intermediate futures as continuations
-     may not be executed at all if `future` or all `shared_future`'s on the result of continuations chain are destroyed.
-   * `future::detach()` and `shared_future::detach()` functions allows to destroy future without cancelation of any tasks.
-     ```cpp
-     auto future = pco::async(pool.executor(), important_calculation)
-       .next(io.get_executor(), important_io)
-       .detach()
-       .next(pool.executor(), not_so_important_calculations);
-     ```
-     `important_calculation` and `important_io` are guarantied to be executed even in case of premature future destruction.
-   * `promise::is_awaiten()` allows to check if there is a `future` or `shared_future` waiting for value to be set on this 
-     `promise` object.
-   * `promise::promise(canceler_arg_t, CancelAction)` constructor allows to specify action which is called in case of cancelation 
-     via future destruction.
-   * Additional `then` overload to check if task is canceled from the continuations function
-     ```cpp
-     pco::future<std::string> res = pco::async(pool.executor(), [] {return 42;})
-       .then([](pco::promise<std::string> p, pco::future<int> f) {
-         std::string res;
-         while (has_work_to_do()) {
-           do_next_step(res, f);
-           if (!p.is_awaiten())
-             return;
-         }
-         p.set_value(res);
-       });
-     ```
+Use:
 
-## Build
+```cpp
+#include "portable_concurrency/p_future.hpp"
+```
 
-    mkdir -p build/debug
-    cd build/debug
-    conan install --build=missing ../..
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ../..
-    ninja
-    ninja test
+This exposes the result-based API via:
+
+- `portable_concurrency::v2::*` result primitives
+- policy aliases such as `portable_concurrency::future_t<T>`
+
+## Timed Wait Guidance
+
+`p_timed_waiter.hpp` is deprecated under v1 freeze.
+Use timed waits directly on result handles:
+
+- `future_result::wait_for(...)`
+- `future_result::wait_until(...)`
+- `shared_result::wait_for(...)`
+- `shared_result::wait_until(...)`
+
+## Notes
+
+This repository maintains C++20 as primary target with C++17 compatibility where applicable in framework code.
