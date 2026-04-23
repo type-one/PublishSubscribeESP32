@@ -21,7 +21,6 @@
 namespace
 {
 using namespace portable_concurrency::v2;
-#if defined(WORKER_TASK_HAS_PC_ASYNC)
 struct scenario_worker_context {
     std::atomic<int> loop_counter { 0 };
 };
@@ -35,7 +34,6 @@ std::unique_ptr<scenario_worker_task> make_worker_task(
     constexpr std::size_t stack_size = 4096U;
     return std::make_unique<scenario_worker_task>(std::move(startup), context, name, stack_size);
 }
-#endif
 
 struct polling_context {
     std::atomic<int> ready_checks { 0 };
@@ -147,7 +145,6 @@ TEST(V2Scenarios, WhenAnyBrokenPromiseWinnerFallbackScenario)
     EXPECT_EQ(result.value(), 77);
 }
 
-#if defined(WORKER_TASK_HAS_PC_ASYNC)
 /**
  * @brief Tests ComputationChainOnWorkerTask.
  */
@@ -321,4 +318,3 @@ TEST(V2Scenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
     EXPECT_GT(periodic_context->ready_checks.load(), 0);
     EXPECT_EQ(worker_context->loop_counter.load(), 1);
 }
-#endif

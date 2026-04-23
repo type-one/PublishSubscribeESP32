@@ -59,13 +59,6 @@
 #include "tools/platform_helpers.hpp"
 #include "tools/sync_queue.hpp"
 
-// portable_concurrency requires exception support; gate everything that pulls it in.
-#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
-#define WORKER_TASK_HAS_PC_ASYNC
-#include "portable_concurrency/p_execution.hpp"
-#include "portable_concurrency/p_future.hpp"
-#endif
-
 namespace tools
 {
     template <typename Context>
