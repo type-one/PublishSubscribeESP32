@@ -18,6 +18,10 @@
 
 #pragma once
 
+#if defined(PORTABLE_CONCURRENCY_V1_API_FROZEN) && !defined(PORTABLE_CONCURRENCY_ALLOW_V1_HEADERS)
+#error "portable_concurrency v1 when_all API is frozen. Migrate to result-based API in portable_concurrency/p_future_v2.hpp."
+#endif
+
 #include <atomic>
 #include <type_traits>
 #include <utility>
