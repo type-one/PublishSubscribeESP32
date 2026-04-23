@@ -47,7 +47,9 @@
  *   - pco::uses_v2_policy            == true (always)
  */
 
-#include "p_future_v2.hpp"
+#include "bits/alias_namespace.h"
+#include "bits/packaged_task_result.h"
+#include "bits/result_future.h"
 
 namespace portable_concurrency {
 
