@@ -706,9 +706,9 @@ namespace
 
             if (status == portable_concurrency::future_status::timeout)
             {
-                std::printf("timeout detected: destroying promise to trigger cancellation\n");
-                // Destroying the promise (via moving into scope-local, then out of scope)
-                // triggers the cleanup action.
+                std::printf("timeout detected: destroying future to trigger cancellation\n");
+                // In v2, canceler callbacks are tied to downstream abandonment.
+                future = future_result<int, result_error> {};
                 promise = promise_result<int> {};
             }
 
