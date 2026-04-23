@@ -53,6 +53,12 @@ public:
         constexpr int sample_offset = 1;
         return (input_value * sample_multiplier) + sample_offset;
     }
+
+    int process_chain_stage(int input_value, int stage_index) const
+    {
+        constexpr int stage_weight = 3;
+        return input_value + ((stage_index + 1) * stage_weight);
+    }
 };
 
 using worker_v2_task = tools::worker_task<worker_v2_context>;
@@ -66,7 +72,7 @@ std::unique_ptr<worker_v2_task> make_worker_v2_task(
     return std::make_unique<worker_v2_task>(std::move(startup), context, name, stack_size);
 }
 
-#if defined(PS_PC_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
+#if defined(PS_PC_HAS_COROUTINES)
 portable_concurrency::v2::future_result<int> coroutine_v2_schedule_job(
     worker_v2_task& worker, const std::shared_ptr<worker_v2_context>& context, int value)
 {
@@ -87,10 +93,42 @@ portable_concurrency::v2::future_result<int> coroutine_v2_await_future_job(
 }
 
 portable_concurrency::v2::future_result<int> coroutine_process_sample_on_worker(
-    worker_v2_task& worker, const std::shared_ptr<stress_worker_processor>& processor, int input_value)
+    worker_v2_task& worker,
+    const std::shared_ptr<worker_v2_context>& context,
+    const std::shared_ptr<stress_worker_processor>& processor,
+    int input_value)
 {
     co_await worker.schedule();
+    context->loop_counter.fetch_add(1);
     co_return processor->process_sample(input_value);
+}
+
+portable_concurrency::v2::future_result<int> coroutine_alternating_chain_on_two_workers(worker_v2_task& worker_first,
+    worker_v2_task& worker_second,
+    const std::shared_ptr<worker_v2_context>& context_first,
+    const std::shared_ptr<worker_v2_context>& context_second,
+    const std::shared_ptr<stress_worker_processor>& processor,
+    int input_value,
+    int stage_count)
+{
+    int chain_value = input_value;
+    for (int stage_index = 0; stage_index < stage_count; ++stage_index)
+    {
+        if ((stage_index % 2) == 0)
+        {
+            co_await worker_first.schedule();
+            context_first->loop_counter.fetch_add(1);
+        }
+        else
+        {
+            co_await worker_second.schedule();
+            context_second->loop_counter.fetch_add(1);
+        }
+
+        chain_value = processor->process_chain_stage(chain_value, stage_index);
+    }
+
+    co_return chain_value;
 }
 #endif
 
@@ -203,7 +241,9 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
     auto startup = [](const std::shared_ptr<periodic_stress_context>&, const std::string&) {};
     auto* worker_ptr = worker.get();
 
-    auto periodic = [worker_ptr, processor](const std::shared_ptr<periodic_stress_context>& local_context, const std::string&)
+    auto periodic = [worker_ptr, worker_context, processor](
+                        const std::shared_ptr<periodic_stress_context>& local_context,
+                        const std::string&)
     {
         int submitted_index = local_context->submitted_jobs.load();
         const int target_value = target_job_count;
@@ -276,7 +316,56 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
     EXPECT_EQ(worker_context->loop_counter.load(), target_job_count);
 }
 
-#if defined(PS_PC_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
+TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithoutCoroutines)
+{
+    using namespace portable_concurrency::v2;
+
+    constexpr int initial_value = 10;
+    constexpr int stage_count = 6;
+
+    auto context_first = std::make_shared<worker_v2_context>();
+    auto context_second = std::make_shared<worker_v2_context>();
+    auto worker_first = make_worker_v2_task(context_first, "v2_alternating_chain_worker_a");
+    auto worker_second = make_worker_v2_task(context_second, "v2_alternating_chain_worker_b");
+    auto processor = std::make_shared<stress_worker_processor>();
+
+    int chain_value = initial_value;
+    for (int stage_index = 0; stage_index < stage_count; ++stage_index)
+    {
+        auto* active_worker = ((stage_index % 2) == 0) ? worker_first.get() : worker_second.get();
+        auto active_context = ((stage_index % 2) == 0) ? context_first : context_second;
+
+        auto stage_future = active_worker->delegate_async_v2(
+            [processor](const std::shared_ptr<worker_v2_context>& local_context,
+                const std::string&,
+                int input_chain_value,
+                int current_stage)
+            {
+                local_context->loop_counter.fetch_add(1);
+                return processor->process_chain_stage(input_chain_value, current_stage);
+            },
+            chain_value,
+            stage_index);
+
+        const auto stage_result = stage_future.get_result();
+        ASSERT_TRUE(stage_result.has_value());
+        chain_value = stage_result.value();
+        ASSERT_GT(active_context->loop_counter.load(), 0);
+    }
+
+    int expected_value = initial_value;
+    for (int stage_index = 0; stage_index < stage_count; ++stage_index)
+    {
+        expected_value = processor->process_chain_stage(expected_value, stage_index);
+    }
+
+    constexpr int expected_calls_per_worker = stage_count / 2;
+    EXPECT_EQ(chain_value, expected_value);
+    EXPECT_EQ(context_first->loop_counter.load(), expected_calls_per_worker);
+    EXPECT_EQ(context_second->loop_counter.load(), expected_calls_per_worker);
+}
+
+#if defined(PS_PC_HAS_COROUTINES)
 TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineScheduleFlow)
 {
     auto context = std::make_shared<worker_v2_context>();
@@ -333,7 +422,9 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCorou
     auto startup = [](const std::shared_ptr<periodic_stress_context>&, const std::string&) {};
     auto* worker_ptr = worker.get();
 
-    auto periodic = [worker_ptr, processor](const std::shared_ptr<periodic_stress_context>& local_context, const std::string&)
+    auto periodic = [worker_ptr, worker_context, processor](
+                        const std::shared_ptr<periodic_stress_context>& local_context,
+                        const std::string&)
     {
         int submitted_index = local_context->submitted_jobs.load();
         const int target_value = target_job_count;
@@ -347,7 +438,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCorou
             return;
         }
 
-        auto chained = coroutine_process_sample_on_worker(*worker_ptr, processor, submitted_index)
+        auto chained = coroutine_process_sample_on_worker(*worker_ptr, worker_context, processor, submitted_index)
                            .then_value([local_context](int processed_value)
                            {
                                local_context->completed_jobs.fetch_add(1);
@@ -399,5 +490,35 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCorou
         = static_cast<std::int64_t>(target_job_count) * static_cast<std::int64_t>(target_job_count);
     EXPECT_EQ(stress_context->processed_sum.load(), expected_sum);
     EXPECT_EQ(worker_context->loop_counter.load(), target_job_count);
+}
+
+TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithCoroutines)
+{
+    using namespace portable_concurrency::v2;
+
+    constexpr int initial_value = 10;
+    constexpr int stage_count = 6;
+
+    auto context_first = std::make_shared<worker_v2_context>();
+    auto context_second = std::make_shared<worker_v2_context>();
+    auto worker_first = make_worker_v2_task(context_first, "v2_alternating_coro_chain_worker_a");
+    auto worker_second = make_worker_v2_task(context_second, "v2_alternating_coro_chain_worker_b");
+    auto processor = std::make_shared<stress_worker_processor>();
+
+    auto chained_future = coroutine_alternating_chain_on_two_workers(
+        *worker_first, *worker_second, context_first, context_second, processor, initial_value, stage_count);
+    const auto chained_result = chained_future.get_result();
+    ASSERT_TRUE(chained_result.has_value());
+
+    int expected_value = initial_value;
+    for (int stage_index = 0; stage_index < stage_count; ++stage_index)
+    {
+        expected_value = processor->process_chain_stage(expected_value, stage_index);
+    }
+
+    constexpr int expected_calls_per_worker = stage_count / 2;
+    EXPECT_EQ(chained_result.value(), expected_value);
+    EXPECT_EQ(context_first->loop_counter.load(), expected_calls_per_worker);
+    EXPECT_EQ(context_second->loop_counter.load(), expected_calls_per_worker);
 }
 #endif

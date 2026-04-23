@@ -1,9 +1,9 @@
 /**
  * @file p_future_policy.hpp
  * @brief Portable concurrency component.
- * @author Laurent Lardinois
+ * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026
- * @note Refactored with the help of Copilot.
+ * @note Refactored from Sergey Vidyuk's work with the help of Copilot.
  */
 
 //-----------------------------------------------------------------------------//
@@ -13,7 +13,7 @@
 // https://github.com/type-one/PublishSubscribeESP32                           //
 //                                                                             //
 // MIT License                                                                 //
-// Refactored with the help of Copilot.                                        //
+// Derived from Sergey Vidyuk's work with the help of Copilot.                 //
 //-----------------------------------------------------------------------------//
 
 #pragma once

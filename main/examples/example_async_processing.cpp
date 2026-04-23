@@ -80,6 +80,12 @@ namespace
             constexpr int sample_offset = 1;
             return (sample_value * sample_multiplier) + sample_offset;
         }
+
+        [[nodiscard]] static int process_chain_stage(int input_value, int stage_index)
+        {
+            constexpr int stage_weight = 3;
+            return input_value + ((stage_index + 1) * stage_weight);
+        }
     };
 
     using async_worker = tools::worker_task<async_context>;
@@ -97,17 +103,26 @@ namespace
     // -----------------------------------------------------------------------
     // v2 coroutine helpers — compiled only when coroutine support is present
 
-#if defined(ASYNC_EXAMPLE_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
+#if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
+    struct alternating_chain_request
+    {
+        std::shared_ptr<async_context> context_first;
+        std::shared_ptr<async_context> context_second;
+        std::shared_ptr<async_processing_worker_model> processor;
+        int initial_value = 0;
+        int chain_stage_count = 0;
+    };
+
     /**
      * @brief Coroutine that hops onto @p worker, increments the call counter, and
      *        returns @p input scaled by three.
      */
     portable_concurrency::v2::future_result<int> schedule_and_compute(
-        async_worker& worker, const std::shared_ptr<async_context>& context, int input)
+        async_worker* worker_ptr, std::shared_ptr<async_context> context, int input_value)
     {
-        co_await worker.schedule();
+        co_await worker_ptr->schedule();
         context->call_count.fetch_add(1);
-        co_return input * 3;
+        co_return input_value * 3;
     }
 
     /**
@@ -115,24 +130,49 @@ namespace
      *        adds an offset to the resolved value.
      */
     portable_concurrency::v2::future_result<int> schedule_and_await(
-        async_worker& worker,
-        const std::shared_ptr<async_context>& context,
+        async_worker* worker_ptr,
+        std::shared_ptr<async_context> context,
         portable_concurrency::v2::future_result<int> upstream,
-        int offset)
+        int offset_value)
     {
-        co_await worker.schedule();
+        co_await worker_ptr->schedule();
         const int base = co_await upstream;
         context->call_count.fetch_add(1);
-        co_return base + offset;
+        co_return base + offset_value;
     }
 
     portable_concurrency::v2::future_result<int> schedule_and_process_sample(
-        async_worker& worker, const std::shared_ptr<async_processing_worker_model>& processor, int sample_value)
+        async_worker* worker_ptr,
+        std::shared_ptr<async_context> context,
+        std::shared_ptr<async_processing_worker_model> processor,
+        int sample_value)
     {
-        co_await worker.schedule();
+        co_await worker_ptr->schedule();
+        context->call_count.fetch_add(1);
         co_return processor->process_sample(sample_value);
     }
-#endif // ASYNC_EXAMPLE_HAS_COROUTINES && WORKER_TASK_HAS_PC_ASYNC
+
+    portable_concurrency::v2::future_result<int> schedule_alternating_chain_on_two_workers(
+        async_worker* worker_first_ptr, async_worker* worker_second_ptr, alternating_chain_request request)
+    {
+        int chain_value = request.initial_value;
+        for (int stage_index = 0; stage_index < request.chain_stage_count; ++stage_index)
+        {
+            if ((stage_index % 2) == 0)
+            {
+                co_await worker_first_ptr->schedule();
+                request.context_first->call_count.fetch_add(1);
+            }
+            else
+            {
+                co_await worker_second_ptr->schedule();
+                request.context_second->call_count.fetch_add(1);
+            }
+            chain_value = request.processor->process_chain_stage(chain_value, stage_index);
+        }
+        co_return chain_value;
+    }
+#endif // ASYNC_EXAMPLE_HAS_COROUTINES
 
     // -----------------------------------------------------------------------
     // Example 1: async_result with inplace_executor + then_value / then_error
@@ -514,7 +554,7 @@ namespace
     // -----------------------------------------------------------------------
     // Example 10: coroutine schedule() + co_await future_result
 
-#if defined(ASYNC_EXAMPLE_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
+#if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
     /**
      * @brief Shows a coroutine that hops onto a worker via @c schedule(), performs
      *        a computation, then awaits an upstream @c future_result.
@@ -527,21 +567,26 @@ namespace
         auto context = std::make_shared<async_context>();
         auto worker = make_async_worker(context, "v2_coro_worker");
 
+        constexpr int upstream_input_value = 5;
+        constexpr int scheduled_input_value = 8;
+        constexpr int scheduled_increment = 1;
+        constexpr int awaited_offset = 3;
+
         // Fire an upstream async job that the second coroutine will await.
         auto upstream = worker->delegate_async_v2(
-            [](const std::shared_ptr<async_context>& ctx, const std::string&, int v)
+            [](const std::shared_ptr<async_context>& ctx, const std::string&, int upstream_input)
             {
                 ctx->call_count.fetch_add(1);
-                return v * 4;
+                return upstream_input * 4;
             },
-            5);
+            upstream_input_value);
 
         // schedule_and_compute hops onto the worker, increments the counter, returns input * 3.
-        auto scheduled = schedule_and_compute(*worker, context, 8)
-                             .then_value([](int v) { return v + 1; });
+        auto scheduled = schedule_and_compute(worker.get(), context, scheduled_input_value)
+                             .then_value([](int computed_value) { return computed_value + scheduled_increment; });
 
         // schedule_and_await hops onto the worker, awaits upstream (5*4=20), adds offset 3.
-        auto awaited = schedule_and_await(*worker, context, std::move(upstream), 3);
+        auto awaited = schedule_and_await(worker.get(), context, std::move(upstream), awaited_offset);
 
         const auto result_a = scheduled.get_result();
         const auto result_b = awaited.get_result();
@@ -556,7 +601,7 @@ namespace
         }
         std::printf("worker call_count: %d\n", context->call_count.load());
     }
-#endif // ASYNC_EXAMPLE_HAS_COROUTINES && WORKER_TASK_HAS_PC_ASYNC
+#endif // ASYNC_EXAMPLE_HAS_COROUTINES
 
     // -----------------------------------------------------------------------
     // Example 11: timeout with wait_for()
@@ -710,7 +755,9 @@ namespace
         auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) {};
         auto* worker_ptr = worker.get();
 
-        auto periodic = [worker_ptr, processor](const std::shared_ptr<periodic_feed_context>& local_context, const std::string&)
+        auto periodic = [worker_ptr, async_worker_context, processor](
+                    const std::shared_ptr<periodic_feed_context>& local_context,
+                    const std::string&)
         {
             int submitted_index = local_context->submitted_samples.load();
             const int target_value = target_sample_count;
@@ -775,7 +822,67 @@ namespace
             expected_sum);
     }
 
-#if defined(ASYNC_EXAMPLE_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
+    // -----------------------------------------------------------------------
+    // Example 15: alternating processing chain across two worker executors
+
+    /**
+     * @brief Runs a sequential processing chain where each stage is dispatched
+     *        alternately to worker A then worker B executors.
+     */
+    void test_alternating_chain_two_workers_no_coroutines()
+    {
+        LOG_INFO("-- v2: alternating chain across two workers (no coroutine) --");
+        print_stats();
+
+        constexpr int initial_value = 10;
+        constexpr int stage_count = 6;
+        constexpr int expected_calls_per_worker = stage_count / 2;
+
+        auto context_first = std::make_shared<async_context>();
+        auto context_second = std::make_shared<async_context>();
+        auto worker_first = make_async_worker(context_first, "v2_alt_chain_worker_a");
+        auto worker_second = make_async_worker(context_second, "v2_alt_chain_worker_b");
+
+        int chain_value = initial_value;
+        for (int stage_index = 0; stage_index < stage_count; ++stage_index)
+        {
+            auto* active_worker = ((stage_index % 2) == 0) ? worker_first.get() : worker_second.get();
+
+            auto stage_future = active_worker->delegate_async_v2(
+                [](const std::shared_ptr<async_context>& local_context,
+                    const std::string&,
+                    int input_chain_value,
+                    int current_stage)
+                {
+                    local_context->call_count.fetch_add(1);
+                    return async_processing_worker_model::process_chain_stage(input_chain_value, current_stage);
+                },
+                chain_value,
+                stage_index);
+
+            const auto stage_result = stage_future.get_result();
+            if (!stage_result.has_value())
+            {
+                std::printf("alternating chain (no coroutine): stage %d failed\n", stage_index);
+                return;
+            }
+            chain_value = stage_result.value();
+        }
+
+        int expected_value = initial_value;
+        for (int stage_index = 0; stage_index < stage_count; ++stage_index)
+        {
+            expected_value = async_processing_worker_model::process_chain_stage(expected_value, stage_index);
+        }
+
+        std::printf("alternating chain (no coroutine): result=%d expected=%d\n", chain_value, expected_value);
+        std::printf("alternating chain (no coroutine): worker_a_calls=%d worker_b_calls=%d expected_each=%d\n",
+            context_first->call_count.load(),
+            context_second->call_count.load(),
+            expected_calls_per_worker);
+    }
+
+#if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
     // -----------------------------------------------------------------------
     // Example 14: periodic task feeds worker via coroutine schedule()
 
@@ -805,7 +912,9 @@ namespace
         auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) {};
         auto* worker_ptr = worker.get();
 
-        auto periodic = [worker_ptr, processor](const std::shared_ptr<periodic_feed_context>& local_context, const std::string&)
+        auto periodic = [worker_ptr, async_worker_context, processor](
+                            const std::shared_ptr<periodic_feed_context>& local_context,
+                            const std::string&)
         {
             int submitted_index = local_context->submitted_samples.load();
             const int target_value = target_sample_count;
@@ -819,7 +928,7 @@ namespace
                 return;
             }
 
-            auto chained = schedule_and_process_sample(*worker_ptr, processor, submitted_index)
+            auto chained = schedule_and_process_sample(worker_ptr, async_worker_context, processor, submitted_index)
                                .then_value([local_context](int processed_value)
                                {
                                    local_context->completed_samples.fetch_add(1);
@@ -864,6 +973,57 @@ namespace
             feed_context->aggregated_output.load(),
             expected_sum);
     }
+
+    // -----------------------------------------------------------------------
+    // Example 16: alternating chain across two workers with coroutine schedule()
+
+    /**
+     * @brief Runs the same alternating two-worker chain as a coroutine flow using
+     *        schedule() hops between worker A and worker B.
+     */
+    void test_alternating_chain_two_workers_coroutines()
+    {
+        LOG_INFO("-- v2: alternating chain across two workers (coroutine) --");
+        print_stats();
+
+        constexpr int initial_value = 10;
+        constexpr int stage_count = 6;
+        constexpr int expected_calls_per_worker = stage_count / 2;
+
+        auto context_first = std::make_shared<async_context>();
+        auto context_second = std::make_shared<async_context>();
+        auto worker_first = make_async_worker(context_first, "v2_alt_coro_chain_worker_a");
+        auto worker_second = make_async_worker(context_second, "v2_alt_coro_chain_worker_b");
+        auto processor = std::make_shared<async_processing_worker_model>();
+
+        alternating_chain_request request;
+        request.context_first = context_first;
+        request.context_second = context_second;
+        request.processor = processor;
+        request.initial_value = initial_value;
+        request.chain_stage_count = stage_count;
+
+        auto chained_future = schedule_alternating_chain_on_two_workers(worker_first.get(), worker_second.get(), request);
+        const auto chained_result = chained_future.get_result();
+
+        if (!chained_result.has_value())
+        {
+            std::printf("alternating chain (coroutine): failed\n");
+            return;
+        }
+
+        int expected_value = initial_value;
+        for (int stage_index = 0; stage_index < stage_count; ++stage_index)
+        {
+            expected_value = async_processing_worker_model::process_chain_stage(expected_value, stage_index);
+        }
+
+        std::printf("alternating chain (coroutine): result=%d expected=%d\n", chained_result.value(), expected_value);
+        std::printf("alternating chain (coroutine): worker_a_calls=%d worker_b_calls=%d expected_each=%d\n",
+            context_first->call_count.load(),
+            context_second->call_count.load(),
+            expected_calls_per_worker);
+    }
 #endif
 
 } // namespace
@@ -884,9 +1044,11 @@ void run_example_async_processing()
     test_timeout_detection();
     test_timeout_and_cancellation();
     test_periodic_feeds_worker_stress_no_coroutines();
+    test_alternating_chain_two_workers_no_coroutines();
 
-#if defined(ASYNC_EXAMPLE_HAS_COROUTINES) && defined(WORKER_TASK_HAS_PC_ASYNC)
+#if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
     test_coroutine_schedule_and_await();
     test_periodic_feeds_worker_stress_coroutines();
+    test_alternating_chain_two_workers_coroutines();
 #endif
 }
