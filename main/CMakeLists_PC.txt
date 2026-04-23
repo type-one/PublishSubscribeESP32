@@ -363,6 +363,39 @@ set(PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES
     tests/portable_concurrency_v2/test_continuation_result_no_exceptions.cpp
     tests/portable_concurrency_v2/test_future_result.cpp
     tests/portable_concurrency_v2/test_next_result.cpp
+    tests/portable_concurrency_v2/test_packaged_task_result.cpp
+    tests/portable_concurrency_v2/test_promise_result.cpp
+    tests/portable_concurrency_v2/test_reference_type_unsupported.cpp
+    tests/portable_concurrency_v2/test_shared_result.cpp
+    tests/portable_concurrency_v2/test_v2_scenarios.cpp
+    tests/portable_concurrency_v2/test_when_all_result.cpp
+    tests/portable_concurrency_v2/test_when_any_result.cpp
+)
+
+list(APPEND TEST_SOURCES ${PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES})
+
+# Create an executable for running tests.
+# Do not use `run_tests` on Visual Studio because CTest generates a built-in
+# `RUN_TESTS` utility target and Windows project names are case-insensitive.
+set(RUN_TESTS_TARGET publish_subscribe_tests)
+if(TARGET ${RUN_TESTS_TARGET})
+    get_filename_component(_cmake_list_name "${CMAKE_CURRENT_LIST_FILE}" NAME_WE)
+    set(RUN_TESTS_TARGET "publish_subscribe_tests_${_cmake_list_name}")
+    message(WARNING "Target publish_subscribe_tests already exists. Using ${RUN_TESTS_TARGET} in this CMake list to avoid solution project-name collisions.")
+endif()
+add_executable(${RUN_TESTS_TARGET} ${TEST_SOURCES})
+
+# Disable clang-tidy for the test target: it runs on every TU and can triple
+# per-file compile time. Static analysis of production code is enough.
+set_target_properties(${RUN_TESTS_TARGET} PROPERTIES CXX_CLANG_TIDY "")
+
+# Precompiled header: gtest/gtest.h and the STL headers used by most test files
+# are parsed once and reused across all 23 TUs instead of being re-parsed each time.
+target_precompile_headers(${RUN_TESTS_TARGET} PRIVATE
+    <gtest/gtest.h>
+    <atomic>
+    <chrono>
+    <cstddef>
     <cstdint>
     <functional>
     <memory>
@@ -380,3 +413,11 @@ set(RUN_TESTS_COMMAND_TARGET run_tests_command)
 if(TARGET ${RUN_TESTS_COMMAND_TARGET})
     get_filename_component(_cmake_list_name "${CMAKE_CURRENT_LIST_FILE}" NAME_WE)
     set(RUN_TESTS_COMMAND_TARGET "run_tests_command_${_cmake_list_name}")
+endif()
+add_custom_target(
+    ${RUN_TESTS_COMMAND_TARGET}
+    COMMAND $<TARGET_FILE:${RUN_TESTS_TARGET}>
+    DEPENDS ${RUN_TESTS_TARGET}
+)
+
+gtest_discover_tests(${RUN_TESTS_TARGET})
