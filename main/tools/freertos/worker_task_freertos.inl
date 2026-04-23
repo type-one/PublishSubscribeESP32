@@ -362,63 +362,6 @@ namespace tools
                 as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
         }
 
-        /**
-         * @brief Delegates a callable to the worker task and returns a policy-selected future.
-         *
-         * When PORTABLE_CONCURRENCY_V2_DEFAULT is defined, dispatches via delegate_async_v2
-         * and returns a future_result<R, result_error> (no-exception API).
-         * Otherwise (default), dispatches via delegate_async and returns a future<R>
-         * (requires exception support).
-         *
-         * @tparam Callable Callable type.
-         * @tparam Args     Additional argument types forwarded to the callable.
-         * @param  work     The callable to execute on the FreeRTOS task.
-         * @param  args     Additional arguments forwarded after context and task_name.
-         * @return          A future whose type depends on the active async policy.
-         */
-#ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
-        template <typename Callable, typename... Args>
-        auto delegate_async_policy(Callable&& work, Args&&... args)
-            -> decltype(portable_concurrency::v2::async_result(std::declval<executor_type>(),
-                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
-                std::forward<Args>(args)...))
-        {
-            return portable_concurrency::v2::async_result(
-                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
-        }
-#elif defined(WORKER_TASK_HAS_PC_ASYNC)
-        template <typename Callable, typename... Args>
-        auto delegate_async_policy(Callable&& work, Args&&... args)
-            -> decltype(portable_concurrency::async(std::declval<executor_type>(),
-                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
-                std::forward<Args>(args)...))
-        {
-            return portable_concurrency::async(
-                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
-        }
-#else
-        template <typename Callable, typename... Args>
-        auto delegate_async_policy(Callable&& work, Args&&... args)
-            -> decltype(portable_concurrency::v2::async_result(std::declval<executor_type>(),
-                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
-                std::forward<Args>(args)...))
-        {
-            return portable_concurrency::v2::async_result(
-                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
-        }
-#endif // delegate_async_policy
-
-#if defined(WORKER_TASK_HAS_PC_ASYNC)
-        template <typename Callable, typename... Args>
-        auto delegate_async(Callable&& work, Args&&... args) -> decltype(portable_concurrency::async(
-            std::declval<executor_type>(), std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(),
-            std::declval<std::string>(), std::forward<Args>(args)...))
-        {
-            return portable_concurrency::async(
-                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
-        }
-#endif // WORKER_TASK_HAS_PC_ASYNC
-
 #if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines) || (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
         class schedule_awaitable
         {

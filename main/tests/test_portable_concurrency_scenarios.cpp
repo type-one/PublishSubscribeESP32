@@ -277,7 +277,7 @@ TEST(PortableConcurrencyScenarios, PeriodicTaskPollsLongWorkerComputationReadine
     auto worker_context = std::make_shared<scenario_worker_context>();
     auto worker = make_worker_task(worker_context, "long_compute_worker");
 
-    auto long_future = worker->delegate_async_policy(
+    auto long_future = worker->delegate_async_v2(
         [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int value)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(220));

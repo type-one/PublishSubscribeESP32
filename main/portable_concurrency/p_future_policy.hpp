@@ -24,20 +24,16 @@
  * @defgroup future_policy_hdr <portable_concurrency/p_future_policy>
  * @headerfile portable_concurrency/p_future_policy
  *
- * Build-time policy selector: routes future creation to v1 (exception-based)
- * or v2 (result-based) API depending on the PORTABLE_CONCURRENCY_V2_DEFAULT
- * compile-time definition.
+ * Result-oriented future API (v2): routes all future creation to the v2 API.
+ * Exception support is not required.
  *
  * Usage:
  *   #include "portable_concurrency/p_future_policy.hpp"
  *
- *   // Create a typed future in whichever mode is active:
+ *   // Create a typed future using the v2 result-based API:
  *   pco::future_t<int> fut = pco::make_async_default(exec, []{ return 42; });
  *
- *   // Inspect the active policy at compile time:
- *   static_assert(pco::uses_v2_policy == true);  // when v2 is selected
- *
- * When PORTABLE_CONCURRENCY_V2_DEFAULT is defined:
+ * Type aliases (all use v2 result-based API):
  *   - pco::future_t<T>               -> pco::v2::future_result<T, pco::v2::result_error>
  *   - pco::shared_future_t<T>        -> pco::v2::shared_result<T, pco::v2::result_error>
  *   - pco::promise_t<T>              -> pco::v2::promise_result<T, pco::v2::result_error>
@@ -45,21 +41,8 @@
  *   - pco::make_ready_default(...)   -> pco::v2::make_ready_result(...)
  *   - pco::make_error_default<T>(e)  -> pco::v2::make_error_result<T>(e)
  *   - pco::active_async_policy       -> pco::async_policy_v2_tag
- *   - pco::uses_v2_policy            == true
- *
- * When PORTABLE_CONCURRENCY_V2_DEFAULT is NOT defined (default):
- *   - pco::future_t<T>               -> pco::future<T>
- *   - pco::shared_future_t<T>        -> pco::shared_future<T>
- *   - pco::promise_t<T>              -> pco::promise<T>
- *   - pco::make_async_default(...)   -> pco::async(...)
- *   - pco::make_ready_default(...)   -> pco::make_ready_future(...)
- *   - pco::make_error_default<T>(e)  -> pco::make_exceptional_future<T>(e)
- *   - pco::active_async_policy       -> pco::async_policy_v1_tag
- *   - pco::uses_v2_policy            == false
- *   - Requires exception support (__EXCEPTIONS / _CPPUNWIND)
+ *   - pco::uses_v2_policy            == true (always)
  */
-
-#ifdef PORTABLE_CONCURRENCY_V2_DEFAULT
 
 #include "p_future_v2.hpp"
 
@@ -121,70 +104,3 @@ using active_async_policy = async_policy_v2_tag;
 static constexpr bool uses_v2_policy = true;
 
 } // namespace portable_concurrency
-
-#else // ----------------------------------------------------------------- v1
-
-#include "p_future.hpp"
-
-namespace portable_concurrency {
-
-/// Type alias for the default future: resolves to future<T> in v1 mode.
-template <typename T>
-using future_t = future<T>;
-
-/// Type alias for the default shared future: resolves to shared_future<T> in v1 mode.
-template <typename T>
-using shared_future_t = shared_future<T>;
-
-/// Type alias for the default promise: resolves to promise<T> in v1 mode.
-template <typename T>
-using promise_t = promise<T>;
-
-/// Unified ready-future factory — v1 policy.
-template <typename T>
-auto make_ready_default(T &&value) -> decltype(make_ready_future(std::forward<T>(value))) {
-    return make_ready_future(std::forward<T>(value));
-}
-
-/// Unified ready-future factory for void — v1 policy.
-inline auto make_ready_default() -> decltype(make_ready_future()) {
-    return make_ready_future();
-}
-
-/// Unified error-future factory — v1 policy.
-template <typename T>
-future_t<T> make_error_default(std::exception_ptr error) {
-    return make_exceptional_future<T>(std::move(error));
-}
-
-/// Unified error-future factory — v1 policy.
-template <typename T, typename Err>
-future_t<T> make_error_default(Err error) {
-    return make_exceptional_future<T>(std::move(error));
-}
-
-/**
- * @brief Unified async dispatch — v1 (exception-based) policy.
- *
- * Posts `callable(args...)` to executor `exec` and returns a future<R>
- * where R = std::invoke_result_t<F, A...>.  Requires exception support.
- */
-template <typename Exec, typename F, typename... A>
-auto make_async_default(Exec&& exec, F&& callable, A&&... args)
-    -> decltype(async(std::forward<Exec>(exec), std::forward<F>(callable), std::forward<A>(args)...))
-{
-    return async(std::forward<Exec>(exec), std::forward<F>(callable), std::forward<A>(args)...);
-}
-
-/// Tag type identifying that the v1 (exception-based) policy is active.
-struct async_policy_v1_tag {};
-
-/// Resolves to the tag type of the currently active async policy.
-using active_async_policy = async_policy_v1_tag;
-
-/// True when the v2 result-based policy is active; false when the v1 exception-based policy is active.
-static constexpr bool uses_v2_policy = false;
-
-} // namespace portable_concurrency
-
-#endif // PORTABLE_CONCURRENCY_V2_DEFAULT
