@@ -2,6 +2,8 @@
 
 Goal: make `portable_concurrency_v2` in exceptions-off mode equivalent in features and behavior to `portable_concurrency` (exceptions-based), except for documented intentional divergences.
 
+Historical note: references to `tests/portable_concurrency/*` in this backlog are source-parity anchors from the pre-removal v1 suite. The v1 files are no longer present in this repository.
+
 ## Priority Legend
 - P0: blocking feature parity gap
 - P1: high-value behavioral parity and migration safety
@@ -34,7 +36,7 @@ Goal: make `portable_concurrency_v2` in exceptions-off mode equivalent in featur
     - New `test_abandon_result.cpp` (or equivalent split) in v2 test folder.
   - Status:
     - Added `tests/portable_concurrency_v2/test_abandon_result.cpp` with 14 parity tests covering dropped async work, dropped continuations, packaged task abandonment, promise abandonment, and invalid nested-handle returns.
-    - Registered the new test file in all host CMake variants: `CMakeLists.txt`, `CMakeLists_PC.txt`, `CMakeLists_COPILOT.txt`.
+    - Registered the new test file in host CMake variants (`CMakeLists.txt`, `CMakeLists_PC.txt`) at the time of implementation.
     - Updated `resolve_nested_handle(...)` in `portable_concurrency/bits/result_future.h` to map invalid nested-handle (`no_state`) outcomes to `broken_promise`, matching v1 abandon semantics.
     - Fixed `promise_result` move-assignment abandonment behavior to avoid deadlock and correctly publish `broken_promise` for replaced pending states.
 
@@ -172,7 +174,7 @@ Goal: make `portable_concurrency_v2` in exceptions-off mode equivalent in featur
   - implemented and tested in v2 exceptions-off, or
   - explicitly documented as intentional divergence with rationale.
 - v2 tests compile and pass in host build variants used in this repo.
-- New tests are linked into the active host CMake paths (`CMakeLists.txt`, `CMakeLists_PC.txt`, `CMakeLists_COPILOT.txt`) when needed.
+- New tests are linked into the active host CMake paths (`CMakeLists.txt`, `CMakeLists_PC.txt`) when needed.
 
 ## Progress Tracker
 - [x] P0 complete

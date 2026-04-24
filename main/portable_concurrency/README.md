@@ -16,8 +16,8 @@ Use these headers:
 
 ## Migration Status
 
-- The legacy v1 future/promise API is frozen and not supported for new code.
-- Build wiring no longer compiles the legacy v1 future stack translation unit.
+- The legacy v1 future/promise API has been removed from this repository.
+- Build wiring compiles only the result-based v2 future/runtime implementation.
 - Runtime primitives required by thread pool/latch remain available.
 
 ## Include Guidance
@@ -37,7 +37,6 @@ The older `p_future_v2.hpp` wrapper is no longer part of the public surface.
 
 ## Timed Wait Guidance
 
-`p_timed_waiter.hpp` is deprecated under v1 freeze.
 Use timed waits directly on result handles:
 
 - `future_result::wait_for(...)`
