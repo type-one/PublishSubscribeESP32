@@ -13,7 +13,6 @@
 
 namespace
 {
-using namespace pco::v2;
 struct queued_executor {
     std::vector<pco::unique_function<void()>> tasks;
 
@@ -49,7 +48,7 @@ namespace
  */
 TEST(ContinuationResultTest, then_value_runs_on_success)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -70,7 +69,7 @@ TEST(ContinuationResultTest, then_value_runs_on_success)
  */
 TEST(ContinuationResultTest, then_value_executor_skips_when_downstream_destroyed)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -85,7 +84,7 @@ TEST(ContinuationResultTest, then_value_executor_skips_when_downstream_destroyed
         return value + 1;
     });
 
-    chained = future_result<int>{};
+    chained = pco::future_result<int>{};
     exec.run_all();
 
     EXPECT_FALSE(called);
@@ -96,22 +95,22 @@ TEST(ContinuationResultTest, then_value_executor_skips_when_downstream_destroyed
  */
 TEST(ContinuationResultTest, then_error_executor_skips_when_downstream_destroyed)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
     queued_executor exec;
     bool called = false;
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
-    auto chained = std::move(source).then_error(exec, [&called](result_error)
+    auto chained = std::move(source).then_error(exec, [&called](pco::result_error)
     {
         called = true;
         return 7;
     });
 
-    chained = future_result<int>{};
+    chained = pco::future_result<int>{};
     exec.run_all();
 
     EXPECT_FALSE(called);
@@ -122,7 +121,7 @@ TEST(ContinuationResultTest, then_error_executor_skips_when_downstream_destroyed
  */
 TEST(ContinuationResultTest, then_result_executor_skips_when_downstream_destroyed)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -132,13 +131,13 @@ TEST(ContinuationResultTest, then_result_executor_skips_when_downstream_destroye
     promise.set_value(9);
 
     auto chained = std::move(source).then_result(exec,
-        [&called](pco::v2::expected<int, result_error> result)
+        [&called](pco::expected<int, pco::result_error> result)
         {
             called = true;
             return result.value() * 2;
         });
 
-    chained = future_result<int>{};
+    chained = pco::future_result<int>{};
     exec.run_all();
 
     EXPECT_FALSE(called);
@@ -149,7 +148,7 @@ TEST(ContinuationResultTest, then_result_executor_skips_when_downstream_destroye
  */
 TEST(ContinuationResultTest, then_value_skips_when_downstream_destroyed)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -161,7 +160,7 @@ TEST(ContinuationResultTest, then_value_skips_when_downstream_destroyed)
         return value + 1;
     });
 
-    chained = future_result<int>{};
+    chained = pco::future_result<int>{};
     promise.set_value(4);
 
     EXPECT_FALSE(called);
@@ -172,20 +171,20 @@ TEST(ContinuationResultTest, then_value_skips_when_downstream_destroyed)
  */
 TEST(ContinuationResultTest, then_error_skips_when_downstream_destroyed)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
     bool called = false;
 
-    auto chained = std::move(source).then_error([&called](result_error)
+    auto chained = std::move(source).then_error([&called](pco::result_error)
     {
         called = true;
         return 7;
     });
 
-    chained = future_result<int>{};
-    promise.set_error(result_error::execution_failure);
+    chained = pco::future_result<int>{};
+    promise.set_error(pco::result_error::execution_failure);
 
     EXPECT_FALSE(called);
 }
@@ -195,20 +194,20 @@ TEST(ContinuationResultTest, then_error_skips_when_downstream_destroyed)
  */
 TEST(ContinuationResultTest, then_result_skips_when_downstream_destroyed)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
     bool called = false;
 
     auto chained = std::move(source).then_result(
-        [&called](pco::v2::expected<int, result_error> result)
+        [&called](pco::expected<int, pco::result_error> result)
         {
             called = true;
             return result.has_value() ? result.value() * 2 : -1;
         });
 
-    chained = future_result<int>{};
+    chained = pco::future_result<int>{};
     promise.set_value(9);
 
     EXPECT_FALSE(called);
@@ -219,12 +218,12 @@ TEST(ContinuationResultTest, then_result_skips_when_downstream_destroyed)
  */
 TEST(ContinuationResultTest, then_value_skips_on_error)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
     bool called = false;
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto chained = std::move(source).then_value([&called](int)
     {
@@ -234,7 +233,7 @@ TEST(ContinuationResultTest, then_value_skips_on_error)
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
     EXPECT_FALSE(called);
 }
 
@@ -243,15 +242,15 @@ TEST(ContinuationResultTest, then_value_skips_on_error)
  */
 TEST(ContinuationResultTest, then_error_recovers_value)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
-    auto chained = std::move(source).then_error([](result_error error)
+    auto chained = std::move(source).then_error([](pco::result_error error)
     {
-        EXPECT_EQ(error, result_error::execution_failure);
+        EXPECT_EQ(error, pco::result_error::execution_failure);
         return 7;
     });
 
@@ -265,14 +264,14 @@ TEST(ContinuationResultTest, then_error_recovers_value)
  */
 TEST(ContinuationResultTest, then_error_passthrough_on_success)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
     bool called = false;
 
     promise.set_value(42);
 
-    auto chained = std::move(source).then_error([&called](result_error)
+    auto chained = std::move(source).then_error([&called](pco::result_error)
     {
         called = true;
         return -1;
@@ -285,18 +284,18 @@ TEST(ContinuationResultTest, then_error_passthrough_on_success)
 }
 
 /**
- * @brief Verifies then_result receives successful expected values.
+ * @brief Verifies then_result receives successful pco::expected values.
  */
 TEST(ContinuationResultTest, then_result_receives_success_expected)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
     promise.set_value(42);
 
     auto chained = std::move(source).then_result(
-        [](pco::v2::expected<int, result_error> result)
+        [](pco::expected<int, pco::result_error> result)
         {
             EXPECT_TRUE(result.has_value());
             return result.value() + 1;
@@ -308,21 +307,21 @@ TEST(ContinuationResultTest, then_result_receives_success_expected)
 }
 
 /**
- * @brief Verifies then_result receives error expected values.
+ * @brief Verifies then_result receives error pco::expected values.
  */
 TEST(ContinuationResultTest, then_result_receives_error_expected)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::broken_promise);
+    promise.set_error(pco::result_error::broken_promise);
 
     auto chained = std::move(source).then_result(
-        [](pco::v2::expected<int, result_error> result)
+        [](pco::expected<int, pco::result_error> result)
         {
             EXPECT_FALSE(result.has_value());
-            EXPECT_EQ(result.error(), result_error::broken_promise);
+            EXPECT_EQ(result.error(), pco::result_error::broken_promise);
             return 3;
         });
 
@@ -336,14 +335,14 @@ TEST(ContinuationResultTest, then_result_receives_error_expected)
  */
 TEST(ContinuationResultTest, chained_error_to_value_flow)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto chained = std::move(source)
-                       .then_error([](result_error)
+                       .then_error([](pco::result_error)
                        {
                            return 5;
                        })
@@ -362,7 +361,7 @@ TEST(ContinuationResultTest, chained_error_to_value_flow)
  */
 TEST(ContinuationResultTest, then_value_unwraps_nested_future_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -370,7 +369,7 @@ TEST(ContinuationResultTest, then_value_unwraps_nested_future_result)
 
     auto chained = std::move(source).then_value([](int value)
     {
-        auto nested_pair = make_result_promise<int>();
+        auto nested_pair = pco::make_result_promise<int>();
         nested_pair.first.set_value(value * 4);
         return std::move(nested_pair.second);
     });
@@ -385,7 +384,7 @@ TEST(ContinuationResultTest, then_value_unwraps_nested_future_result)
  */
 TEST(ContinuationResultTest, then_value_unwraps_nested_shared_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -393,7 +392,7 @@ TEST(ContinuationResultTest, then_value_unwraps_nested_shared_result)
 
     auto chained = std::move(source).then_value([](int value)
     {
-        auto nested_pair = make_result_promise<int>();
+        auto nested_pair = pco::make_result_promise<int>();
         nested_pair.first.set_value(value + 3);
         return std::move(nested_pair.second).share();
     });
@@ -408,15 +407,15 @@ TEST(ContinuationResultTest, then_value_unwraps_nested_shared_result)
  */
 TEST(ContinuationResultTest, then_result_unwraps_nested_future_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
     promise.set_value(7);
 
-    auto chained = std::move(source).then_result([](pco::v2::expected<int, result_error> result)
+    auto chained = std::move(source).then_result([](pco::expected<int, pco::result_error> result)
     {
-        auto nested_pair = make_result_promise<int>();
+        auto nested_pair = pco::make_result_promise<int>();
         nested_pair.first.set_value(result.value() * 2);
         return std::move(nested_pair.second);
     });
@@ -431,7 +430,7 @@ TEST(ContinuationResultTest, then_result_unwraps_nested_future_result)
  */
 TEST(ContinuationResultTest, then_value_executor_unwraps_nested_future_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -441,7 +440,7 @@ TEST(ContinuationResultTest, then_value_executor_unwraps_nested_future_result)
         pco::inplace_executor,
         [](int value)
         {
-            auto nested_pair = make_result_promise<int>();
+            auto nested_pair = pco::make_result_promise<int>();
             nested_pair.first.set_value(value - 1);
             return std::move(nested_pair.second);
         });
@@ -456,7 +455,7 @@ TEST(ContinuationResultTest, then_value_executor_unwraps_nested_future_result)
  */
 TEST(ContinuationResultTest, then_value_unwraps_nested_error)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -464,14 +463,14 @@ TEST(ContinuationResultTest, then_value_unwraps_nested_error)
 
     auto chained = std::move(source).then_value([](int)
     {
-        auto nested_pair = make_result_promise<int>();
-        nested_pair.first.set_error(result_error::execution_failure);
+        auto nested_pair = pco::make_result_promise<int>();
+        nested_pair.first.set_error(pco::result_error::execution_failure);
         return std::move(nested_pair.second);
     });
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
 }
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
@@ -480,7 +479,7 @@ TEST(ContinuationResultTest, then_value_unwraps_nested_error)
  */
 TEST(ContinuationResultTest, then_value_throw_maps_to_continuation_failure)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -493,7 +492,7 @@ TEST(ContinuationResultTest, then_value_throw_maps_to_continuation_failure)
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::continuation_failure);
+    EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
 }
 
 /**
@@ -501,20 +500,20 @@ TEST(ContinuationResultTest, then_value_throw_maps_to_continuation_failure)
  */
 TEST(ContinuationResultTest, then_error_throw_maps_to_continuation_failure)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
-    auto chained = std::move(source).then_error([](result_error) -> int
+    auto chained = std::move(source).then_error([](pco::result_error) -> int
     {
         throw std::runtime_error("boom");
     });
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::continuation_failure);
+    EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
 }
 
 /**
@@ -522,21 +521,21 @@ TEST(ContinuationResultTest, then_error_throw_maps_to_continuation_failure)
  */
 TEST(ContinuationResultTest, then_result_throw_maps_to_continuation_failure)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
     promise.set_value(42);
 
     auto chained = std::move(source).then_result(
-        [](pco::v2::expected<int, result_error>) -> int
+        [](pco::expected<int, pco::result_error>) -> int
         {
             throw std::runtime_error("boom");
         });
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::continuation_failure);
+    EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
 }
 #endif
 
@@ -545,7 +544,7 @@ TEST(ContinuationResultTest, then_result_throw_maps_to_continuation_failure)
  */
 TEST(ContinuationResultTest, then_value_executor_dispatches_and_transforms)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -569,12 +568,12 @@ TEST(ContinuationResultTest, then_value_executor_dispatches_and_transforms)
  */
 TEST(ContinuationResultTest, then_value_executor_propagates_error)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
     bool called = false;
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto chained = std::move(source).then_value(
         pco::inplace_executor,
@@ -586,7 +585,7 @@ TEST(ContinuationResultTest, then_value_executor_propagates_error)
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
     EXPECT_FALSE(called);
 }
 
@@ -595,17 +594,17 @@ TEST(ContinuationResultTest, then_value_executor_propagates_error)
  */
 TEST(ContinuationResultTest, then_error_executor_dispatches_and_recovers)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto chained = std::move(source).then_error(
         pco::inplace_executor,
-        [](result_error error)
+        [](pco::result_error error)
         {
-            EXPECT_EQ(error, result_error::execution_failure);
+            EXPECT_EQ(error, pco::result_error::execution_failure);
             return 7;
         });
 
@@ -619,7 +618,7 @@ TEST(ContinuationResultTest, then_error_executor_dispatches_and_recovers)
  */
 TEST(ContinuationResultTest, then_error_executor_passthrough_on_success)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
     bool called = false;
@@ -628,7 +627,7 @@ TEST(ContinuationResultTest, then_error_executor_passthrough_on_success)
 
     auto chained = std::move(source).then_error(
         pco::inplace_executor,
-        [&called](result_error)
+        [&called](pco::result_error)
         {
             called = true;
             return -1;
@@ -645,7 +644,7 @@ TEST(ContinuationResultTest, then_error_executor_passthrough_on_success)
  */
 TEST(ContinuationResultTest, then_result_executor_dispatches_on_success)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -653,7 +652,7 @@ TEST(ContinuationResultTest, then_result_executor_dispatches_on_success)
 
     auto chained = std::move(source).then_result(
         pco::inplace_executor,
-        [](pco::v2::expected<int, result_error> result)
+        [](pco::expected<int, pco::result_error> result)
         {
             EXPECT_TRUE(result.has_value());
             return result.value() + 1;
@@ -669,18 +668,18 @@ TEST(ContinuationResultTest, then_result_executor_dispatches_on_success)
  */
 TEST(ContinuationResultTest, then_result_executor_dispatches_on_error)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::broken_promise);
+    promise.set_error(pco::result_error::broken_promise);
 
     auto chained = std::move(source).then_result(
         pco::inplace_executor,
-        [](pco::v2::expected<int, result_error> result)
+        [](pco::expected<int, pco::result_error> result)
         {
             EXPECT_FALSE(result.has_value());
-            EXPECT_EQ(result.error(), result_error::broken_promise);
+            EXPECT_EQ(result.error(), pco::result_error::broken_promise);
             return 3;
         });
 
@@ -694,7 +693,7 @@ TEST(ContinuationResultTest, then_result_executor_dispatches_on_error)
  */
 TEST(ContinuationResultTest, chained_executor_continuations)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -725,7 +724,7 @@ TEST(ContinuationResultTest, chained_executor_continuations)
  */
 TEST(ContinuationResultTest, then_value_executor_throw_maps_to_continuation_failure)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -740,7 +739,7 @@ TEST(ContinuationResultTest, then_value_executor_throw_maps_to_continuation_fail
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::continuation_failure);
+    EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
 }
 
 /**
@@ -748,22 +747,22 @@ TEST(ContinuationResultTest, then_value_executor_throw_maps_to_continuation_fail
  */
 TEST(ContinuationResultTest, then_error_executor_throw_maps_to_continuation_failure)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto chained = std::move(source).then_error(
         pco::inplace_executor,
-        [](result_error) -> int
+        [](pco::result_error) -> int
         {
             throw std::runtime_error("executor error handler failed");
         });
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::continuation_failure);
+    EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
 }
 
 /**
@@ -771,7 +770,7 @@ TEST(ContinuationResultTest, then_error_executor_throw_maps_to_continuation_fail
  */
 TEST(ContinuationResultTest, then_result_executor_throw_maps_to_continuation_failure)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -779,14 +778,14 @@ TEST(ContinuationResultTest, then_result_executor_throw_maps_to_continuation_fai
 
     auto chained = std::move(source).then_result(
         pco::inplace_executor,
-        [](pco::v2::expected<int, result_error>) -> int
+        [](pco::expected<int, pco::result_error>) -> int
         {
             throw std::runtime_error("executor result handler failed");
         });
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::continuation_failure);
+    EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
 }
 #endif
 

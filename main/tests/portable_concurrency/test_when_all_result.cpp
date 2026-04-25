@@ -1,6 +1,6 @@
 /**
  * @file test_when_all_result.cpp
- * @brief Unit tests for v2 when_all combinator.
+ * @brief Unit tests for v2 pco::when_all combinator.
  */
 
 #include <gtest/gtest.h>
@@ -15,14 +15,13 @@
 
 namespace
 {
-using namespace pco::v2;
 
 /**
  * @brief Tests empty when all returns ready empty tuple.
  */
 TEST(WhenAllResultTest, empty_when_all_returns_ready_empty_tuple)
 {
-    auto combined = when_all();
+    auto combined = pco::when_all();
     EXPECT_TRUE(combined.valid());
     EXPECT_TRUE(combined.is_ready());
 
@@ -36,15 +35,15 @@ TEST(WhenAllResultTest, empty_when_all_returns_ready_empty_tuple)
  */
 TEST(WhenAllResultTest, collects_all_success_results)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto future1 = std::move(pair1.second);
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto future2 = std::move(pair2.second);
 
-    auto combined = when_all(std::move(future1), std::move(future2));
+    auto combined = pco::when_all(std::move(future1), std::move(future2));
 
     promise1.set_value(10);
     promise2.set_value(20);
@@ -64,17 +63,17 @@ TEST(WhenAllResultTest, collects_all_success_results)
  */
 TEST(WhenAllResultTest, keeps_individual_errors_in_result_tuple)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto future1 = std::move(pair1.second);
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto future2 = std::move(pair2.second);
 
-    auto combined = when_all(std::move(future1), std::move(future2));
+    auto combined = pco::when_all(std::move(future1), std::move(future2));
 
-    promise1.set_error(result_error::execution_failure);
+    promise1.set_error(pco::result_error::execution_failure);
     promise2.set_value(7);
 
     auto result = combined.get_result();
@@ -82,7 +81,7 @@ TEST(WhenAllResultTest, keeps_individual_errors_in_result_tuple)
 
     auto all = std::move(result).value();
     ASSERT_FALSE(std::get<0>(all).has_value());
-    EXPECT_EQ(std::get<0>(all).error(), result_error::execution_failure);
+    EXPECT_EQ(std::get<0>(all).error(), pco::result_error::execution_failure);
     ASSERT_TRUE(std::get<1>(all).has_value());
     EXPECT_EQ(std::get<1>(all).value(), 7);
 }
@@ -92,15 +91,15 @@ TEST(WhenAllResultTest, keeps_individual_errors_in_result_tuple)
  */
 TEST(WhenAllResultTest, becomes_ready_only_after_all_inputs_complete)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto future1 = std::move(pair1.second);
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto future2 = std::move(pair2.second);
 
-    auto combined = when_all(std::move(future1), std::move(future2));
+    auto combined = pco::when_all(std::move(future1), std::move(future2));
 
     promise1.set_value(1);
     EXPECT_FALSE(combined.is_ready());
@@ -128,17 +127,17 @@ TEST(WhenAllResultTest, becomes_ready_only_after_all_inputs_complete)
  */
 TEST(WhenAllResultTest, invalid_input_returns_no_state_error)
 {
-    future_result<int> invalid_future;
+    pco::future_result<int> invalid_future;
 
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto valid_future = std::move(pair.second);
 
-    auto combined = when_all(std::move(invalid_future), std::move(valid_future));
+    auto combined = pco::when_all(std::move(invalid_future), std::move(valid_future));
 
     auto result = combined.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::no_state);
+    EXPECT_EQ(result.error(), pco::result_error::no_state);
 
     promise.set_value(1);
 }
@@ -148,17 +147,17 @@ TEST(WhenAllResultTest, invalid_input_returns_no_state_error)
  */
 TEST(WhenAllResultTest, broken_promise_input_still_completes_combined_future)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto future1 = std::move(pair1.second);
 
-    future_result<int> future2;
+    pco::future_result<int> future2;
     {
-        auto pair2 = make_result_promise<int>();
+        auto pair2 = pco::make_result_promise<int>();
         future2 = std::move(pair2.second);
     }
 
-    auto combined = when_all(std::move(future1), std::move(future2));
+    auto combined = pco::when_all(std::move(future1), std::move(future2));
 
     promise1.set_value(42);
 
@@ -169,7 +168,7 @@ TEST(WhenAllResultTest, broken_promise_input_still_completes_combined_future)
     ASSERT_TRUE(std::get<0>(all).has_value());
     EXPECT_EQ(std::get<0>(all).value(), 42);
     ASSERT_FALSE(std::get<1>(all).has_value());
-    EXPECT_EQ(std::get<1>(all).error(), result_error::broken_promise);
+    EXPECT_EQ(std::get<1>(all).error(), pco::result_error::broken_promise);
 }
 
 /**
@@ -177,9 +176,9 @@ TEST(WhenAllResultTest, broken_promise_input_still_completes_combined_future)
  */
 TEST(WhenAllResultTest, iterator_overload_empty_range_returns_ready_empty_vector)
 {
-    std::list<future_result<int>> empty;
+    std::list<pco::future_result<int>> empty;
 
-    auto combined = when_all(empty.begin(), empty.end());
+    auto combined = pco::when_all(empty.begin(), empty.end());
 
     ASSERT_TRUE(combined.valid());
     ASSERT_TRUE(combined.is_ready());
@@ -194,19 +193,19 @@ TEST(WhenAllResultTest, iterator_overload_empty_range_returns_ready_empty_vector
  */
 TEST(WhenAllResultTest, iterator_overload_collects_results_in_order)
 {
-    std::vector<future_result<int>> futures;
+    std::vector<pco::future_result<int>> futures;
 
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     futures.push_back(std::move(pair1.second));
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     futures.push_back(std::move(pair2.second));
 
-    auto combined = when_all(futures.begin(), futures.end());
+    auto combined = pco::when_all(futures.begin(), futures.end());
 
-    promise2.set_error(result_error::execution_failure);
+    promise2.set_error(pco::result_error::execution_failure);
     promise1.set_value(5);
 
     auto result = combined.get_result();
@@ -215,7 +214,7 @@ TEST(WhenAllResultTest, iterator_overload_collects_results_in_order)
     ASSERT_TRUE(result.value()[0].has_value());
     EXPECT_EQ(result.value()[0].value(), 5);
     ASSERT_FALSE(result.value()[1].has_value());
-    EXPECT_EQ(result.value()[1].error(), result_error::execution_failure);
+    EXPECT_EQ(result.value()[1].error(), pco::result_error::execution_failure);
 }
 
 /**
@@ -223,17 +222,17 @@ TEST(WhenAllResultTest, iterator_overload_collects_results_in_order)
  */
 TEST(WhenAllResultTest, vector_overload_collects_results)
 {
-    std::vector<future_result<int>> futures;
+    std::vector<pco::future_result<int>> futures;
 
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     futures.push_back(std::move(pair1.second));
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     futures.push_back(std::move(pair2.second));
 
-    auto combined = when_all(std::move(futures));
+    auto combined = pco::when_all(std::move(futures));
 
     promise1.set_value(11);
     promise2.set_value(22);
@@ -252,17 +251,17 @@ TEST(WhenAllResultTest, vector_overload_collects_results)
  */
 TEST(WhenAllResultTest, iterator_overload_invalid_input_returns_no_state_error)
 {
-    std::vector<future_result<int>> futures;
+    std::vector<pco::future_result<int>> futures;
     futures.emplace_back();
 
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     futures.push_back(std::move(pair.second));
 
-    auto combined = when_all(futures.begin(), futures.end());
+    auto combined = pco::when_all(futures.begin(), futures.end());
     auto result = combined.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::no_state);
+    EXPECT_EQ(result.error(), pco::result_error::no_state);
 
     promise.set_value(1);
 }
@@ -272,17 +271,17 @@ TEST(WhenAllResultTest, iterator_overload_invalid_input_returns_no_state_error)
  */
 TEST(WhenAllResultTest, vector_overload_invalid_input_returns_no_state_error)
 {
-    std::vector<future_result<int>> futures;
+    std::vector<pco::future_result<int>> futures;
     futures.emplace_back();
 
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     futures.push_back(std::move(pair.second));
 
-    auto combined = when_all(std::move(futures));
+    auto combined = pco::when_all(std::move(futures));
     auto result = combined.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::no_state);
+    EXPECT_EQ(result.error(), pco::result_error::no_state);
 
     promise.set_value(1);
 }
@@ -292,20 +291,20 @@ TEST(WhenAllResultTest, vector_overload_invalid_input_returns_no_state_error)
  */
 TEST(WhenAllResultTest, vector_overload_preserves_broken_promise_in_results)
 {
-    std::vector<future_result<int>> futures;
+    std::vector<pco::future_result<int>> futures;
 
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     futures.push_back(std::move(pair1.second));
 
-    future_result<int> broken_future;
+    pco::future_result<int> broken_future;
     {
-        auto pair2 = make_result_promise<int>();
+        auto pair2 = pco::make_result_promise<int>();
         broken_future = std::move(pair2.second);
     }
     futures.push_back(std::move(broken_future));
 
-    auto combined = when_all(std::move(futures));
+    auto combined = pco::when_all(std::move(futures));
 
     promise1.set_value(33);
 
@@ -315,21 +314,21 @@ TEST(WhenAllResultTest, vector_overload_preserves_broken_promise_in_results)
     ASSERT_TRUE(result.value()[0].has_value());
     EXPECT_EQ(result.value()[0].value(), 33);
     ASSERT_FALSE(result.value()[1].has_value());
-    EXPECT_EQ(result.value()[1].error(), result_error::broken_promise);
+    EXPECT_EQ(result.value()[1].error(), pco::result_error::broken_promise);
 }
 
 // ---------------------------------------------------------------------------
-// P2.1 — when_all hardening parity
+// P2.1 — pco::when_all hardening parity
 // ---------------------------------------------------------------------------
 
 TEST(WhenAllResultTest, some_inputs_initially_ready_combined_waits_for_pending)
 {
-    auto pair0 = make_result_promise<int>();
-    auto pair1 = make_result_promise<int>();
-    // pair0 ready before when_all
+    auto pair0 = pco::make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
+    // pair0 ready before pco::when_all
     pair0.first.set_value(10);
 
-    auto combined = when_all(std::move(pair0.second), std::move(pair1.second));
+    auto combined = pco::when_all(std::move(pair0.second), std::move(pair1.second));
     EXPECT_FALSE(combined.is_ready());
 
     pair1.first.set_value(20);
@@ -343,12 +342,12 @@ TEST(WhenAllResultTest, some_inputs_initially_ready_combined_waits_for_pending)
 
 TEST(WhenAllResultTest, all_inputs_initially_ready_combined_is_immediately_ready)
 {
-    auto pair0 = make_result_promise<int>();
-    auto pair1 = make_result_promise<int>();
+    auto pair0 = pco::make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     pair0.first.set_value(1);
     pair1.first.set_value(2);
 
-    auto combined = when_all(std::move(pair0.second), std::move(pair1.second));
+    auto combined = pco::when_all(std::move(pair0.second), std::move(pair1.second));
     EXPECT_TRUE(combined.is_ready());
 
     auto result = combined.get_result();
@@ -359,17 +358,17 @@ TEST(WhenAllResultTest, all_inputs_initially_ready_combined_is_immediately_ready
 
 TEST(WhenAllResultTest, concurrent_readiness_collects_all_results)
 {
-    std::vector<future_result<int>> futures;
-    std::vector<promise_result<int>> promises;
+    std::vector<pco::future_result<int>> futures;
+    std::vector<pco::promise_result<int>> promises;
     promises.reserve(3);
     futures.reserve(3);
     for (int i = 0; i < 3; ++i) {
-        auto p = make_result_promise<int>();
+        auto p = pco::make_result_promise<int>();
         promises.push_back(std::move(p.first));
         futures.push_back(std::move(p.second));
     }
 
-    auto combined = when_all(std::move(futures));
+    auto combined = pco::when_all(std::move(futures));
     EXPECT_FALSE(combined.is_ready());
 
     std::atomic<bool> go{false};
@@ -394,16 +393,16 @@ TEST(WhenAllResultTest, concurrent_readiness_collects_all_results)
 
 TEST(WhenAllResultTest, iterator_overload_preserves_input_order_in_results)
 {
-    std::vector<future_result<int>> futures;
-    std::vector<promise_result<int>> promises;
+    std::vector<pco::future_result<int>> futures;
+    std::vector<pco::promise_result<int>> promises;
     const int N = 5;
     for (int i = 0; i < N; ++i) {
-        auto p = make_result_promise<int>();
+        auto p = pco::make_result_promise<int>();
         promises.push_back(std::move(p.first));
         futures.push_back(std::move(p.second));
     }
 
-    auto combined = when_all(futures.begin(), futures.end());
+    auto combined = pco::when_all(futures.begin(), futures.end());
 
     // Complete in reverse order
     for (int i = N - 1; i >= 0; --i)

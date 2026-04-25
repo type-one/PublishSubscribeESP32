@@ -27,10 +27,10 @@
  * @file example_async_processing.cpp
  * @brief Demonstrates the portable_concurrency v2 result-based async API.
  *
- * Covers: future_result, promise_result, packaged_task_result, async_result,
- * then_value, then_error, then_result, when_all, make_result_promise,
+ * Covers: pco::future_result, pco::promise_result, pco::packaged_task_result, pco::async_result,
+ * then_value, then_error, then_result, pco::when_all, pco::make_result_promise,
  * delegate_async, and — when coroutines are available — co_await on
- * future_result and worker_task::schedule().
+ * pco::future_result and worker_task::schedule().
  *
  * @author Laurent Lardinois
  * @date 2026-05-25
@@ -68,7 +68,7 @@ namespace
         std::atomic<int> completed_samples { 0 };
         std::atomic<int> failed_samples { 0 };
         std::atomic<std::int64_t> aggregated_output { 0 };
-        std::vector<pco::v2::future_result<int>> pending_results;
+        std::vector<pco::future_result<int>> pending_results;
     };
 
     class async_processing_worker_model
@@ -117,7 +117,7 @@ namespace
      * @brief Coroutine that hops onto @p worker, increments the call counter, and
      *        returns @p input scaled by three.
      */
-    pco::v2::future_result<int> schedule_and_compute(
+    pco::future_result<int> schedule_and_compute(
         async_worker* worker_ptr, std::shared_ptr<async_context> context, int input_value)
     {
         co_await worker_ptr->schedule();
@@ -129,10 +129,10 @@ namespace
      * @brief Coroutine that hops onto @p worker, awaits @p upstream, and
      *        adds an offset to the resolved value.
      */
-    pco::v2::future_result<int> schedule_and_await(
+    pco::future_result<int> schedule_and_await(
         async_worker* worker_ptr,
         std::shared_ptr<async_context> context,
-        pco::v2::future_result<int> upstream,
+        pco::future_result<int> upstream,
         int offset_value)
     {
         co_await worker_ptr->schedule();
@@ -141,7 +141,7 @@ namespace
         co_return base + offset_value;
     }
 
-    pco::v2::future_result<int> schedule_and_process_sample(
+    pco::future_result<int> schedule_and_process_sample(
         async_worker* worker_ptr,
         std::shared_ptr<async_context> context,
         std::shared_ptr<async_processing_worker_model> processor,
@@ -152,7 +152,7 @@ namespace
         co_return processor->process_sample(sample_value);
     }
 
-    pco::v2::future_result<int> schedule_alternating_chain_on_two_workers(
+    pco::future_result<int> schedule_alternating_chain_on_two_workers(
         async_worker* worker_first_ptr, async_worker* worker_second_ptr, alternating_chain_request request)
     {
         int chain_value = request.initial_value;
@@ -175,7 +175,7 @@ namespace
 #endif // ASYNC_EXAMPLE_HAS_COROUTINES
 
     // -----------------------------------------------------------------------
-    // Example 1: async_result with inplace_executor + then_value / then_error
+    // Example 1: pco::async_result with inplace_executor + then_value / then_error
 
     /**
      * @brief Shows a basic v2 chain: inline computation, value transformation,
@@ -183,14 +183,13 @@ namespace
      */
     void test_async_result_chain()
     {
-        LOG_INFO("-- v2: async_result + then_value + then_error --");
+        LOG_INFO("-- v2: pco::async_result + then_value + then_error --");
         print_stats();
 
-        using namespace pco::v2;
 
         constexpr int input_value = 7;
 
-        auto future = async_result(
+        auto future = pco::async_result(
             pco::inplace_executor,
             [](int squared_input)
             {
@@ -200,40 +199,39 @@ namespace
 
         const auto result = std::move(future)
                                 .then_value([](int squared) { return squared + 1; })
-                                .then_error([](result_error) { return -1; })
+                                .then_error([](pco::result_error) { return -1; })
                                 .get_result();
 
         if (result.has_value())
         {
-            std::printf("async_result chain: 7^2 + 1 = %d\n", result.value());
+            std::printf("pco::async_result chain: 7^2 + 1 = %d\n", result.value());
         }
     }
 
     // -----------------------------------------------------------------------
-    // Example 2: then_result to inspect the full expected<T,E>
+    // Example 2: then_result to inspect the full pco::expected<T,E>
 
     /**
      * @brief Demonstrates @c then_result, which receives the full
-     *        @c expected<T,E> and can branch on value or error.
+     *        @c pco::expected<T,E> and can branch on value or error.
      */
     void test_then_result_inspection()
     {
-        LOG_INFO("-- v2: then_result full expected inspection --");
+        LOG_INFO("-- v2: then_result full pco::expected inspection --");
         print_stats();
 
-        using namespace pco::v2;
 
         constexpr int offset_value = 10;
         constexpr int input_base = 5;
 
-        auto future = async_result(
+        auto future = pco::async_result(
             pco::inplace_executor,
             [](int input_val) { return input_val + offset_value; },
             input_base);
 
         const auto description = std::move(future)
                                      .then_result(
-                                         [](const expected<int, result_error>& res) -> std::string
+                                         [](const pco::expected<int, pco::result_error>& res) -> std::string
                                          {
                                              if (res.has_value())
                                              {
@@ -253,7 +251,7 @@ namespace
     // Example 3: error recovery — execution_failure caught by then_error
 
     /**
-     * @brief Shows that @c then_error can intercept @c result_error::execution_failure
+     * @brief Shows that @c then_error can intercept @c pco::result_error::execution_failure
      *        and recover with a default value.
      */
     void test_error_recovery()
@@ -261,21 +259,20 @@ namespace
         LOG_INFO("-- v2: error recovery via then_error --");
         print_stats();
 
-        using namespace pco::v2;
 
         // A broken_promise scenario: discard the promise without fulfilling it.
-        auto pair = make_result_promise<int>();
+        auto pair = pco::make_result_promise<int>();
         auto promise = std::move(pair.first);
         auto future = std::move(pair.second);
 
         // Let the promise go out of scope — future sees broken_promise.
-        promise = promise_result<int> {};
+        promise = pco::promise_result<int> {};
 
         const auto recovered = std::move(future)
                                    .then_error(
-                                       [](result_error err) -> int
+                                       [](pco::result_error err) -> int
                                        {
-                                           if (err == result_error::broken_promise)
+                                           if (err == pco::result_error::broken_promise)
                                            {
                                                std::printf("then_error caught: broken_promise — recovering with 0\n");
                                            }
@@ -287,47 +284,45 @@ namespace
     }
 
     // -----------------------------------------------------------------------
-    // Example 4: packaged_task_result — pre-packaged callable
+    // Example 4: pco::packaged_task_result — pre-packaged callable
 
     /**
-     * @brief Demonstrates @c packaged_task_result: package a callable once,
-     *        then invoke it to obtain a @c future_result.
+     * @brief Demonstrates @c pco::packaged_task_result: package a callable once,
+     *        then invoke it to obtain a @c pco::future_result.
      */
     void test_packaged_task()
     {
-        LOG_INFO("-- v2: packaged_task_result --");
+        LOG_INFO("-- v2: pco::packaged_task_result --");
         print_stats();
 
-        using namespace pco::v2;
 
         constexpr int first_arg = 30;
         constexpr int second_arg = 12;
 
-        packaged_task_result<int(int, int)> task { [](int arg_a, int arg_b) { return arg_a + arg_b; } };
+        pco::packaged_task_result<int(int, int)> task { [](int arg_a, int arg_b) { return arg_a + arg_b; } };
         auto future = task.get_future();
         task(first_arg, second_arg);
 
         const auto result = future.get_result();
         if (result.has_value())
         {
-            std::printf("packaged_task_result: 30 + 12 = %d\n", result.value());
+            std::printf("pco::packaged_task_result: 30 + 12 = %d\n", result.value());
         }
     }
 
     // -----------------------------------------------------------------------
-    // Example 5: packaged_task_result with std::reference_wrapper return
+    // Example 5: pco::packaged_task_result with std::reference_wrapper return
 
     /**
      * @brief Shows the @c std::reference_wrapper workaround for returning a
-     *        reference from @c packaged_task_result (direct reference types are
+     *        reference from @c pco::packaged_task_result (direct reference types are
      *        prohibited by the v2 static_assert).
      */
     void test_packaged_task_reference_wrapper()
     {
-        LOG_INFO("-- v2: packaged_task_result with reference_wrapper --");
+        LOG_INFO("-- v2: pco::packaged_task_result with reference_wrapper --");
         print_stats();
 
-        using namespace pco::v2;
 
         constexpr int initial_value = 42;
         constexpr int increment_amount = 8;
@@ -335,7 +330,7 @@ namespace
 
         int value = initial_value;
 
-        packaged_task_result<std::reference_wrapper<int>()> task { [&value]()
+        pco::packaged_task_result<std::reference_wrapper<int>()> task { [&value]()
             {
                 return std::ref(value);
             } };
@@ -347,23 +342,22 @@ namespace
         {
             // Modifying through the returned reference_wrapper affects the original.
             result.value().get() += increment_amount;
-            std::printf("reference_wrapper result: original value is now %d (expected %d)\n", value, expected_result);
+            std::printf("reference_wrapper result: original value is now %d (pco::expected %d)\n", value, expected_result);
         }
     }
 
     // -----------------------------------------------------------------------
-    // Example 6: manual promise_result fulfilled by a worker
+    // Example 6: manual pco::promise_result fulfilled by a worker
 
     /**
-     * @brief Creates a @c promise_result / @c future_result pair, fulfils the
+     * @brief Creates a @c pco::promise_result / @c pco::future_result pair, fulfils the
      *        promise from a worker thread, and chains a transformation.
      */
     void test_manual_promise_fulfillment()
     {
-        LOG_INFO("-- v2: manual promise_result fulfilled from worker --");
+        LOG_INFO("-- v2: manual pco::promise_result fulfilled from worker --");
         print_stats();
 
-        using namespace pco::v2;
 
         constexpr int promise_value = 77;
         constexpr int multiplication_factor = 2;
@@ -371,12 +365,12 @@ namespace
         auto context = std::make_shared<async_context>();
         auto worker = make_async_worker(context, "promise_fulfillment_worker");
 
-        auto pair = make_result_promise<int>();
+        auto pair = pco::make_result_promise<int>();
         auto promise = std::move(pair.first);
         auto future = std::move(pair.second);
 
         // Wrap in shared_ptr so the worker lambda can capture it safely.
-        auto shared_promise = std::make_shared<promise_result<int>>(std::move(promise));
+        auto shared_promise = std::make_shared<pco::promise_result<int>>(std::move(promise));
 
         worker->delegate(
             [shared_promise](const std::shared_ptr<async_context>& ctx, const std::string&)
@@ -400,14 +394,13 @@ namespace
 
     /**
      * @brief Dispatches work to a worker via @c delegate_async, then chains
-     *        @c then_value and @c then_error on the returned @c future_result.
+     *        @c then_value and @c then_error on the returned @c pco::future_result.
      */
     void test_delegate_async_chain()
     {
         LOG_INFO("-- v2: delegate_async chain --");
         print_stats();
 
-        using namespace pco::v2;
 
         constexpr int multiplier = 6;
         constexpr int addition_offset = 2;
@@ -426,7 +419,7 @@ namespace
 
         const auto result = std::move(future)
                                 .then_value([](int val) { return val + addition_offset; })
-                                .then_error([](result_error) { return -1; })
+                                .then_error([](pco::result_error) { return -1; })
                                 .get_result();
 
         if (result.has_value())
@@ -448,13 +441,12 @@ namespace
         LOG_INFO("-- v2: fan-out / fan-in gather --");
         print_stats();
 
-        using namespace pco::v2;
 
         auto context = std::make_shared<async_context>();
         auto worker = make_async_worker(context, "v2_gather_worker");
 
         constexpr int job_count = 5;
-        std::vector<future_result<int>> jobs;
+        std::vector<pco::future_result<int>> jobs;
         jobs.reserve(static_cast<std::size_t>(job_count));
 
         for (int i = 1; i <= job_count; ++i)
@@ -479,23 +471,22 @@ namespace
         }
 
         // 1^2 + 2^2 + 3^2 + 4^2 + 5^2 = 55
-        std::printf("fan-out gather sum of squares 1..5 = %d (expected 55)\n", total);
+        std::printf("fan-out gather sum of squares 1..5 = %d (pco::expected 55)\n", total);
         std::printf("worker call_count: %d\n", context->call_count.load());
     }
 
     // -----------------------------------------------------------------------
-    // Example 9: when_all gather two parallel delegate_async results
+    // Example 9: pco::when_all gather two parallel delegate_async results
 
     /**
-     * @brief Demonstrates @c when_all on a vector of @c future_result values,
+     * @brief Demonstrates @c pco::when_all on a vector of @c pco::future_result values,
      *        collecting two parallel worker results into a single future.
      */
     void test_when_all_gather()
     {
-        LOG_INFO("-- v2: when_all gather --");
+        LOG_INFO("-- v2: pco::when_all gather --");
         print_stats();
 
-        using namespace pco::v2;
 
         auto context = std::make_shared<async_context>();
         auto worker = make_async_worker(context, "v2_when_all_worker");
@@ -521,14 +512,14 @@ namespace
             },
             second_input);
 
-        std::vector<future_result<int>> futures;
+        std::vector<pco::future_result<int>> futures;
         futures.reserve(2U);
         futures.push_back(std::move(future_a));
         futures.push_back(std::move(future_b));
 
-        using expected_int = tools::expected<int, result_error>;
+        using expected_int = tools::expected<int, pco::result_error>;
 
-        auto combined = when_all(std::move(futures)).then_value(
+        auto combined = pco::when_all(std::move(futures)).then_value(
             [](const std::vector<expected_int>& results)
             {
                 int sum = 0;
@@ -546,22 +537,22 @@ namespace
         if (result.has_value())
         {
             // 10*3=30, 20+7=27, total=57
-            std::printf("when_all gather: 10*3 + (20+7) = %d (expected 57)\n", result.value());
+            std::printf("pco::when_all gather: 10*3 + (20+7) = %d (pco::expected 57)\n", result.value());
         }
         std::printf("worker call_count: %d\n", context->call_count.load());
     }
 
     // -----------------------------------------------------------------------
-    // Example 10: coroutine schedule() + co_await future_result
+    // Example 10: coroutine schedule() + co_await pco::future_result
 
 #if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
     /**
      * @brief Shows a coroutine that hops onto a worker via @c schedule(), performs
-     *        a computation, then awaits an upstream @c future_result.
+     *        a computation, then awaits an upstream @c pco::future_result.
      */
     void test_coroutine_schedule_and_await()
     {
-        LOG_INFO("-- v2: coroutine schedule() + co_await future_result --");
+        LOG_INFO("-- v2: coroutine schedule() + co_await pco::future_result --");
         print_stats();
 
         auto context = std::make_shared<async_context>();
@@ -593,11 +584,11 @@ namespace
 
         if (result_a.has_value())
         {
-            std::printf("coro schedule: 8*3+1 = %d (expected 25)\n", result_a.value());
+            std::printf("coro schedule: 8*3+1 = %d (pco::expected 25)\n", result_a.value());
         }
         if (result_b.has_value())
         {
-            std::printf("coro await: 5*4+3 = %d (expected 23)\n", result_b.value());
+            std::printf("coro await: 5*4+3 = %d (pco::expected 23)\n", result_b.value());
         }
         std::printf("worker call_count: %d\n", context->call_count.load());
     }
@@ -607,7 +598,7 @@ namespace
     // Example 11: timeout with wait_for()
 
     /**
-     * @brief Demonstrates using @c wait_for() on a @c future_result to detect
+     * @brief Demonstrates using @c wait_for() on a @c pco::future_result to detect
      *        when an async operation exceeds its time budget.
      *
      * In this example, the slow task completes before the timeout, so we see
@@ -618,13 +609,12 @@ namespace
         LOG_INFO("-- v2: timeout detection with wait_for() --");
         print_stats();
 
-        using namespace pco::v2;
         using namespace std::chrono_literals;
 
         constexpr int base_value = 50;
         constexpr auto timeout_duration = 100ms;
 
-        auto future = async_result(
+        auto future = pco::async_result(
             pco::inplace_executor,
             [](int input_base)
             {
@@ -675,7 +665,6 @@ namespace
         LOG_INFO("-- v2: timeout and cancellation with cleanup action --");
         print_stats();
 
-        using namespace pco::v2;
         using namespace std::chrono_literals;
 
         constexpr auto cancel_timeout_duration = 10ms;
@@ -687,7 +676,7 @@ namespace
             // Create a promise with a custom cancellation/cleanup action.
             // The lambda captures cleanup_called by reference; when the promise
             // is destroyed, the lambda fires.
-            auto pair = make_result_promise<int>(
+            auto pair = pco::make_result_promise<int>(
                 pco::canceler_arg,
                 [&cleanup_called]()
                 {
@@ -708,8 +697,8 @@ namespace
             {
                 std::printf("timeout detected: destroying future to trigger cancellation\n");
                 // In v2, canceler callbacks are tied to downstream abandonment.
-                future = future_result<int, result_error> {};
-                promise = promise_result<int> {};
+                future = pco::future_result<int, pco::result_error> {};
+                promise = pco::promise_result<int> {};
             }
 
             // give cleanup action a moment to fire (if it's async)
@@ -738,7 +727,6 @@ namespace
         LOG_INFO("-- v2: periodic -> worker stress (no coroutine) --");
         print_stats();
 
-        using namespace pco::v2;
 
         constexpr int target_sample_count = 40;
         constexpr std::size_t periodic_stack_size = 4096U;
@@ -787,7 +775,7 @@ namespace
                                    local_context->aggregated_output.fetch_add(processed_value);
                                    return processed_value;
                                })
-                               .then_error([local_context](result_error)
+                               .then_error([local_context](pco::result_error)
                                {
                                    local_context->failed_samples.fetch_add(1);
                                    return -1;
@@ -817,7 +805,7 @@ namespace
 
         const std::int64_t expected_sum
             = static_cast<std::int64_t>(target_sample_count) * static_cast<std::int64_t>(target_sample_count);
-        std::printf("periodic feed (no coroutine): aggregated=%" PRId64 " expected=%" PRId64 "\n",
+        std::printf("periodic feed (no coroutine): aggregated=%" PRId64 " pco::expected=%" PRId64 "\n",
             feed_context->aggregated_output.load(),
             expected_sum);
     }
@@ -875,7 +863,7 @@ namespace
             expected_value = async_processing_worker_model::process_chain_stage(expected_value, stage_index);
         }
 
-        std::printf("alternating chain (no coroutine): result=%d expected=%d\n", chain_value, expected_value);
+        std::printf("alternating chain (no coroutine): result=%d pco::expected=%d\n", chain_value, expected_value);
         std::printf("alternating chain (no coroutine): worker_a_calls=%d worker_b_calls=%d expected_each=%d\n",
             context_first->call_count.load(),
             context_second->call_count.load(),
@@ -895,7 +883,6 @@ namespace
         LOG_INFO("-- v2: periodic -> worker stress (coroutine) --");
         print_stats();
 
-        using namespace pco::v2;
 
         constexpr int target_sample_count = 40;
         constexpr std::size_t periodic_stack_size = 4096U;
@@ -935,7 +922,7 @@ namespace
                                    local_context->aggregated_output.fetch_add(processed_value);
                                    return processed_value;
                                })
-                               .then_error([local_context](result_error)
+                               .then_error([local_context](pco::result_error)
                                {
                                    local_context->failed_samples.fetch_add(1);
                                    return -1;
@@ -969,7 +956,7 @@ namespace
 
         const std::int64_t expected_sum
             = static_cast<std::int64_t>(target_sample_count) * static_cast<std::int64_t>(target_sample_count);
-        std::printf("periodic feed (coroutine): aggregated=%" PRId64 " expected=%" PRId64 "\n",
+        std::printf("periodic feed (coroutine): aggregated=%" PRId64 " pco::expected=%" PRId64 "\n",
             feed_context->aggregated_output.load(),
             expected_sum);
     }
@@ -1018,7 +1005,7 @@ namespace
             expected_value = async_processing_worker_model::process_chain_stage(expected_value, stage_index);
         }
 
-        std::printf("alternating chain (coroutine): result=%d expected=%d\n", chained_result.value(), expected_value);
+        std::printf("alternating chain (coroutine): result=%d pco::expected=%d\n", chained_result.value(), expected_value);
         std::printf("alternating chain (coroutine): worker_a_calls=%d worker_b_calls=%d expected_each=%d\n",
             context_first->call_count.load(),
             context_second->call_count.load(),

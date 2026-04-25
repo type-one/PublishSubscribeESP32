@@ -1,6 +1,6 @@
 /**
  * @file test_packaged_task_result.cpp
- * @brief Unit tests for portable_concurrency v2 packaged_task_result.
+ * @brief Unit tests for portable_concurrency v2 pco::packaged_task_result.
  */
 
 #include <gtest/gtest.h>
@@ -13,17 +13,16 @@
 
 namespace
 {
-using namespace pco::v2;
 
 TEST(PackagedTaskResultTest, default_constructed_is_invalid)
 {
-    packaged_task_result<int(int)> task;
+    pco::packaged_task_result<int(int)> task;
     EXPECT_FALSE(task.valid());
 }
 
 TEST(PackagedTaskResultTest, constructed_from_callable_is_valid)
 {
-    packaged_task_result<int(int)> task([](int v)
+    pco::packaged_task_result<int(int)> task([](int v)
     {
         return v + 1;
     });
@@ -32,7 +31,7 @@ TEST(PackagedTaskResultTest, constructed_from_callable_is_valid)
 
 TEST(PackagedTaskResultTest, invoke_with_value_argument_delivers_result)
 {
-    packaged_task_result<int(int)> task([](int v)
+    pco::packaged_task_result<int(int)> task([](int v)
     {
         return v * 2;
     });
@@ -47,7 +46,7 @@ TEST(PackagedTaskResultTest, invoke_with_value_argument_delivers_result)
 
 TEST(PackagedTaskResultTest, invoke_with_move_only_argument)
 {
-    packaged_task_result<int(std::unique_ptr<int>)> task([](std::unique_ptr<int> p)
+    pco::packaged_task_result<int(std::unique_ptr<int>)> task([](std::unique_ptr<int> p)
     {
         return *p;
     });
@@ -62,9 +61,9 @@ TEST(PackagedTaskResultTest, invoke_with_move_only_argument)
 
 TEST(PackagedTaskResultTest, unwraps_nested_future_result)
 {
-    packaged_task_result<future_result<int>()> task([]
+    pco::packaged_task_result<pco::future_result<int>()> task([]
     {
-        return make_ready_result(42);
+        return pco::make_ready_result(42);
     });
 
     auto future = task.get_future();
@@ -77,9 +76,9 @@ TEST(PackagedTaskResultTest, unwraps_nested_future_result)
 
 TEST(PackagedTaskResultTest, unwraps_nested_shared_result)
 {
-    packaged_task_result<shared_result<int>()> task([]
+    pco::packaged_task_result<pco::shared_result<int>()> task([]
     {
-        return make_ready_result(7).share();
+        return pco::make_ready_result(7).share();
     });
 
     auto shared = task.get_future();
@@ -92,9 +91,9 @@ TEST(PackagedTaskResultTest, unwraps_nested_shared_result)
 
 TEST(PackagedTaskResultTest, unsatisfied_task_destruction_yields_broken_promise)
 {
-    future_result<int> future;
+    pco::future_result<int> future;
     {
-        packaged_task_result<int()> task([]
+        pco::packaged_task_result<int()> task([]
         {
             return 5;
         });
@@ -103,29 +102,29 @@ TEST(PackagedTaskResultTest, unsatisfied_task_destruction_yields_broken_promise)
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
 TEST(PackagedTaskResultTest, thrown_exception_propagates)
 {
-    packaged_task_result<int()> task([]() -> int
+    pco::packaged_task_result<int()> task([]() -> int
     {
         throw 7;
     });
 
     auto future = task.get_future();
 
-    // v2 no longer catches exceptions in packaged_task_result internals.
+    // v2 no longer catches exceptions in pco::packaged_task_result internals.
     // In exception-enabled builds, the callable exception propagates to caller.
     EXPECT_THROW(task(), int);
 
     // Promise was not fulfilled due to propagation; when task goes out of scope,
     // future transitions to broken_promise.
-    task = packaged_task_result<int()>{};
+    task = pco::packaged_task_result<int()>{};
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 #endif
 
@@ -138,45 +137,45 @@ TEST(PackagedTaskResultTest, thrown_exception_propagates)
 
 TEST(PackagedTaskResultTest, move_constructed_from_valid_is_valid)
 {
-    packaged_task_result<int(int)> src([](int v) { return v; });
-    packaged_task_result<int(int)> dst(std::move(src));
+    pco::packaged_task_result<int(int)> src([](int v) { return v; });
+    pco::packaged_task_result<int(int)> dst(std::move(src));
     EXPECT_TRUE(dst.valid());
 }
 
 TEST(PackagedTaskResultTest, move_constructed_from_invalid_is_invalid)
 {
-    packaged_task_result<int(int)> src;
-    packaged_task_result<int(int)> dst(std::move(src));
+    pco::packaged_task_result<int(int)> src;
+    pco::packaged_task_result<int(int)> dst(std::move(src));
     EXPECT_FALSE(dst.valid());
 }
 
 TEST(PackagedTaskResultTest, move_assigned_with_valid_is_valid)
 {
-    packaged_task_result<int(int)> src([](int v) { return v; });
-    packaged_task_result<int(int)> dst;
+    pco::packaged_task_result<int(int)> src([](int v) { return v; });
+    pco::packaged_task_result<int(int)> dst;
     dst = std::move(src);
     EXPECT_TRUE(dst.valid());
 }
 
 TEST(PackagedTaskResultTest, move_assigned_with_invalid_is_invalid)
 {
-    packaged_task_result<int(int)> src;
-    packaged_task_result<int(int)> dst;
+    pco::packaged_task_result<int(int)> src;
+    pco::packaged_task_result<int(int)> dst;
     dst = std::move(src);
     EXPECT_FALSE(dst.valid());
 }
 
 TEST(PackagedTaskResultTest, moved_to_constructor_leaves_source_invalid)
 {
-    packaged_task_result<int(int)> src([](int v) { return v; });
-    packaged_task_result<int(int)> dst(std::move(src));
+    pco::packaged_task_result<int(int)> src([](int v) { return v; });
+    pco::packaged_task_result<int(int)> dst(std::move(src));
     EXPECT_FALSE(src.valid());
 }
 
 TEST(PackagedTaskResultTest, moved_to_assignment_leaves_source_invalid)
 {
-    packaged_task_result<int(int)> src([](int v) { return v; });
-    packaged_task_result<int(int)> dst;
+    pco::packaged_task_result<int(int)> src([](int v) { return v; });
+    pco::packaged_task_result<int(int)> dst;
     dst = std::move(src);
     EXPECT_FALSE(src.valid());
 }
@@ -185,7 +184,7 @@ TEST(PackagedTaskResultTest, moved_to_assignment_leaves_source_invalid)
 
 TEST(PackagedTaskResultTest, invoke_with_lvalue_const_reference_argument)
 {
-    packaged_task_result<std::size_t(std::string)> task(
+    pco::packaged_task_result<std::size_t(std::string)> task(
         [](const std::string &s) { return s.size(); });
 
     auto future = task.get_future();
@@ -198,7 +197,7 @@ TEST(PackagedTaskResultTest, invoke_with_lvalue_const_reference_argument)
 
 TEST(PackagedTaskResultTest, invoke_with_rvalue_reference_argument)
 {
-    packaged_task_result<int(std::unique_ptr<int>&&)> task(
+    pco::packaged_task_result<int(std::unique_ptr<int>&&)> task(
         [](std::unique_ptr<int> &&p) { return *p; });
 
     auto future = task.get_future();
@@ -212,7 +211,7 @@ TEST(PackagedTaskResultTest, invoke_with_rvalue_reference_argument)
 TEST(PackagedTaskResultTest, return_reference_wrapper_preserves_reference_semantics)
 {
     int value = 11;
-    packaged_task_result<std::reference_wrapper<int>()> task([&value]() {
+    pco::packaged_task_result<std::reference_wrapper<int>()> task([&value]() {
         return std::ref(value);
     });
 
@@ -229,7 +228,7 @@ TEST(PackagedTaskResultTest, return_reference_wrapper_preserves_reference_semant
 TEST(PackagedTaskResultTest, accepts_reference_wrapper_argument)
 {
     int value = 10;
-    packaged_task_result<int(std::reference_wrapper<int>)> task(
+    pco::packaged_task_result<int(std::reference_wrapper<int>)> task(
         [](std::reference_wrapper<int> wrapped) {
             wrapped.get() += 5;
             return wrapped.get();
@@ -251,7 +250,7 @@ TEST(PackagedTaskResultTest, destroys_callable_after_invocation)
     auto sp = std::make_shared<int>(42);
     std::weak_ptr<int> wp = sp;
 
-    packaged_task_result<int(int)> task(
+    pco::packaged_task_result<int(int)> task(
         [sp = std::exchange(sp, nullptr)](int val) { return val + *sp; });
 
     auto future = task.get_future();
@@ -268,8 +267,8 @@ TEST(PackagedTaskResultTest, destroys_callable_after_invocation)
 
 TEST(PackagedTaskResultTest, invalid_nested_future_result_unwraps_to_broken_promise)
 {
-    packaged_task_result<future_result<int>()> task([] {
-        return future_result<int>{};   // default-constructed == no_state
+    pco::packaged_task_result<pco::future_result<int>()> task([] {
+        return pco::future_result<int>{};   // default-constructed == no_state
     });
 
     auto future = task.get_future();
@@ -277,7 +276,7 @@ TEST(PackagedTaskResultTest, invalid_nested_future_result_unwraps_to_broken_prom
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 } // namespace

@@ -550,7 +550,7 @@ namespace
  * - Push a convertible type (`const char*`) to exercise forwarding conversion.
  * - Push a brace-initialized value to verify overload compatibility.
  * - Emplace constructor arguments and verify in-place construction result.
- * - Pop all values and check ordering and expected payloads.
+ * - Pop all values and check ordering and pco::expected payloads.
  */
 TEST(SyncQueuePerfectForwardingTest, PushAndEmplaceSupportExactBraceAndConversionCalls)
 {

@@ -105,7 +105,7 @@ TYPED_TEST(SyncRingVectorTest, PushAndSize)
  * @brief Test case to verify the front and back elements of the SyncRingVector.
  *
  * This test case pushes three elements into the SyncRingVector and checks if
- * the front and back elements are as expected.
+ * the front and back elements are as pco::expected.
  *
  * @tparam TypeParam The type parameter for the test case.
  *

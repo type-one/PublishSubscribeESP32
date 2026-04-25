@@ -12,17 +12,16 @@
 
 namespace
 {
-using namespace pco::v2;
 
 /**
- * @brief Verifies a successful async_result chain using then_value.
+ * @brief Verifies a successful pco::async_result chain using then_value.
  *
  * This checks the common happy path: async computation succeeds and
  * continuation transforms the produced value.
  */
 TEST(PortableConcurrencyV2Test, AsyncResultThenValueSuccess)
 {
-    auto future = async_result(pco::inplace_executor,
+    auto future = pco::async_result(pco::inplace_executor,
         [](int value)
         {
             return value * 2;
@@ -40,31 +39,31 @@ TEST(PortableConcurrencyV2Test, AsyncResultThenValueSuccess)
 }
 
 /**
- * @brief Verifies that a default-constructed future_result reports no_state.
+ * @brief Verifies that a default-constructed pco::future_result reports no_state.
  */
 TEST(PortableConcurrencyV2Test, DefaultConstructedFutureReturnsNoState)
 {
-    future_result<int> future;
+    pco::future_result<int> future;
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::no_state);
+    EXPECT_EQ(result.error(), pco::result_error::no_state);
 }
 
 /**
- * @brief Verifies broken_promise when promise_result is destroyed unsatisfied.
+ * @brief Verifies broken_promise when pco::promise_result is destroyed unsatisfied.
  */
 TEST(PortableConcurrencyV2Test, PromiseDestructionWithoutValueReturnsBrokenPromise)
 {
-    future_result<int> future;
+    pco::future_result<int> future;
     {
-        promise_result<int> promise;
+        pco::promise_result<int> promise;
         future = promise.get_future();
     }
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 /**
@@ -72,11 +71,11 @@ TEST(PortableConcurrencyV2Test, PromiseDestructionWithoutValueReturnsBrokenPromi
  */
 TEST(PortableConcurrencyV2Test, ThenValuePropagatesExistingError)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto chained = std::move(future).then_value([](int value)
     {
@@ -85,7 +84,7 @@ TEST(PortableConcurrencyV2Test, ThenValuePropagatesExistingError)
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
 }
 
 /**
@@ -93,15 +92,15 @@ TEST(PortableConcurrencyV2Test, ThenValuePropagatesExistingError)
  */
 TEST(PortableConcurrencyV2Test, ThenErrorRecoversFromError)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
-    auto recovered = std::move(future).then_error([](result_error error)
+    auto recovered = std::move(future).then_error([](pco::result_error error)
     {
-        EXPECT_EQ(error, result_error::execution_failure);
+        EXPECT_EQ(error, pco::result_error::execution_failure);
         return 7;
     });
 
@@ -118,14 +117,14 @@ TEST(PortableConcurrencyV2Test, ThenErrorRecoversFromError)
  */
 TEST(PortableConcurrencyV2Test, ThenErrorThenValueSimplifiesBranching)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto simplified = std::move(future)
-                          .then_error([](result_error)
+                          .then_error([](pco::result_error)
                           {
                               return 5;
                           })
@@ -145,21 +144,21 @@ TEST(PortableConcurrencyV2Test, ThenErrorThenValueSimplifiesBranching)
  */
 TEST(PortableConcurrencyV2Test, ThenResultMapsThrownExceptionToContinuationFailure)
 {
-    auto future = async_result(pco::inplace_executor,
+    auto future = pco::async_result(pco::inplace_executor,
         []()
         {
             return 1;
         });
 
     auto chained = std::move(future).then_result(
-        [](pco::v2::expected<int, result_error>) -> int
+        [](pco::expected<int, pco::result_error>) -> int
         {
             throw std::runtime_error("boom");
         });
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::continuation_failure);
+    EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
 }
 #endif
 

@@ -13,7 +13,6 @@
 
 namespace
 {
-using namespace pco::v2;
 
 class null_executor_t {
 private:
@@ -40,13 +39,13 @@ namespace {
 
 TEST(AbandonResultAsyncTest, dropped_async_task_yields_broken_promise)
 {
-    auto future = async_result(null_executor, []
+    auto future = pco::async_result(null_executor, []
     {
     });
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultAsyncTest, dropped_async_task_destroys_stored_callable)
@@ -54,20 +53,20 @@ TEST(AbandonResultAsyncTest, dropped_async_task_destroys_stored_callable)
     auto owned = std::make_shared<int>(42);
     std::weak_ptr<int> weak = owned;
 
-    auto future = async_result(null_executor, [held = std::exchange(owned, nullptr)]
+    auto future = pco::async_result(null_executor, [held = std::exchange(owned, nullptr)]
     {
         (void)held;
     });
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
     EXPECT_TRUE(weak.expired());
 }
 
 TEST(AbandonResultContinuationTest, dropped_future_next_task_yields_broken_promise)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -80,18 +79,18 @@ TEST(AbandonResultContinuationTest, dropped_future_next_task_yields_broken_promi
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultContinuationTest, dropped_future_then_result_task_yields_broken_promise)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
     auto chained = std::move(source).then_result(
         null_executor,
-        [](pco::v2::expected<int, result_error> current)
+        [](pco::expected<int, pco::result_error> current)
         {
             if (current.has_value()) {
                 return std::to_string(current.value());
@@ -103,12 +102,12 @@ TEST(AbandonResultContinuationTest, dropped_future_then_result_task_yields_broke
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultContinuationTest, dropped_shared_next_task_yields_broken_promise)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -121,18 +120,18 @@ TEST(AbandonResultContinuationTest, dropped_shared_next_task_yields_broken_promi
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultContinuationTest, dropped_shared_then_result_task_yields_broken_promise)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
     auto chained = shared.then_result(
         null_executor,
-        [](const pco::v2::expected<int, result_error> &current)
+        [](const pco::expected<int, pco::result_error> &current)
         {
             if (current.has_value()) {
                 return std::to_string(current.value());
@@ -144,14 +143,14 @@ TEST(AbandonResultContinuationTest, dropped_shared_then_result_task_yields_broke
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultPackagedTaskTest, destroying_uninvoked_task_yields_broken_promise)
 {
-    future_result<size_t> future;
+    pco::future_result<size_t> future;
     {
-        packaged_task_result<size_t(size_t, const std::string &)> task(
+        pco::packaged_task_result<size_t(size_t, const std::string &)> task(
             [](size_t left, const std::string &right)
             {
                 return left + right.size();
@@ -161,12 +160,12 @@ TEST(AbandonResultPackagedTaskTest, destroying_uninvoked_task_yields_broken_prom
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultPackagedTaskTest, resetting_uninvoked_task_yields_broken_promise)
 {
-    packaged_task_result<size_t(size_t, const std::string &)> task(
+    pco::packaged_task_result<size_t(size_t, const std::string &)> task(
         [](size_t left, const std::string &right)
         {
             return left + right.size();
@@ -177,17 +176,17 @@ TEST(AbandonResultPackagedTaskTest, resetting_uninvoked_task_yields_broken_promi
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultPackagedTaskTest, destroying_uninvoked_task_releases_callable_capture)
 {
     auto owned = std::make_shared<int>(7);
     std::weak_ptr<int> weak = owned;
-    future_result<void> future;
+    pco::future_result<void> future;
 
     {
-        packaged_task_result<void()> task([held = std::exchange(owned, nullptr)]
+        pco::packaged_task_result<void()> task([held = std::exchange(owned, nullptr)]
         {
             (void)held;
         });
@@ -196,26 +195,26 @@ TEST(AbandonResultPackagedTaskTest, destroying_uninvoked_task_releases_callable_
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
     EXPECT_TRUE(weak.expired());
 }
 
 TEST(AbandonResultPromiseTest, destroying_promise_before_set_yields_broken_promise)
 {
-    future_result<size_t> future;
+    pco::future_result<size_t> future;
     {
-        auto pair = make_result_promise<size_t>();
+        auto pair = pco::make_result_promise<size_t>();
         future = std::move(pair.second);
     }
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultPromiseTest, resetting_unset_promise_yields_broken_promise)
 {
-    auto pair = make_result_promise<void>();
+    auto pair = pco::make_result_promise<void>();
     auto promise = std::move(pair.first);
     auto future = std::move(pair.second);
 
@@ -223,62 +222,62 @@ TEST(AbandonResultPromiseTest, resetting_unset_promise_yields_broken_promise)
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultContinuationTest, invalid_nested_future_from_then_result_maps_to_broken_promise)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
     auto chained = std::move(source).then_result(
-        [](pco::v2::expected<int, result_error>)
+        [](pco::expected<int, pco::result_error>)
         {
-            return future_result<std::string>{};
+            return pco::future_result<std::string>{};
         });
 
     promise.set_value(42);
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultContinuationTest, invalid_nested_future_from_next_maps_to_broken_promise)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
     auto chained = std::move(source).next([](int)
     {
-        return future_result<std::string>{};
+        return pco::future_result<std::string>{};
     });
 
     promise.set_value(42);
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 TEST(AbandonResultContinuationTest, invalid_nested_future_from_shared_next_maps_to_broken_promise)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second).share();
 
     auto chained = source.next([](int)
     {
-        return future_result<std::string>{};
+        return pco::future_result<std::string>{};
     });
 
     promise.set_value(42);
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
 } // namespace

@@ -41,7 +41,6 @@
 #include "unique_function.hpp"
 
 namespace pco {
-namespace v2 {
 
 enum class result_error {
   no_state = 1,
@@ -2422,5 +2421,4 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
   return future;
 }
 
-} // namespace v2
 } // namespace pco

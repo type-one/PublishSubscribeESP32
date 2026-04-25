@@ -1,6 +1,6 @@
 /**
  * @file test_async_result.cpp
- * @brief Imported-style unit tests for portable_concurrency v2 async_result.
+ * @brief Imported-style unit tests for portable_concurrency v2 pco::async_result.
  */
 
 #include <gtest/gtest.h>
@@ -11,14 +11,13 @@
 
 namespace
 {
-using namespace pco::v2;
 
 /**
- * @brief Verifies async_result returns a valid future_result.
+ * @brief Verifies pco::async_result returns a valid pco::future_result.
  */
 TEST(AsyncResultTest, returns_valid_future)
 {
-    auto future = async_result(pco::inplace_executor, []
+    auto future = pco::async_result(pco::inplace_executor, []
     {
         return 42;
     });
@@ -27,11 +26,11 @@ TEST(AsyncResultTest, returns_valid_future)
 }
 
 /**
- * @brief Verifies async_result delivers the function return value.
+ * @brief Verifies pco::async_result delivers the function return value.
  */
 TEST(AsyncResultTest, delivers_function_result)
 {
-    auto future = async_result(pco::inplace_executor, []
+    auto future = pco::async_result(pco::inplace_executor, []
     {
         return 42;
     });
@@ -42,11 +41,11 @@ TEST(AsyncResultTest, delivers_function_result)
 }
 
 /**
- * @brief Verifies async_result forwards call arguments to the callable.
+ * @brief Verifies pco::async_result forwards call arguments to the callable.
  */
 TEST(AsyncResultTest, forwards_parameters_to_callable)
 {
-    auto future = async_result(pco::inplace_executor,
+    auto future = pco::async_result(pco::inplace_executor,
         [](int left, int right)
         {
             return left + right;
@@ -60,12 +59,12 @@ TEST(AsyncResultTest, forwards_parameters_to_callable)
 }
 
 /**
- * @brief Verifies async_result supports void callables.
+ * @brief Verifies pco::async_result supports void callables.
  */
 TEST(AsyncResultTest, supports_void_callable)
 {
     bool executed = false;
-    auto future = async_result(pco::inplace_executor, [&executed]
+    auto future = pco::async_result(pco::inplace_executor, [&executed]
     {
         executed = true;
     });
@@ -81,23 +80,23 @@ TEST(AsyncResultTest, supports_void_callable)
  */
 TEST(AsyncResultTest, thrown_callable_exception_maps_to_execution_failure)
 {
-    auto future = async_result(pco::inplace_executor, []() -> int
+    auto future = pco::async_result(pco::inplace_executor, []() -> int
     {
         throw 42;
     });
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
 }
 #endif
 
 /**
- * @brief Verifies then_value can transform an async_result success value.
+ * @brief Verifies then_value can transform an pco::async_result success value.
  */
 TEST(AsyncResultTest, then_value_transforms_async_result_value)
 {
-    auto future = async_result(pco::inplace_executor, []
+    auto future = pco::async_result(pco::inplace_executor, []
     {
         return 21;
     });
@@ -113,15 +112,15 @@ TEST(AsyncResultTest, then_value_transforms_async_result_value)
 }
 
 /**
- * @brief Verifies void async_result can chain through then_result.
+ * @brief Verifies void pco::async_result can chain through then_result.
  */
 TEST(AsyncResultTest, void_async_result_then_result_transitions_to_value)
 {
-    auto future = async_result(pco::inplace_executor, []
+    auto future = pco::async_result(pco::inplace_executor, []
     {
     });
 
-    auto chained = std::move(future).then_result([](pco::v2::expected<void, result_error> result)
+    auto chained = std::move(future).then_result([](pco::expected<void, pco::result_error> result)
     {
         EXPECT_TRUE(result.has_value());
         return 11;
@@ -142,7 +141,7 @@ TEST(AsyncResultTest, executes_callable_on_specified_executor_thread)
     pco::static_thread_pool pool{1};
     auto exec = pool.executor();
 
-    auto future = async_result(exec, [] {
+    auto future = pco::async_result(exec, [] {
         return std::this_thread::get_id();
     });
 
@@ -157,15 +156,15 @@ TEST(AsyncResultTest, unwraps_nested_future_result)
     pco::static_thread_pool pool{1};
     auto exec = pool.executor();
 
-    auto future = async_result(exec, [exec] {
-        return async_result(exec, [] { return 100500; });
+    auto future = pco::async_result(exec, [exec] {
+        return pco::async_result(exec, [] { return 100500; });
     });
 
-    // result type must be future_result<int>, not future_result<future_result<int>>
+    // result type must be pco::future_result<int>, not pco::future_result<pco::future_result<int>>
     static_assert(
         std::is_same<decltype(future),
-                     future_result<int>>::value,
-        "async_result must unwrap nested future_result");
+                     pco::future_result<int>>::value,
+        "pco::async_result must unwrap nested pco::future_result");
 
     auto result = future.get_result();
     ASSERT_TRUE(result.has_value());
@@ -177,14 +176,14 @@ TEST(AsyncResultTest, unwraps_nested_shared_result)
     pco::static_thread_pool pool{1};
     auto exec = pool.executor();
 
-    auto future = async_result(exec, [exec] {
-        return async_result(exec, [] { return 42; }).share();
+    auto future = pco::async_result(exec, [exec] {
+        return pco::async_result(exec, [] { return 42; }).share();
     });
 
     static_assert(
         std::is_same<decltype(future),
-                     future_result<int>>::value,
-        "async_result must unwrap nested shared_result");
+                     pco::future_result<int>>::value,
+        "pco::async_result must unwrap nested pco::shared_result");
 
     auto result = future.get_result();
     ASSERT_TRUE(result.has_value());
@@ -199,7 +198,7 @@ TEST(AsyncResultTest, destroys_callable_after_invocation)
     pco::static_thread_pool pool{1};
     auto exec = pool.executor();
 
-    auto future = async_result(exec, [sp = std::exchange(sp, nullptr)] {
+    auto future = pco::async_result(exec, [sp = std::exchange(sp, nullptr)] {
         return *sp;
     });
 

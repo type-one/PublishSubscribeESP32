@@ -558,7 +558,7 @@ TEST(SyncRingBufferPerfectForwardingTest, PushAndEmplaceForwarding)
  * @brief Verifies perfect forwarding paths for ISR insertion APIs.
  *
  * This test validates that ISR-safe push/emplace variants preserve forwarding
- * semantics and insert expected values.
+ * semantics and insert pco::expected values.
  */
 TEST(SyncRingBufferPerfectForwardingTest, IsrPushAndEmplaceForwarding)
 {

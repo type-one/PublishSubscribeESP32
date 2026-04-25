@@ -15,14 +15,13 @@
 
 namespace
 {
-using namespace pco::v2;
 
 /**
  * @brief Verifies then_value executes directly without exception handling in no-exception mode.
  */
 TEST(ContinuationResultNoExceptionsTest, then_value_direct_execution)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -43,12 +42,12 @@ TEST(ContinuationResultNoExceptionsTest, then_value_direct_execution)
  */
 TEST(ContinuationResultNoExceptionsTest, then_value_error_propagation)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
     bool called = false;
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto chained = std::move(source).then_value([&called](int)
     {
@@ -58,7 +57,7 @@ TEST(ContinuationResultNoExceptionsTest, then_value_error_propagation)
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
     EXPECT_FALSE(called);
 }
 
@@ -67,15 +66,15 @@ TEST(ContinuationResultNoExceptionsTest, then_value_error_propagation)
  */
 TEST(ContinuationResultNoExceptionsTest, then_error_direct_recovery)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
-    auto chained = std::move(source).then_error([](result_error error)
+    auto chained = std::move(source).then_error([](pco::result_error error)
     {
-        EXPECT_EQ(error, result_error::execution_failure);
+        EXPECT_EQ(error, pco::result_error::execution_failure);
         return 7;
     });
 
@@ -89,14 +88,14 @@ TEST(ContinuationResultNoExceptionsTest, then_error_direct_recovery)
  */
 TEST(ContinuationResultNoExceptionsTest, then_error_success_bypass)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
     bool called = false;
 
     promise.set_value(42);
 
-    auto chained = std::move(source).then_error([&called](result_error)
+    auto chained = std::move(source).then_error([&called](pco::result_error)
     {
         called = true;
         return -1;
@@ -113,14 +112,14 @@ TEST(ContinuationResultNoExceptionsTest, then_error_success_bypass)
  */
 TEST(ContinuationResultNoExceptionsTest, then_result_direct_value_invocation)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
     promise.set_value(42);
 
     auto chained = std::move(source).then_result(
-        [](pco::v2::expected<int, result_error> result)
+        [](pco::expected<int, pco::result_error> result)
         {
             EXPECT_TRUE(result.has_value());
             return result.value() + 1;
@@ -136,17 +135,17 @@ TEST(ContinuationResultNoExceptionsTest, then_result_direct_value_invocation)
  */
 TEST(ContinuationResultNoExceptionsTest, then_result_direct_error_invocation)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::broken_promise);
+    promise.set_error(pco::result_error::broken_promise);
 
     auto chained = std::move(source).then_result(
-        [](pco::v2::expected<int, result_error> result)
+        [](pco::expected<int, pco::result_error> result)
         {
             EXPECT_FALSE(result.has_value());
-            EXPECT_EQ(result.error(), result_error::broken_promise);
+            EXPECT_EQ(result.error(), pco::result_error::broken_promise);
             return 3;
         });
 
@@ -160,7 +159,7 @@ TEST(ContinuationResultNoExceptionsTest, then_result_direct_error_invocation)
  */
 TEST(ContinuationResultNoExceptionsTest, multiple_chained_continuations)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -191,17 +190,17 @@ TEST(ContinuationResultNoExceptionsTest, multiple_chained_continuations)
  */
 TEST(ContinuationResultNoExceptionsTest, complex_error_recovery_chain)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::broken_promise);
+    promise.set_error(pco::result_error::broken_promise);
 
     auto chained = std::move(source)
-                       .then_error([](result_error error)
+                       .then_error([](pco::result_error error)
                        {
                            // Recover from broken_promise to a default value
-                           if (error == result_error::broken_promise) {
+                           if (error == pco::result_error::broken_promise) {
                                return 100;
                            }
                            return 0;
@@ -211,7 +210,7 @@ TEST(ContinuationResultNoExceptionsTest, complex_error_recovery_chain)
                            return x / 2;
                        })
                        .then_result(
-                           [](pco::v2::expected<int, result_error> result)
+                           [](pco::expected<int, pco::result_error> result)
                            {
                                EXPECT_TRUE(result.has_value());
                                return result.value() + 10;
@@ -231,7 +230,7 @@ TEST(ContinuationResultNoExceptionsTest, complex_error_recovery_chain)
  */
 TEST(ContinuationResultNoExceptionsTest, lightweight_continuation_execution)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
@@ -255,17 +254,17 @@ TEST(ContinuationResultNoExceptionsTest, lightweight_continuation_execution)
  */
 TEST(ContinuationResultNoExceptionsTest, void_promise_error_recovery_via_then_result)
 {
-    auto promise_and_future = make_result_promise<void>();
+    auto promise_and_future = pco::make_result_promise<void>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto chained = std::move(source).then_result(
-        [](pco::v2::expected<void, result_error> result)
+        [](pco::expected<void, pco::result_error> result)
         {
             EXPECT_FALSE(result.has_value());
-            EXPECT_EQ(result.error(), result_error::execution_failure);
+            EXPECT_EQ(result.error(), pco::result_error::execution_failure);
             return 99;  // Transition from void error to int value
         });
 
@@ -279,7 +278,7 @@ TEST(ContinuationResultNoExceptionsTest, void_promise_error_recovery_via_then_re
  */
 TEST(ContinuationResultNoExceptionsTest, then_value_unwraps_nested_future_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -287,7 +286,7 @@ TEST(ContinuationResultNoExceptionsTest, then_value_unwraps_nested_future_result
 
     auto chained = std::move(source).then_value([](int value)
     {
-        auto nested_pair = make_result_promise<int>();
+        auto nested_pair = pco::make_result_promise<int>();
         nested_pair.first.set_value(value * 4);
         return std::move(nested_pair.second);
     });
@@ -302,7 +301,7 @@ TEST(ContinuationResultNoExceptionsTest, then_value_unwraps_nested_future_result
  */
 TEST(ContinuationResultNoExceptionsTest, then_value_unwraps_nested_shared_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -310,7 +309,7 @@ TEST(ContinuationResultNoExceptionsTest, then_value_unwraps_nested_shared_result
 
     auto chained = std::move(source).then_value([](int value)
     {
-        auto nested_pair = make_result_promise<int>();
+        auto nested_pair = pco::make_result_promise<int>();
         nested_pair.first.set_value(value + 3);
         return std::move(nested_pair.second).share();
     });
@@ -325,15 +324,15 @@ TEST(ContinuationResultNoExceptionsTest, then_value_unwraps_nested_shared_result
  */
 TEST(ContinuationResultNoExceptionsTest, then_result_unwraps_nested_future_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
     promise.set_value(7);
 
-    auto chained = std::move(source).then_result([](pco::v2::expected<int, result_error> result)
+    auto chained = std::move(source).then_result([](pco::expected<int, pco::result_error> result)
     {
-        auto nested_pair = make_result_promise<int>();
+        auto nested_pair = pco::make_result_promise<int>();
         nested_pair.first.set_value(result.value() * 2);
         return std::move(nested_pair.second);
     });
@@ -348,7 +347,7 @@ TEST(ContinuationResultNoExceptionsTest, then_result_unwraps_nested_future_resul
  */
 TEST(ContinuationResultNoExceptionsTest, then_value_executor_unwraps_nested_future_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -358,7 +357,7 @@ TEST(ContinuationResultNoExceptionsTest, then_value_executor_unwraps_nested_futu
         pco::inplace_executor,
         [](int value)
         {
-            auto nested_pair = make_result_promise<int>();
+            auto nested_pair = pco::make_result_promise<int>();
             nested_pair.first.set_value(value - 1);
             return std::move(nested_pair.second);
         });
@@ -373,7 +372,7 @@ TEST(ContinuationResultNoExceptionsTest, then_value_executor_unwraps_nested_futu
  */
 TEST(ContinuationResultNoExceptionsTest, then_value_unwraps_nested_error)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
@@ -381,14 +380,14 @@ TEST(ContinuationResultNoExceptionsTest, then_value_unwraps_nested_error)
 
     auto chained = std::move(source).then_value([](int)
     {
-        auto nested_pair = make_result_promise<int>();
-        nested_pair.first.set_error(result_error::execution_failure);
+        auto nested_pair = pco::make_result_promise<int>();
+        nested_pair.first.set_error(pco::result_error::execution_failure);
         return std::move(nested_pair.second);
     });
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
 }
 
 } // namespace

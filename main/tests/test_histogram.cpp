@@ -221,7 +221,7 @@ TYPED_TEST(HistogramTest, Average)
  * @brief Test case for calculating the variance of the histogram.
  *
  * This test adds a series of values to the histogram and then checks if the
- * calculated variance matches the expected value.
+ * calculated variance matches the pco::expected value.
  *
  * @tparam TypeParam The data type used for the histogram values.
  *

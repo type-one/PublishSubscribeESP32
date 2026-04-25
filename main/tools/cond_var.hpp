@@ -49,9 +49,9 @@
 // Usage with portable_concurrency v2:
 //   #include "tools/critical_section.hpp"
 //   #include "tools/cond_var.hpp"
-//   using future_t = pco::v2::future_result<
+//   using future_t = pco::future_result<
 //       int,
-//       pco::v2::result_error,
+//       pco::result_error,
 //       tools::critical_section,
 //       tools::cond_var>;
 

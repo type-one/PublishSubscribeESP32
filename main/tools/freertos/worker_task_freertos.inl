@@ -347,11 +347,11 @@ namespace tools
 
         template <typename Callable, typename... Args>
         auto delegate_async(Callable&& work, Args&&... args)
-            -> decltype(pco::v2::async_result(std::declval<executor_type>(),
+            -> decltype(pco::async_result(std::declval<executor_type>(),
                 std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
                 std::forward<Args>(args)...))
         {
-            return pco::v2::async_result(
+            return pco::async_result(
                 as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
         }
 

@@ -42,7 +42,7 @@ struct periodic_stress_context {
     std::atomic<int> completed_jobs { 0 };
     std::atomic<int> failed_jobs { 0 };
     std::atomic<std::int64_t> processed_sum { 0 };
-    std::vector<pco::v2::future_result<int>> scheduled_results;
+    std::vector<pco::future_result<int>> scheduled_results;
 };
 
 class stress_worker_processor {
@@ -73,7 +73,7 @@ std::unique_ptr<worker_v2_task> make_worker_v2_task(
 }
 
 #if defined(PS_PC_HAS_COROUTINES)
-pco::v2::future_result<int> coroutine_schedule_job(
+pco::future_result<int> coroutine_schedule_job(
     worker_v2_task& worker, const std::shared_ptr<worker_v2_context>& context, int value)
 {
     co_await worker.schedule();
@@ -81,10 +81,10 @@ pco::v2::future_result<int> coroutine_schedule_job(
     co_return value * 3;
 }
 
-pco::v2::future_result<int> coroutine_await_future_job(
+pco::future_result<int> coroutine_await_future_job(
     worker_v2_task& worker,
     const std::shared_ptr<worker_v2_context>& context,
-    pco::v2::future_result<int> upstream)
+    pco::future_result<int> upstream)
 {
     co_await worker.schedule();
     const int upstream_value = co_await upstream;
@@ -92,7 +92,7 @@ pco::v2::future_result<int> coroutine_await_future_job(
     co_return upstream_value + 5;
 }
 
-pco::v2::future_result<int> coroutine_process_sample_on_worker(
+pco::future_result<int> coroutine_process_sample_on_worker(
     worker_v2_task& worker,
     const std::shared_ptr<worker_v2_context>& context,
     const std::shared_ptr<stress_worker_processor>& processor,
@@ -103,7 +103,7 @@ pco::v2::future_result<int> coroutine_process_sample_on_worker(
     co_return processor->process_sample(input_value);
 }
 
-pco::v2::future_result<int> coroutine_alternating_chain_on_two_workers(worker_v2_task& worker_first,
+pco::future_result<int> coroutine_alternating_chain_on_two_workers(worker_v2_task& worker_first,
     worker_v2_task& worker_second,
     const std::shared_ptr<worker_v2_context>& context_first,
     const std::shared_ptr<worker_v2_context>& context_second,
@@ -152,7 +152,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, AsyncResultChainOnWorkerExecutor)
                        {
                            return value + 2;
                        })
-                       .then_error([](pco::v2::result_error)
+                       .then_error([](pco::result_error)
                        {
                            return -1;
                        });
@@ -168,7 +168,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, GatherComputationsWithWorkerExecutor)
     auto context = std::make_shared<worker_v2_context>();
     auto worker = make_worker_v2_task(context, "v2_gather_worker_test");
 
-    std::vector<pco::v2::future_result<int>> jobs;
+    std::vector<pco::future_result<int>> jobs;
     jobs.reserve(5);
 
     for (int value = 1; value <= 5; ++value)
@@ -199,7 +199,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PromiseResultManualFulfillment)
     auto context = std::make_shared<worker_v2_context>();
     auto worker = make_worker_v2_task(context, "v2_promise_worker_test");
 
-    auto pair = pco::v2::make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto future = std::move(pair.second);
 
@@ -224,7 +224,6 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PromiseResultManualFulfillment)
 
 TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCoroutines)
 {
-    using namespace pco::v2;
 
     constexpr int target_job_count = 80;
     constexpr std::size_t periodic_stack_size = 4096U;
@@ -273,7 +272,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
                                local_context->processed_sum.fetch_add(processed_value);
                                return processed_value;
                            })
-                           .then_error([local_context](result_error)
+                           .then_error([local_context](pco::result_error)
                            {
                                local_context->failed_jobs.fetch_add(1);
                                return -1;
@@ -318,7 +317,6 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
 
 TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithoutCoroutines)
 {
-    using namespace pco::v2;
 
     constexpr int initial_value = 10;
     constexpr int stage_count = 6;
@@ -405,7 +403,6 @@ TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineAwaitsFutureResult)
 
 TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCoroutines)
 {
-    using namespace pco::v2;
 
     constexpr int target_job_count = 80;
     constexpr std::size_t periodic_stack_size = 4096U;
@@ -445,7 +442,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCorou
                                local_context->processed_sum.fetch_add(processed_value);
                                return processed_value;
                            })
-                           .then_error([local_context](result_error)
+                           .then_error([local_context](pco::result_error)
                            {
                                local_context->failed_jobs.fetch_add(1);
                                return -1;
@@ -494,7 +491,6 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCorou
 
 TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithCoroutines)
 {
-    using namespace pco::v2;
 
     constexpr int initial_value = 10;
     constexpr int stage_count = 6;

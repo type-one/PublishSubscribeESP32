@@ -415,7 +415,7 @@ TEST_F(TimerTest, TestOrderOfMultipleTimeouts)
  * @brief Unit test for testing multiple timers using the CppTime library.
  *
  * This test case verifies the behavior of multiple timers and their interactions.
- * It checks if the timers trigger at the correct intervals and if the removal of a timer works as expected.
+ * It checks if the timers trigger at the correct intervals and if the removal of a timer works as pco::expected.
  *
  * @test
  * - Creates two unique pointers to CppTime::Timer objects.

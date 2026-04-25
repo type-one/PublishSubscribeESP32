@@ -19,7 +19,6 @@
 
 namespace
 {
-using namespace pco::v2;
 struct scenario_worker_context {
     std::atomic<int> loop_counter { 0 };
 };
@@ -48,14 +47,14 @@ using polling_periodic_task = tools::periodic_task<polling_context>;
  */
 TEST(ConcurrencyScenarios, PromiseChainRecoveryAndTransform)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto source = std::move(pair.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto result = std::move(source)
-                      .then_error([](result_error)
+                      .then_error([](pco::result_error)
                       {
                           return 10;
                       })
@@ -74,30 +73,30 @@ TEST(ConcurrencyScenarios, PromiseChainRecoveryAndTransform)
  */
 TEST(ConcurrencyScenarios, WhenAllBrokenPromiseRecoveryScenario)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto future1 = std::move(pair1.second);
 
-    future_result<int> broken_future;
+    pco::future_result<int> broken_future;
     {
-        auto pair2 = make_result_promise<int>();
+        auto pair2 = pco::make_result_promise<int>();
         broken_future = std::move(pair2.second);
     }
 
-    auto combined = when_all(std::move(future1), std::move(broken_future));
+    auto combined = pco::when_all(std::move(future1), std::move(broken_future));
 
     promise1.set_value(42);
 
     auto chained = std::move(combined)
                        .then_value([](std::tuple<
-                                      pco::v2::expected<int, result_error>,
-                                      pco::v2::expected<int, result_error>> all)
+                                      pco::expected<int, pco::result_error>,
+                                      pco::expected<int, pco::result_error>> all)
                        {
                            const auto& first = std::get<0>(all);
                            const auto& second = std::get<1>(all);
 
                            if (first.has_value() && !second.has_value() &&
-                               second.error() == result_error::broken_promise)
+                               second.error() == pco::result_error::broken_promise)
                            {
                                return first.value() + 100;
                            }
@@ -114,23 +113,23 @@ TEST(ConcurrencyScenarios, WhenAllBrokenPromiseRecoveryScenario)
  */
 TEST(ConcurrencyScenarios, WhenAnyBrokenPromiseWinnerFallbackScenario)
 {
-    future_result<int> broken_future;
+    pco::future_result<int> broken_future;
     {
-        auto pair = make_result_promise<int>();
+        auto pair = pco::make_result_promise<int>();
         broken_future = std::move(pair.second);
     }
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto future2 = std::move(pair2.second);
 
-    auto chained = when_any(std::move(broken_future), std::move(future2))
-                       .then_value([](pco::v2::when_any_result<
-                                      std::tuple<future_result<int>,
-                                                 future_result<int>>> any)
+    auto chained = pco::when_any(std::move(broken_future), std::move(future2))
+                       .then_value([](pco::when_any_result<
+                                      std::tuple<pco::future_result<int>,
+                                                 pco::future_result<int>>> any)
                        {
                            auto winner = std::get<0>(any.futures).get_result();
-                           if (!winner.has_value() && winner.error() == result_error::broken_promise)
+                           if (!winner.has_value() && winner.error() == pco::result_error::broken_promise)
                            {
                                return 77;
                            }
@@ -183,7 +182,7 @@ TEST(ConcurrencyScenarios, GatherSeveralComputationsWithWhenAll)
     auto context = std::make_shared<scenario_worker_context>();
     auto worker = make_worker_task(context, "v2_fanout_worker");
 
-    std::vector<future_result<int>> jobs;
+    std::vector<pco::future_result<int>> jobs;
     jobs.reserve(5);
 
     for (int value = 1; value <= 5; ++value)
@@ -204,8 +203,8 @@ TEST(ConcurrencyScenarios, GatherSeveralComputationsWithWhenAll)
                     }));
     }
 
-    auto total = when_all(std::move(jobs))
-                     .then_value([](std::vector<pco::v2::expected<int, result_error>> results)
+    auto total = pco::when_all(std::move(jobs))
+                     .then_value([](std::vector<pco::expected<int, pco::result_error>> results)
                      {
                          int sum = 0;
                          for (const auto& item : results)
@@ -300,7 +299,7 @@ TEST(ConcurrencyScenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
     }
 
     auto result = std::move(long_future)
-                      .then_error([](result_error)
+                      .then_error([](pco::result_error)
                       {
                           return -1;
                       })

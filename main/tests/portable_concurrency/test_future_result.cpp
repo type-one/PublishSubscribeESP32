@@ -1,6 +1,6 @@
 /**
  * @file test_future_result.cpp
- * @brief Imported-style unit tests for portable_concurrency v2 future_result.
+ * @brief Imported-style unit tests for portable_concurrency v2 pco::future_result.
  */
 
 #include <gtest/gtest.h>
@@ -13,34 +13,33 @@
 
 namespace
 {
-using namespace pco::v2;
 
 /**
- * @brief Verifies a default-constructed future_result is invalid.
+ * @brief Verifies a default-constructed pco::future_result is invalid.
  */
 TEST(FutureResultTest, default_constructed_is_invalid)
 {
-    future_result<void> future;
+    pco::future_result<void> future;
     EXPECT_FALSE(future.valid());
 }
 
 /**
- * @brief Verifies a future obtained from a promise_result is valid.
+ * @brief Verifies a future obtained from a pco::promise_result is valid.
  */
 TEST(FutureResultTest, obtained_from_promise_is_valid)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto future = std::move(promise_and_future.second);
 
     EXPECT_TRUE(future.valid());
 }
 
 /**
- * @brief Verifies is_ready reports false before the promise_result is fulfilled.
+ * @brief Verifies is_ready reports false before the pco::promise_result is fulfilled.
  */
 TEST(FutureResultTest, is_ready_returns_false_on_nonready_state)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto future = std::move(promise_and_future.second);
 
     EXPECT_FALSE(future.is_ready());
@@ -51,7 +50,7 @@ TEST(FutureResultTest, is_ready_returns_false_on_nonready_state)
  */
 TEST(FutureResultTest, is_ready_returns_true_after_value_is_set)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -65,7 +64,7 @@ TEST(FutureResultTest, is_ready_returns_true_after_value_is_set)
  */
 TEST(FutureResultTest, get_result_returns_value_and_invalidates_future)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -82,11 +81,11 @@ TEST(FutureResultTest, get_result_returns_value_and_invalidates_future)
  */
 TEST(FutureResultTest, get_result_on_invalid_future_reports_no_state)
 {
-    future_result<int> future;
+    pco::future_result<int> future;
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::no_state);
+    EXPECT_EQ(result.error(), pco::result_error::no_state);
 }
 
 /**
@@ -94,15 +93,15 @@ TEST(FutureResultTest, get_result_on_invalid_future_reports_no_state)
  */
 TEST(FutureResultTest, get_result_returns_stored_error)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
 }
 
 /**
@@ -110,7 +109,7 @@ TEST(FutureResultTest, get_result_returns_stored_error)
  */
 TEST(FutureResultTest, void_future_reports_success_when_value_is_set)
 {
-    auto promise_and_future = make_result_promise<void>();
+    auto promise_and_future = pco::make_result_promise<void>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -125,7 +124,7 @@ TEST(FutureResultTest, void_future_reports_success_when_value_is_set)
  */
 TEST(FutureResultTest, wait_unblocks_on_async_value)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -150,11 +149,11 @@ TEST(FutureResultTest, wait_unblocks_on_async_value)
  */
 TEST(FutureResultTest, move_construction_transfers_validity)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto source = std::move(promise_and_future.second);
 
-    future_result<int> destination = std::move(source);
+    pco::future_result<int> destination = std::move(source);
 
     EXPECT_FALSE(source.valid());
     EXPECT_TRUE(destination.valid());
@@ -170,7 +169,7 @@ TEST(FutureResultTest, move_construction_transfers_validity)
  */
 TEST(FutureResultTest, wait_on_invalid_future_is_harmless)
 {
-    future_result<int> future;
+    pco::future_result<int> future;
     future.wait();
     SUCCEED();
 }
@@ -180,7 +179,7 @@ TEST(FutureResultTest, wait_on_invalid_future_is_harmless)
  */
 TEST(FutureResultTest, make_ready_result_produces_ready_value)
 {
-    auto future = make_ready_result(42);
+    auto future = pco::make_ready_result(42);
 
     EXPECT_TRUE(future.valid());
     EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), pco::future_status::ready);
@@ -195,7 +194,7 @@ TEST(FutureResultTest, make_ready_result_produces_ready_value)
  */
 TEST(FutureResultTest, make_ready_result_void_produces_ready_success)
 {
-    auto future = make_ready_result<>();
+    auto future = pco::make_ready_result<>();
 
     EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), pco::future_status::ready);
 
@@ -208,13 +207,13 @@ TEST(FutureResultTest, make_ready_result_void_produces_ready_success)
  */
 TEST(FutureResultTest, make_error_result_produces_ready_error)
 {
-    auto future = make_error_result<int>(result_error::execution_failure);
+    auto future = pco::make_error_result<int>(pco::result_error::execution_failure);
 
     EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), pco::future_status::ready);
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
 }
 
 /**
@@ -222,7 +221,7 @@ TEST(FutureResultTest, make_error_result_produces_ready_error)
  */
 TEST(FutureResultTest, wait_for_times_out_when_not_ready)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto future = std::move(promise_and_future.second);
 
     EXPECT_EQ(future.wait_for(std::chrono::milliseconds(1)), pco::future_status::timeout);
@@ -233,7 +232,7 @@ TEST(FutureResultTest, wait_for_times_out_when_not_ready)
  */
 TEST(FutureResultTest, wait_for_returns_ready_after_completion)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -256,7 +255,7 @@ TEST(FutureResultTest, wait_for_returns_ready_after_completion)
  */
 TEST(FutureResultTest, wait_until_returns_ready_for_ready_future)
 {
-    auto future = make_ready_result(7);
+    auto future = pco::make_ready_result(7);
 
     EXPECT_EQ(future.wait_until(std::chrono::steady_clock::now() + std::chrono::milliseconds(1)),
               pco::future_status::ready);
@@ -271,7 +270,7 @@ TEST(FutureResultTest, wait_until_returns_ready_for_ready_future)
  */
 TEST(FutureResultTest, wait_for_invalid_future_returns_timeout)
 {
-    future_result<int> future;
+    pco::future_result<int> future;
 
     EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), pco::future_status::timeout);
 }
@@ -281,7 +280,7 @@ TEST(FutureResultTest, wait_for_invalid_future_returns_timeout)
  */
 TEST(FutureResultTest, notify_runs_when_future_becomes_ready)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -301,7 +300,7 @@ TEST(FutureResultTest, notify_runs_when_future_becomes_ready)
  */
 TEST(FutureResultTest, notify_runs_immediately_if_already_ready)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
     promise.set_value(10);
@@ -320,7 +319,7 @@ TEST(FutureResultTest, notify_runs_immediately_if_already_ready)
  */
 TEST(FutureResultTest, notify_executor_dispatches_callback)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -340,7 +339,7 @@ TEST(FutureResultTest, notify_executor_dispatches_callback)
  */
 TEST(FutureResultTest, notify_runs_once_even_if_multiple_completions_attempted)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -351,7 +350,7 @@ TEST(FutureResultTest, notify_runs_once_even_if_multiple_completions_attempted)
     });
 
     promise.set_value(10);
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     future.wait();
     EXPECT_EQ(notifications.load(), 1);
@@ -362,7 +361,7 @@ TEST(FutureResultTest, notify_runs_once_even_if_multiple_completions_attempted)
  */
 TEST(FutureResultTest, notify_runs_when_future_becomes_ready_with_error)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -372,7 +371,7 @@ TEST(FutureResultTest, notify_runs_when_future_becomes_ready_with_error)
         notifications.fetch_add(1);
     });
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
     future.wait();
     EXPECT_EQ(notifications.load(), 1);
 }
@@ -382,9 +381,9 @@ TEST(FutureResultTest, notify_runs_when_future_becomes_ready_with_error)
  */
 TEST(FutureResultTest, notify_runs_when_promise_is_broken)
 {
-    future_result<int> future;
+    pco::future_result<int> future;
     {
-        auto pair = make_result_promise<int>();
+        auto pair = pco::make_result_promise<int>();
         future = std::move(pair.second);
     }
 
@@ -397,7 +396,7 @@ TEST(FutureResultTest, notify_runs_when_promise_is_broken)
     future.wait();
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
     EXPECT_EQ(notifications.load(), 1);
 }
 
@@ -406,7 +405,7 @@ TEST(FutureResultTest, notify_runs_when_promise_is_broken)
  */
 TEST(FutureResultTest, notify_not_called_if_future_destroyed_before_completion)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -427,7 +426,7 @@ TEST(FutureResultTest, notify_not_called_if_future_destroyed_before_completion)
  */
 TEST(FutureResultTest, notify_runs_for_async_completion)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto future = std::move(promise_and_future.second);
 
@@ -453,7 +452,7 @@ TEST(FutureResultTest, notify_runs_for_async_completion)
  */
 TEST(FutureResultTest, detach_from_pending_invalidates_source_and_keeps_result_path)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto future = std::move(pair.second);
 
@@ -473,7 +472,7 @@ TEST(FutureResultTest, detach_from_pending_invalidates_source_and_keeps_result_p
  */
 TEST(FutureResultTest, detach_from_ready_preserves_ready_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto future = std::move(pair.second);
 
@@ -493,7 +492,7 @@ TEST(FutureResultTest, detach_from_ready_preserves_ready_result)
  */
 TEST(FutureResultTest, detach_keeps_state_alive_after_returned_handle_is_dropped)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto future = std::move(pair.second);
 
@@ -511,11 +510,11 @@ TEST(FutureResultTest, detach_keeps_state_alive_after_returned_handle_is_dropped
  */
 TEST(FutureResultTest, move_then_detach_keeps_valid_destination)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto future = std::move(pair.second);
 
-    future_result<int> moved = std::move(future);
+    pco::future_result<int> moved = std::move(future);
     EXPECT_FALSE(future.valid());
     EXPECT_TRUE(moved.valid());
 

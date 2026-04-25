@@ -427,7 +427,7 @@ TYPED_TEST(SyncDictionaryTest, AddDuplicateKeyStringKey)
  *
  * The test performs the following checks:
  * - Adds a collection of key-value pairs to the dictionary.
- * - Verifies that the dictionary contains the expected keys.
+ * - Verifies that the dictionary contains the pco::expected keys.
  * - Verifies that the values associated with the keys are correct.
  */
 TYPED_TEST(SyncDictionaryTest, AddUnorderedCollectionIntKey)

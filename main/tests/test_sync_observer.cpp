@@ -308,7 +308,7 @@ TEST_F(SyncObserverTest, ConcurrentSubscribeAndUnsubscribe)
  *
  * This test subscribes an observer to a topic and then concurrently publishes
  * events to that topic from two different threads. It ensures that the observer
- * receives events within the expected range.
+ * receives events within the pco::expected range.
  *
  * @test
  * - Subscribes an observer to "TestTopic".
@@ -340,7 +340,7 @@ TEST_F(SyncObserverTest, ConcurrentPublish)
     t1.join();
     t2.join();
 
-    // Ensure the last event is within the expected range
+    // Ensure the last event is within the pco::expected range
     ASSERT_TRUE(observer->last_event >= 0 && observer->last_event < 200);
 }
 

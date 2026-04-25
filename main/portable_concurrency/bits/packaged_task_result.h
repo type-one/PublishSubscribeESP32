@@ -27,7 +27,6 @@
 #include "result_future.h"
 
 namespace pco {
-namespace v2 {
 
 template <typename Signature> class packaged_task_result;
 
@@ -178,5 +177,4 @@ private:
   std::shared_ptr<state_base> state_;
 };
 
-} // namespace v2
 } // namespace pco

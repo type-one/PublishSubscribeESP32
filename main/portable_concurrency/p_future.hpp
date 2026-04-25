@@ -33,34 +33,34 @@
 namespace pco {
 
 /// Type alias for the default future: resolves to future_result<T, E>.
-template <typename T, typename E = v2::result_error>
-using future_t = v2::future_result<T, E>;
+template <typename T, typename E = result_error>
+using future_t = future_result<T, E>;
 
 /// Type alias for the default shared future: resolves to shared_result<T, E>.
-template <typename T, typename E = v2::result_error>
-using shared_future_t = v2::shared_result<T, E>;
+template <typename T, typename E = result_error>
+using shared_future_t = shared_result<T, E>;
 
 /// Type alias for the default promise: resolves to promise_result<T, E>.
-template <typename T, typename E = v2::result_error>
-using promise_t = v2::promise_result<T, E>;
+template <typename T, typename E = result_error>
+using promise_t = promise_result<T, E>;
 
 /// Unified ready-future factory.
 template <typename T>
 auto make_ready_default(T &&value)
-	-> decltype(v2::make_ready_result<T>(std::forward<T>(value))) {
-	return v2::make_ready_result<T>(std::forward<T>(value));
+	-> decltype(make_ready_result<T>(std::forward<T>(value))) {
+	return make_ready_result<T>(std::forward<T>(value));
 }
 
 /// Unified ready-future factory for void.
-inline auto make_ready_default() -> decltype(v2::make_ready_result<>()) {
-	return v2::make_ready_result<>();
+inline auto make_ready_default() -> decltype(make_ready_result<>()) {
+	return make_ready_result<>();
 }
 
 /// Unified error-future factory.
-template <typename T, typename E = v2::result_error>
+template <typename T, typename E = result_error>
 auto make_error_default(E error)
-	-> decltype(v2::make_error_result<T, E>(std::move(error))) {
-	return v2::make_error_result<T, E>(std::move(error));
+	-> decltype(make_error_result<T, E>(std::move(error))) {
+	return make_error_result<T, E>(std::move(error));
 }
 
 /**
@@ -71,10 +71,10 @@ auto make_error_default(E error)
  */
 template <typename Exec, typename F, typename... A>
 auto make_async_default(Exec&& exec, F&& callable, A&&... args)
-	-> decltype(v2::async_result(
+	-> decltype(async_result(
 		std::forward<Exec>(exec), std::forward<F>(callable), std::forward<A>(args)...))
 {
-	return v2::async_result(
+	return async_result(
 		std::forward<Exec>(exec), std::forward<F>(callable), std::forward<A>(args)...);
 }
 

@@ -1,6 +1,6 @@
 /**
  * @file test_shared_result.cpp
- * @brief Unit tests for v2 shared_result and shared-input combinators.
+ * @brief Unit tests for v2 pco::shared_result and shared-input combinators.
  */
 
 #include <gtest/gtest.h>
@@ -15,14 +15,13 @@
 
 namespace
 {
-using namespace pco::v2;
 
 /**
  * @brief Tests default constructed is invalid.
  */
 TEST(SharedResultTest, default_constructed_is_invalid)
 {
-    shared_result<int> shared;
+    pco::shared_result<int> shared;
     EXPECT_FALSE(shared.valid());
 }
 
@@ -31,7 +30,7 @@ TEST(SharedResultTest, default_constructed_is_invalid)
  */
 TEST(SharedResultTest, share_transfers_validity_from_future)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto future = std::move(promise_and_future.second);
 
     auto shared = std::move(future).share();
@@ -45,7 +44,7 @@ TEST(SharedResultTest, share_transfers_validity_from_future)
  */
 TEST(SharedResultTest, copy_constructed_from_valid_is_valid)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto shared1 = std::move(promise_and_future.second).share();
     auto shared2 = shared1;
 
@@ -58,7 +57,7 @@ TEST(SharedResultTest, copy_constructed_from_valid_is_valid)
  */
 TEST(SharedResultTest, get_result_can_be_called_twice)
 {
-    auto promise_and_future = make_result_promise<int>();
+    auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
     auto shared = std::move(promise_and_future.second).share();
 
@@ -78,7 +77,7 @@ TEST(SharedResultTest, get_result_can_be_called_twice)
  */
 TEST(SharedResultTest, get_result_returns_stable_reference_for_unique_ptr_value)
 {
-    auto promise_and_future = make_result_promise<std::unique_ptr<int>>();
+    auto promise_and_future = pco::make_result_promise<std::unique_ptr<int>>();
     auto promise = std::move(promise_and_future.first);
     auto shared = std::move(promise_and_future.second).share();
 
@@ -97,9 +96,9 @@ TEST(SharedResultTest, get_result_returns_stable_reference_for_unique_ptr_value)
  */
 TEST(SharedResultTest, broken_promise_is_observable_from_multiple_copies)
 {
-    shared_result<int> shared1;
+    pco::shared_result<int> shared1;
     {
-        auto promise_and_future = make_result_promise<int>();
+        auto promise_and_future = pco::make_result_promise<int>();
         shared1 = std::move(promise_and_future.second).share();
     }
     auto shared2 = shared1;
@@ -108,8 +107,8 @@ TEST(SharedResultTest, broken_promise_is_observable_from_multiple_copies)
     const auto &result2 = shared2.get_result();
     ASSERT_FALSE(result1.has_value());
     ASSERT_FALSE(result2.has_value());
-    EXPECT_EQ(result1.error(), result_error::broken_promise);
-    EXPECT_EQ(result2.error(), result_error::broken_promise);
+    EXPECT_EQ(result1.error(), pco::result_error::broken_promise);
+    EXPECT_EQ(result2.error(), pco::result_error::broken_promise);
 }
 
 /**
@@ -117,7 +116,7 @@ TEST(SharedResultTest, broken_promise_is_observable_from_multiple_copies)
  */
 TEST(SharedResultTest, wait_for_times_out_when_not_ready)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto shared = std::move(pair.second).share();
 
     EXPECT_EQ(shared.wait_for(std::chrono::milliseconds(1)), pco::future_status::timeout);
@@ -128,7 +127,7 @@ TEST(SharedResultTest, wait_for_times_out_when_not_ready)
  */
 TEST(SharedResultTest, wait_until_returns_ready_after_completion)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -150,7 +149,7 @@ TEST(SharedResultTest, wait_until_returns_ready_after_completion)
  */
 TEST(SharedResultTest, wait_for_invalid_shared_returns_timeout)
 {
-    shared_result<int> shared;
+    pco::shared_result<int> shared;
 
     EXPECT_EQ(shared.wait_for(std::chrono::milliseconds(0)), pco::future_status::timeout);
 }
@@ -160,7 +159,7 @@ TEST(SharedResultTest, wait_for_invalid_shared_returns_timeout)
  */
 TEST(SharedResultTest, detach_from_pending_invalidates_source_and_keeps_result_path)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -180,7 +179,7 @@ TEST(SharedResultTest, detach_from_pending_invalidates_source_and_keeps_result_p
  */
 TEST(SharedResultTest, detach_from_ready_preserves_ready_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -200,7 +199,7 @@ TEST(SharedResultTest, detach_from_ready_preserves_ready_result)
  */
 TEST(SharedResultTest, detached_handle_does_not_cancel_completion)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -219,11 +218,11 @@ TEST(SharedResultTest, detached_handle_does_not_cancel_completion)
  */
 TEST(SharedResultTest, move_then_detach_keeps_valid_destination)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
-    shared_result<int> moved = std::move(shared);
+    pco::shared_result<int> moved = std::move(shared);
     EXPECT_FALSE(shared.valid());
     EXPECT_TRUE(moved.valid());
 
@@ -242,15 +241,15 @@ TEST(SharedResultTest, move_then_detach_keeps_valid_destination)
  */
 TEST(SharedResultTest, when_any_accepts_shared_results)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto shared1 = std::move(pair1.second).share();
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto shared2 = std::move(pair2.second).share();
 
-    auto combined = when_any(shared1, shared2);
+    auto combined = pco::when_any(shared1, shared2);
 
     promise2.set_value(9);
 
@@ -268,15 +267,15 @@ TEST(SharedResultTest, when_any_accepts_shared_results)
  */
 TEST(SharedResultTest, when_all_accepts_shared_results)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto shared1 = std::move(pair1.second).share();
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto shared2 = std::move(pair2.second).share();
 
-    auto combined = when_all(shared1, shared2);
+    auto combined = pco::when_all(shared1, shared2);
 
     promise1.set_value(1);
     promise2.set_value(2);
@@ -294,15 +293,15 @@ TEST(SharedResultTest, when_all_accepts_shared_results)
  */
 TEST(SharedResultTest, when_all_accepts_mixed_future_and_shared)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto future1 = std::move(pair1.second);
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto shared2 = std::move(pair2.second).share();
 
-    auto combined = when_all(std::move(future1), shared2);
+    auto combined = pco::when_all(std::move(future1), shared2);
 
     promise2.set_value(20);
     promise1.set_value(10);
@@ -325,19 +324,19 @@ TEST(SharedResultTest, when_all_accepts_mixed_future_and_shared)
  */
 TEST(SharedResultTest, when_all_vector_accepts_shared_results)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto shared1 = std::move(pair1.second).share();
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto shared2 = std::move(pair2.second).share();
 
-    std::vector<shared_result<int>> shareds;
+    std::vector<pco::shared_result<int>> shareds;
     shareds.push_back(shared1);
     shareds.push_back(shared2);
 
-    auto combined = when_all(std::move(shareds));
+    auto combined = pco::when_all(std::move(shareds));
 
     promise2.set_value(20);
     promise1.set_value(10);
@@ -354,21 +353,21 @@ TEST(SharedResultTest, when_all_vector_accepts_shared_results)
  */
 TEST(SharedResultTest, when_any_vector_accepts_shared_results_and_reuses_storage)
 {
-    auto pair1 = make_result_promise<int>();
+    auto pair1 = pco::make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
     auto shared1 = std::move(pair1.second).share();
 
-    auto pair2 = make_result_promise<int>();
+    auto pair2 = pco::make_result_promise<int>();
     auto promise2 = std::move(pair2.first);
     auto shared2 = std::move(pair2.second).share();
 
-    std::vector<shared_result<int>> shareds;
+    std::vector<pco::shared_result<int>> shareds;
     shareds.reserve(2);
     shareds.push_back(shared1);
     shareds.push_back(shared2);
     const auto *buffer = shareds.data();
 
-    auto combined = when_any(std::move(shareds));
+    auto combined = pco::when_any(std::move(shareds));
 
     promise1.set_value(33);
 
@@ -386,7 +385,7 @@ TEST(SharedResultTest, when_any_vector_accepts_shared_results_and_reuses_storage
  */
 TEST(SharedResultTest, then_value_transforms_success)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -407,7 +406,7 @@ TEST(SharedResultTest, then_value_transforms_success)
  */
 TEST(SharedResultTest, then_value_propagates_error)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -416,11 +415,11 @@ TEST(SharedResultTest, then_value_propagates_error)
         return value * 2;
     });
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto result = chained.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
 }
 
 /**
@@ -428,16 +427,16 @@ TEST(SharedResultTest, then_value_propagates_error)
  */
 TEST(SharedResultTest, then_error_recovers_error)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
-    auto chained = shared.then_error([](result_error)
+    auto chained = shared.then_error([](pco::result_error)
     {
         return 123;
     });
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto result = chained.get_result();
     ASSERT_TRUE(result.has_value());
@@ -445,15 +444,15 @@ TEST(SharedResultTest, then_error_recovers_error)
 }
 
 /**
- * @brief Tests then result receives full expected.
+ * @brief Tests then result receives full pco::expected.
  */
 TEST(SharedResultTest, then_result_receives_full_expected)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
-    auto chained = shared.then_result([](const shared_result<int>::result_type &res)
+    auto chained = shared.then_result([](const pco::shared_result<int>::result_type &res)
     {
         return res.has_value() ? res.value() + 1 : -1;
     });
@@ -470,7 +469,7 @@ TEST(SharedResultTest, then_result_receives_full_expected)
  */
 TEST(SharedResultTest, then_value_executor_dispatches)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -491,12 +490,12 @@ TEST(SharedResultTest, then_value_executor_dispatches)
  */
 TEST(SharedResultTest, then_result_executor_dispatches)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
     auto chained = shared.then_result(pco::inplace_executor,
-                                      [](const shared_result<int>::result_type &res)
+                                      [](const pco::shared_result<int>::result_type &res)
     {
         return res.has_value() ? res.value() * 2 : 0;
     });
@@ -513,7 +512,7 @@ TEST(SharedResultTest, then_result_executor_dispatches)
  */
 TEST(SharedResultTest, then_value_supports_move_only_value_by_const_reference)
 {
-    auto pair = make_result_promise<std::unique_ptr<int>>();
+    auto pair = pco::make_result_promise<std::unique_ptr<int>>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -534,13 +533,13 @@ TEST(SharedResultTest, then_value_supports_move_only_value_by_const_reference)
  */
 TEST(SharedResultTest, then_value_unwraps_nested_future_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
     auto chained = shared.then_value([](const int &value)
     {
-        auto nested_pair = make_result_promise<int>();
+        auto nested_pair = pco::make_result_promise<int>();
         nested_pair.first.set_value(value * 5);
         return std::move(nested_pair.second);
     });
@@ -557,13 +556,13 @@ TEST(SharedResultTest, then_value_unwraps_nested_future_result)
  */
 TEST(SharedResultTest, then_result_unwraps_nested_shared_result)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
-    auto chained = shared.then_result([](const shared_result<int>::result_type &res)
+    auto chained = shared.then_result([](const pco::shared_result<int>::result_type &res)
     {
-        auto nested_pair = make_result_promise<int>();
+        auto nested_pair = pco::make_result_promise<int>();
         nested_pair.first.set_value(res.value() + 11);
         return std::move(nested_pair.second).share();
     });
@@ -580,7 +579,7 @@ TEST(SharedResultTest, then_result_unwraps_nested_shared_result)
  */
 TEST(SharedResultTest, void_then_value_transforms_success)
 {
-    auto pair = make_result_promise<void>();
+    auto pair = pco::make_result_promise<void>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -601,17 +600,17 @@ TEST(SharedResultTest, void_then_value_transforms_success)
  */
 TEST(SharedResultTest, void_then_error_recovers_error)
 {
-    auto pair = make_result_promise<void>();
+    auto pair = pco::make_result_promise<void>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
     bool invoked = false;
-    auto chained = shared.then_error([&](result_error)
+    auto chained = shared.then_error([&](pco::result_error)
     {
         invoked = true;
     });
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     auto result = chained.get_result();
     ASSERT_TRUE(result.has_value());
@@ -623,12 +622,12 @@ TEST(SharedResultTest, void_then_error_recovers_error)
  */
 TEST(SharedResultTest, void_then_result_executor_dispatches)
 {
-    auto pair = make_result_promise<void>();
+    auto pair = pco::make_result_promise<void>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
     auto chained = shared.then_result(pco::inplace_executor,
-                                      [](const shared_result<void>::result_type &res)
+                                      [](const pco::shared_result<void>::result_type &res)
     {
         return res.has_value() ? 1 : 0;
     });
@@ -645,7 +644,7 @@ TEST(SharedResultTest, void_then_result_executor_dispatches)
  */
 TEST(SharedResultTest, notify_runs_when_shared_becomes_ready)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -665,7 +664,7 @@ TEST(SharedResultTest, notify_runs_when_shared_becomes_ready)
  */
 TEST(SharedResultTest, notify_runs_immediately_if_already_ready)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
     promise.set_value(1);
@@ -684,7 +683,7 @@ TEST(SharedResultTest, notify_runs_immediately_if_already_ready)
  */
 TEST(SharedResultTest, notify_executor_dispatches_callback)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -704,7 +703,7 @@ TEST(SharedResultTest, notify_executor_dispatches_callback)
  */
 TEST(SharedResultTest, notify_runs_once_even_if_multiple_completions_attempted)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -715,7 +714,7 @@ TEST(SharedResultTest, notify_runs_once_even_if_multiple_completions_attempted)
     });
 
     promise.set_value(1);
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
 
     shared.wait();
     EXPECT_EQ(notifications.load(), 1);
@@ -723,7 +722,7 @@ TEST(SharedResultTest, notify_runs_once_even_if_multiple_completions_attempted)
 
 TEST(SharedResultTest, notify_runs_when_shared_becomes_ready_with_error)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -733,19 +732,19 @@ TEST(SharedResultTest, notify_runs_when_shared_becomes_ready_with_error)
         notifications.fetch_add(1);
     });
 
-    promise.set_error(result_error::execution_failure);
+    promise.set_error(pco::result_error::execution_failure);
     shared.wait();
     const auto &result = shared.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
     EXPECT_EQ(notifications.load(), 1);
 }
 
 TEST(SharedResultTest, notify_runs_when_promise_is_broken)
 {
-    shared_result<int> shared;
+    pco::shared_result<int> shared;
     {
-        auto pair = make_result_promise<int>();
+        auto pair = pco::make_result_promise<int>();
         shared = std::move(pair.second).share();
     }
 
@@ -758,13 +757,13 @@ TEST(SharedResultTest, notify_runs_when_promise_is_broken)
     shared.wait();
     const auto &result = shared.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::broken_promise);
+    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
     EXPECT_EQ(notifications.load(), 1);
 }
 
 TEST(SharedResultTest, notify_not_called_if_shared_destroyed_before_completion)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -782,7 +781,7 @@ TEST(SharedResultTest, notify_not_called_if_shared_destroyed_before_completion)
 
 TEST(SharedResultTest, notify_runs_for_async_completion)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -810,7 +809,7 @@ TEST(SharedResultTest, notify_runs_for_async_completion)
 
 TEST(SharedResultTest, all_then_value_continuations_are_invoked)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -826,7 +825,7 @@ TEST(SharedResultTest, all_then_value_continuations_are_invoked)
 
 TEST(SharedResultTest, all_continuations_observe_consistent_value)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -845,7 +844,7 @@ TEST(SharedResultTest, all_continuations_observe_consistent_value)
 
 TEST(SharedResultTest, all_continuations_invoked_on_broken_promise)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -858,13 +857,13 @@ TEST(SharedResultTest, all_continuations_invoked_on_broken_promise)
     auto r2 = cnt2.get_result();
     ASSERT_FALSE(r1.has_value());
     ASSERT_FALSE(r2.has_value());
-    EXPECT_EQ(r1.error(), result_error::broken_promise);
-    EXPECT_EQ(r2.error(), result_error::broken_promise);
+    EXPECT_EQ(r1.error(), pco::result_error::broken_promise);
+    EXPECT_EQ(r2.error(), pco::result_error::broken_promise);
 }
 
 TEST(SharedResultTest, continuation_attached_after_readiness_fires_inline)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
@@ -881,7 +880,7 @@ TEST(SharedResultTest, continuation_attached_after_readiness_fires_inline)
 
 TEST(SharedResultTest, multiple_notify_callbacks_all_invoked)
 {
-    auto pair = make_result_promise<int>();
+    auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
