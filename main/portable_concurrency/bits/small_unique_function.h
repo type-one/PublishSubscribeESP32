@@ -24,7 +24,6 @@
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces,bugprone-forwarding-reference-overload)
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 constexpr size_t small_buffer_size = 5 * sizeof(void *);
@@ -70,6 +69,5 @@ private:
 extern template class small_unique_function<void()>;
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco
 // NOLINTEND(modernize-concat-nested-namespaces,bugprone-forwarding-reference-overload)

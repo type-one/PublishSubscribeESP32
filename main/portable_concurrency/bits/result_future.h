@@ -41,7 +41,6 @@
 #include "unique_function.hpp"
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace v2 {
 
 enum class result_error {
@@ -2680,5 +2679,4 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
 }
 
 } // namespace v2
-} // namespace cxx14_v1
 } // namespace pco

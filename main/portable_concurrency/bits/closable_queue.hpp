@@ -22,7 +22,6 @@
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 template <typename T> bool closable_queue<T>::pop(T &dest) {
@@ -52,6 +51,5 @@ template <typename T> void closable_queue<T>::close() {
 }
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco
 // NOLINTEND(modernize-concat-nested-namespaces)

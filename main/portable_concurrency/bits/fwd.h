@@ -21,7 +21,6 @@
 #include <memory>
 
 namespace pco {
-inline namespace cxx14_v1 {
 
 struct canceler_arg_t {};
 constexpr canceler_arg_t canceler_arg = {};
@@ -45,5 +44,4 @@ template <typename T>
 std::shared_ptr<future_state<T>> state_of(shared_future<T> &&);
 } // namespace detail
 
-} // namespace cxx14_v1
 } // namespace pco

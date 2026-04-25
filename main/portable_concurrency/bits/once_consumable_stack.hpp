@@ -26,7 +26,6 @@
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces,readability-braces-around-statements,readability-identifier-length,readability-named-parameter,modernize-use-equals-default,cppcoreguidelines-pro-type-const-cast)
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 template <typename T>
@@ -129,6 +128,5 @@ once_consumable_stack<T>::consumed_marker() const noexcept {
 }
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco
 // NOLINTEND(modernize-concat-nested-namespaces,readability-braces-around-statements,readability-identifier-length,readability-named-parameter,modernize-use-equals-default,cppcoreguidelines-pro-type-const-cast)

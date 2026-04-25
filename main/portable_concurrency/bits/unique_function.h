@@ -24,7 +24,6 @@
 #include "small_unique_function.h"
 
 namespace pco {
-inline namespace cxx14_v1 {
 
 template <typename S> class unique_function;
 
@@ -130,5 +129,4 @@ private:
 
 extern template class unique_function<void()>;
 
-} // namespace cxx14_v1
 } // namespace pco

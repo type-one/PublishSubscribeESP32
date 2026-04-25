@@ -22,7 +22,6 @@
 #include <memory>
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 template <typename T> struct forward_list_node {
@@ -153,5 +152,4 @@ private:
 };
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco

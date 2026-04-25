@@ -22,7 +22,6 @@
 #include <utility>
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 template <typename T> struct is_reference_wrapper : std::false_type {};
@@ -94,5 +93,4 @@ auto invoke(F &&f, A &&...args) noexcept(
 }
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco

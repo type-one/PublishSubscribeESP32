@@ -25,7 +25,6 @@
 #include <queue>
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 template <typename T> class closable_queue {
@@ -42,5 +41,4 @@ private:
 };
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco

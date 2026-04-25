@@ -22,7 +22,6 @@
 #include "small_unique_function.hpp"
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 using continuation = small_unique_function<void()>;
@@ -47,5 +46,4 @@ private:
 };
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco

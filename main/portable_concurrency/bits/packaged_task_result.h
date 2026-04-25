@@ -27,7 +27,6 @@
 #include "result_future.h"
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace v2 {
 
 template <typename Signature> class packaged_task_result;
@@ -188,5 +187,4 @@ private:
 };
 
 } // namespace v2
-} // namespace cxx14_v1
 } // namespace pco

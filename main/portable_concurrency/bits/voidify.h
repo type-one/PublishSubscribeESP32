@@ -19,7 +19,6 @@
 #pragma once
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 // TODO: replace with std::void_t after migration to C++17
@@ -28,5 +27,4 @@ template <typename T> struct voidify {
 };
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco

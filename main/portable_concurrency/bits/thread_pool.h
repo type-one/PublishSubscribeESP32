@@ -30,7 +30,6 @@
 #include "unique_function.hpp"
 
 namespace pco {
-inline namespace cxx14_v1 {
 
 namespace detail {
 extern template class closable_queue<unique_function<void()>>;
@@ -87,10 +86,9 @@ private:
   std::atomic<bool> stopped_{false};
 };
 
-} // namespace cxx14_v1
 
 template <>
-struct is_executor<cxx14_v1::static_thread_pool::executor_type>
+struct is_executor<static_thread_pool::executor_type>
     : std::true_type {};
 
 } // namespace pco

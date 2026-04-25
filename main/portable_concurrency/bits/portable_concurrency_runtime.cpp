@@ -33,7 +33,6 @@
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces,cppcoreguidelines-rvalue-reference-param-not-moved)
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 [[noreturn]] void throw_bad_func_call() {
@@ -180,5 +179,4 @@ void static_thread_pool::wait() {
   threads_.clear();
 }
 
-} // namespace cxx14_v1
 } // namespace pco

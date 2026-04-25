@@ -25,7 +25,6 @@
 #include <mutex>
 
 namespace pco {
-inline namespace cxx14_v1 {
 
 /**
  * @headerfile portable_concurrency/latch
@@ -58,5 +57,4 @@ private:
   mutable tools::cond_var cv_;
 };
 
-} // namespace cxx14_v1
 } // namespace pco

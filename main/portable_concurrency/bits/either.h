@@ -28,7 +28,6 @@
 #include "concurrency_type_traits.h"
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 #if defined(__has_builtin)
@@ -182,5 +181,4 @@ template <typename... T> struct scope_either_cleaner<either<monostate, T...>> {
 };
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco

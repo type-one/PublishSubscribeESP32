@@ -27,7 +27,6 @@
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces,bugprone-easily-swappable-parameters,readability-identifier-length,fuchsia-trailing-return,readability-named-parameter,cppcoreguidelines-pro-type-member-init,readability-braces-around-statements)
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 [[noreturn]] void throw_bad_func_call();
@@ -73,12 +72,12 @@ const callable_vtbl<R, A...> &get_callable_vtbl() {
         // anything to `void` if `R` is `void`
         return static_cast<std::conditional_t<
             std::is_void<R>::value, void,
-            decltype(pco::cxx14_v1::detail::invoke(
+            decltype(pco::detail::invoke(
                 small_buffer_cast<F>(buf), std::forward<A>(a)...))>>(
-            pco::cxx14_v1::detail::invoke(
+            pco::detail::invoke(
                 small_buffer_cast<F>(buf), std::forward<A>(a)...));
 #else
-        return static_cast<R>(pco::cxx14_v1::detail::invoke(
+        return static_cast<R>(pco::detail::invoke(
             small_buffer_cast<F>(buf), std::forward<A>(a)...));
 #endif
       }};
@@ -164,6 +163,5 @@ R small_unique_function<R(A...)>::operator()(A... args) const {
 }
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco
 // NOLINTEND(modernize-concat-nested-namespaces,bugprone-easily-swappable-parameters,readability-identifier-length,fuchsia-trailing-return,readability-named-parameter,cppcoreguidelines-pro-type-member-init,readability-braces-around-statements)

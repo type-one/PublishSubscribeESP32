@@ -21,25 +21,21 @@
 #if defined(__cpp_impl_coroutine)
 #include <coroutine>
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 using suspend_never = std::suspend_never;
 template <typename Promise = void>
 using coroutine_handle = std::coroutine_handle<Promise>;
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco
 #define PC_HAS_COROUTINES
 #elif defined(__cpp_coroutines)
 #include <experimental/coroutine>
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 using suspend_never = std::experimental::suspend_never;
 template <typename Promise = void>
 using coroutine_handle = std::experimental::coroutine_handle<Promise>;
 #define PC_HAS_COROUTINES
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco
 #endif

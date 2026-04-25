@@ -24,7 +24,6 @@
 #include "voidify.h"
 
 namespace pco {
-inline namespace cxx14_v1 {
 namespace detail {
 
 #if defined(__cpp_lib_is_invocable)
@@ -145,5 +144,4 @@ struct swallow {
 };
 
 } // namespace detail
-} // namespace cxx14_v1
 } // namespace pco
