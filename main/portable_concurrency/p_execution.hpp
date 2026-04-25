@@ -26,5 +26,9 @@
  * executor types.
  */
 
-#include "bits/alias_namespace.h"
 #include "bits/execution.h"
+
+#if !defined(PCO_NAMESPACE_ALIAS_DEFINED)
+#define PCO_NAMESPACE_ALIAS_DEFINED
+namespace pco = portable_concurrency;
+#endif

@@ -47,9 +47,13 @@
  *   - pco::uses_v2_policy            == true (always)
  */
 
-#include "bits/alias_namespace.h"
 #include "bits/packaged_task_result.h"
 #include "bits/result_future.h"
+
+#if !defined(PCO_NAMESPACE_ALIAS_DEFINED)
+#define PCO_NAMESPACE_ALIAS_DEFINED
+namespace pco = portable_concurrency;
+#endif
 
 namespace portable_concurrency {
 

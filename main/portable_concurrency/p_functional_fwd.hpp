@@ -26,5 +26,9 @@
  * concurrent code
  */
 
-#include "bits/alias_namespace.h"
 #include "bits/unique_function.h"
+
+#if !defined(PCO_NAMESPACE_ALIAS_DEFINED)
+#define PCO_NAMESPACE_ALIAS_DEFINED
+namespace pco = portable_concurrency;
+#endif

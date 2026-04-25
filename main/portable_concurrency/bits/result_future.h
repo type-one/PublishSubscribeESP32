@@ -36,7 +36,7 @@
 #include "execution.h"
 #include "tools/critical_section.hpp"
 #include "tools/cond_var.hpp"
-#include "expected_compat.h"
+#include "tools/expected.hpp"
 #include "fwd.h"
 #include "unique_function.hpp"
 
@@ -50,6 +50,13 @@ enum class result_error {
   execution_failure,
   continuation_failure,
 };
+
+// Compatibility aliases: expose tools::expected/unexpected for v2 API users
+template <typename T, typename E>
+using expected = tools::expected<T, E>;
+
+template <typename E>
+using unexpected = tools::unexpected<E>;
 
 template <typename T, typename E = result_error> class future_result;
 template <typename T, typename E = result_error> class shared_result;
@@ -151,7 +158,7 @@ template <typename T, typename E> struct result_shared_state {
   tools::critical_section mutex_;
   tools::cond_var cv_;
   bool ready_ = false;
-  std::optional<expected<T, E>> result_;
+  std::optional<tools::expected<T, E>> result_;
   std::vector<std::function<void()>> on_ready_cbs_;
   unique_function<void()> cancel_action_;
 };
@@ -262,7 +269,7 @@ public:
         if (new_state && old_state == new_state) {
           std::lock_guard<tools::critical_section> guard(old_state->mutex_);
           if (!old_state->ready_) {
-            old_state->result_.emplace(make_expected_error<T, E>(E::broken_promise));
+            old_state->result_.emplace(tools::unexpected<E>(E::broken_promise));
             old_state->ready_ = true;
             callbacks = std::move(old_state->on_ready_cbs_);
             old_state->cv_.notify_all();
@@ -270,7 +277,7 @@ public:
         } else if (new_state) {
           std::scoped_lock lock(old_state->mutex_, new_state->mutex_);
           if (!old_state->ready_) {
-            old_state->result_.emplace(make_expected_error<T, E>(E::broken_promise));
+            old_state->result_.emplace(tools::unexpected<E>(E::broken_promise));
             old_state->ready_ = true;
             callbacks = std::move(old_state->on_ready_cbs_);
             old_state->cv_.notify_all();
@@ -278,7 +285,7 @@ public:
         } else {
           std::lock_guard<tools::critical_section> guard(old_state->mutex_);
           if (!old_state->ready_) {
-            old_state->result_.emplace(make_expected_error<T, E>(E::broken_promise));
+            old_state->result_.emplace(tools::unexpected<E>(E::broken_promise));
             old_state->ready_ = true;
             callbacks = std::move(old_state->on_ready_cbs_);
             old_state->cv_.notify_all();
@@ -312,7 +319,7 @@ private:
     {
       std::lock_guard<tools::critical_section> guard(state->mutex_);
       if (!state->ready_) {
-        state->result_.emplace(make_expected_error<T, E>(E::broken_promise));
+        state->result_.emplace(tools::unexpected<E>(E::broken_promise));
         state->ready_ = true;
         cbs = std::move(state->on_ready_cbs_);
         state->cv_.notify_all();
@@ -335,7 +342,7 @@ public:
     return future;
   }
 
-  void set_result(expected<T, E> result) {
+  void set_result(tools::expected<T, E> result) {
     auto state = get_state();
     if (!state) {
       return;
@@ -361,16 +368,16 @@ public:
   template <typename U = T,
             typename std::enable_if<!std::is_void<U>::value, int>::type = 0>
   void set_value(U value) {
-    set_result(expected<T, E>(std::move(value)));
+    set_result(tools::expected<T, E>(std::move(value)));
   }
 
   template <typename U = T,
             typename std::enable_if<std::is_void<U>::value, int>::type = 0>
   void set_value() {
-    set_result(expected<void, E>());
+    set_result(tools::expected<void, E>());
   }
 
-  void set_error(E error) { set_result(make_expected_error<T, E>(std::move(error))); }
+  void set_error(E error) { set_result(tools::unexpected<E>(std::move(error))); }
 
   [[nodiscard]] bool is_awaiten() const noexcept {
     return static_cast<bool>(state_) || !weak_state_.expired();
@@ -466,7 +473,7 @@ static_assert(!std::is_reference_v<T>,
 public:
   using value_type = T;
   using error_type = E;
-  using result_type = expected<T, E>;
+  using result_type = tools::expected<T, E>;
 
 #if defined(PC_HAS_COROUTINES)
   using promise_type = promise_result<T, E>;
@@ -539,7 +546,7 @@ public:
 
   result_type get_result() {
     if (!state_) {
-      return make_expected_error<T, E>(E::no_state);
+      return tools::unexpected<E>(E::no_state);
     }
 
     wait();
@@ -549,7 +556,7 @@ public:
   // Internal helper for combinators that are invoked only after readiness.
   result_type take_ready_result() {
     if (!state_) {
-      return make_expected_error<T, E>(E::no_state);
+      return tools::unexpected<E>(E::no_state);
     }
 
     std::optional<result_type> out;
@@ -724,7 +731,7 @@ public:
     auto next_future = next_promise.get_future();
 
     if (!state_) {
-      result_type current = make_expected_error<T, E>(E::no_state);
+      result_type current = tools::unexpected<E>(E::no_state);
 #if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (detail::is_result_handle<next_raw_t>::value) {
@@ -803,7 +810,7 @@ public:
   auto then(Exec &&exec, F &&fn) &&
       -> future_result<detail::interrupt_promise_arg_t<F, future_result<T, E>, E>, E> {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     using next_value_t = detail::interrupt_promise_arg_t<F, future_result<T, E>, E>;
     using exec_store_t = std::conditional_t<std::is_lvalue_reference<Exec>::value,
@@ -872,7 +879,7 @@ public:
   auto then_value(Exec &&exec, F &&fn) &&
       -> future_result<detail::unwrapped_result_value_t<detail::result_then_value_type<F, T>>, E> {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     using next_value_t = detail::unwrapped_result_value_t<detail::result_then_value_type<F, T>>;
     using next_raw_t = typename detail::result_then_value_type<F, T>::raw_type;
@@ -1037,7 +1044,7 @@ public:
   auto then_error(Exec &&exec, F &&fn) &&
       -> future_result<T, E> {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     using exec_store_t = std::conditional_t<std::is_lvalue_reference<Exec>::value,
                                             std::reference_wrapper<std::remove_reference_t<Exec>>,
@@ -1163,7 +1170,7 @@ public:
   auto then_result(Exec &&exec, F &&fn) &&
       -> future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, result_type>>, E> {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     using traits_t = detail::result_then_result_type<F, result_type>;
     using next_value_t = detail::unwrapped_result_value_t<traits_t>;
@@ -1175,7 +1182,7 @@ public:
     auto next_future = next_promise.get_future();
 
     if (!state_) {
-      result_type current = make_expected_error<T, E>(E::no_state);
+      result_type current = tools::unexpected<E>(E::no_state);
       post(std::forward<Exec>(exec),
            [current = std::move(current),
             fn = std::forward<F>(fn),
@@ -1321,7 +1328,7 @@ public:
   template <typename Exec, typename F>
   void notify(Exec &&exec, F &&notification) {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     auto exec_obj = std::make_shared<std::decay_t<Exec>>(std::forward<Exec>(exec));
     auto cb = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
@@ -1359,7 +1366,7 @@ static_assert(!std::is_reference_v<T>,
 public:
   using value_type = T;
   using error_type = E;
-  using result_type = expected<T, E>;
+  using result_type = tools::expected<T, E>;
 
   shared_result() = default;
 
@@ -1410,7 +1417,7 @@ public:
   const result_type &get_result() const {
     if (!state_) {
       if (!invalid_result_) {
-        invalid_result_ = std::make_unique<result_type>(make_expected_error<T, E>(E::no_state));
+        invalid_result_ = std::make_unique<result_type>(tools::unexpected<E>(E::no_state));
       }
       return *invalid_result_;
     }
@@ -1442,7 +1449,7 @@ public:
   template <typename Exec, typename F>
   void notify(Exec &&exec, F &&notification) const {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     auto exec_obj = std::make_shared<std::decay_t<Exec>>(std::forward<Exec>(exec));
     auto cb = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
@@ -1543,7 +1550,7 @@ public:
   auto then_value(Exec &&exec, F &&fn) const
       -> future_result<detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>, E> {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     using next_value_t = detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>;
     using next_raw_t = typename detail::result_shared_then_value_type<F, T>::raw_type;
@@ -1634,7 +1641,7 @@ public:
   auto then(Exec &&exec, F &&fn) const
       -> future_result<detail::interrupt_promise_arg_t<F, shared_result<T, E>, E>, E> {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     using next_value_t = detail::interrupt_promise_arg_t<F, shared_result<T, E>, E>;
     promise_result<next_value_t, E> next_promise;
@@ -1740,7 +1747,7 @@ public:
                                     int>::type = 0>
   auto then_error(Exec &&exec, F &&fn) const -> future_result<T, E> {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     promise_result<T, E> next_promise;
     auto next_future = next_promise.get_future();
@@ -1850,7 +1857,7 @@ public:
   auto then_result(Exec &&exec, F &&fn) const
       -> future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, const result_type &>>, E> {
     static_assert(is_executor<std::decay_t<Exec>>::value,
-                  "Exec must satisfy portable_concurrency::is_executor");
+                  "Exec must satisfy pco::is_executor");
 
     using traits_t = detail::result_then_result_type<F, const result_type &>;
     using next_value_t = detail::unwrapped_result_value_t<traits_t>;
@@ -2551,7 +2558,7 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
                typename detail::invoke_decay_t<F, A...>>::type,
            result_error> {
   static_assert(is_executor<std::decay_t<Exec>>::value,
-                "Exec must satisfy portable_concurrency::is_executor");
+                "Exec must satisfy pco::is_executor");
 
   using raw_value_t = typename detail::invoke_decay_t<F, A...>;
   using value_t = typename detail::unwrapped_result_value<raw_value_t>::type;
