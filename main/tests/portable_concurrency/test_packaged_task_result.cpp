@@ -107,7 +107,7 @@ TEST(PackagedTaskResultTest, unsatisfied_task_destruction_yields_broken_promise)
 }
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
-TEST(PackagedTaskResultTest, thrown_exception_maps_to_execution_failure)
+TEST(PackagedTaskResultTest, thrown_exception_propagates)
 {
     packaged_task_result<int()> task([]() -> int
     {
@@ -115,11 +115,17 @@ TEST(PackagedTaskResultTest, thrown_exception_maps_to_execution_failure)
     });
 
     auto future = task.get_future();
-    task();
 
+    // v2 no longer catches exceptions in packaged_task_result internals.
+    // In exception-enabled builds, the callable exception propagates to caller.
+    EXPECT_THROW(task(), int);
+
+    // Promise was not fulfilled due to propagation; when task goes out of scope,
+    // future transitions to broken_promise.
+    task = packaged_task_result<int()>{};
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), result_error::execution_failure);
+    EXPECT_EQ(result.error(), result_error::broken_promise);
 }
 #endif
 
