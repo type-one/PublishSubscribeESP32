@@ -7,7 +7,6 @@ Result-based async/future API for this repository.
 Use these headers:
 
 - `portable_concurrency/p_future.hpp` (primary unified entrypoint)
-- `portable_concurrency/p_future_policy.hpp` (policy aliases/helpers)
 - `portable_concurrency/p_execution.hpp`
 - `portable_concurrency/p_thread_pool.hpp`
 - `portable_concurrency/p_latch.hpp`

@@ -22,7 +22,69 @@
  *
  * Unified public future API surface.
  *
- * This header intentionally forwards to the result-based v2 API and policy aliases.
+ * This header exposes a single result-based policy (v2).
  */
 
-#include "p_future_policy.hpp"
+#include <utility>
+
+#include "bits/packaged_task_result.h"
+#include "bits/result_future.h"
+
+namespace pco {
+
+/// Type alias for the default future: resolves to future_result<T, E>.
+template <typename T, typename E = v2::result_error>
+using future_t = v2::future_result<T, E>;
+
+/// Type alias for the default shared future: resolves to shared_result<T, E>.
+template <typename T, typename E = v2::result_error>
+using shared_future_t = v2::shared_result<T, E>;
+
+/// Type alias for the default promise: resolves to promise_result<T, E>.
+template <typename T, typename E = v2::result_error>
+using promise_t = v2::promise_result<T, E>;
+
+/// Unified ready-future factory.
+template <typename T>
+auto make_ready_default(T &&value)
+	-> decltype(v2::make_ready_result<T>(std::forward<T>(value))) {
+	return v2::make_ready_result<T>(std::forward<T>(value));
+}
+
+/// Unified ready-future factory for void.
+inline auto make_ready_default() -> decltype(v2::make_ready_result<>()) {
+	return v2::make_ready_result<>();
+}
+
+/// Unified error-future factory.
+template <typename T, typename E = v2::result_error>
+auto make_error_default(E error)
+	-> decltype(v2::make_error_result<T, E>(std::move(error))) {
+	return v2::make_error_result<T, E>(std::move(error));
+}
+
+/**
+ * @brief Unified async dispatch (result-based policy).
+ *
+ * Posts `callable(args...)` to executor `exec` and returns a future_result<R, E>
+ * where R = std::invoke_result_t<F, A...>.
+ */
+template <typename Exec, typename F, typename... A>
+auto make_async_default(Exec&& exec, F&& callable, A&&... args)
+	-> decltype(v2::async_result(
+		std::forward<Exec>(exec), std::forward<F>(callable), std::forward<A>(args)...))
+{
+	return v2::async_result(
+		std::forward<Exec>(exec), std::forward<F>(callable), std::forward<A>(args)...);
+}
+
+/// Tag type identifying the active result-based async policy.
+struct async_policy_v2_tag {};
+
+/// Resolves to the tag type of the currently active async policy.
+using active_async_policy = async_policy_v2_tag;
+
+/// True when the result-based policy is active.
+static constexpr bool uses_v2_policy = true;
+
+} // namespace pco
