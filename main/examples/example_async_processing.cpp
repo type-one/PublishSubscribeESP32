@@ -25,7 +25,7 @@
 
 /**
  * @file example_async_processing.cpp
- * @brief Demonstrates the portable_concurrency v2 result-based async API.
+ * @brief Demonstrates the portable_concurrency result-based async API.
  *
  * Covers: pco::future_result, pco::promise_result, pco::packaged_task_result, pco::async_result,
  * then_value, then_error, then_result, pco::when_all, pco::make_result_promise,
@@ -101,7 +101,7 @@ namespace
     }
 
     // -----------------------------------------------------------------------
-    // v2 coroutine helpers — compiled only when coroutine support is present
+    // coroutine helpers for the result-based API — compiled only when coroutine support is present
 
 #if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
     struct alternating_chain_request
@@ -178,7 +178,7 @@ namespace
     // Example 1: pco::async_result with inplace_executor + then_value / then_error
 
     /**
-     * @brief Shows a basic v2 chain: inline computation, value transformation,
+     * @brief Shows a basic result-based chain: inline computation, value transformation,
      *        and an error recovery fallback.
      */
     void test_async_result_chain()
@@ -316,7 +316,7 @@ namespace
     /**
      * @brief Shows the @c std::reference_wrapper workaround for returning a
      *        reference from @c pco::packaged_task_result (direct reference types are
-     *        prohibited by the v2 static_assert).
+     *        prohibited by the result-based API static_assert).
      */
     void test_packaged_task_reference_wrapper()
     {
@@ -696,7 +696,7 @@ namespace
             if (status == pco::future_status::timeout)
             {
                 std::printf("timeout detected: destroying future to trigger cancellation\n");
-                // In v2, canceler callbacks are tied to downstream abandonment.
+                // In the result-based API, canceler callbacks are tied to downstream abandonment.
                 future = pco::future_result<int, pco::result_error> {};
                 promise = pco::promise_result<int> {};
             }

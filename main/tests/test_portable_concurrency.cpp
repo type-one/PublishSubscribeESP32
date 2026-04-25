@@ -1,6 +1,6 @@
 /**
  * @file test_portable_concurrency.cpp
- * @brief Unit tests for result-based portable_concurrency v2 APIs.
+ * @brief Unit tests for result-based portable_concurrency APIs.
  */
 
 #include <gtest/gtest.h>

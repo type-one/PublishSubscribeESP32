@@ -9,7 +9,7 @@
 
 /**
  * @file test_portable_concurrency_worker_task.cpp
- * @brief Tests mirroring v2 worker_task examples from main.cpp.
+ * @brief Tests mirroring result-based worker_task examples from main.cpp.
  */
 
 #include <gtest/gtest.h>

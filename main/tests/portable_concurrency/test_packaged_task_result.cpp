@@ -1,6 +1,6 @@
 /**
  * @file test_packaged_task_result.cpp
- * @brief Unit tests for portable_concurrency v2 pco::packaged_task_result.
+ * @brief Unit tests for portable_concurrency result-based API pco::packaged_task_result.
  */
 
 #include <gtest/gtest.h>
@@ -115,7 +115,7 @@ TEST(PackagedTaskResultTest, thrown_exception_propagates)
 
     auto future = task.get_future();
 
-    // v2 no longer catches exceptions in pco::packaged_task_result internals.
+    // the result-based API no longer catches exceptions in pco::packaged_task_result internals.
     // In exception-enabled builds, the callable exception propagates to caller.
     EXPECT_THROW(task(), int);
 

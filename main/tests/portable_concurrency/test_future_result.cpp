@@ -1,6 +1,6 @@
 /**
  * @file test_future_result.cpp
- * @brief Imported-style unit tests for portable_concurrency v2 pco::future_result.
+ * @brief Imported-style unit tests for portable_concurrency pco::future_result.
  */
 
 #include <gtest/gtest.h>

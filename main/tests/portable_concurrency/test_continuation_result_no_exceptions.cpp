@@ -1,6 +1,6 @@
 /**
  * @file test_continuation_result_no_exceptions.cpp
- * @brief No-exception-mode focused tests for v2 continuation semantics.
+ * @brief No-exception-mode focused tests for result-based continuation semantics.
  *
  * These tests are designed to run when exceptions are disabled (-fno-exceptions).
  * They verify that continuation chains work correctly without exception handling overhead,

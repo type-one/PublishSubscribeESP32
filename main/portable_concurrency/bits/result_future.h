@@ -49,7 +49,7 @@ enum class result_error {
   continuation_failure,
 };
 
-// Compatibility aliases: expose tools::expected/unexpected for v2 API users
+// Compatibility aliases: expose tools::expected/unexpected for result-based API users
 template <typename T, typename E>
 using expected = tools::expected<T, E>;
 

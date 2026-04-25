@@ -1,6 +1,6 @@
 /**
  * @file test_promise_result.cpp
- * @brief Imported-style unit tests for portable_concurrency v2 pco::promise_result.
+ * @brief Imported-style unit tests for portable_concurrency pco::promise_result.
  */
 
 #include <gtest/gtest.h>
@@ -257,7 +257,7 @@ TEST(PromiseResultTest, moved_from_set_error_is_noop)
 }
 
 /**
- *  Verifies allocator-tag constructor is intentionally unsupported in v2.
+ *  Verifies allocator-tag constructor is intentionally unsupported in the result-based API.
  */
 TEST(PromiseResultTest, allocator_constructor_is_not_supported)
 {

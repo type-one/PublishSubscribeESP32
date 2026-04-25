@@ -1,6 +1,6 @@
 /**
  * @file test_abandon_result.cpp
- * @brief v2 parity tests for task abandonment and cancellation semantics.
+ * @brief parity tests for task abandonment and cancellation semantics.
  */
 
 #include <gtest/gtest.h>

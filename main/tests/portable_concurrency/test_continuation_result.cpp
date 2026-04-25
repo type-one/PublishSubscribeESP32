@@ -1,6 +1,6 @@
 /**
  * @file test_continuation_result.cpp
- * @brief Second-batch unit tests for v2 continuation semantics.
+ * @brief Second-batch unit tests for result-based continuation semantics.
  */
 
 #include <gtest/gtest.h>

@@ -46,7 +46,7 @@
 // On FreeRTOS (FREERTOS_PLATFORM defined):
 //   tools::cond_var = a custom FreeRTOS-backed implementation
 //
-// Usage with portable_concurrency v2:
+// Usage with the portable_concurrency result-based API:
 //   #include "tools/critical_section.hpp"
 //   #include "tools/cond_var.hpp"
 //   using future_t = pco::future_result<

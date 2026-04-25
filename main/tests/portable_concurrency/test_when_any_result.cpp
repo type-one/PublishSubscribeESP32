@@ -1,6 +1,6 @@
 /**
  * @file test_when_any_result.cpp
- * @brief Unit tests for v2 pco::when_any tuple combinator.
+ * @brief Unit tests for pco::when_any tuple combinator.
  */
 
 #include <gtest/gtest.h>

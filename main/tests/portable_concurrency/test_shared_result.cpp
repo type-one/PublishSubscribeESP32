@@ -1,6 +1,6 @@
 /**
  * @file test_shared_result.cpp
- * @brief Unit tests for v2 pco::shared_result and shared-input combinators.
+ * @brief Unit tests for pco::shared_result and shared-input combinators.
  */
 
 #include <gtest/gtest.h>

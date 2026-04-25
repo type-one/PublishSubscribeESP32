@@ -1,6 +1,6 @@
 /**
  * @file test_when_all_result.cpp
- * @brief Unit tests for v2 pco::when_all combinator.
+ * @brief Unit tests for pco::when_all combinator.
  */
 
 #include <gtest/gtest.h>

@@ -1,6 +1,6 @@
 /**
  * @file test_scenarios.cpp
- * @brief Black-box scenario-style tests for portable_concurrency v2.
+ * @brief Black-box scenario-style tests for portable_concurrency result-based API.
  */
 
 #include <gtest/gtest.h>

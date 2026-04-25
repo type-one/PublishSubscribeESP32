@@ -1,6 +1,6 @@
 /**
  * @file test_async_result.cpp
- * @brief Imported-style unit tests for portable_concurrency v2 pco::async_result.
+ * @brief Imported-style unit tests for portable_concurrency pco::async_result.
  */
 
 #include <gtest/gtest.h>

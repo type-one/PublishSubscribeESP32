@@ -22,7 +22,7 @@
  *
  * Unified public future API surface.
  *
- * This header exposes a single result-based policy (v2).
+ * This header exposes a single result-based policy.
  */
 
 #include <utility>

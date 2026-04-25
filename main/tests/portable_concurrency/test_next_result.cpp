@@ -1,6 +1,6 @@
 /**
  * @file test_next_result.cpp
- * @brief Parity tests for v2 next API and non-blocking executor continuations.
+ * @brief Parity tests for next API and non-blocking executor continuations.
  */
 
 #include <gtest/gtest.h>
