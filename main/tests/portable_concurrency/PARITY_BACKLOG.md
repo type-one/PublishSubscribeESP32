@@ -1,6 +1,6 @@
-# portable_concurrency_v2 Parity Backlog
+# portable_concurrency Parity Backlog
 
-Goal: make `portable_concurrency_v2` in exceptions-off mode equivalent in features and behavior to `portable_concurrency` (exceptions-based), except for documented intentional divergences.
+Goal: make `portable_concurrency` in exceptions-off mode equivalent in features and behavior to `portable_concurrency` (exceptions-based), except for documented intentional divergences.
 
 Historical note: references to `tests/portable_concurrency/*` in this backlog are source-parity anchors from the pre-removal v1 suite. The v1 files are no longer present in this repository.
 
@@ -24,7 +24,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - New v2 tests covering all above behaviors.
   - Status:
     - Implemented `then(...)` interruptible continuation overloads for both `future_result` and `shared_result` in `portable_concurrency/bits/result_future.h`.
-    - Added no-exceptions parity tests in `tests/portable_concurrency_v2/test_continuation_result_no_exceptions.cpp`.
+    - Added no-exceptions parity tests in `tests/portable_concurrency/test_continuation_result_no_exceptions.cpp`.
 
 - [x] P0.2 Abandon/cancellation matrix parity
   - Target parity from v1:
@@ -35,7 +35,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
   - Deliverables:
     - New `test_abandon_result.cpp` (or equivalent split) in v2 test folder.
   - Status:
-    - Added `tests/portable_concurrency_v2/test_abandon_result.cpp` with 14 parity tests covering dropped async work, dropped continuations, packaged task abandonment, promise abandonment, and invalid nested-handle returns.
+    - Added `tests/portable_concurrency/test_abandon_result.cpp` with 14 parity tests covering dropped async work, dropped continuations, packaged task abandonment, promise abandonment, and invalid nested-handle returns.
     - Registered the new test file in host CMake variants (`CMakeLists.txt`, `CMakeLists_PC.txt`) at the time of implementation.
     - Updated `resolve_nested_handle(...)` in `portable_concurrency/bits/result_future.h` to map invalid nested-handle (`no_state`) outcomes to `broken_promise`, matching v1 abandon semantics.
     - Fixed `promise_result` move-assignment abandonment behavior to avoid deadlock and correctly publish `broken_promise` for replaced pending states.
@@ -51,12 +51,12 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - async completion path
     - error completion path coverage for future_result/shared_result
   - Status:
-    - Added future-side notify parity tests in `tests/portable_concurrency_v2/test_future_result.cpp`:
+    - Added future-side notify parity tests in `tests/portable_concurrency/test_future_result.cpp`:
       - `notify_runs_when_future_becomes_ready_with_error`
       - `notify_runs_when_promise_is_broken`
       - `notify_not_called_if_future_destroyed_before_completion`
       - `notify_runs_for_async_completion`
-    - Added shared-side notify parity tests in `tests/portable_concurrency_v2/test_shared_result.cpp`:
+    - Added shared-side notify parity tests in `tests/portable_concurrency/test_shared_result.cpp`:
       - `notify_runs_when_shared_becomes_ready_with_error`
       - `notify_runs_when_promise_is_broken`
       - `notify_not_called_if_shared_destroyed_before_completion`
@@ -72,7 +72,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - repeated completion semantics under v2 rules
     - allocator behavior decision (implement or explicitly mark unsupported)
   - Status:
-    - Added promise parity tests in `tests/portable_concurrency_v2/test_promise_result.cpp`:
+    - Added promise parity tests in `tests/portable_concurrency/test_promise_result.cpp`:
       - `can_retrieve_value_set_before_get_future`
       - `repeated_completion_without_future_is_harmless`
       - `repeated_completion_with_future_preserves_first_result`
@@ -89,7 +89,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - Multiple continuations attached to same shared source.
     - Deterministic, all-fired semantics with consistent observed result.
   - Status:
-    - Added 5 parity tests in `tests/portable_concurrency_v2/test_shared_result.cpp`:
+    - Added 5 parity tests in `tests/portable_concurrency/test_shared_result.cpp`:
       - `all_then_value_continuations_are_invoked`
       - `all_continuations_observe_consistent_value`
       - `all_continuations_invoked_on_broken_promise`
@@ -106,12 +106,12 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - `tests/portable_concurrency/test_when_any_tuple.cpp`
     - `tests/portable_concurrency/test_when_any_vector.cpp`
   - Status:
-    - Added 4 parity tests in `tests/portable_concurrency_v2/test_when_all_result.cpp`:
+    - Added 4 parity tests in `tests/portable_concurrency/test_when_all_result.cpp`:
       - `some_inputs_initially_ready_combined_waits_for_pending`
       - `all_inputs_initially_ready_combined_is_immediately_ready`
       - `concurrent_readiness_collects_all_results`
       - `iterator_overload_preserves_input_order_in_results`
-    - Added 4 parity tests in `tests/portable_concurrency_v2/test_when_any_result.cpp`:
+    - Added 4 parity tests in `tests/portable_concurrency/test_when_any_result.cpp`:
       - `later_readiness_does_not_change_winner_index`
       - `concurrent_readiness_resolves_with_valid_winner_index`
       - `iterator_overload_winner_index_stable_after_more_complete`
@@ -122,7 +122,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
   - Target parity from v1:
     - `tests/portable_concurrency/test_async.cpp`
   - Status:
-    - Added 4 parity tests in `tests/portable_concurrency_v2/test_async_result.cpp`:
+    - Added 4 parity tests in `tests/portable_concurrency/test_async_result.cpp`:
       - `executes_callable_on_specified_executor_thread`
       - `unwraps_nested_future_result`
       - `unwraps_nested_shared_result`
@@ -135,7 +135,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - `tests/portable_concurrency/test_packaged_task.cpp`
     - `tests/portable_concurrency/test_packaged_task_unwrap.cpp`
   - Status:
-    - Added 10 parity tests in `tests/portable_concurrency_v2/test_packaged_task_result.cpp`:
+    - Added 10 parity tests in `tests/portable_concurrency/test_packaged_task_result.cpp`:
       - `move_constructed_from_valid_is_valid`
       - `move_constructed_from_invalid_is_invalid`
       - `move_assigned_with_valid_is_valid`
@@ -151,7 +151,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
 ## P3 (Policy and Documentation)
 
 - [x] P3.1 Document intentional non-parity
-  - Documented intentional divergences in `tests/portable_concurrency_v2/test_reference_type_unsupported.cpp`:
+  - Documented intentional divergences in `tests/portable_concurrency/test_reference_type_unsupported.cpp`:
     1. Reference return types unsupported (static_assert; use `reference_wrapper<T>` or pointers)
     2. Allocator-extended `promise_result` constructor not provided (no-exceptions / embedded target)
     3. `get_future()` twice returns invalid future instead of throwing `future_already_retrieved`

@@ -8,7 +8,7 @@
 //-----------------------------------------------------------------------------//
 
 /**
- * @file test_portable_concurrency_v2_worker_task.cpp
+ * @file test_portable_concurrency_worker_task.cpp
  * @brief Tests mirroring v2 worker_task examples from main.cpp.
  */
 

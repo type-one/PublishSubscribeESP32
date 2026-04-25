@@ -339,8 +339,8 @@ set(TEST_SOURCES
     tests/test_lock_free_ring_buffer.cpp
     tests/test_memory_pipe.cpp
     tests/test_periodic_task.cpp
-    tests/test_portable_concurrency_v2.cpp
-    tests/test_portable_concurrency_v2_worker_task.cpp
+    tests/test_portable_concurrency.cpp
+    tests/test_portable_concurrency_worker_task.cpp
     tests/test_ring_buffer.cpp
     tests/test_ring_vector.cpp
     tests/test_sync_dictionary.cpp
@@ -357,19 +357,19 @@ set(TEST_SOURCES
 
 
 set(PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES
-    tests/portable_concurrency_v2/test_abandon_result.cpp
-    tests/portable_concurrency_v2/test_async_result.cpp
-    tests/portable_concurrency_v2/test_continuation_result.cpp
-    tests/portable_concurrency_v2/test_continuation_result_no_exceptions.cpp
-    tests/portable_concurrency_v2/test_future_result.cpp
-    tests/portable_concurrency_v2/test_next_result.cpp
-    tests/portable_concurrency_v2/test_packaged_task_result.cpp
-    tests/portable_concurrency_v2/test_promise_result.cpp
-    tests/portable_concurrency_v2/test_reference_type_unsupported.cpp
-    tests/portable_concurrency_v2/test_shared_result.cpp
-    tests/portable_concurrency_v2/test_v2_scenarios.cpp
-    tests/portable_concurrency_v2/test_when_all_result.cpp
-    tests/portable_concurrency_v2/test_when_any_result.cpp
+    tests/portable_concurrency/test_abandon_result.cpp
+    tests/portable_concurrency/test_async_result.cpp
+    tests/portable_concurrency/test_continuation_result.cpp
+    tests/portable_concurrency/test_continuation_result_no_exceptions.cpp
+    tests/portable_concurrency/test_future_result.cpp
+    tests/portable_concurrency/test_next_result.cpp
+    tests/portable_concurrency/test_packaged_task_result.cpp
+    tests/portable_concurrency/test_promise_result.cpp
+    tests/portable_concurrency/test_reference_type_unsupported.cpp
+    tests/portable_concurrency/test_shared_result.cpp
+    tests/portable_concurrency/test_scenarios.cpp
+    tests/portable_concurrency/test_when_all_result.cpp
+    tests/portable_concurrency/test_when_any_result.cpp
 )
 
 list(APPEND TEST_SOURCES ${PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES})

@@ -1,5 +1,5 @@
 /**
- * @file test_v2_scenarios.cpp
+ * @file test_scenarios.cpp
  * @brief Black-box scenario-style tests for portable_concurrency v2.
  */
 

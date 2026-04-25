@@ -1,5 +1,5 @@
 /**
- * @file test_portable_concurrency_v2.cpp
+ * @file test_portable_concurrency.cpp
  * @brief Unit tests for result-based portable_concurrency v2 APIs.
  */
 
