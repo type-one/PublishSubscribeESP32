@@ -68,11 +68,6 @@ template <typename Sequence> struct when_any_result {
 
 namespace detail {
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
-#define PC_V2_HAS_EXCEPTIONS
-#endif
-
-// Helper to deduce invoke result properly for void types in then_value chains
 template <typename F, typename T, typename = void>
 struct result_then_value_type {
   using raw_type = std::decay_t<std::invoke_result_t<F, T>>;
@@ -599,7 +594,6 @@ public:
         return;
       }
 
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (std::is_void<T>::value) {
           if constexpr (detail::is_result_handle<next_raw_t>::value) {
@@ -624,28 +618,7 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
-#else
-      if constexpr (std::is_void<T>::value) {
-        if constexpr (detail::is_result_handle<next_raw_t>::value) {
-          detail::resolve_nested_handle(ctx->promise, ctx->fn());
-        } else if constexpr (std::is_void<next_value_t>::value) {
-          ctx->fn();
-          ctx->promise.set_value();
-        } else {
-          ctx->promise.set_value(ctx->fn());
-        }
-      } else {
-        if constexpr (detail::is_result_handle<next_raw_t>::value) {
-          detail::resolve_nested_handle(ctx->promise,
-                                        ctx->fn(std::move(current).value()));
-        } else if constexpr (std::is_void<next_value_t>::value) {
-          ctx->fn(std::move(current).value());
-          ctx->promise.set_value();
-        } else {
-          ctx->promise.set_value(ctx->fn(std::move(current).value()));
-        }
-      }
-#endif
+
     });
 
     return next_future;
@@ -656,7 +629,6 @@ public:
     auto next_future = next_promise.get_future();
 
     if (!state_) {
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (std::is_void<T>::value) {
           std::forward<F>(fn)(E::no_state);
@@ -667,14 +639,7 @@ public:
       } catch (...) {
         next_promise.set_error(E::continuation_failure);
       }
-#else
-      if constexpr (std::is_void<T>::value) {
-        std::forward<F>(fn)(E::no_state);
-        next_promise.set_value();
-      } else {
-        next_promise.set_value(std::forward<F>(fn)(E::no_state));
-      }
-#endif
+
       return next_future;
     }
 
@@ -696,7 +661,6 @@ public:
         return;
       }
 
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (std::is_void<T>::value) {
           ctx->fn(current.error());
@@ -707,14 +671,7 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
-#else
-      if constexpr (std::is_void<T>::value) {
-        ctx->fn(current.error());
-        ctx->promise.set_value();
-      } else {
-        ctx->promise.set_value(ctx->fn(current.error()));
-      }
-#endif
+
     });
 
     return next_future;
@@ -731,7 +688,6 @@ public:
 
     if (!state_) {
       result_type current = tools::unexpected<E>(E::no_state);
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (detail::is_result_handle<next_raw_t>::value) {
           detail::resolve_nested_handle(next_promise, std::forward<F>(fn)(std::move(current)));
@@ -744,16 +700,7 @@ public:
       } catch (...) {
         next_promise.set_error(E::continuation_failure);
       }
-#else
-      if constexpr (detail::is_result_handle<next_raw_t>::value) {
-        detail::resolve_nested_handle(next_promise, std::forward<F>(fn)(std::move(current)));
-      } else if constexpr (std::is_void<next_value_t>::value) {
-        std::forward<F>(fn)(std::move(current));
-        next_promise.set_value();
-      } else {
-        next_promise.set_value(std::forward<F>(fn)(std::move(current)));
-      }
-#endif
+
       return next_future;
     }
 
@@ -771,7 +718,6 @@ public:
 
       result_type current = ctx->self.take_ready_result();
 
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (detail::is_result_handle<next_raw_t>::value) {
           detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
@@ -784,16 +730,7 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
-#else
-      if constexpr (detail::is_result_handle<next_raw_t>::value) {
-        detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
-      } else if constexpr (std::is_void<next_value_t>::value) {
-        ctx->fn(std::move(current));
-        ctx->promise.set_value();
-      } else {
-        ctx->promise.set_value(ctx->fn(std::move(current)));
-      }
-#endif
+
     });
 
     return next_future;
@@ -925,7 +862,6 @@ public:
           if (!ctx->promise.is_awaiten()) {
             return;
           }
-#if defined(PC_V2_HAS_EXCEPTIONS)
           try {
             if constexpr (std::is_void<T>::value) {
               if constexpr (detail::is_result_handle<next_raw_t>::value) {
@@ -950,35 +886,13 @@ public:
           } catch (...) {
             ctx->promise.set_error(E::continuation_failure);
           }
-#else
-          if constexpr (std::is_void<T>::value) {
-            if constexpr (detail::is_result_handle<next_raw_t>::value) {
-              detail::resolve_nested_handle(ctx->promise, ctx->fn());
-            } else if constexpr (std::is_void<next_value_t>::value) {
-              ctx->fn();
-              ctx->promise.set_value();
-            } else {
-              ctx->promise.set_value(ctx->fn());
-            }
-          } else {
-            if constexpr (detail::is_result_handle<next_raw_t>::value) {
-              detail::resolve_nested_handle(ctx->promise,
-                                            ctx->fn(std::move(current).value()));
-            } else if constexpr (std::is_void<next_value_t>::value) {
-              ctx->fn(std::move(current).value());
-              ctx->promise.set_value();
-            } else {
-              ctx->promise.set_value(ctx->fn(std::move(current).value()));
-            }
-          }
-#endif
+
         });
       } else {
         post(ctx->exec, [ctx, current = std::move(current)]() mutable {
           if (!ctx->promise.is_awaiten()) {
             return;
           }
-#if defined(PC_V2_HAS_EXCEPTIONS)
           try {
             if constexpr (std::is_void<T>::value) {
               if constexpr (detail::is_result_handle<next_raw_t>::value) {
@@ -1003,28 +917,7 @@ public:
           } catch (...) {
             ctx->promise.set_error(E::continuation_failure);
           }
-#else
-          if constexpr (std::is_void<T>::value) {
-            if constexpr (detail::is_result_handle<next_raw_t>::value) {
-              detail::resolve_nested_handle(ctx->promise, ctx->fn());
-            } else if constexpr (std::is_void<next_value_t>::value) {
-              ctx->fn();
-              ctx->promise.set_value();
-            } else {
-              ctx->promise.set_value(ctx->fn());
-            }
-          } else {
-            if constexpr (detail::is_result_handle<next_raw_t>::value) {
-              detail::resolve_nested_handle(ctx->promise,
-                                            ctx->fn(std::move(current).value()));
-            } else if constexpr (std::is_void<next_value_t>::value) {
-              ctx->fn(std::move(current).value());
-              ctx->promise.set_value();
-            } else {
-              ctx->promise.set_value(ctx->fn(std::move(current).value()));
-            }
-          }
-#endif
+
         });
       }
     });
@@ -1058,7 +951,6 @@ public:
              if (!promise.is_awaiten()) {
                return;
              }
-#if defined(PC_V2_HAS_EXCEPTIONS)
              try {
                if constexpr (std::is_void<T>::value) {
                  fn(E::no_state);
@@ -1069,14 +961,7 @@ public:
              } catch (...) {
                promise.set_error(E::continuation_failure);
              }
-#else
-             if constexpr (std::is_void<T>::value) {
-               fn(E::no_state);
-               promise.set_value();
-             } else {
-               promise.set_value(fn(E::no_state));
-             }
-#endif
+
            });
       return next_future;
     }
@@ -1113,7 +998,6 @@ public:
           if (!ctx->promise.is_awaiten()) {
             return;
           }
-#if defined(PC_V2_HAS_EXCEPTIONS)
           try {
             if constexpr (std::is_void<T>::value) {
               ctx->fn(error);
@@ -1124,21 +1008,13 @@ public:
           } catch (...) {
             ctx->promise.set_error(E::continuation_failure);
           }
-#else
-          if constexpr (std::is_void<T>::value) {
-            ctx->fn(error);
-            ctx->promise.set_value();
-          } else {
-            ctx->promise.set_value(ctx->fn(error));
-          }
-#endif
+
         });
       } else {
         post(ctx->exec, [ctx, error = current.error()]() mutable {
           if (!ctx->promise.is_awaiten()) {
             return;
           }
-#if defined(PC_V2_HAS_EXCEPTIONS)
           try {
             if constexpr (std::is_void<T>::value) {
               ctx->fn(error);
@@ -1149,14 +1025,7 @@ public:
           } catch (...) {
             ctx->promise.set_error(E::continuation_failure);
           }
-#else
-          if constexpr (std::is_void<T>::value) {
-            ctx->fn(error);
-            ctx->promise.set_value();
-          } else {
-            ctx->promise.set_value(ctx->fn(error));
-          }
-#endif
+
         });
       }
     });
@@ -1189,7 +1058,6 @@ public:
              if (!promise.is_awaiten()) {
                return;
              }
-#if defined(PC_V2_HAS_EXCEPTIONS)
              try {
                if constexpr (detail::is_result_handle<next_raw_t>::value) {
                  detail::resolve_nested_handle(promise, fn(std::move(current)));
@@ -1202,16 +1070,7 @@ public:
              } catch (...) {
                promise.set_error(E::continuation_failure);
              }
-#else
-             if constexpr (detail::is_result_handle<next_raw_t>::value) {
-               detail::resolve_nested_handle(promise, fn(std::move(current)));
-             } else if constexpr (std::is_void<next_value_t>::value) {
-               fn(std::move(current));
-               promise.set_value();
-             } else {
-               promise.set_value(fn(std::move(current)));
-             }
-#endif
+
            });
       return next_future;
     }
@@ -1243,7 +1102,6 @@ public:
           if (!ctx->promise.is_awaiten()) {
             return;
           }
-#if defined(PC_V2_HAS_EXCEPTIONS)
           try {
             if constexpr (detail::is_result_handle<next_raw_t>::value) {
               detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
@@ -1256,23 +1114,13 @@ public:
           } catch (...) {
             ctx->promise.set_error(E::continuation_failure);
           }
-#else
-          if constexpr (detail::is_result_handle<next_raw_t>::value) {
-            detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
-          } else if constexpr (std::is_void<next_value_t>::value) {
-            ctx->fn(std::move(current));
-            ctx->promise.set_value();
-          } else {
-            ctx->promise.set_value(ctx->fn(std::move(current)));
-          }
-#endif
+
         });
       } else {
         post(ctx->exec, [ctx, current = std::move(current)]() mutable {
           if (!ctx->promise.is_awaiten()) {
             return;
           }
-#if defined(PC_V2_HAS_EXCEPTIONS)
           try {
             if constexpr (detail::is_result_handle<next_raw_t>::value) {
               detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
@@ -1285,16 +1133,7 @@ public:
           } catch (...) {
             ctx->promise.set_error(E::continuation_failure);
           }
-#else
-          if constexpr (detail::is_result_handle<next_raw_t>::value) {
-            detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
-          } else if constexpr (std::is_void<next_value_t>::value) {
-            ctx->fn(std::move(current));
-            ctx->promise.set_value();
-          } else {
-            ctx->promise.set_value(ctx->fn(std::move(current)));
-          }
-#endif
+
         });
       }
     });
@@ -1495,7 +1334,6 @@ public:
         return;
       }
 
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (std::is_void<T>::value) {
           if constexpr (detail::is_result_handle<next_raw_t>::value) {
@@ -1519,27 +1357,7 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
-#else
-      if constexpr (std::is_void<T>::value) {
-        if constexpr (detail::is_result_handle<next_raw_t>::value) {
-          detail::resolve_nested_handle(ctx->promise, ctx->fn());
-        } else if constexpr (std::is_void<next_value_t>::value) {
-          ctx->fn();
-          ctx->promise.set_value();
-        } else {
-          ctx->promise.set_value(ctx->fn());
-        }
-      } else {
-        if constexpr (detail::is_result_handle<next_raw_t>::value) {
-          detail::resolve_nested_handle(ctx->promise, ctx->fn(current.value()));
-        } else if constexpr (std::is_void<next_value_t>::value) {
-          ctx->fn(current.value());
-          ctx->promise.set_value();
-        } else {
-          ctx->promise.set_value(ctx->fn(current.value()));
-        }
-      }
-#endif
+
     });
 
     return next_future;
@@ -1579,7 +1397,6 @@ public:
           return;
         }
         const auto &ready = ctx->self.get_result();
-#if defined(PC_V2_HAS_EXCEPTIONS)
         try {
           if constexpr (std::is_void<T>::value) {
             if constexpr (detail::is_result_handle<next_raw_t>::value) {
@@ -1603,27 +1420,7 @@ public:
         } catch (...) {
           ctx->promise.set_error(E::continuation_failure);
         }
-#else
-        if constexpr (std::is_void<T>::value) {
-          if constexpr (detail::is_result_handle<next_raw_t>::value) {
-            detail::resolve_nested_handle(ctx->promise, ctx->fn());
-          } else if constexpr (std::is_void<next_value_t>::value) {
-            ctx->fn();
-            ctx->promise.set_value();
-          } else {
-            ctx->promise.set_value(ctx->fn());
-          }
-        } else {
-          if constexpr (detail::is_result_handle<next_raw_t>::value) {
-            detail::resolve_nested_handle(ctx->promise, ctx->fn(ready.value()));
-          } else if constexpr (std::is_void<next_value_t>::value) {
-            ctx->fn(ready.value());
-            ctx->promise.set_value();
-          } else {
-            ctx->promise.set_value(ctx->fn(ready.value()));
-          }
-        }
-#endif
+
       });
     });
 
@@ -1717,7 +1514,6 @@ public:
         return;
       }
 
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (std::is_void<T>::value) {
           ctx->fn(current.error());
@@ -1728,14 +1524,7 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
-#else
-      if constexpr (std::is_void<T>::value) {
-        ctx->fn(current.error());
-        ctx->promise.set_value();
-      } else {
-        ctx->promise.set_value(ctx->fn(current.error()));
-      }
-#endif
+
     });
 
     return next_future;
@@ -1778,7 +1567,6 @@ public:
           return;
         }
         const auto &ready = ctx->self.get_result();
-#if defined(PC_V2_HAS_EXCEPTIONS)
         try {
           if constexpr (std::is_void<T>::value) {
             ctx->fn(ready.error());
@@ -1789,14 +1577,7 @@ public:
         } catch (...) {
           ctx->promise.set_error(E::continuation_failure);
         }
-#else
-        if constexpr (std::is_void<T>::value) {
-          ctx->fn(ready.error());
-          ctx->promise.set_value();
-        } else {
-          ctx->promise.set_value(ctx->fn(ready.error()));
-        }
-#endif
+
       });
     });
 
@@ -1824,7 +1605,6 @@ public:
         return;
       }
       const auto &current = ctx->self.get_result();
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (detail::is_result_handle<next_raw_t>::value) {
           detail::resolve_nested_handle(ctx->promise, ctx->fn(current));
@@ -1837,16 +1617,7 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
-#else
-      if constexpr (detail::is_result_handle<next_raw_t>::value) {
-        detail::resolve_nested_handle(ctx->promise, ctx->fn(current));
-      } else if constexpr (std::is_void<next_value_t>::value) {
-        ctx->fn(current);
-        ctx->promise.set_value();
-      } else {
-        ctx->promise.set_value(ctx->fn(current));
-      }
-#endif
+
     });
 
     return next_future;
@@ -1881,7 +1652,6 @@ public:
           return;
         }
         const auto &current = ctx->self.get_result();
-#if defined(PC_V2_HAS_EXCEPTIONS)
         try {
           if constexpr (detail::is_result_handle<next_raw_t>::value) {
             detail::resolve_nested_handle(ctx->promise, ctx->fn(current));
@@ -1894,16 +1664,7 @@ public:
         } catch (...) {
           ctx->promise.set_error(E::continuation_failure);
         }
-#else
-        if constexpr (detail::is_result_handle<next_raw_t>::value) {
-          detail::resolve_nested_handle(ctx->promise, ctx->fn(current));
-        } else if constexpr (std::is_void<next_value_t>::value) {
-          ctx->fn(current);
-          ctx->promise.set_value();
-        } else {
-          ctx->promise.set_value(ctx->fn(current));
-        }
-#endif
+
       });
     });
 
@@ -2633,7 +2394,6 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
     auto task = [promise = std::move(promise),
                  fn = std::forward<F>(fn),
                  params = std::make_tuple(std::forward<A>(args)...)]() mutable {
-#if defined(PC_V2_HAS_EXCEPTIONS)
       try {
         if constexpr (std::is_void_v<value_t>) {
           {
@@ -2653,23 +2413,7 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
       } catch (...) {
         promise.set_error(result_error::execution_failure);
       }
-#else
-      if constexpr (std::is_void_v<value_t>) {
-        {
-          auto fn_local = std::move(fn);
-          auto params_local = std::move(params);
-          std::apply(fn_local, std::move(params_local));
-        }
-        promise.set_value();
-      } else {
-        auto val = [&]() {
-          auto fn_local = std::move(fn);
-          auto params_local = std::move(params);
-          return std::apply(fn_local, std::move(params_local));
-        }();
-        promise.set_value(std::move(val));
-      }
-#endif
+
     };
 
     post(std::forward<Exec>(exec), std::move(task));
