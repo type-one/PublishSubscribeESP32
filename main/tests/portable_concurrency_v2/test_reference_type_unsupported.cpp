@@ -25,12 +25,11 @@
  * with `-fno-exceptions` builds. Verified by
  * `PromiseResultTest.get_future_twice_returns_invalid_second_future`.
  *
- * ### 4. Exception propagation is conditional on PC_V2_HAS_EXCEPTIONS
+ * ### 4. Exception propagation is not supported
  * v1 propagates arbitrary exceptions via `std::exception_ptr` through `set_exception`.
- * v2 maps exceptional states to `result_error::execution_failure` by default.
- * Exception-propagating overloads (`set_exception`, `then` exception paths) are
- * only available when `PC_V2_HAS_EXCEPTIONS` is defined. This is intentional for
- * embedded / no-exceptions targets.
+ * v2 maps exceptional states to `result_error::execution_failure`.
+ * There are no try/catch paths in v2; the design is exception-free for
+ * compatibility with `-fno-exceptions` embedded targets (e.g. ESP32).
  *
  * ### 5. Error type is result_error enum, not std::future_error/std::error_code
  * v1 reports errors via `std::future_error` (which is a `std::exception` subclass).

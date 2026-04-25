@@ -155,7 +155,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     1. Reference return types unsupported (static_assert; use `reference_wrapper<T>` or pointers)
     2. Allocator-extended `promise_result` constructor not provided (no-exceptions / embedded target)
     3. `get_future()` twice returns invalid future instead of throwing `future_already_retrieved`
-    4. Exception propagation guarded by `PC_V2_HAS_EXCEPTIONS`; maps to `result_error::execution_failure` by default
+    4. Exception propagation not supported; all exceptional states map to `result_error::execution_failure` (exception-free design for ESP32 / `-fno-exceptions` targets)
     5. Error type is `result_error` enum, not `std::future_error` / `std::error_code`
 
 ## Execution Order

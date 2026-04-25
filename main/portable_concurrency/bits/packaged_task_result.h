@@ -119,15 +119,7 @@ private:
       auto local_fn = std::move(*fn);
       fn.reset();
 
-#if defined(PC_V2_HAS_EXCEPTIONS)
-      try {
-        invoke_and_set(local_fn, std::forward<A>(args)...);
-      } catch (...) {
-        promise.set_error(error_type::execution_failure);
-      }
-#else
       invoke_and_set(local_fn, std::forward<A>(args)...);
-#endif
     }
 
     template <typename Fn, typename... Args>
