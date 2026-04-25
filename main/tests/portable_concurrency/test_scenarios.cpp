@@ -46,7 +46,7 @@ using polling_periodic_task = tools::periodic_task<polling_context>;
 /**
  * @brief Tests PromiseChainRecoveryAndTransform.
  */
-TEST(V2Scenarios, PromiseChainRecoveryAndTransform)
+TEST(ConcurrencyScenarios, PromiseChainRecoveryAndTransform)
 {
     auto pair = make_result_promise<int>();
     auto promise = std::move(pair.first);
@@ -72,7 +72,7 @@ TEST(V2Scenarios, PromiseChainRecoveryAndTransform)
 /**
  * @brief Tests WhenAllBrokenPromiseRecoveryScenario.
  */
-TEST(V2Scenarios, WhenAllBrokenPromiseRecoveryScenario)
+TEST(ConcurrencyScenarios, WhenAllBrokenPromiseRecoveryScenario)
 {
     auto pair1 = make_result_promise<int>();
     auto promise1 = std::move(pair1.first);
@@ -112,7 +112,7 @@ TEST(V2Scenarios, WhenAllBrokenPromiseRecoveryScenario)
 /**
  * @brief Tests WhenAnyBrokenPromiseWinnerFallbackScenario.
  */
-TEST(V2Scenarios, WhenAnyBrokenPromiseWinnerFallbackScenario)
+TEST(ConcurrencyScenarios, WhenAnyBrokenPromiseWinnerFallbackScenario)
 {
     future_result<int> broken_future;
     {
@@ -147,7 +147,7 @@ TEST(V2Scenarios, WhenAnyBrokenPromiseWinnerFallbackScenario)
 /**
  * @brief Tests ComputationChainOnWorkerTask.
  */
-TEST(V2Scenarios, ComputationChainOnWorkerTask)
+TEST(ConcurrencyScenarios, ComputationChainOnWorkerTask)
 {
     auto context = std::make_shared<scenario_worker_context>();
     auto worker = make_worker_task(context, "v2_chain_worker");
@@ -178,7 +178,7 @@ TEST(V2Scenarios, ComputationChainOnWorkerTask)
 /**
  * @brief Tests GatherSeveralComputationsWithWhenAll.
  */
-TEST(V2Scenarios, GatherSeveralComputationsWithWhenAll)
+TEST(ConcurrencyScenarios, GatherSeveralComputationsWithWhenAll)
 {
     auto context = std::make_shared<scenario_worker_context>();
     auto worker = make_worker_task(context, "v2_fanout_worker");
@@ -227,7 +227,7 @@ TEST(V2Scenarios, GatherSeveralComputationsWithWhenAll)
 /**
  * @brief Tests ChainAcrossDifferentExecutors.
  */
-TEST(V2Scenarios, ChainAcrossDifferentExecutors)
+TEST(ConcurrencyScenarios, ChainAcrossDifferentExecutors)
 {
     auto context_a = std::make_shared<scenario_worker_context>();
     auto context_b = std::make_shared<scenario_worker_context>();
@@ -260,7 +260,7 @@ TEST(V2Scenarios, ChainAcrossDifferentExecutors)
 /**
  * @brief Tests PeriodicTaskPollsLongWorkerComputationReadiness.
  */
-TEST(V2Scenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
+TEST(ConcurrencyScenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
 {
     auto worker_context = std::make_shared<scenario_worker_context>();
     auto worker = make_worker_task(worker_context, "v2_long_compute_worker");
