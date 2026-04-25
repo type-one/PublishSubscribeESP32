@@ -21,7 +21,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 namespace detail {
 
@@ -95,4 +95,4 @@ auto invoke(F &&f, A &&...args) noexcept(
 
 } // namespace detail
 } // namespace cxx14_v1
-} // namespace portable_concurrency
+} // namespace pco

@@ -23,7 +23,7 @@
 #include "fwd.h"
 #include "voidify.h"
 
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 namespace detail {
 
@@ -146,4 +146,4 @@ struct swallow {
 
 } // namespace detail
 } // namespace cxx14_v1
-} // namespace portable_concurrency
+} // namespace pco

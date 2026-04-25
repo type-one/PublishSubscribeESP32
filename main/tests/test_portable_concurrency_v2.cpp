@@ -12,7 +12,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 /**
  * @brief Verifies a successful async_result chain using then_value.
@@ -22,7 +22,7 @@ using namespace portable_concurrency::v2;
  */
 TEST(PortableConcurrencyV2Test, AsyncResultThenValueSuccess)
 {
-    auto future = async_result(portable_concurrency::inplace_executor,
+    auto future = async_result(pco::inplace_executor,
         [](int value)
         {
             return value * 2;
@@ -145,14 +145,14 @@ TEST(PortableConcurrencyV2Test, ThenErrorThenValueSimplifiesBranching)
  */
 TEST(PortableConcurrencyV2Test, ThenResultMapsThrownExceptionToContinuationFailure)
 {
-    auto future = async_result(portable_concurrency::inplace_executor,
+    auto future = async_result(pco::inplace_executor,
         []()
         {
             return 1;
         });
 
     auto chained = std::move(future).then_result(
-        [](portable_concurrency::v2::expected<int, result_error>) -> int
+        [](pco::v2::expected<int, result_error>) -> int
         {
             throw std::runtime_error("boom");
         });

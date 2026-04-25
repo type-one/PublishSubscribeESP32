@@ -26,7 +26,7 @@
 
 #include "result_future.h"
 
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 namespace v2 {
 
@@ -189,4 +189,4 @@ private:
 
 } // namespace v2
 } // namespace cxx14_v1
-} // namespace portable_concurrency
+} // namespace pco

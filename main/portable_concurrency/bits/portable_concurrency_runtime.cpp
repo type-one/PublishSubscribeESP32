@@ -32,7 +32,7 @@
 #include "unique_function.hpp"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces,cppcoreguidelines-rvalue-reference-param-not-moved)
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 namespace detail {
 
@@ -181,4 +181,4 @@ void static_thread_pool::wait() {
 }
 
 } // namespace cxx14_v1
-} // namespace portable_concurrency
+} // namespace pco

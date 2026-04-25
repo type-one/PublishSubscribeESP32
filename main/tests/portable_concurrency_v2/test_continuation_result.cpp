@@ -13,9 +13,9 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 struct queued_executor {
-    std::vector<portable_concurrency::unique_function<void()>> tasks;
+    std::vector<pco::unique_function<void()>> tasks;
 
     void run_all()
     {
@@ -35,7 +35,7 @@ void post(queued_executor &exec, Task &&task)
 }
 } // namespace
 
-namespace portable_concurrency
+namespace pco
 {
 template <>
 struct is_executor<queued_executor> : std::true_type {};
@@ -132,7 +132,7 @@ TEST(ContinuationResultTest, then_result_executor_skips_when_downstream_destroye
     promise.set_value(9);
 
     auto chained = std::move(source).then_result(exec,
-        [&called](portable_concurrency::v2::expected<int, result_error> result)
+        [&called](pco::v2::expected<int, result_error> result)
         {
             called = true;
             return result.value() * 2;
@@ -202,7 +202,7 @@ TEST(ContinuationResultTest, then_result_skips_when_downstream_destroyed)
     bool called = false;
 
     auto chained = std::move(source).then_result(
-        [&called](portable_concurrency::v2::expected<int, result_error> result)
+        [&called](pco::v2::expected<int, result_error> result)
         {
             called = true;
             return result.has_value() ? result.value() * 2 : -1;
@@ -296,7 +296,7 @@ TEST(ContinuationResultTest, then_result_receives_success_expected)
     promise.set_value(42);
 
     auto chained = std::move(source).then_result(
-        [](portable_concurrency::v2::expected<int, result_error> result)
+        [](pco::v2::expected<int, result_error> result)
         {
             EXPECT_TRUE(result.has_value());
             return result.value() + 1;
@@ -319,7 +319,7 @@ TEST(ContinuationResultTest, then_result_receives_error_expected)
     promise.set_error(result_error::broken_promise);
 
     auto chained = std::move(source).then_result(
-        [](portable_concurrency::v2::expected<int, result_error> result)
+        [](pco::v2::expected<int, result_error> result)
         {
             EXPECT_FALSE(result.has_value());
             EXPECT_EQ(result.error(), result_error::broken_promise);
@@ -414,7 +414,7 @@ TEST(ContinuationResultTest, then_result_unwraps_nested_future_result)
 
     promise.set_value(7);
 
-    auto chained = std::move(source).then_result([](portable_concurrency::v2::expected<int, result_error> result)
+    auto chained = std::move(source).then_result([](pco::v2::expected<int, result_error> result)
     {
         auto nested_pair = make_result_promise<int>();
         nested_pair.first.set_value(result.value() * 2);
@@ -438,7 +438,7 @@ TEST(ContinuationResultTest, then_value_executor_unwraps_nested_future_result)
     promise.set_value(8);
 
     auto chained = std::move(source).then_value(
-        portable_concurrency::inplace_executor,
+        pco::inplace_executor,
         [](int value)
         {
             auto nested_pair = make_result_promise<int>();
@@ -529,7 +529,7 @@ TEST(ContinuationResultTest, then_result_throw_maps_to_continuation_failure)
     promise.set_value(42);
 
     auto chained = std::move(source).then_result(
-        [](portable_concurrency::v2::expected<int, result_error>) -> int
+        [](pco::v2::expected<int, result_error>) -> int
         {
             throw std::runtime_error("boom");
         });
@@ -553,7 +553,7 @@ TEST(ContinuationResultTest, then_value_executor_dispatches_and_transforms)
 
     // Use inplace_executor to ensure deterministic execution
     auto chained = std::move(source).then_value(
-        portable_concurrency::inplace_executor,
+        pco::inplace_executor,
         [](int value)
         {
             return value * 2;
@@ -577,7 +577,7 @@ TEST(ContinuationResultTest, then_value_executor_propagates_error)
     promise.set_error(result_error::execution_failure);
 
     auto chained = std::move(source).then_value(
-        portable_concurrency::inplace_executor,
+        pco::inplace_executor,
         [&called](int)
         {
             called = true;
@@ -602,7 +602,7 @@ TEST(ContinuationResultTest, then_error_executor_dispatches_and_recovers)
     promise.set_error(result_error::execution_failure);
 
     auto chained = std::move(source).then_error(
-        portable_concurrency::inplace_executor,
+        pco::inplace_executor,
         [](result_error error)
         {
             EXPECT_EQ(error, result_error::execution_failure);
@@ -627,7 +627,7 @@ TEST(ContinuationResultTest, then_error_executor_passthrough_on_success)
     promise.set_value(42);
 
     auto chained = std::move(source).then_error(
-        portable_concurrency::inplace_executor,
+        pco::inplace_executor,
         [&called](result_error)
         {
             called = true;
@@ -652,8 +652,8 @@ TEST(ContinuationResultTest, then_result_executor_dispatches_on_success)
     promise.set_value(42);
 
     auto chained = std::move(source).then_result(
-        portable_concurrency::inplace_executor,
-        [](portable_concurrency::v2::expected<int, result_error> result)
+        pco::inplace_executor,
+        [](pco::v2::expected<int, result_error> result)
         {
             EXPECT_TRUE(result.has_value());
             return result.value() + 1;
@@ -676,8 +676,8 @@ TEST(ContinuationResultTest, then_result_executor_dispatches_on_error)
     promise.set_error(result_error::broken_promise);
 
     auto chained = std::move(source).then_result(
-        portable_concurrency::inplace_executor,
-        [](portable_concurrency::v2::expected<int, result_error> result)
+        pco::inplace_executor,
+        [](pco::v2::expected<int, result_error> result)
         {
             EXPECT_FALSE(result.has_value());
             EXPECT_EQ(result.error(), result_error::broken_promise);
@@ -702,13 +702,13 @@ TEST(ContinuationResultTest, chained_executor_continuations)
 
     auto chained = std::move(source)
                        .then_value(
-                           portable_concurrency::inplace_executor,
+                           pco::inplace_executor,
                            [](int value)
                            {
                                return value + 5;
                            })
                        .then_value(
-                           portable_concurrency::inplace_executor,
+                           pco::inplace_executor,
                            [](int value)
                            {
                                return value * 2;
@@ -732,7 +732,7 @@ TEST(ContinuationResultTest, then_value_executor_throw_maps_to_continuation_fail
     promise.set_value(42);
 
     auto chained = std::move(source).then_value(
-        portable_concurrency::inplace_executor,
+        pco::inplace_executor,
         [](int) -> int
         {
             throw std::runtime_error("executor continuation failed");
@@ -755,7 +755,7 @@ TEST(ContinuationResultTest, then_error_executor_throw_maps_to_continuation_fail
     promise.set_error(result_error::execution_failure);
 
     auto chained = std::move(source).then_error(
-        portable_concurrency::inplace_executor,
+        pco::inplace_executor,
         [](result_error) -> int
         {
             throw std::runtime_error("executor error handler failed");
@@ -778,8 +778,8 @@ TEST(ContinuationResultTest, then_result_executor_throw_maps_to_continuation_fai
     promise.set_value(42);
 
     auto chained = std::move(source).then_result(
-        portable_concurrency::inplace_executor,
-        [](portable_concurrency::v2::expected<int, result_error>) -> int
+        pco::inplace_executor,
+        [](pco::v2::expected<int, result_error>) -> int
         {
             throw std::runtime_error("executor result handler failed");
         });

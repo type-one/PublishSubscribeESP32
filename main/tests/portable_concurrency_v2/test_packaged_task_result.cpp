@@ -13,7 +13,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 TEST(PackagedTaskResultTest, default_constructed_is_invalid)
 {

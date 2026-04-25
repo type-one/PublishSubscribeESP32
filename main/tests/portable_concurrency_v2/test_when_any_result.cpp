@@ -15,7 +15,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 /**
  * @brief Tests empty when any returns ready with npos index.

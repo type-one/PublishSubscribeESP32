@@ -14,9 +14,9 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 struct queued_executor {
-    std::vector<portable_concurrency::unique_function<void()>> tasks;
+    std::vector<pco::unique_function<void()>> tasks;
 
     void run_all()
     {
@@ -36,7 +36,7 @@ void post(queued_executor &exec, Task &&task)
 }
 } // namespace
 
-namespace portable_concurrency
+namespace pco
 {
 template <>
 struct is_executor<queued_executor> : std::true_type {};
@@ -143,7 +143,7 @@ TEST(NextResultTest, shared_next_executor_dispatches)
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
-    auto chained = shared.next(portable_concurrency::inplace_executor, [](const int &value)
+    auto chained = shared.next(pco::inplace_executor, [](const int &value)
     {
         return value * 2;
     });

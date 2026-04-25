@@ -15,7 +15,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 /**
  * @brief Tests default constructed is invalid.
@@ -120,7 +120,7 @@ TEST(SharedResultTest, wait_for_times_out_when_not_ready)
     auto pair = make_result_promise<int>();
     auto shared = std::move(pair.second).share();
 
-    EXPECT_EQ(shared.wait_for(std::chrono::milliseconds(1)), portable_concurrency::future_status::timeout);
+    EXPECT_EQ(shared.wait_for(std::chrono::milliseconds(1)), pco::future_status::timeout);
 }
 
 /**
@@ -139,7 +139,7 @@ TEST(SharedResultTest, wait_until_returns_ready_after_completion)
     });
 
     EXPECT_EQ(shared.wait_until(std::chrono::steady_clock::now() + std::chrono::milliseconds(100)),
-              portable_concurrency::future_status::ready);
+              pco::future_status::ready);
     EXPECT_EQ(shared.get_result().value(), 33);
 
     producer.join();
@@ -152,7 +152,7 @@ TEST(SharedResultTest, wait_for_invalid_shared_returns_timeout)
 {
     shared_result<int> shared;
 
-    EXPECT_EQ(shared.wait_for(std::chrono::milliseconds(0)), portable_concurrency::future_status::timeout);
+    EXPECT_EQ(shared.wait_for(std::chrono::milliseconds(0)), pco::future_status::timeout);
 }
 
 /**
@@ -474,7 +474,7 @@ TEST(SharedResultTest, then_value_executor_dispatches)
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
-    auto chained = shared.then_value(portable_concurrency::inplace_executor, [](const int &value)
+    auto chained = shared.then_value(pco::inplace_executor, [](const int &value)
     {
         return value + 8;
     });
@@ -495,7 +495,7 @@ TEST(SharedResultTest, then_result_executor_dispatches)
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
-    auto chained = shared.then_result(portable_concurrency::inplace_executor,
+    auto chained = shared.then_result(pco::inplace_executor,
                                       [](const shared_result<int>::result_type &res)
     {
         return res.has_value() ? res.value() * 2 : 0;
@@ -627,7 +627,7 @@ TEST(SharedResultTest, void_then_result_executor_dispatches)
     auto promise = std::move(pair.first);
     auto shared = std::move(pair.second).share();
 
-    auto chained = shared.then_result(portable_concurrency::inplace_executor,
+    auto chained = shared.then_result(pco::inplace_executor,
                                       [](const shared_result<void>::result_type &res)
     {
         return res.has_value() ? 1 : 0;
@@ -689,7 +689,7 @@ TEST(SharedResultTest, notify_executor_dispatches_callback)
     auto shared = std::move(pair.second).share();
 
     std::atomic<int> notifications{0};
-    shared.notify(portable_concurrency::inplace_executor, [&]()
+    shared.notify(pco::inplace_executor, [&]()
     {
         notifications.fetch_add(1);
     });

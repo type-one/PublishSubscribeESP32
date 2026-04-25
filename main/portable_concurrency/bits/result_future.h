@@ -40,7 +40,7 @@
 #include "fwd.h"
 #include "unique_function.hpp"
 
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 namespace v2 {
 
@@ -386,8 +386,8 @@ public:
   explicit operator bool() const noexcept { return is_awaiten(); }
 
 #if defined(PC_HAS_COROUTINES)
-  ::portable_concurrency::detail::suspend_never initial_suspend() const noexcept { return {}; }
-  ::portable_concurrency::detail::suspend_never final_suspend() const noexcept { return {}; }
+  ::pco::detail::suspend_never initial_suspend() const noexcept { return {}; }
+  ::pco::detail::suspend_never final_suspend() const noexcept { return {}; }
   auto get_return_object() { return get_future(); }
 
   void unhandled_exception() {
@@ -539,7 +539,7 @@ public:
     }
   }
 
-  void await_suspend(::portable_concurrency::detail::coroutine_handle<> handle) {
+  void await_suspend(::pco::detail::coroutine_handle<> handle) {
     subscribe([handle]() mutable { handle.resume(); });
   }
 #endif
@@ -2681,4 +2681,4 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
 
 } // namespace v2
 } // namespace cxx14_v1
-} // namespace portable_concurrency
+} // namespace pco

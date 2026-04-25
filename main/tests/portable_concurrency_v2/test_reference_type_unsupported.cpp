@@ -44,7 +44,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 /**
  * @brief Verifies the design constraint: std::reference_wrapper<T> is the idiomatic workaround.

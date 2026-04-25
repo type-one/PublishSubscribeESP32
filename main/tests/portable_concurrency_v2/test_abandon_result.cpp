@@ -13,7 +13,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 class null_executor_t {
 private:
@@ -28,12 +28,12 @@ constexpr null_executor_t null_executor{};
 
 } // namespace
 
-namespace portable_concurrency {
+namespace pco {
 
 template <>
 struct is_executor<null_executor_t> : std::true_type {};
 
-} // namespace portable_concurrency
+} // namespace pco
 
 namespace {
 
@@ -91,7 +91,7 @@ TEST(AbandonResultContinuationTest, dropped_future_then_result_task_yields_broke
 
     auto chained = std::move(source).then_result(
         null_executor,
-        [](portable_concurrency::v2::expected<int, result_error> current)
+        [](pco::v2::expected<int, result_error> current)
         {
             if (current.has_value()) {
                 return std::to_string(current.value());
@@ -132,7 +132,7 @@ TEST(AbandonResultContinuationTest, dropped_shared_then_result_task_yields_broke
 
     auto chained = shared.then_result(
         null_executor,
-        [](const portable_concurrency::v2::expected<int, result_error> &current)
+        [](const pco::v2::expected<int, result_error> &current)
         {
             if (current.has_value()) {
                 return std::to_string(current.value());
@@ -233,7 +233,7 @@ TEST(AbandonResultContinuationTest, invalid_nested_future_from_then_result_maps_
     auto source = std::move(pair.second);
 
     auto chained = std::move(source).then_result(
-        [](portable_concurrency::v2::expected<int, result_error>)
+        [](pco::v2::expected<int, result_error>)
         {
             return future_result<std::string>{};
         });

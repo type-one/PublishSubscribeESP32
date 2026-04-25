@@ -15,7 +15,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 /**
  * @brief Verifies then_value executes directly without exception handling in no-exception mode.
@@ -120,7 +120,7 @@ TEST(ContinuationResultNoExceptionsTest, then_result_direct_value_invocation)
     promise.set_value(42);
 
     auto chained = std::move(source).then_result(
-        [](portable_concurrency::v2::expected<int, result_error> result)
+        [](pco::v2::expected<int, result_error> result)
         {
             EXPECT_TRUE(result.has_value());
             return result.value() + 1;
@@ -143,7 +143,7 @@ TEST(ContinuationResultNoExceptionsTest, then_result_direct_error_invocation)
     promise.set_error(result_error::broken_promise);
 
     auto chained = std::move(source).then_result(
-        [](portable_concurrency::v2::expected<int, result_error> result)
+        [](pco::v2::expected<int, result_error> result)
         {
             EXPECT_FALSE(result.has_value());
             EXPECT_EQ(result.error(), result_error::broken_promise);
@@ -211,7 +211,7 @@ TEST(ContinuationResultNoExceptionsTest, complex_error_recovery_chain)
                            return x / 2;
                        })
                        .then_result(
-                           [](portable_concurrency::v2::expected<int, result_error> result)
+                           [](pco::v2::expected<int, result_error> result)
                            {
                                EXPECT_TRUE(result.has_value());
                                return result.value() + 10;
@@ -262,7 +262,7 @@ TEST(ContinuationResultNoExceptionsTest, void_promise_error_recovery_via_then_re
     promise.set_error(result_error::execution_failure);
 
     auto chained = std::move(source).then_result(
-        [](portable_concurrency::v2::expected<void, result_error> result)
+        [](pco::v2::expected<void, result_error> result)
         {
             EXPECT_FALSE(result.has_value());
             EXPECT_EQ(result.error(), result_error::execution_failure);
@@ -331,7 +331,7 @@ TEST(ContinuationResultNoExceptionsTest, then_result_unwraps_nested_future_resul
 
     promise.set_value(7);
 
-    auto chained = std::move(source).then_result([](portable_concurrency::v2::expected<int, result_error> result)
+    auto chained = std::move(source).then_result([](pco::v2::expected<int, result_error> result)
     {
         auto nested_pair = make_result_promise<int>();
         nested_pair.first.set_value(result.value() * 2);
@@ -355,7 +355,7 @@ TEST(ContinuationResultNoExceptionsTest, then_value_executor_unwraps_nested_futu
     promise.set_value(8);
 
     auto chained = std::move(source).then_value(
-        portable_concurrency::inplace_executor,
+        pco::inplace_executor,
         [](int value)
         {
             auto nested_pair = make_result_promise<int>();

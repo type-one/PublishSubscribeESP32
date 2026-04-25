@@ -11,14 +11,14 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 /**
  * @brief Verifies async_result returns a valid future_result.
  */
 TEST(AsyncResultTest, returns_valid_future)
 {
-    auto future = async_result(portable_concurrency::inplace_executor, []
+    auto future = async_result(pco::inplace_executor, []
     {
         return 42;
     });
@@ -31,7 +31,7 @@ TEST(AsyncResultTest, returns_valid_future)
  */
 TEST(AsyncResultTest, delivers_function_result)
 {
-    auto future = async_result(portable_concurrency::inplace_executor, []
+    auto future = async_result(pco::inplace_executor, []
     {
         return 42;
     });
@@ -46,7 +46,7 @@ TEST(AsyncResultTest, delivers_function_result)
  */
 TEST(AsyncResultTest, forwards_parameters_to_callable)
 {
-    auto future = async_result(portable_concurrency::inplace_executor,
+    auto future = async_result(pco::inplace_executor,
         [](int left, int right)
         {
             return left + right;
@@ -65,7 +65,7 @@ TEST(AsyncResultTest, forwards_parameters_to_callable)
 TEST(AsyncResultTest, supports_void_callable)
 {
     bool executed = false;
-    auto future = async_result(portable_concurrency::inplace_executor, [&executed]
+    auto future = async_result(pco::inplace_executor, [&executed]
     {
         executed = true;
     });
@@ -81,7 +81,7 @@ TEST(AsyncResultTest, supports_void_callable)
  */
 TEST(AsyncResultTest, thrown_callable_exception_maps_to_execution_failure)
 {
-    auto future = async_result(portable_concurrency::inplace_executor, []() -> int
+    auto future = async_result(pco::inplace_executor, []() -> int
     {
         throw 42;
     });
@@ -97,7 +97,7 @@ TEST(AsyncResultTest, thrown_callable_exception_maps_to_execution_failure)
  */
 TEST(AsyncResultTest, then_value_transforms_async_result_value)
 {
-    auto future = async_result(portable_concurrency::inplace_executor, []
+    auto future = async_result(pco::inplace_executor, []
     {
         return 21;
     });
@@ -117,11 +117,11 @@ TEST(AsyncResultTest, then_value_transforms_async_result_value)
  */
 TEST(AsyncResultTest, void_async_result_then_result_transitions_to_value)
 {
-    auto future = async_result(portable_concurrency::inplace_executor, []
+    auto future = async_result(pco::inplace_executor, []
     {
     });
 
-    auto chained = std::move(future).then_result([](portable_concurrency::v2::expected<void, result_error> result)
+    auto chained = std::move(future).then_result([](pco::v2::expected<void, result_error> result)
     {
         EXPECT_TRUE(result.has_value());
         return 11;
@@ -139,7 +139,7 @@ TEST(AsyncResultTest, void_async_result_then_result_transitions_to_value)
 
 TEST(AsyncResultTest, executes_callable_on_specified_executor_thread)
 {
-    portable_concurrency::static_thread_pool pool{1};
+    pco::static_thread_pool pool{1};
     auto exec = pool.executor();
 
     auto future = async_result(exec, [] {
@@ -154,7 +154,7 @@ TEST(AsyncResultTest, executes_callable_on_specified_executor_thread)
 TEST(AsyncResultTest, unwraps_nested_future_result)
 {
 
-    portable_concurrency::static_thread_pool pool{1};
+    pco::static_thread_pool pool{1};
     auto exec = pool.executor();
 
     auto future = async_result(exec, [exec] {
@@ -174,7 +174,7 @@ TEST(AsyncResultTest, unwraps_nested_future_result)
 
 TEST(AsyncResultTest, unwraps_nested_shared_result)
 {
-    portable_concurrency::static_thread_pool pool{1};
+    pco::static_thread_pool pool{1};
     auto exec = pool.executor();
 
     auto future = async_result(exec, [exec] {
@@ -196,7 +196,7 @@ TEST(AsyncResultTest, destroys_callable_after_invocation)
     auto sp = std::make_shared<int>(42);
     std::weak_ptr<int> wp = sp;
 
-    portable_concurrency::static_thread_pool pool{1};
+    pco::static_thread_pool pool{1};
     auto exec = pool.executor();
 
     auto future = async_result(exec, [sp = std::exchange(sp, nullptr)] {

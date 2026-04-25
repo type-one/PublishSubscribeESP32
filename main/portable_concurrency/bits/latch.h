@@ -24,7 +24,7 @@
 #include <cstddef>
 #include <mutex>
 
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 
 /**
@@ -59,4 +59,4 @@ private:
 };
 
 } // namespace cxx14_v1
-} // namespace portable_concurrency
+} // namespace pco

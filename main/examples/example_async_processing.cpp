@@ -68,7 +68,7 @@ namespace
         std::atomic<int> completed_samples { 0 };
         std::atomic<int> failed_samples { 0 };
         std::atomic<std::int64_t> aggregated_output { 0 };
-        std::vector<portable_concurrency::v2::future_result<int>> pending_results;
+        std::vector<pco::v2::future_result<int>> pending_results;
     };
 
     class async_processing_worker_model
@@ -117,7 +117,7 @@ namespace
      * @brief Coroutine that hops onto @p worker, increments the call counter, and
      *        returns @p input scaled by three.
      */
-    portable_concurrency::v2::future_result<int> schedule_and_compute(
+    pco::v2::future_result<int> schedule_and_compute(
         async_worker* worker_ptr, std::shared_ptr<async_context> context, int input_value)
     {
         co_await worker_ptr->schedule();
@@ -129,10 +129,10 @@ namespace
      * @brief Coroutine that hops onto @p worker, awaits @p upstream, and
      *        adds an offset to the resolved value.
      */
-    portable_concurrency::v2::future_result<int> schedule_and_await(
+    pco::v2::future_result<int> schedule_and_await(
         async_worker* worker_ptr,
         std::shared_ptr<async_context> context,
-        portable_concurrency::v2::future_result<int> upstream,
+        pco::v2::future_result<int> upstream,
         int offset_value)
     {
         co_await worker_ptr->schedule();
@@ -141,7 +141,7 @@ namespace
         co_return base + offset_value;
     }
 
-    portable_concurrency::v2::future_result<int> schedule_and_process_sample(
+    pco::v2::future_result<int> schedule_and_process_sample(
         async_worker* worker_ptr,
         std::shared_ptr<async_context> context,
         std::shared_ptr<async_processing_worker_model> processor,
@@ -152,7 +152,7 @@ namespace
         co_return processor->process_sample(sample_value);
     }
 
-    portable_concurrency::v2::future_result<int> schedule_alternating_chain_on_two_workers(
+    pco::v2::future_result<int> schedule_alternating_chain_on_two_workers(
         async_worker* worker_first_ptr, async_worker* worker_second_ptr, alternating_chain_request request)
     {
         int chain_value = request.initial_value;
@@ -186,12 +186,12 @@ namespace
         LOG_INFO("-- v2: async_result + then_value + then_error --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         constexpr int input_value = 7;
 
         auto future = async_result(
-            portable_concurrency::inplace_executor,
+            pco::inplace_executor,
             [](int squared_input)
             {
                 return squared_input * squared_input;
@@ -221,13 +221,13 @@ namespace
         LOG_INFO("-- v2: then_result full expected inspection --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         constexpr int offset_value = 10;
         constexpr int input_base = 5;
 
         auto future = async_result(
-            portable_concurrency::inplace_executor,
+            pco::inplace_executor,
             [](int input_val) { return input_val + offset_value; },
             input_base);
 
@@ -261,7 +261,7 @@ namespace
         LOG_INFO("-- v2: error recovery via then_error --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         // A broken_promise scenario: discard the promise without fulfilling it.
         auto pair = make_result_promise<int>();
@@ -298,7 +298,7 @@ namespace
         LOG_INFO("-- v2: packaged_task_result --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         constexpr int first_arg = 30;
         constexpr int second_arg = 12;
@@ -327,7 +327,7 @@ namespace
         LOG_INFO("-- v2: packaged_task_result with reference_wrapper --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         constexpr int initial_value = 42;
         constexpr int increment_amount = 8;
@@ -363,7 +363,7 @@ namespace
         LOG_INFO("-- v2: manual promise_result fulfilled from worker --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         constexpr int promise_value = 77;
         constexpr int multiplication_factor = 2;
@@ -407,7 +407,7 @@ namespace
         LOG_INFO("-- v2: delegate_async_v2 chain --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         constexpr int multiplier = 6;
         constexpr int addition_offset = 2;
@@ -448,7 +448,7 @@ namespace
         LOG_INFO("-- v2: fan-out / fan-in gather --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         auto context = std::make_shared<async_context>();
         auto worker = make_async_worker(context, "v2_gather_worker");
@@ -495,7 +495,7 @@ namespace
         LOG_INFO("-- v2: when_all gather --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         auto context = std::make_shared<async_context>();
         auto worker = make_async_worker(context, "v2_when_all_worker");
@@ -618,14 +618,14 @@ namespace
         LOG_INFO("-- v2: timeout detection with wait_for() --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
         using namespace std::chrono_literals;
 
         constexpr int base_value = 50;
         constexpr auto timeout_duration = 100ms;
 
         auto future = async_result(
-            portable_concurrency::inplace_executor,
+            pco::inplace_executor,
             [](int input_base)
             {
                 // Simulate a fast computation: just multiply.
@@ -637,7 +637,7 @@ namespace
         const auto status = future.wait_for(timeout_duration);
 
         std::string status_str;
-        if (status == portable_concurrency::future_status::ready)
+        if (status == pco::future_status::ready)
         {
             status_str = "ready";
             const auto result = future.get_result();
@@ -646,7 +646,7 @@ namespace
                 std::printf("timeout_detection: computation ready in time, result=%d\n", result.value());
             }
         }
-        else if (status == portable_concurrency::future_status::timeout)
+        else if (status == pco::future_status::timeout)
         {
             status_str = "timeout";
             std::printf("timeout_detection: computation did NOT complete in 100ms\n");
@@ -675,7 +675,7 @@ namespace
         LOG_INFO("-- v2: timeout and cancellation with cleanup action --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
         using namespace std::chrono_literals;
 
         constexpr auto cancel_timeout_duration = 10ms;
@@ -688,7 +688,7 @@ namespace
             // The lambda captures cleanup_called by reference; when the promise
             // is destroyed, the lambda fires.
             auto pair = make_result_promise<int>(
-                portable_concurrency::canceler_arg,
+                pco::canceler_arg,
                 [&cleanup_called]()
                 {
                     std::printf("cancellation_action fired: cleanup logic triggered\n");
@@ -704,7 +704,7 @@ namespace
             // Wait a short time for completion.
             const auto status = future.wait_for(cancel_timeout_duration);
 
-            if (status == portable_concurrency::future_status::timeout)
+            if (status == pco::future_status::timeout)
             {
                 std::printf("timeout detected: destroying future to trigger cancellation\n");
                 // In v2, canceler callbacks are tied to downstream abandonment.
@@ -738,7 +738,7 @@ namespace
         LOG_INFO("-- v2: periodic -> worker stress (no coroutine) --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         constexpr int target_sample_count = 40;
         constexpr std::size_t periodic_stack_size = 4096U;
@@ -895,7 +895,7 @@ namespace
         LOG_INFO("-- v2: periodic -> worker stress (coroutine) --");
         print_stats();
 
-        using namespace portable_concurrency::v2;
+        using namespace pco::v2;
 
         constexpr int target_sample_count = 40;
         constexpr std::size_t periodic_stack_size = 4096U;

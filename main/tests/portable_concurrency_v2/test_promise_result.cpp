@@ -13,8 +13,8 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
-using portable_concurrency::canceler_arg;
+using namespace pco::v2;
+using pco::canceler_arg;
 
 /**
  * @brief Verifies get_future returns a valid future_result the first time.

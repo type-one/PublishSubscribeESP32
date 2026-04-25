@@ -13,7 +13,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 
 /**
  * @brief Verifies a default-constructed future_result is invalid.
@@ -183,7 +183,7 @@ TEST(FutureResultTest, make_ready_result_produces_ready_value)
     auto future = make_ready_result(42);
 
     EXPECT_TRUE(future.valid());
-    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), portable_concurrency::future_status::ready);
+    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), pco::future_status::ready);
 
     auto result = future.get_result();
     ASSERT_TRUE(result.has_value());
@@ -197,7 +197,7 @@ TEST(FutureResultTest, make_ready_result_void_produces_ready_success)
 {
     auto future = make_ready_result<>();
 
-    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), portable_concurrency::future_status::ready);
+    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), pco::future_status::ready);
 
     auto result = future.get_result();
     ASSERT_TRUE(result.has_value());
@@ -210,7 +210,7 @@ TEST(FutureResultTest, make_error_result_produces_ready_error)
 {
     auto future = make_error_result<int>(result_error::execution_failure);
 
-    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), portable_concurrency::future_status::ready);
+    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), pco::future_status::ready);
 
     auto result = future.get_result();
     ASSERT_FALSE(result.has_value());
@@ -225,7 +225,7 @@ TEST(FutureResultTest, wait_for_times_out_when_not_ready)
     auto promise_and_future = make_result_promise<int>();
     auto future = std::move(promise_and_future.second);
 
-    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(1)), portable_concurrency::future_status::timeout);
+    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(1)), pco::future_status::timeout);
 }
 
 /**
@@ -243,7 +243,7 @@ TEST(FutureResultTest, wait_for_returns_ready_after_completion)
         p.set_value(42);
     });
 
-    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(100)), portable_concurrency::future_status::ready);
+    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(100)), pco::future_status::ready);
     auto result = future.get_result();
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result.value(), 42);
@@ -259,7 +259,7 @@ TEST(FutureResultTest, wait_until_returns_ready_for_ready_future)
     auto future = make_ready_result(7);
 
     EXPECT_EQ(future.wait_until(std::chrono::steady_clock::now() + std::chrono::milliseconds(1)),
-              portable_concurrency::future_status::ready);
+              pco::future_status::ready);
 
     auto result = future.get_result();
     ASSERT_TRUE(result.has_value());
@@ -273,7 +273,7 @@ TEST(FutureResultTest, wait_for_invalid_future_returns_timeout)
 {
     future_result<int> future;
 
-    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), portable_concurrency::future_status::timeout);
+    EXPECT_EQ(future.wait_for(std::chrono::milliseconds(0)), pco::future_status::timeout);
 }
 
 /**
@@ -325,7 +325,7 @@ TEST(FutureResultTest, notify_executor_dispatches_callback)
     auto future = std::move(promise_and_future.second);
 
     std::atomic<int> notifications{0};
-    future.notify(portable_concurrency::inplace_executor, [&]()
+    future.notify(pco::inplace_executor, [&]()
     {
         notifications.fetch_add(1);
     });

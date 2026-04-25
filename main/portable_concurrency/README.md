@@ -30,8 +30,8 @@ Use:
 
 This exposes the result-based API via:
 
-- `portable_concurrency::v2::*` result primitives
-- policy aliases such as `portable_concurrency::future_t<T>`
+- `pco::v2::*` result primitives
+- policy aliases such as `pco::future_t<T>`
 
 The older `p_future_v2.hpp` wrapper is no longer part of the public surface.
 

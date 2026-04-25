@@ -21,7 +21,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace portable_concurrency {
+namespace pco {
 
 /**
  * @headerfile portable_concurrency/execution
@@ -68,7 +68,7 @@ constexpr inplace_executor_t inplace_executor;
 
 template <> struct is_executor<inplace_executor_t> : std::true_type {};
 
-} // namespace portable_concurrency
+} // namespace pco
 
 #ifdef DOXYGEN
 /**
@@ -82,7 +82,7 @@ template <> struct is_executor<inplace_executor_t> : std::true_type {};
  * Function object type meets MoveConstructible, MoveAssignable and Callable
  * (with signature `void()`) standard library named requirements.
  *
- * @sa portable_concurrency::is_executor
+ * @sa pco::is_executor
  */
 template <typename Executor, typename Functor>
 void post(Executor exec, Functor func);

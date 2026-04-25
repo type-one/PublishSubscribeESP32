@@ -20,7 +20,7 @@
 
 namespace
 {
-using namespace portable_concurrency::v2;
+using namespace pco::v2;
 struct scenario_worker_context {
     std::atomic<int> loop_counter { 0 };
 };
@@ -91,8 +91,8 @@ TEST(V2Scenarios, WhenAllBrokenPromiseRecoveryScenario)
 
     auto chained = std::move(combined)
                        .then_value([](std::tuple<
-                                      portable_concurrency::v2::expected<int, result_error>,
-                                      portable_concurrency::v2::expected<int, result_error>> all)
+                                      pco::v2::expected<int, result_error>,
+                                      pco::v2::expected<int, result_error>> all)
                        {
                            const auto& first = std::get<0>(all);
                            const auto& second = std::get<1>(all);
@@ -126,7 +126,7 @@ TEST(V2Scenarios, WhenAnyBrokenPromiseWinnerFallbackScenario)
     auto future2 = std::move(pair2.second);
 
     auto chained = when_any(std::move(broken_future), std::move(future2))
-                       .then_value([](portable_concurrency::v2::when_any_result<
+                       .then_value([](pco::v2::when_any_result<
                                       std::tuple<future_result<int>,
                                                  future_result<int>>> any)
                        {
@@ -206,7 +206,7 @@ TEST(V2Scenarios, GatherSeveralComputationsWithWhenAll)
     }
 
     auto total = when_all(std::move(jobs))
-                     .then_value([](std::vector<portable_concurrency::v2::expected<int, result_error>> results)
+                     .then_value([](std::vector<pco::v2::expected<int, result_error>> results)
                      {
                          int sum = 0;
                          for (const auto& item : results)

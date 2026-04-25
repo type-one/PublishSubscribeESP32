@@ -26,8 +26,3 @@
  */
 
 #include "bits/thread_pool.h"
-
-#if !defined(PCO_NAMESPACE_ALIAS_DEFINED)
-#define PCO_NAMESPACE_ALIAS_DEFINED
-namespace pco = portable_concurrency;
-#endif

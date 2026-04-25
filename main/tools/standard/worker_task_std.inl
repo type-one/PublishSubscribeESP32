@@ -334,11 +334,11 @@ namespace tools
 
         template <typename Callable, typename... Args>
         auto delegate_async_v2(Callable&& work, Args&&... args)
-            -> decltype(portable_concurrency::v2::async_result(std::declval<executor_type>(),
+            -> decltype(pco::v2::async_result(std::declval<executor_type>(),
                 std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
                 std::forward<Args>(args)...))
         {
-            return portable_concurrency::v2::async_result(
+            return pco::v2::async_result(
                 as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
         }
 
@@ -356,7 +356,7 @@ namespace tools
                 return false;
             }
 
-            void await_suspend(portable_concurrency::detail::coroutine_handle<> handle)
+            void await_suspend(pco::detail::coroutine_handle<> handle)
             {
                 m_owner->delegate(
                     [handle](const std::shared_ptr<Context>&, const std::string&) mutable { handle.resume(); });
@@ -419,7 +419,7 @@ namespace tools
     };
 }
 
-namespace portable_concurrency
+namespace pco
 {
     template <typename Context>
     struct is_executor<tools::worker_task_executor<Context>> : std::true_type

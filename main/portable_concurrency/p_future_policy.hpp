@@ -50,12 +50,7 @@
 #include "bits/packaged_task_result.h"
 #include "bits/result_future.h"
 
-#if !defined(PCO_NAMESPACE_ALIAS_DEFINED)
-#define PCO_NAMESPACE_ALIAS_DEFINED
-namespace pco = portable_concurrency;
-#endif
-
-namespace portable_concurrency {
+namespace pco {
 
 /// Type alias for the default future: resolves to future_result<T, E> in v2 mode.
 template <typename T, typename E = v2::result_error>
@@ -112,4 +107,4 @@ using active_async_policy = async_policy_v2_tag;
 /// True when the v2 result-based policy is active; false when the v1 exception-based policy is active.
 static constexpr bool uses_v2_policy = true;
 
-} // namespace portable_concurrency
+} // namespace pco

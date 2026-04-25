@@ -21,7 +21,7 @@
 #include "closable_queue.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 namespace detail {
 
@@ -53,5 +53,5 @@ template <typename T> void closable_queue<T>::close() {
 
 } // namespace detail
 } // namespace cxx14_v1
-} // namespace portable_concurrency
+} // namespace pco
 // NOLINTEND(modernize-concat-nested-namespaces)

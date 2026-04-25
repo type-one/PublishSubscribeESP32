@@ -29,7 +29,7 @@
 #include "execution.h"
 #include "unique_function.hpp"
 
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 
 namespace detail {
@@ -93,4 +93,4 @@ template <>
 struct is_executor<cxx14_v1::static_thread_pool::executor_type>
     : std::true_type {};
 
-} // namespace portable_concurrency
+} // namespace pco

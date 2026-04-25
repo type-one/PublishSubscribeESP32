@@ -21,7 +21,7 @@
 #include "once_consumable_stack.h"
 #include "small_unique_function.hpp"
 
-namespace portable_concurrency {
+namespace pco {
 inline namespace cxx14_v1 {
 namespace detail {
 
@@ -48,4 +48,4 @@ private:
 
 } // namespace detail
 } // namespace cxx14_v1
-} // namespace portable_concurrency
+} // namespace pco
