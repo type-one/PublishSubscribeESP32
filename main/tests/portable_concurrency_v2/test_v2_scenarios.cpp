@@ -154,7 +154,7 @@ TEST(V2Scenarios, ComputationChainOnWorkerTask)
     auto worker = make_worker_task(context, "v2_chain_worker");
 
     auto result = worker
-                      ->delegate_async_v2(
+                      ->delegate_async(
                           [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int value)
                           {
                               ctx->loop_counter.fetch_add(1);
@@ -191,7 +191,7 @@ TEST(V2Scenarios, GatherSeveralComputationsWithWhenAll)
     {
         jobs.emplace_back(
             worker
-                ->delegate_async_v2(
+                ->delegate_async(
                     [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int v)
                     {
                         ctx->loop_counter.fetch_add(1);
@@ -237,7 +237,7 @@ TEST(V2Scenarios, ChainAcrossDifferentExecutors)
     auto worker_b = make_worker_task(context_b, "v2_worker_b");
 
     auto result = worker_a
-                      ->delegate_async_v2(
+                      ->delegate_async(
                           [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int value)
                           {
                               ctx->loop_counter.fetch_add(1);
@@ -266,7 +266,7 @@ TEST(V2Scenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
     auto worker_context = std::make_shared<scenario_worker_context>();
     auto worker = make_worker_task(worker_context, "v2_long_compute_worker");
 
-    auto long_future = worker->delegate_async_v2(
+    auto long_future = worker->delegate_async(
         [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int value)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(220));

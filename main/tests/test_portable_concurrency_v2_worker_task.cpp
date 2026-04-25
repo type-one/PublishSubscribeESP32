@@ -73,7 +73,7 @@ std::unique_ptr<worker_v2_task> make_worker_v2_task(
 }
 
 #if defined(PS_PC_HAS_COROUTINES)
-pco::v2::future_result<int> coroutine_v2_schedule_job(
+pco::v2::future_result<int> coroutine_schedule_job(
     worker_v2_task& worker, const std::shared_ptr<worker_v2_context>& context, int value)
 {
     co_await worker.schedule();
@@ -81,7 +81,7 @@ pco::v2::future_result<int> coroutine_v2_schedule_job(
     co_return value * 3;
 }
 
-pco::v2::future_result<int> coroutine_v2_await_future_job(
+pco::v2::future_result<int> coroutine_await_future_job(
     worker_v2_task& worker,
     const std::shared_ptr<worker_v2_context>& context,
     pco::v2::future_result<int> upstream)
@@ -139,7 +139,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, AsyncResultChainOnWorkerExecutor)
     auto context = std::make_shared<worker_v2_context>();
     auto worker = make_worker_v2_task(context, "v2_chain_worker_test");
 
-    auto future = worker->delegate_async_v2(
+    auto future = worker->delegate_async(
         [](const std::shared_ptr<worker_v2_context>& ctx, const std::string&, int value)
         {
             ctx->loop_counter.fetch_add(1);
@@ -173,7 +173,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, GatherComputationsWithWorkerExecutor)
 
     for (int value = 1; value <= 5; ++value)
     {
-        jobs.emplace_back(worker->delegate_async_v2(
+        jobs.emplace_back(worker->delegate_async(
             [](const std::shared_ptr<worker_v2_context>& ctx, const std::string&, int input)
             {
                 ctx->loop_counter.fetch_add(1);
@@ -258,7 +258,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
         }
 
         auto chained = worker_ptr
-                           ->delegate_async_v2(
+                           ->delegate_async(
                                [processor](const std::shared_ptr<worker_v2_context>& worker_ctx,
                                    const std::string&,
                                    int input_value)
@@ -335,7 +335,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithou
         auto* active_worker = ((stage_index % 2) == 0) ? worker_first.get() : worker_second.get();
         auto active_context = ((stage_index % 2) == 0) ? context_first : context_second;
 
-        auto stage_future = active_worker->delegate_async_v2(
+        auto stage_future = active_worker->delegate_async(
             [processor](const std::shared_ptr<worker_v2_context>& local_context,
                 const std::string&,
                 int input_chain_value,
@@ -371,7 +371,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineScheduleFlow)
     auto context = std::make_shared<worker_v2_context>();
     auto worker = make_worker_v2_task(context, "v2_coro_schedule_test");
 
-    auto scheduled = coroutine_v2_schedule_job(*worker, context, 5).then_value([](int value)
+    auto scheduled = coroutine_schedule_job(*worker, context, 5).then_value([](int value)
     {
         return value + 4;
     });
@@ -387,7 +387,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineAwaitsFutureResult)
     auto context = std::make_shared<worker_v2_context>();
     auto worker = make_worker_v2_task(context, "v2_coro_await_test");
 
-    auto upstream = worker->delegate_async_v2(
+    auto upstream = worker->delegate_async(
         [](const std::shared_ptr<worker_v2_context>& ctx, const std::string&, int value)
         {
             ctx->loop_counter.fetch_add(1);
@@ -395,7 +395,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineAwaitsFutureResult)
         },
         5);
 
-    auto awaited = coroutine_v2_await_future_job(*worker, context, std::move(upstream));
+    auto awaited = coroutine_await_future_job(*worker, context, std::move(upstream));
 
     auto result = awaited.get_result();
     ASSERT_TRUE(result.has_value());

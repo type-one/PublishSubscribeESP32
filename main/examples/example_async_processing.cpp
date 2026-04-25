@@ -29,7 +29,7 @@
  *
  * Covers: future_result, promise_result, packaged_task_result, async_result,
  * then_value, then_error, then_result, when_all, make_result_promise,
- * delegate_async_v2, and — when coroutines are available — co_await on
+ * delegate_async, and — when coroutines are available — co_await on
  * future_result and worker_task::schedule().
  *
  * @author Laurent Lardinois
@@ -396,15 +396,15 @@ namespace
     }
 
     // -----------------------------------------------------------------------
-    // Example 7: delegate_async_v2 chain on a worker
+    // Example 7: delegate_async chain on a worker
 
     /**
-     * @brief Dispatches work to a worker via @c delegate_async_v2, then chains
+     * @brief Dispatches work to a worker via @c delegate_async, then chains
      *        @c then_value and @c then_error on the returned @c future_result.
      */
-    void test_delegate_async_v2_chain()
+    void test_delegate_async_chain()
     {
-        LOG_INFO("-- v2: delegate_async_v2 chain --");
+        LOG_INFO("-- v2: delegate_async chain --");
         print_stats();
 
         using namespace pco::v2;
@@ -416,7 +416,7 @@ namespace
         auto context = std::make_shared<async_context>();
         auto worker = make_async_worker(context, "v2_chain_worker");
 
-        auto future = worker->delegate_async_v2(
+        auto future = worker->delegate_async(
             [](const std::shared_ptr<async_context>& ctx, const std::string&, int value_input)
             {
                 ctx->call_count.fetch_add(1);
@@ -431,13 +431,13 @@ namespace
 
         if (result.has_value())
         {
-            std::printf("delegate_async_v2 chain: 7*6+2 = %d\n", result.value());
+            std::printf("delegate_async chain: 7*6+2 = %d\n", result.value());
         }
         std::printf("worker call_count: %d\n", context->call_count.load());
     }
 
     // -----------------------------------------------------------------------
-    // Example 8: fan-out / fan-in gather with a loop of delegate_async_v2
+    // Example 8: fan-out / fan-in gather with a loop of delegate_async
 
     /**
      * @brief Dispatches several independent jobs in a loop and accumulates
@@ -459,7 +459,7 @@ namespace
 
         for (int i = 1; i <= job_count; ++i)
         {
-            jobs.emplace_back(worker->delegate_async_v2(
+            jobs.emplace_back(worker->delegate_async(
                 [](const std::shared_ptr<async_context>& ctx, const std::string&, int input)
                 {
                     ctx->call_count.fetch_add(1);
@@ -484,7 +484,7 @@ namespace
     }
 
     // -----------------------------------------------------------------------
-    // Example 9: when_all gather two parallel delegate_async_v2 results
+    // Example 9: when_all gather two parallel delegate_async results
 
     /**
      * @brief Demonstrates @c when_all on a vector of @c future_result values,
@@ -505,7 +505,7 @@ namespace
         constexpr int offset_val = 7;
         constexpr int second_input = 20;
 
-        auto future_a = worker->delegate_async_v2(
+        auto future_a = worker->delegate_async(
             [](const std::shared_ptr<async_context>& ctx, const std::string&, int val_a)
             {
                 ctx->call_count.fetch_add(1);
@@ -513,7 +513,7 @@ namespace
             },
             first_input);
 
-        auto future_b = worker->delegate_async_v2(
+        auto future_b = worker->delegate_async(
             [](const std::shared_ptr<async_context>& ctx, const std::string&, int val_b)
             {
                 ctx->call_count.fetch_add(1);
@@ -573,7 +573,7 @@ namespace
         constexpr int awaited_offset = 3;
 
         // Fire an upstream async job that the second coroutine will await.
-        auto upstream = worker->delegate_async_v2(
+        auto upstream = worker->delegate_async(
             [](const std::shared_ptr<async_context>& ctx, const std::string&, int upstream_input)
             {
                 ctx->call_count.fetch_add(1);
@@ -731,7 +731,7 @@ namespace
 
     /**
      * @brief Stresses async dispatch by using a periodic producer that feeds a
-     *        worker class through @c delegate_async_v2.
+     *        worker class through @c delegate_async.
      */
     void test_periodic_feeds_worker_stress_no_coroutines()
     {
@@ -772,7 +772,7 @@ namespace
             }
 
             auto chained = worker_ptr
-                               ->delegate_async_v2(
+                               ->delegate_async(
                                    [processor](const std::shared_ptr<async_context>& local_async_context,
                                        const std::string&,
                                        int sample_value)
@@ -848,7 +848,7 @@ namespace
         {
             auto* active_worker = ((stage_index % 2) == 0) ? worker_first.get() : worker_second.get();
 
-            auto stage_future = active_worker->delegate_async_v2(
+            auto stage_future = active_worker->delegate_async(
                 [](const std::shared_ptr<async_context>& local_context,
                     const std::string&,
                     int input_chain_value,
@@ -1038,7 +1038,7 @@ void run_example_async_processing()
     test_packaged_task();
     test_packaged_task_reference_wrapper();
     test_manual_promise_fulfillment();
-    test_delegate_async_v2_chain();
+    test_delegate_async_chain();
     test_fan_out_gather();
     test_when_all_gather();
     test_timeout_detection();
