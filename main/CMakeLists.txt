@@ -56,7 +56,7 @@ set(TARGET_UZLIB_SRC
 )
 
 set(TARGET_PORTABLE_CONCURRENCY_SRC
-        portable_concurrency/bits/portable_concurrency.cpp
+        portable_concurrency/bits/portable_concurrency_runtime.cpp
 )
 
 set(TARGET_TOOLS_SRC

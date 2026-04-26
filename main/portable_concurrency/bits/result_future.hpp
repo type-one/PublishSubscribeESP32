@@ -602,6 +602,7 @@ public:
         return;
       }
 
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
       try {
         if constexpr (std::is_void<T>::value) {
           if constexpr (detail::is_result_handle<next_raw_t>::value) {
@@ -626,6 +627,28 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
+#else
+      if constexpr (std::is_void<T>::value) {
+        if constexpr (detail::is_result_handle<next_raw_t>::value) {
+          detail::resolve_nested_handle(ctx->promise, ctx->fn());
+        } else if constexpr (std::is_void<next_value_t>::value) {
+          ctx->fn();
+          ctx->promise.set_value();
+        } else {
+          ctx->promise.set_value(ctx->fn());
+        }
+      } else {
+        if constexpr (detail::is_result_handle<next_raw_t>::value) {
+          detail::resolve_nested_handle(ctx->promise,
+                                        ctx->fn(std::move(current).value()));
+        } else if constexpr (std::is_void<next_value_t>::value) {
+          ctx->fn(std::move(current).value());
+          ctx->promise.set_value();
+        } else {
+          ctx->promise.set_value(ctx->fn(std::move(current).value()));
+        }
+      }
+#endif
 
     });
 
@@ -638,6 +661,7 @@ public:
     auto next_future = next_promise.get_future();
 
     if (!state_) {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
       try {
         if constexpr (std::is_void<T>::value) {
           std::forward<F>(function_arg)(E::no_state);
@@ -648,6 +672,14 @@ public:
       } catch (...) {
         next_promise.set_error(E::continuation_failure);
       }
+#else
+      if constexpr (std::is_void<T>::value) {
+        std::forward<F>(function_arg)(E::no_state);
+        next_promise.set_value();
+      } else {
+        next_promise.set_value(std::forward<F>(function_arg)(E::no_state));
+      }
+#endif
 
       return next_future;
     }
@@ -670,6 +702,7 @@ public:
         return;
       }
 
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
       try {
         if constexpr (std::is_void<T>::value) {
           ctx->fn(current.error());
@@ -680,6 +713,14 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
+#else
+      if constexpr (std::is_void<T>::value) {
+        ctx->fn(current.error());
+        ctx->promise.set_value();
+      } else {
+        ctx->promise.set_value(ctx->fn(current.error()));
+      }
+#endif
 
     });
 
@@ -697,6 +738,7 @@ public:
 
     if (!state_) {
       result_type current = tools::unexpected<E>(E::no_state);
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
       try {
         if constexpr (detail::is_result_handle<next_raw_t>::value) {
           detail::resolve_nested_handle(next_promise, std::forward<F>(function_arg)(std::move(current)));
@@ -709,6 +751,16 @@ public:
       } catch (...) {
         next_promise.set_error(E::continuation_failure);
       }
+#else
+      if constexpr (detail::is_result_handle<next_raw_t>::value) {
+        detail::resolve_nested_handle(next_promise, std::forward<F>(function_arg)(std::move(current)));
+      } else if constexpr (std::is_void<next_value_t>::value) {
+        std::forward<F>(function_arg)(std::move(current));
+        next_promise.set_value();
+      } else {
+        next_promise.set_value(std::forward<F>(function_arg)(std::move(current)));
+      }
+#endif
 
       return next_future;
     }
@@ -727,6 +779,7 @@ public:
 
       result_type current = ctx->self.take_ready_result();
 
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
       try {
         if constexpr (detail::is_result_handle<next_raw_t>::value) {
           detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
@@ -739,6 +792,16 @@ public:
       } catch (...) {
         ctx->promise.set_error(E::continuation_failure);
       }
+#else
+      if constexpr (detail::is_result_handle<next_raw_t>::value) {
+        detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
+      } else if constexpr (std::is_void<next_value_t>::value) {
+        ctx->fn(std::move(current));
+        ctx->promise.set_value();
+      } else {
+        ctx->promise.set_value(ctx->fn(std::move(current)));
+      }
+#endif
 
     });
 
@@ -2405,6 +2468,7 @@ async_result(Exec &&exec, F &&function_arg, A &&...args) {
     auto task = [promise = std::move(promise),
                  function_arg = std::forward<F>(function_arg),
                  params = std::make_tuple(std::forward<A>(args)...)]() mutable {
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
       try {
         if constexpr (std::is_void_v<value_t>) {
           {
@@ -2424,6 +2488,23 @@ async_result(Exec &&exec, F &&function_arg, A &&...args) {
       } catch (...) {
         promise.set_error(result_error::execution_failure);
       }
+#else
+      if constexpr (std::is_void_v<value_t>) {
+        {
+          auto function_local = std::move(function_arg);
+          auto params_local = std::move(params);
+          std::apply(function_local, std::move(params_local));
+        }
+        promise.set_value();
+      } else {
+        auto val = [&]() {
+          auto function_local = std::move(function_arg);
+          auto params_local = std::move(params);
+          return std::apply(function_local, std::move(params_local));
+        }();
+        promise.set_value(std::move(val));
+      }
+#endif
 
     };
 
