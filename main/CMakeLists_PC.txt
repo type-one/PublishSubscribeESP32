@@ -133,7 +133,6 @@ if(WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
-add_compile_definitions(CJSONPP_NO_EXCEPTION)
 #add_compile_definitions(USE_MEM_POOL_ALLOCATOR_WARMUP)
 
 # display actual compiling definitions
