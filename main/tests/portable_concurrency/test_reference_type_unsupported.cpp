@@ -44,36 +44,36 @@
 namespace
 {
 
-/**
- * @brief Verifies the design constraint: std::reference_wrapper<T> is the idiomatic workaround.
- */
-TEST(ReferenceTypeUnsupportedTest, reference_wrapper_provides_workaround)
-{
-    pco::promise_result<std::reference_wrapper<int>> promise;
-    auto future = promise.get_future();
+    /**
+     * @brief Verifies the design constraint: std::reference_wrapper<T> is the idiomatic workaround.
+     */
+    TEST(ReferenceTypeUnsupportedTest, reference_wrapper_provides_workaround)
+    {
+        pco::promise_result<std::reference_wrapper<int>> promise;
+        auto future = promise.get_future();
 
-    int value = 42;
-    promise.set_value(std::ref(value));
+        int value = 42;
+        promise.set_value(std::ref(value));
 
-    auto result = future.get_result();
-    ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result.value().get(), 42);
-}
+        auto result = future.get_result();
+        ASSERT_TRUE(result.has_value());
+        EXPECT_EQ(result.value().get(), 42);
+    }
 
-/**
- * @brief Verifies pointer-based approach as an alternative workaround.
- */
-TEST(ReferenceTypeUnsupportedTest, pointers_provide_alternative_workaround)
-{
-    pco::promise_result<int *> promise;
-    auto future = promise.get_future();
+    /**
+     * @brief Verifies pointer-based approach as an alternative workaround.
+     */
+    TEST(ReferenceTypeUnsupportedTest, pointers_provide_alternative_workaround)
+    {
+        pco::promise_result<int*> promise;
+        auto future = promise.get_future();
 
-    int value = 99;
-    promise.set_value(&value);
+        int value = 99;
+        promise.set_value(&value);
 
-    auto result = future.get_result();
-    ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(*result.value(), 99);
-}
+        auto result = future.get_result();
+        ASSERT_TRUE(result.has_value());
+        EXPECT_EQ(*result.value(), 99);
+    }
 
 } // namespace
