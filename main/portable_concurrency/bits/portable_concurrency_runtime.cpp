@@ -47,8 +47,9 @@ template struct forward_list_deleter<continuation>;
 template class once_consumable_stack<continuation>;
 
 void continuations_stack::push(continuation &&continuation_fn) {
-  if (!stack_.push(continuation_fn)) {
-    continuation_fn();
+  auto continuation_local = std::move(continuation_fn);
+  if (!stack_.push(continuation_local)) {
+    continuation_local();
   }
 }
 

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "once_consumable_stack.h"
 #include "small_unique_function.hpp"
 
@@ -32,8 +34,9 @@ public:
   void push(continuation &&continuation_fn);
   template <typename Alloc>
   void push(continuation &&continuation_fn, const Alloc &alloc) {
-    if (!stack_.push(continuation_fn, alloc)) {
-      continuation_fn();
+    auto continuation_local = std::move(continuation_fn);
+    if (!stack_.push(continuation_local, alloc)) {
+      continuation_local();
     }
   }
 

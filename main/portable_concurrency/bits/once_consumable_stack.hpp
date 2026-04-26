@@ -122,8 +122,13 @@ forward_list<T> once_consumable_stack<T>::consume() noexcept {
 }
 
 template <typename T>
-forward_list_node<T>* once_consumable_stack<T>::consumed_marker() const noexcept {
-  return reinterpret_cast<forward_list_node<T>*>(const_cast<once_consumable_stack*>(this));
+forward_list_node<T>* once_consumable_stack<T>::consumed_marker() noexcept {
+  return reinterpret_cast<forward_list_node<T>*>(this);
+}
+
+template <typename T>
+const forward_list_node<T>* once_consumable_stack<T>::consumed_marker() const noexcept {
+  return reinterpret_cast<const forward_list_node<T>*>(this);
 }
 
 } // namespace pco::detail

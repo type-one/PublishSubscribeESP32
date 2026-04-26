@@ -36,25 +36,29 @@ unique_function<R(A...)>::unique_function(std::nullptr_t unused) noexcept
 }
 
 template <typename R, typename... A>
-template <typename F, typename>
-unique_function<R(A...)>::unique_function(F&& f_arg)
-    : unique_function(std::forward<F>(f_arg), detail::is_storable_t<std::decay_t<F>>{}) {}
+template <typename function_type, typename>
+unique_function<R(A...)>::unique_function(function_type&& f_arg)
+    : unique_function(std::forward<function_type>(f_arg), detail::is_storable_t<std::decay_t<function_type>>{}) {}
 
 template <typename R, typename... A>
-template <typename F>
-unique_function<R(A...)>::unique_function(F&& f_arg, std::true_type unused) : func_(std::forward<F>(f_arg)) {
+template <typename function_type>
+unique_function<R(A...)>::unique_function(function_type&& f_arg, std::true_type unused)
+    : func_(std::forward<function_type>(f_arg)) {
   static_cast<void>(unused);
 }
 
 template <typename R, typename... A>
-template <typename F>
-unique_function<R(A...)>::unique_function(F&& f_arg, std::false_type unused) {
+template <typename function_type>
+unique_function<R(A...)>::unique_function(function_type f_arg, std::false_type unused) {
   static_cast<void>(unused);
   if (detail::is_null(f_arg)) {
     return;
   }
-  func_ = [func = std::make_unique<std::decay_t<F>>(std::forward<F>(f_arg))](
-              A... a_arg) { return detail::invoke(*func, std::forward<A>(a_arg)...); };
+  using stored_function_type = std::decay_t<function_type>;
+  auto stored_function = std::make_unique<stored_function_type>(std::move(f_arg));
+  func_ = [func = std::move(stored_function)](A... a_arg) {
+    return detail::invoke(*func, std::forward<A>(a_arg)...);
+  };
 }
 
 template <typename R, typename... A>

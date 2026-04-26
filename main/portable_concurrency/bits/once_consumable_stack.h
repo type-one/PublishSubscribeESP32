@@ -142,7 +142,8 @@ private:
   // Return address of some valid object which can not alias with
   // forward_list_node<T> instances. Can be used as marker in pointer
   // compariaions but must never be dereferenced.
-  forward_list_node<T> *consumed_marker() const noexcept;
+  forward_list_node<T> *consumed_marker() noexcept;
+  const forward_list_node<T> *consumed_marker() const noexcept;
 
   bool push(forward_list<T> &node) noexcept;
 

@@ -46,7 +46,7 @@ using func_ptr_t = R (*)(A...);
 template <typename R, typename... A>
 struct callable_vtbl {
   func_ptr_t<void, small_buffer&> destroy;
-  func_ptr_t<void, small_buffer&, small_buffer&> move;
+  func_ptr_t<void, small_buffer&, small_buffer*> move;
   func_ptr_t<R, small_buffer&, A...> call;
 };
 
@@ -59,7 +59,7 @@ template <typename F, typename R, typename... A>
 const callable_vtbl<R, A...>& get_callable_vtbl() {
   static_assert(is_storable_t<F>::value, "Can't embed object into small buffer");
   static const callable_vtbl<R, A...> res = {[](small_buffer& buf) { small_buffer_cast<F>(buf).~F(); },
-      [](small_buffer& src, small_buffer& dst) { new (dst.data.data()) F{std::move(small_buffer_cast<F>(src))}; },
+  [](small_buffer& src, small_buffer* dst) { new (dst->data.data()) F{std::move(small_buffer_cast<F>(src))}; },
       [](small_buffer& buf, A... a_arg) -> R {
 #if !defined(_MSC_VER)
         // Must not perform conversions marked as explicit but must cast
@@ -80,8 +80,8 @@ struct is_null_comparable : std::false_type {};
 template <typename T>
 struct is_null_comparable<T, typename voidify<decltype(std::declval<T>() == nullptr)>::type> : std::true_type {};
 
-template <typename T>
-std::enable_if_t<!is_null_comparable<T>::value, bool> is_null(const T& /*unused*/) noexcept {
+template <typename T, std::enable_if_t<!is_null_comparable<T>::value, int> = 0>
+bool is_null(const T& /*unused*/) noexcept {
   return false;
 }
 
@@ -90,8 +90,8 @@ std::enable_if_t<!is_null_comparable<T>::value, bool> is_null(const T& /*unused*
 #pragma GCC diagnostic ignored "-Waddress"
 #pragma GCC diagnostic ignored "-Wnonnull-compare"
 #endif
-template <typename T>
-auto is_null(const T& val) noexcept -> std::enable_if_t<is_null_comparable<T>::value, bool> {
+template <typename T, std::enable_if_t<is_null_comparable<T>::value, int> = 0>
+bool is_null(const T& val) noexcept {
   return val == nullptr;
 }
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 6
@@ -125,7 +125,7 @@ small_unique_function<R(A...)>::~small_unique_function() {
 template <typename R, typename... A>
 small_unique_function<R(A...)>::small_unique_function(small_unique_function<R(A...)>&& rhs) noexcept {
   if (rhs.vtbl_) {
-    rhs.vtbl_->move(rhs.buffer_, buffer_);
+    rhs.vtbl_->move(rhs.buffer_, &buffer_);
   }
   vtbl_ = rhs.vtbl_;
 }
@@ -137,7 +137,7 @@ small_unique_function<R(A...)>& small_unique_function<R(A...)>::operator=(
     vtbl_->destroy(buffer_);
   }
   if (rhs.vtbl_) {
-    rhs.vtbl_->move(rhs.buffer_, buffer_);
+    rhs.vtbl_->move(rhs.buffer_, &buffer_);
   }
   vtbl_ = rhs.vtbl_;
   return *this;

@@ -69,9 +69,9 @@ public:
    * any function type which is sent to a user provided executor via
    * ADL-discovered function `post`.
    */
-  template <typename F, typename = std::enable_if_t<!std::is_same<
-                            std::decay_t<F>, unique_function>::value>>
-  unique_function(F &&f);
+  template <typename function_type, typename = std::enable_if_t<!std::is_same<
+                            std::decay_t<function_type>, unique_function>::value>>
+  unique_function(function_type &&f_arg);
 
   /**
    * Destroys any stored function object.
@@ -119,11 +119,10 @@ public:
   }
 
 private:
-  template <typename F> unique_function(F &&f, std::true_type);
+  template <typename function_type> unique_function(function_type &&f_arg, std::true_type);
 
-  template <typename F> unique_function(F &&f, std::false_type);
+  template <typename function_type> unique_function(function_type f_arg, std::false_type);
 
-private:
   detail::small_unique_function<R(A...)> func_;
 };
 
