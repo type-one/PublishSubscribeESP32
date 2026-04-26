@@ -24,111 +24,144 @@
 
 #include "once_consumable_stack_fwd.hpp"
 
-namespace pco::detail {
+namespace pco::detail
+{
 
-template <typename T>
-void forward_list_deleter<T>::operator()(forward_list_node<T>* head) noexcept {
-  if (!head) {
-    return;
-  }
+    template <typename T>
+    void forward_list_deleter<T>::operator()(forward_list_node<T>* head) noexcept
+    {
+        if (!head)
+        {
+            return;
+        }
 
-  for (auto* ptr = head; ptr != nullptr;) {
-    auto* to_delete = ptr;
-    ptr = ptr->next;
-    to_delete->deallocate_self();
-  }
-}
-
-template <typename T>
-class forward_list_iterator {
-public:
-  forward_list_iterator() noexcept = default;
-  forward_list_iterator(forward_list<T>& list) noexcept : node_(list.get()) {}
-
-  forward_list_iterator operator++() noexcept {
-    if (!node_) {
-      return *this;
+        for (auto* ptr = head; ptr != nullptr;)
+        {
+            auto* to_delete = ptr;
+            ptr = ptr->next;
+            to_delete->deallocate_self();
+        }
     }
-    node_ = node_->next;
-    return *this;
-  }
 
-  T& operator*() noexcept { return node_->val; }
+    template <typename T>
+    class forward_list_iterator
+    {
+    public:
+        forward_list_iterator() noexcept = default;
+        forward_list_iterator(forward_list<T>& list) noexcept
+            : node_(list.get())
+        {
+        }
 
-  bool operator==(const forward_list_iterator& rhs) const noexcept { return node_ == rhs.node_; }
+        forward_list_iterator operator++() noexcept
+        {
+            if (!node_)
+            {
+                return *this;
+            }
+            node_ = node_->next;
+            return *this;
+        }
 
-  bool operator!=(const forward_list_iterator& rhs) const noexcept { return node_ != rhs.node_; }
+        T& operator*() noexcept
+        {
+            return node_->val;
+        }
 
-private:
-  forward_list_node<T>* node_ = nullptr;
-};
+        bool operator==(const forward_list_iterator& rhs) const noexcept
+        {
+            return node_ == rhs.node_;
+        }
 
-template <typename T>
-forward_list_iterator<T> begin(forward_list<T>& list) noexcept {
-  return {list};
-}
+        bool operator!=(const forward_list_iterator& rhs) const noexcept
+        {
+            return node_ != rhs.node_;
+        }
 
-template <typename T>
-forward_list_iterator<T> end(forward_list<T>& /*unused*/) noexcept {
-  return {};
-}
+    private:
+        forward_list_node<T>* node_ = nullptr;
+    };
 
-template <typename T>
-once_consumable_stack<T>::~once_consumable_stack() {
-  // Create temporary forward_list which can destroy all nodes properly. Nobody
-  // else should access this object anymore at the moment of destruction so
-  // relaxed memory order is enough.
-  auto* head = head_.load(std::memory_order_relaxed);
-  if (head && head != consumed_marker()) {
-    forward_list<T>{head};
-  }
-}
-
-template <typename T>
-bool once_consumable_stack<T>::push(T& val) {
-  return push(val, std::allocator<T>{});
-}
-
-template <typename T>
-bool once_consumable_stack<T>::push(forward_list<T>& node) noexcept {
-  assert(!node->next);
-  auto* curr_head = head_.load(std::memory_order_acquire);
-  if (curr_head == consumed_marker()) {
-    return false;
-  }
-  node->next = curr_head;
-  while (!head_.compare_exchange_strong(node->next, node.get(), std::memory_order_acq_rel)) {
-    if (node->next == consumed_marker()) {
-      node->next = nullptr;
-      return false;
+    template <typename T>
+    forward_list_iterator<T> begin(forward_list<T>& list) noexcept
+    {
+        return { list };
     }
-  }
-  node.release();
-  return true;
-}
 
-template <typename T>
-bool once_consumable_stack<T>::is_consumed() const noexcept {
-  return head_.load(std::memory_order_acquire) == consumed_marker();
-}
+    template <typename T>
+    forward_list_iterator<T> end(forward_list<T>& /*unused*/) noexcept
+    {
+        return {};
+    }
 
-template <typename T>
-forward_list<T> once_consumable_stack<T>::consume() noexcept {
-  auto* curr_head = head_.exchange(consumed_marker(), std::memory_order_acq_rel);
-  if (curr_head == consumed_marker()) {
-    return {nullptr, forward_list_deleter<T>{}};
-  }
-  return forward_list<T>{curr_head, forward_list_deleter<T>{}};
-}
+    template <typename T>
+    once_consumable_stack<T>::~once_consumable_stack()
+    {
+        // Create temporary forward_list which can destroy all nodes properly. Nobody
+        // else should access this object anymore at the moment of destruction so
+        // relaxed memory order is enough.
+        auto* head = head_.load(std::memory_order_relaxed);
+        if (head && head != consumed_marker())
+        {
+            forward_list<T> { head };
+        }
+    }
 
-template <typename T>
-forward_list_node<T>* once_consumable_stack<T>::consumed_marker() noexcept {
-  return reinterpret_cast<forward_list_node<T>*>(this);
-}
+    template <typename T>
+    bool once_consumable_stack<T>::push(T& val)
+    {
+        return push(val, std::allocator<T> {});
+    }
 
-template <typename T>
-const forward_list_node<T>* once_consumable_stack<T>::consumed_marker() const noexcept {
-  return reinterpret_cast<const forward_list_node<T>*>(this);
-}
+    template <typename T>
+    bool once_consumable_stack<T>::push(forward_list<T>& node) noexcept
+    {
+        assert(!node->next);
+        auto* curr_head = head_.load(std::memory_order_acquire);
+        if (curr_head == consumed_marker())
+        {
+            return false;
+        }
+        node->next = curr_head;
+        while (!head_.compare_exchange_strong(node->next, node.get(), std::memory_order_acq_rel))
+        {
+            if (node->next == consumed_marker())
+            {
+                node->next = nullptr;
+                return false;
+            }
+        }
+        node.release();
+        return true;
+    }
+
+    template <typename T>
+    bool once_consumable_stack<T>::is_consumed() const noexcept
+    {
+        return head_.load(std::memory_order_acquire) == consumed_marker();
+    }
+
+    template <typename T>
+    forward_list<T> once_consumable_stack<T>::consume() noexcept
+    {
+        auto* curr_head = head_.exchange(consumed_marker(), std::memory_order_acq_rel);
+        if (curr_head == consumed_marker())
+        {
+            return { nullptr, forward_list_deleter<T> {} };
+        }
+        return forward_list<T> { curr_head, forward_list_deleter<T> {} };
+    }
+
+    template <typename T>
+    forward_list_node<T>* once_consumable_stack<T>::consumed_marker() noexcept
+    {
+        return reinterpret_cast<forward_list_node<T>*>(this);
+    }
+
+    template <typename T>
+    const forward_list_node<T>* once_consumable_stack<T>::consumed_marker() const noexcept
+    {
+        return reinterpret_cast<const forward_list_node<T>*>(this);
+    }
 
 } // namespace pco::detail

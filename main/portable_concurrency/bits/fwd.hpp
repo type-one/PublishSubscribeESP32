@@ -21,28 +21,43 @@
 #include <cstdint>
 #include <memory>
 
-namespace pco {
+namespace pco
+{
 
-struct canceler_arg_t {};
-constexpr canceler_arg_t canceler_arg = {};
+    struct canceler_arg_t
+    {
+    };
+    constexpr canceler_arg_t canceler_arg = {};
 
-enum class future_status : std::uint8_t { ready, timeout };
+    enum class future_status : std::uint8_t
+    {
+        ready,
+        timeout
+    };
 
-template <typename T> class future;
-template <typename Signature> class packaged_task;
-template <typename T> class promise;
-template <typename T> class shared_future;
+    template <typename T>
+    class future;
+    template <typename Signature>
+    class packaged_task;
+    template <typename T>
+    class promise;
+    template <typename T>
+    class shared_future;
 
-namespace detail {
-template <typename T> struct future_state;
+    namespace detail
+    {
+        template <typename T>
+        struct future_state;
 
-template <typename T> std::shared_ptr<future_state<T>> &state_of(future<T> &);
-template <typename T> std::shared_ptr<future_state<T>> state_of(future<T> &&);
+        template <typename T>
+        std::shared_ptr<future_state<T>>& state_of(future<T>&);
+        template <typename T>
+        std::shared_ptr<future_state<T>> state_of(future<T>&&);
 
-template <typename T>
-std::shared_ptr<future_state<T>> &state_of(shared_future<T> &);
-template <typename T>
-std::shared_ptr<future_state<T>> state_of(shared_future<T> &&);
-} // namespace detail
+        template <typename T>
+        std::shared_ptr<future_state<T>>& state_of(shared_future<T>&);
+        template <typename T>
+        std::shared_ptr<future_state<T>> state_of(shared_future<T>&&);
+    } // namespace detail
 
 } // namespace pco

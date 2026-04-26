@@ -18,76 +18,88 @@
 
 #pragma once
 
-#include <atomic>
-#include "tools/critical_section.hpp"
 #include "tools/cond_var.hpp"
+#include "tools/critical_section.hpp"
+#include <atomic>
 #include <cstdint>
 #include <thread>
 #include <type_traits>
+
 
 #include "closable_queue_fwd.hpp"
 #include "execution_impl.hpp"
 #include "unique_function.hpp"
 
-namespace pco {
-namespace detail {
-extern template class closable_queue<unique_function<void()>>;
+namespace pco
+{
+    namespace detail
+    {
+        extern template class closable_queue<unique_function<void()>>;
 
-class queue_executor {
-public:
-  queue_executor(closable_queue<unique_function<void()>> *queue) noexcept
-      : queue_{queue} {}
+        class queue_executor
+        {
+        public:
+            queue_executor(closable_queue<unique_function<void()>>* queue) noexcept
+                : queue_ { queue }
+            {
+            }
 
-private:
-  friend void post(queue_executor exec, unique_function<void()> fun) {
-    exec.queue_->push(std::move(fun));
-  }
-  closable_queue<unique_function<void()>> *queue_;
-};
+        private:
+            friend void post(queue_executor exec, unique_function<void()> fun)
+            {
+                exec.queue_->push(std::move(fun));
+            }
+            closable_queue<unique_function<void()>>* queue_;
+        };
 
-} // namespace detail
+    } // namespace detail
 
-/**
- * @headerfile portable_concurrency/thread_pool
- * @ingroup thread_pool
- */
-class static_thread_pool {
-public:
-  using executor_type = detail::queue_executor;
+    /**
+     * @headerfile portable_concurrency/thread_pool
+     * @ingroup thread_pool
+     */
+    class static_thread_pool
+    {
+    public:
+        using executor_type = detail::queue_executor;
 
-  explicit static_thread_pool(std::size_t num_threads);
+        explicit static_thread_pool(std::size_t num_threads);
 
-  static_thread_pool(const static_thread_pool &) = delete;
-  static_thread_pool &operator=(const static_thread_pool &) = delete;
-  static_thread_pool(static_thread_pool &&) = delete;
-  static_thread_pool &operator=(static_thread_pool &&) = delete;
+        static_thread_pool(const static_thread_pool&) = delete;
+        static_thread_pool& operator=(const static_thread_pool&) = delete;
+        static_thread_pool(static_thread_pool&&) = delete;
+        static_thread_pool& operator=(static_thread_pool&&) = delete;
 
-  /// stop accepting incoming work and wait for work to drain
-  ~static_thread_pool();
+        /// stop accepting incoming work and wait for work to drain
+        ~static_thread_pool();
 
-  /// attach current thread to the thread pools list of worker threads
-  void attach();
+        /// attach current thread to the thread pools list of worker threads
+        void attach();
 
-  /// signal all work to complete
-  void stop();
+        /// signal all work to complete
+        void stop();
 
-  /// wait for all threads in the thread pool to complete
-  void wait();
+        /// wait for all threads in the thread pool to complete
+        void wait();
 
-  executor_type executor() noexcept { return {&queue_}; }
+        executor_type executor() noexcept
+        {
+            return { &queue_ };
+        }
 
-private:
-  detail::closable_queue<unique_function<void()>> queue_;
-  std::vector<std::thread> threads_;
-  unsigned attached_threads_ = 0;
-  tools::critical_section mutex_;
-  tools::cond_var cv_;
-  std::atomic<bool> stopped_{false};
-};
+    private:
+        detail::closable_queue<unique_function<void()>> queue_;
+        std::vector<std::thread> threads_;
+        unsigned attached_threads_ = 0;
+        tools::critical_section mutex_;
+        tools::cond_var cv_;
+        std::atomic<bool> stopped_ { false };
+    };
 
 
-template <>
-struct is_executor<static_thread_pool::executor_type>
-    : std::true_type {};
+    template <>
+    struct is_executor<static_thread_pool::executor_type> : std::true_type
+    {
+    };
 
 } // namespace pco

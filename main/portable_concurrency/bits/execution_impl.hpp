@@ -21,53 +21,63 @@
 #include <type_traits>
 #include <utility>
 
-namespace pco {
+namespace pco
+{
 
-/**
- * @headerfile portable_concurrency/execution
- * @ingroup execution
- * @brief Trait which can be specialized for user provided types to enable using
- * them as executors.
- *
- * Some functions in the portable_concurrency library allow to specify executor
- * to perform requested actions. Those function only participate in overload
- * resolution if this trait is specialized for the executor argument and
- * `is_executor<E>::value` is `true`.
- *
- * In addition to this trait specialization there should be @ref post function
- * provided in order to use executor type E with portable_concurrency library.
- *
- * @sa post
- */
-template <typename E> struct is_executor : std::false_type {};
+    /**
+     * @headerfile portable_concurrency/execution
+     * @ingroup execution
+     * @brief Trait which can be specialized for user provided types to enable using
+     * them as executors.
+     *
+     * Some functions in the portable_concurrency library allow to specify executor
+     * to perform requested actions. Those function only participate in overload
+     * resolution if this trait is specialized for the executor argument and
+     * `is_executor<E>::value` is `true`.
+     *
+     * In addition to this trait specialization there should be @ref post function
+     * provided in order to use executor type E with portable_concurrency library.
+     *
+     * @sa post
+     */
+    template <typename E>
+    struct is_executor : std::false_type
+    {
+    };
 
-/**
- * @headerfile portable_concurrency/execution
- * @ingroup execution
- * @brief Trivial executor which evaluates task immediately in the invocation
- * thread
- *
- * This executor is used by `future::then` and other continuation-related family
- * of functions by default when no executor is specified explicitly.
- */
-class inplace_executor_t {
-private:
-  template <typename Task> friend void post(inplace_executor_t exec, Task &&task) {
-    static_cast<void>(exec);
-    std::forward<Task>(task)();
-  }
-};
+    /**
+     * @headerfile portable_concurrency/execution
+     * @ingroup execution
+     * @brief Trivial executor which evaluates task immediately in the invocation
+     * thread
+     *
+     * This executor is used by `future::then` and other continuation-related family
+     * of functions by default when no executor is specified explicitly.
+     */
+    class inplace_executor_t
+    {
+    private:
+        template <typename Task>
+        friend void post(inplace_executor_t exec, Task&& task)
+        {
+            static_cast<void>(exec);
+            std::forward<Task>(task)();
+        }
+    };
 
-/**
- * @headerfile portable_concurrency/execution
- * @ingroup execution
- * @brief Global instance of trivial in-place executor type
- *
- * @sa inplace_executor
- */
-constexpr inplace_executor_t inplace_executor;
+    /**
+     * @headerfile portable_concurrency/execution
+     * @ingroup execution
+     * @brief Global instance of trivial in-place executor type
+     *
+     * @sa inplace_executor
+     */
+    constexpr inplace_executor_t inplace_executor;
 
-template <> struct is_executor<inplace_executor_t> : std::true_type {};
+    template <>
+    struct is_executor<inplace_executor_t> : std::true_type
+    {
+    };
 
 } // namespace pco
 

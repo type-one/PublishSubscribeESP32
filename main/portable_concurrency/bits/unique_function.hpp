@@ -24,70 +24,80 @@
 #include "invoke.hpp"
 #include "small_unique_function.hpp"
 #include "unique_function_fwd.hpp"
-namespace pco {
-
-template <typename R, typename... A>
-unique_function<R(A...)>::unique_function() noexcept = default;
-
-template <typename R, typename... A>
-unique_function<R(A...)>::unique_function(std::nullptr_t unused) noexcept
+namespace pco
 {
-  static_cast<void>(unused);  
-}
 
-template <typename R, typename... A>
-template <typename function_type, typename>
-unique_function<R(A...)>::unique_function(function_type&& f_arg)
-    : unique_function(std::forward<function_type>(f_arg), detail::is_storable_t<std::decay_t<function_type>>{}) {}
+    template <typename R, typename... A>
+    unique_function<R(A...)>::unique_function() noexcept = default;
 
-template <typename R, typename... A>
-template <typename function_type>
-unique_function<R(A...)>::unique_function(function_type&& f_arg, std::true_type unused)
-    : func_(std::forward<function_type>(f_arg)) {
-  static_cast<void>(unused);
-}
+    template <typename R, typename... A>
+    unique_function<R(A...)>::unique_function(std::nullptr_t unused) noexcept
+    {
+        static_cast<void>(unused);
+    }
 
-template <typename R, typename... A>
-template <typename function_type>
-unique_function<R(A...)>::unique_function(function_type f_arg, std::false_type unused) {
-  static_cast<void>(unused);
-  if (detail::is_null(f_arg)) {
-    return;
-  }
-  using stored_function_type = std::decay_t<function_type>;
-  auto stored_function = std::make_unique<stored_function_type>(std::move(f_arg));
-  func_ = [func = std::move(stored_function)](A... a_arg) {
-    return detail::invoke(*func, std::forward<A>(a_arg)...);
-  };
-}
+    template <typename R, typename... A>
+    template <typename function_type, typename>
+    unique_function<R(A...)>::unique_function(function_type&& f_arg)
+        : unique_function(std::forward<function_type>(f_arg), detail::is_storable_t<std::decay_t<function_type>> {})
+    {
+    }
 
-template <typename R, typename... A>
-unique_function<R(A...)>::~unique_function() = default;
+    template <typename R, typename... A>
+    template <typename function_type>
+    unique_function<R(A...)>::unique_function(function_type&& f_arg, std::true_type unused)
+        : func_(std::forward<function_type>(f_arg))
+    {
+        static_cast<void>(unused);
+    }
 
-template <typename R, typename... A>
-unique_function<R(A...)>::unique_function(unique_function<R(A...)>&&) noexcept = default;
+    template <typename R, typename... A>
+    template <typename function_type>
+    unique_function<R(A...)>::unique_function(function_type f_arg, std::false_type unused)
+    {
+        static_cast<void>(unused);
+        if (detail::is_null(f_arg))
+        {
+            return;
+        }
+        using stored_function_type = std::decay_t<function_type>;
+        auto stored_function = std::make_unique<stored_function_type>(std::move(f_arg));
+        func_ = [func = std::move(stored_function)](A... a_arg)
+        { return detail::invoke(*func, std::forward<A>(a_arg)...); };
+    }
 
-template <typename R, typename... A>
-unique_function<R(A...)>& unique_function<R(A...)>::operator=(unique_function<R(A...)>&&) noexcept = default;
+    template <typename R, typename... A>
+    unique_function<R(A...)>::~unique_function() = default;
 
-template <typename R, typename... A>
-R unique_function<R(A...)>::operator()(A... args) const {
-  return func_(std::forward<A>(args)...);
-}
+    template <typename R, typename... A>
+    unique_function<R(A...)>::unique_function(unique_function<R(A...)>&&) noexcept = default;
 
-template <typename R, typename... A>
-unique_function<R(A...)>::unique_function(detail::small_unique_function<R(A...)>&& rhs) noexcept
-    : func_(std::move(rhs)) {}
+    template <typename R, typename... A>
+    unique_function<R(A...)>& unique_function<R(A...)>::operator=(unique_function<R(A...)>&&) noexcept = default;
 
-template <typename R, typename... A>
-unique_function<R(A...)>& unique_function<R(A...)>::operator=(detail::small_unique_function<R(A...)>&& rhs) noexcept {
-  func_ = std::move(rhs);
-  return *this;
-}
+    template <typename R, typename... A>
+    R unique_function<R(A...)>::operator()(A... args) const
+    {
+        return func_(std::forward<A>(args)...);
+    }
 
-template <typename R, typename... A>
-unique_function<R(A...)>::operator detail::small_unique_function<R(A...)>&&() && noexcept {
-  return std::move(func_);
-}
+    template <typename R, typename... A>
+    unique_function<R(A...)>::unique_function(detail::small_unique_function<R(A...)>&& rhs) noexcept
+        : func_(std::move(rhs))
+    {
+    }
+
+    template <typename R, typename... A>
+    unique_function<R(A...)>& unique_function<R(A...)>::operator=(detail::small_unique_function<R(A...)>&& rhs) noexcept
+    {
+        func_ = std::move(rhs);
+        return *this;
+    }
+
+    template <typename R, typename... A>
+    unique_function<R(A...)>::operator detail::small_unique_function<R(A...)>&&() && noexcept
+    {
+        return std::move(func_);
+    }
 
 } // namespace pco

@@ -18,25 +18,29 @@
 
 #pragma once
 
-#include <condition_variable>
-#include "tools/critical_section.hpp"
 #include "tools/cond_var.hpp"
+#include "tools/critical_section.hpp"
+#include <condition_variable>
 #include <mutex>
 #include <queue>
 
-namespace pco::detail {
 
-template <typename T> class closable_queue {
-public:
-  bool pop(T &dest);
-  void push(T &&val);
-  void close();
+namespace pco::detail
+{
 
-private:
-  tools::critical_section mutex_;
-  tools::cond_var cv_;
-  std::queue<T> queue_;
-  bool closed_ = false;
-};
+    template <typename T>
+    class closable_queue
+    {
+    public:
+        bool pop(T& dest);
+        void push(T&& val);
+        void close();
+
+    private:
+        tools::critical_section mutex_;
+        tools::cond_var cv_;
+        std::queue<T> queue_;
+        bool closed_ = false;
+    };
 
 } // namespace pco::detail

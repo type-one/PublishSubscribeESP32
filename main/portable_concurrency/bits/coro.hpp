@@ -20,18 +20,20 @@
 
 #if defined(__cpp_impl_coroutine)
 #include <coroutine>
-namespace pco::detail {
-using suspend_never = std::suspend_never;
-template <typename Promise = void>
-using coroutine_handle = std::coroutine_handle<Promise>;
+namespace pco::detail
+{
+    using suspend_never = std::suspend_never;
+    template <typename Promise = void>
+    using coroutine_handle = std::coroutine_handle<Promise>;
 } // namespace pco::detail
 #define PC_HAS_COROUTINES
 #elif defined(__cpp_coroutines)
 #include <experimental/coroutine>
-namespace pco::detail {
-using suspend_never = std::experimental::suspend_never;
-template <typename Promise = void>
-using coroutine_handle = std::experimental::coroutine_handle<Promise>;
+namespace pco::detail
+{
+    using suspend_never = std::experimental::suspend_never;
+    template <typename Promise = void>
+    using coroutine_handle = std::experimental::coroutine_handle<Promise>;
 #define PC_HAS_COROUTINES
 } // namespace pco::detail
 #endif

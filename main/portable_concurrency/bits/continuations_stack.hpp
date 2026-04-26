@@ -23,28 +23,32 @@
 #include "once_consumable_stack_fwd.hpp"
 #include "small_unique_function.hpp"
 
-namespace pco::detail {
+namespace pco::detail
+{
 
-using continuation = small_unique_function<void()>;
-extern template struct forward_list_deleter<continuation>;
-extern template class once_consumable_stack<continuation>;
+    using continuation = small_unique_function<void()>;
+    extern template struct forward_list_deleter<continuation>;
+    extern template class once_consumable_stack<continuation>;
 
-class continuations_stack {
-public:
-  void push(continuation &&continuation_fn);
-  template <typename Alloc>
-  void push(continuation &&continuation_fn, const Alloc &alloc) {
-    auto continuation_local = std::move(continuation_fn);
-    if (!stack_.push(continuation_local, alloc)) {
-      continuation_local();
-    }
-  }
+    class continuations_stack
+    {
+    public:
+        void push(continuation&& continuation_fn);
+        template <typename Alloc>
+        void push(continuation&& continuation_fn, const Alloc& alloc)
+        {
+            auto continuation_local = std::move(continuation_fn);
+            if (!stack_.push(continuation_local, alloc))
+            {
+                continuation_local();
+            }
+        }
 
-  void execute();
-  [[nodiscard]] bool executed() const;
+        void execute();
+        [[nodiscard]] bool executed() const;
 
-private:
-  once_consumable_stack<continuation> stack_;
-};
+    private:
+        once_consumable_stack<continuation> stack_;
+    };
 
 } // namespace pco::detail
