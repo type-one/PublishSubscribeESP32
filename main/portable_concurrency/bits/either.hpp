@@ -1,5 +1,5 @@
 /**
- * @file either.h
+ * @file either.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2017-10-25
@@ -23,9 +23,9 @@
 #include <type_traits>
 #include <utility>
 
-#include <portable_concurrency/bits/config.h>
+#include <portable_concurrency/bits/config.hpp>
 
-#include "concurrency_type_traits.h"
+#include "concurrency_type_traits.hpp"
 
 namespace pco::detail {
 

@@ -1,8 +1,8 @@
 /**
- * @file p_thread_pool.hpp
+ * @file latch.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
- * @date 2018-10-13
+ * @date 2017-06-14
  * @license https://creativecommons.org/publicdomain/zero/1.0/
  * @see https://creativecommons.org/publicdomain/zero/1.0/
  */
@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------//
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
-// Original date: 2018-10-13                                                   //
+// Original date: 2017-06-14                                                   //
 // https://github.com/VestniK/portable_concurrency                             //
 // Public Domain (CC0 1.0)                                                     //
 // https://creativecommons.org/publicdomain/zero/1.0/                          //
@@ -19,10 +19,10 @@
 #pragma once
 
 /**
- * @defgroup thread_pool <portable_concurrency/thread_pool>
- * @headerfile portable_concurrency/thread_pool
+ * @defgroup latch <portable_concurrency/latch>
+ * @headerfile portable_concurrency/latch
  *
- * Statically sized thread pool implementation
+ * Simple non reusable barrier class.
  */
 
-#include "bits/thread_pool.h"
+#include "bits/latch_impl.hpp"

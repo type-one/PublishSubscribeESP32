@@ -1,5 +1,5 @@
 /**
- * @file fwd.h
+ * @file fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2017-06-14
@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 namespace pco {
@@ -25,7 +26,7 @@ namespace pco {
 struct canceler_arg_t {};
 constexpr canceler_arg_t canceler_arg = {};
 
-enum class future_status { ready, timeout };
+enum class future_status : std::uint8_t { ready, timeout };
 
 template <typename T> class future;
 template <typename Signature> class packaged_task;

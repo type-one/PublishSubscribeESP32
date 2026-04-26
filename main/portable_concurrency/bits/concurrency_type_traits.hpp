@@ -1,5 +1,5 @@
 /**
- * @file concurrency_type_traits.h
+ * @file concurrency_type_traits.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2017-06-14
@@ -20,8 +20,8 @@
 
 #include <type_traits>
 
-#include "fwd.h"
-#include "voidify.h"
+#include "fwd.hpp"
+#include "voidify.hpp"
 
 namespace pco::detail {
 

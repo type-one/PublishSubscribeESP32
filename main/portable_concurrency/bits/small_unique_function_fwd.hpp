@@ -1,5 +1,5 @@
 /**
- * @file small_unique_function.h
+ * @file small_unique_function_fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-02-01
@@ -41,10 +41,10 @@ public:
   small_unique_function() noexcept;
   small_unique_function(std::nullptr_t) noexcept;
 
-  template <typename F,
-            typename = std::enable_if_t<!std::is_same_v<std::decay_t<F>,
+  template <typename function_type,
+            typename = std::enable_if_t<!std::is_same_v<std::decay_t<function_type>,
                                                         small_unique_function>>>
-  small_unique_function(F &&f);
+  small_unique_function(function_type &&f_arg);
 
   ~small_unique_function();
 

@@ -1,5 +1,5 @@
 /**
- * @file result_future.h
+ * @file result_future.hpp
  * @brief Portable concurrency component.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026
@@ -20,6 +20,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -32,17 +33,17 @@
 #include <utility>
 #include <vector>
 
-#include "coro.h"
-#include "execution.h"
+#include "coro.hpp"
+#include "execution_impl.hpp"
 #include "tools/critical_section.hpp"
 #include "tools/cond_var.hpp"
 #include "tools/expected.hpp"
-#include "fwd.h"
+#include "fwd.hpp"
 #include "unique_function.hpp"
 
 namespace pco {
 
-enum class result_error {
+enum class result_error : std::uint8_t {
   no_state = 1,
   broken_promise,
   execution_failure,
@@ -114,7 +115,7 @@ struct interrupt_promise_deducer {
   static R deduce_method(void (C::*)(promise_result<R, E>, Source));
 
   template <typename F>
-  static auto deduce(F) -> decltype(deduce_method(&F::operator()));
+  static auto deduce(F function_object) -> decltype(deduce_method(&F::operator()));
 };
 
 template <typename Func, typename Source, typename E, typename = void>
@@ -137,9 +138,13 @@ using interrupt_promise_arg_t =
 
 template <typename T, typename E> struct result_shared_state {
   result_shared_state() = default;
+  result_shared_state(const result_shared_state &) = delete;
+  result_shared_state &operator=(const result_shared_state &) = delete;
+  result_shared_state(result_shared_state &&) = delete;
+  result_shared_state &operator=(result_shared_state &&) = delete;
 
   template <typename F>
-  explicit result_shared_state(canceler_arg_t, F &&cancel_action)
+  explicit result_shared_state([[maybe_unused]] canceler_arg_t canceler_tag, F &&cancel_action)
       : cancel_action_(std::forward<F>(cancel_action)) {}
 
   ~result_shared_state() {
@@ -318,8 +323,9 @@ private:
         state->cv_.notify_all();
       }
     }
-    for (auto &cb : cbs)
-      cb();
+    for (auto &callback : cbs) {
+      callback();
+    }
   }
 
 public:
@@ -354,8 +360,9 @@ public:
       cbs = std::move(state->on_ready_cbs_);
       state->cv_.notify_all();
     }
-    for (auto &cb : cbs)
-      cb();
+    for (auto &callback : cbs) {
+      callback();
+    }
   }
 
   template <typename U = T,
@@ -379,8 +386,8 @@ public:
   explicit operator bool() const noexcept { return is_awaiten(); }
 
 #if defined(PC_HAS_COROUTINES)
-  ::pco::detail::suspend_never initial_suspend() const noexcept { return {}; }
-  ::pco::detail::suspend_never final_suspend() const noexcept { return {}; }
+  [[nodiscard]] ::pco::detail::suspend_never initial_suspend() const noexcept { return {}; }
+  [[nodiscard]] ::pco::detail::suspend_never final_suspend() const noexcept { return {}; }
   auto get_return_object() { return get_future(); }
 
   void unhandled_exception() {
@@ -399,6 +406,7 @@ public:
 #endif
 
 private:
+  [[nodiscard]]
   detail::result_state_ptr<T, E> get_state() const {
     if (state_) {
       return state_;
@@ -480,6 +488,7 @@ public:
   future_result &operator=(const future_result &) = delete;
   future_result(future_result &&) noexcept = default;
   future_result &operator=(future_result &&) noexcept = default;
+  ~future_result() = default;
 
   [[nodiscard]] bool valid() const noexcept { return static_cast<bool>(state_); }
 
@@ -528,7 +537,7 @@ public:
     if constexpr (std::is_void_v<T>) {
       return;
     } else {
-      return std::move(result).value();
+      return std::move(*result);
     }
   }
 
@@ -552,19 +561,19 @@ public:
       return tools::unexpected<E>(E::no_state);
     }
 
-    std::optional<result_type> out;
+    result_type out = tools::unexpected<E>(E::no_state);
     {
       std::lock_guard<tools::critical_section> guard(state_->mutex_);
-      out.emplace(std::move(*state_->result_));
+      out = std::move(state_->result_).value_or(result_type{tools::unexpected<E>(E::no_state)});
       state_->result_.reset();
     } // mutex released before shared_ptr drops its ref, preventing use-after-free
     state_.reset();
-    return std::move(*out);
+    return out;
   }
 
   template <typename F>
-  auto then_value(F &&fn) &&
-      -> future_result<detail::unwrapped_result_value_t<detail::result_then_value_type<F, T>>, E> {
+  future_result<detail::unwrapped_result_value_t<detail::result_then_value_type<F, T>>, E>
+  then_value(F &&function_arg) && {
     using next_value_t = detail::unwrapped_result_value_t<detail::result_then_value_type<F, T>>;
     using next_raw_t = typename detail::result_then_value_type<F, T>::raw_type;
     promise_result<next_value_t, E> next_promise;
@@ -581,7 +590,7 @@ public:
       promise_result<next_value_t, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -623,17 +632,18 @@ public:
     return next_future;
   }
 
-  template <typename F> auto then_error(F &&fn) && -> future_result<T, E> {
+  template <typename F>
+  future_result<T, E> then_error(F &&function_arg) && {
     promise_result<T, E> next_promise;
     auto next_future = next_promise.get_future();
 
     if (!state_) {
       try {
         if constexpr (std::is_void<T>::value) {
-          std::forward<F>(fn)(E::no_state);
+          std::forward<F>(function_arg)(E::no_state);
           next_promise.set_value();
         } else {
-          next_promise.set_value(std::forward<F>(fn)(E::no_state));
+          next_promise.set_value(std::forward<F>(function_arg)(E::no_state));
         }
       } catch (...) {
         next_promise.set_error(E::continuation_failure);
@@ -648,7 +658,7 @@ public:
       promise_result<T, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -677,8 +687,8 @@ public:
   }
 
   template <typename F>
-  auto then_result(F &&fn) &&
-      -> future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, result_type>>, E> {
+  future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, result_type>>, E>
+  then_result(F &&function_arg) && {
     using traits_t = detail::result_then_result_type<F, result_type>;
     using next_value_t = detail::unwrapped_result_value_t<traits_t>;
     using next_raw_t = typename traits_t::raw_type;
@@ -689,12 +699,12 @@ public:
       result_type current = tools::unexpected<E>(E::no_state);
       try {
         if constexpr (detail::is_result_handle<next_raw_t>::value) {
-          detail::resolve_nested_handle(next_promise, std::forward<F>(fn)(std::move(current)));
+          detail::resolve_nested_handle(next_promise, std::forward<F>(function_arg)(std::move(current)));
         } else if constexpr (std::is_void<next_value_t>::value) {
-          std::forward<F>(fn)(std::move(current));
+          std::forward<F>(function_arg)(std::move(current));
           next_promise.set_value();
         } else {
-          next_promise.set_value(std::forward<F>(fn)(std::move(current)));
+          next_promise.set_value(std::forward<F>(function_arg)(std::move(current)));
         }
       } catch (...) {
         next_promise.set_error(E::continuation_failure);
@@ -709,7 +719,7 @@ public:
       promise_result<next_value_t, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -736,14 +746,14 @@ public:
   }
 
   template <typename F>
-  auto then(F &&fn) &&
-      -> future_result<detail::interrupt_promise_arg_t<F, future_result<T, E>, E>, E> {
-    return std::move(*this).then(inplace_executor, std::forward<F>(fn));
+  future_result<detail::interrupt_promise_arg_t<F, future_result<T, E>, E>, E>
+  then(F &&function_arg) && {
+    return std::move(*this).then(inplace_executor, std::forward<F>(function_arg));
   }
 
   template <typename Exec, typename F>
-  auto then(Exec &&exec, F &&fn) &&
-      -> future_result<detail::interrupt_promise_arg_t<F, future_result<T, E>, E>, E> {
+  future_result<detail::interrupt_promise_arg_t<F, future_result<T, E>, E>, E>
+  then(Exec &&exec, F &&function_arg) && {
     static_assert(is_executor<std::decay_t<Exec>>::value,
                   "Exec must satisfy pco::is_executor");
 
@@ -776,7 +786,7 @@ public:
     }();
 
     auto ctx = std::make_shared<Ctx>(
-        Ctx{std::move(*this), std::move(stored_exec), std::forward<F>(fn), std::move(next_promise)});
+      Ctx{std::move(*this), std::move(stored_exec), std::forward<F>(function_arg), std::move(next_promise)});
 
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
@@ -804,15 +814,15 @@ public:
   }
 
   template <typename F>
-  auto next(F &&fn) &&
-      -> decltype(std::move(*this).then_value(std::forward<F>(fn))) {
-    return std::move(*this).then_value(std::forward<F>(fn));
+  auto next(F &&function_arg) &&
+      -> decltype(std::move(*this).then_value(std::forward<F>(function_arg))) {
+    return std::move(*this).then_value(std::forward<F>(function_arg));
   }
 
   // Executor-aware then_value: dispatches continuation to executor
   template <typename Exec, typename F>
-  auto then_value(Exec &&exec, F &&fn) &&
-      -> future_result<detail::unwrapped_result_value_t<detail::result_then_value_type<F, T>>, E> {
+  future_result<detail::unwrapped_result_value_t<detail::result_then_value_type<F, T>>, E>
+  then_value(Exec &&exec, F &&function_arg) && {
     static_assert(is_executor<std::decay_t<Exec>>::value,
                   "Exec must satisfy pco::is_executor");
 
@@ -844,7 +854,7 @@ public:
       }
     }();
 
-    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::move(stored_exec), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::move(stored_exec), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -925,15 +935,14 @@ public:
   }
 
   template <typename Exec, typename F>
-  auto next(Exec &&exec, F &&fn) &&
-      -> decltype(std::move(*this).then_value(std::forward<Exec>(exec), std::forward<F>(fn))) {
-    return std::move(*this).then_value(std::forward<Exec>(exec), std::forward<F>(fn));
+  auto next(Exec &&exec, F &&function_arg) &&
+      -> decltype(std::move(*this).then_value(std::forward<Exec>(exec), std::forward<F>(function_arg))) {
+    return std::move(*this).then_value(std::forward<Exec>(exec), std::forward<F>(function_arg));
   }
 
   // Executor-aware then_error: dispatches error handler to executor
   template <typename Exec, typename F>
-  auto then_error(Exec &&exec, F &&fn) &&
-      -> future_result<T, E> {
+  future_result<T, E> then_error(Exec &&exec, F &&function_arg) && {
     static_assert(is_executor<std::decay_t<Exec>>::value,
                   "Exec must satisfy pco::is_executor");
 
@@ -946,16 +955,16 @@ public:
 
     if (!state_) {
       post(std::forward<Exec>(exec),
-           [fn = std::forward<F>(fn), promise = std::move(next_promise)]() mutable {
+           [function_arg = std::forward<F>(function_arg), promise = std::move(next_promise)]() mutable {
              if (!promise.is_awaiten()) {
                return;
              }
              try {
                if constexpr (std::is_void<T>::value) {
-                 fn(E::no_state);
+                 function_arg(E::no_state);
                  promise.set_value();
                } else {
-                 promise.set_value(fn(E::no_state));
+                 promise.set_value(function_arg(E::no_state));
                }
              } catch (...) {
                promise.set_error(E::continuation_failure);
@@ -980,7 +989,7 @@ public:
       }
     }();
 
-    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::move(stored_exec), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::move(stored_exec), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -1034,8 +1043,8 @@ public:
 
   // Executor-aware then_result: dispatches full result handler to executor
   template <typename Exec, typename F>
-  auto then_result(Exec &&exec, F &&fn) &&
-      -> future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, result_type>>, E> {
+  future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, result_type>>, E>
+  then_result(Exec &&exec, F &&function_arg) && {
     static_assert(is_executor<std::decay_t<Exec>>::value,
                   "Exec must satisfy pco::is_executor");
 
@@ -1052,19 +1061,19 @@ public:
       result_type current = tools::unexpected<E>(E::no_state);
       post(std::forward<Exec>(exec),
            [current = std::move(current),
-            fn = std::forward<F>(fn),
+        function_arg = std::forward<F>(function_arg),
             promise = std::move(next_promise)]() mutable {
              if (!promise.is_awaiten()) {
                return;
              }
              try {
                if constexpr (detail::is_result_handle<next_raw_t>::value) {
-                 detail::resolve_nested_handle(promise, fn(std::move(current)));
+                 detail::resolve_nested_handle(promise, function_arg(std::move(current)));
                } else if constexpr (std::is_void<next_value_t>::value) {
-                 fn(std::move(current));
+                 function_arg(std::move(current));
                  promise.set_value();
                } else {
-                 promise.set_value(fn(std::move(current)));
+                 promise.set_value(function_arg(std::move(current)));
                }
              } catch (...) {
                promise.set_error(E::continuation_failure);
@@ -1089,7 +1098,7 @@ public:
       }
     }();
 
-    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::move(stored_exec), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{std::move(*this), std::move(stored_exec), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -1143,23 +1152,23 @@ public:
   // Register a callback invoked when this future becomes ready.
   // If already ready the callback is invoked inline (lock released first).
   // Silently dropped if the future has no state.
-  void subscribe(std::function<void()> cb) {
+  void subscribe(std::function<void()> callback) {
     if (!state_) {
       return;
     }
     std::unique_lock<tools::critical_section> lock(state_->mutex_);
     if (state_->ready_) {
       lock.unlock();
-      cb();
+      callback();
       return;
     }
-    state_->on_ready_cbs_.push_back(std::move(cb));
+    state_->on_ready_cbs_.push_back(std::move(callback));
   }
 
   template <typename F>
   void notify(F &&notification) {
-    auto cb = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
-    subscribe([cb]() mutable { (*cb)(); });
+    auto callback = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
+    subscribe([callback]() mutable { (*callback)(); });
   }
 
   template <typename Exec, typename F>
@@ -1168,9 +1177,9 @@ public:
                   "Exec must satisfy pco::is_executor");
 
     auto exec_obj = std::make_shared<std::decay_t<Exec>>(std::forward<Exec>(exec));
-    auto cb = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
-    subscribe([exec_obj, cb]() mutable {
-      post(*exec_obj, [cb]() mutable { (*cb)(); });
+    auto callback = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
+    subscribe([exec_obj, callback]() mutable {
+      post(*exec_obj, [callback]() mutable { (*callback)(); });
     });
   }
 
@@ -1221,6 +1230,7 @@ public:
 
   shared_result(shared_result &&) noexcept = default;
   shared_result &operator=(shared_result &&) noexcept = default;
+  ~shared_result() = default;
 
   [[nodiscard]] bool valid() const noexcept { return static_cast<bool>(state_); }
 
@@ -1264,23 +1274,23 @@ public:
     return *state_->result_;
   }
 
-  void subscribe(std::function<void()> cb) const {
+  void subscribe(std::function<void()> callback) const {
     if (!state_) {
       return;
     }
     std::unique_lock<tools::critical_section> lock(state_->mutex_);
     if (state_->ready_) {
       lock.unlock();
-      cb();
+      callback();
       return;
     }
-    state_->on_ready_cbs_.push_back(std::move(cb));
+    state_->on_ready_cbs_.push_back(std::move(callback));
   }
 
   template <typename F>
   void notify(F &&notification) const {
-    auto cb = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
-    subscribe([cb]() mutable { (*cb)(); });
+    auto callback = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
+    subscribe([callback]() mutable { (*callback)(); });
   }
 
   template <typename Exec, typename F>
@@ -1289,9 +1299,9 @@ public:
                   "Exec must satisfy pco::is_executor");
 
     auto exec_obj = std::make_shared<std::decay_t<Exec>>(std::forward<Exec>(exec));
-    auto cb = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
-    subscribe([exec_obj, cb]() mutable {
-      post(*exec_obj, [cb]() mutable { (*cb)(); });
+    auto callback = std::make_shared<std::decay_t<F>>(std::forward<F>(notification));
+    subscribe([exec_obj, callback]() mutable {
+      post(*exec_obj, [callback]() mutable { (*callback)(); });
     });
   }
 
@@ -1309,8 +1319,8 @@ public:
   }
 
   template <typename F>
-  auto then_value(F &&fn) const
-      -> future_result<detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>, E> {
+  future_result<detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>, E>
+  then_value(F &&function_arg) const {
     using next_value_t = detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>;
     using next_raw_t = typename detail::result_shared_then_value_type<F, T>::raw_type;
     promise_result<next_value_t, E> next_promise;
@@ -1322,7 +1332,7 @@ public:
       promise_result<next_value_t, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -1363,8 +1373,8 @@ public:
   }
 
   template <typename Exec, typename F>
-  auto then_value(Exec &&exec, F &&fn) const
-      -> future_result<detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>, E> {
+  future_result<detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>, E>
+  then_value(Exec &&exec, F &&function_arg) const {
     static_assert(is_executor<std::decay_t<Exec>>::value,
                   "Exec must satisfy pco::is_executor");
 
@@ -1380,7 +1390,7 @@ public:
       promise_result<next_value_t, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<Exec>(exec), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<Exec>(exec), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -1427,14 +1437,14 @@ public:
   }
 
   template <typename F>
-  auto then(F &&fn) const
-      -> future_result<detail::interrupt_promise_arg_t<F, shared_result<T, E>, E>, E> {
-    return this->then(inplace_executor, std::forward<F>(fn));
+  future_result<detail::interrupt_promise_arg_t<F, shared_result<T, E>, E>, E>
+  then(F &&function_arg) const {
+    return this->then(inplace_executor, std::forward<F>(function_arg));
   }
 
   template <typename Exec, typename F>
-  auto then(Exec &&exec, F &&fn) const
-      -> future_result<detail::interrupt_promise_arg_t<F, shared_result<T, E>, E>, E> {
+  future_result<detail::interrupt_promise_arg_t<F, shared_result<T, E>, E>, E>
+  then(Exec &&exec, F &&function_arg) const {
     static_assert(is_executor<std::decay_t<Exec>>::value,
                   "Exec must satisfy pco::is_executor");
 
@@ -1455,7 +1465,7 @@ public:
     };
 
     auto ctx = std::make_shared<Ctx>(
-        Ctx{*this, std::forward<Exec>(exec), std::forward<F>(fn), std::move(next_promise)});
+      Ctx{*this, std::forward<Exec>(exec), std::forward<F>(function_arg), std::move(next_promise)});
 
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
@@ -1474,21 +1484,21 @@ public:
   }
 
   template <typename F>
-  auto next(F &&fn) const
-      -> decltype(this->then_value(std::forward<F>(fn))) {
-    return this->then_value(std::forward<F>(fn));
+  auto next(F &&function_arg) const
+      -> decltype(this->then_value(std::forward<F>(function_arg))) {
+    return this->then_value(std::forward<F>(function_arg));
   }
 
   template <typename Exec, typename F>
-  auto next(Exec &&exec, F &&fn) const
-      -> decltype(this->then_value(std::forward<Exec>(exec), std::forward<F>(fn))) {
-    return this->then_value(std::forward<Exec>(exec), std::forward<F>(fn));
+  auto next(Exec &&exec, F &&function_arg) const
+      -> decltype(this->then_value(std::forward<Exec>(exec), std::forward<F>(function_arg))) {
+    return this->then_value(std::forward<Exec>(exec), std::forward<F>(function_arg));
   }
 
   template <typename F, typename U = T,
             typename std::enable_if<std::is_void<U>::value || std::is_copy_constructible<U>::value,
                                     int>::type = 0>
-  auto then_error(F &&fn) const -> future_result<T, E> {
+  future_result<T, E> then_error(F &&function_arg) const {
     promise_result<T, E> next_promise;
     auto next_future = next_promise.get_future();
 
@@ -1498,7 +1508,7 @@ public:
       promise_result<T, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -1532,7 +1542,7 @@ public:
   template <typename Exec, typename F, typename U = T,
             typename std::enable_if<std::is_void<U>::value || std::is_copy_constructible<U>::value,
                                     int>::type = 0>
-  auto then_error(Exec &&exec, F &&fn) const -> future_result<T, E> {
+  future_result<T, E> then_error(Exec &&exec, F &&function_arg) const {
     static_assert(is_executor<std::decay_t<Exec>>::value,
                   "Exec must satisfy pco::is_executor");
 
@@ -1546,7 +1556,7 @@ public:
       promise_result<T, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<Exec>(exec), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<Exec>(exec), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -1584,8 +1594,8 @@ public:
   }
 
   template <typename F>
-  auto then_result(F &&fn) const
-      -> future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, const result_type &>>, E> {
+  future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, const result_type &>>, E>
+  then_result(F &&function_arg) const {
     using traits_t = detail::result_then_result_type<F, const result_type &>;
     using next_value_t = detail::unwrapped_result_value_t<traits_t>;
     using next_raw_t = typename traits_t::raw_type;
@@ -1598,7 +1608,7 @@ public:
       promise_result<next_value_t, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -1623,8 +1633,8 @@ public:
   }
 
   template <typename Exec, typename F>
-  auto then_result(Exec &&exec, F &&fn) const
-      -> future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, const result_type &>>, E> {
+  future_result<detail::unwrapped_result_value_t<detail::result_then_result_type<F, const result_type &>>, E>
+  then_result(Exec &&exec, F &&function_arg) const {
     static_assert(is_executor<std::decay_t<Exec>>::value,
                   "Exec must satisfy pco::is_executor");
 
@@ -1641,7 +1651,7 @@ public:
       promise_result<next_value_t, E> promise;
     };
 
-    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<Exec>(exec), std::forward<F>(fn), std::move(next_promise)});
+    auto ctx = std::make_shared<Ctx>(Ctx{*this, std::forward<Exec>(exec), std::forward<F>(function_arg), std::move(next_promise)});
     ctx->self.subscribe([ctx]() mutable {
       if (!ctx->promise.is_awaiten()) {
         return;
@@ -1727,10 +1737,10 @@ inline future_result<when_any_result<std::tuple<>>, result_error> when_any() {
 }
 
 template <typename... Futures>
-auto when_all(Futures &&...futures)
-    -> std::enable_if_t<detail::are_result_futures<Futures...>::value,
-                        future_result<std::tuple<typename std::decay_t<Futures>::result_type...>,
-                                      typename std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>::error_type>> {
+std::enable_if_t<detail::are_result_futures<Futures...>::value,
+         future_result<std::tuple<typename std::decay_t<Futures>::result_type...>,
+                 typename std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>::error_type>>
+when_all(Futures &&...futures) {
   using first_future_t = std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>;
   using error_t = typename first_future_t::error_type;
 
@@ -1746,7 +1756,7 @@ auto when_all(Futures &&...futures)
   auto future_tuple = std::make_tuple(std::forward<Futures>(futures)...);
 
   bool all_valid = true;
-  std::apply([&](auto &...f) { ((all_valid = all_valid && f.valid()), ...); }, future_tuple);
+  std::apply([&](auto &...future_item) { ((all_valid = all_valid && future_item.valid()), ...); }, future_tuple);
   if (!all_valid) {
     promise.set_error(error_t::no_state);
     return combined_future;
@@ -1758,15 +1768,15 @@ auto when_all(Futures &&...futures)
     promise_result<results_tuple_t, error_t> promise;
 
     WhenAllCtx(std::size_t remaining,
-               std::tuple<std::decay_t<Futures>...> f,
-               promise_result<results_tuple_t, error_t> p)
-        : remaining_(remaining), futures(std::move(f)), promise(std::move(p)) {}
+         std::tuple<std::decay_t<Futures>...> futures_arg,
+         promise_result<results_tuple_t, error_t> promise_arg)
+       : remaining_(remaining), futures(std::move(futures_arg)), promise(std::move(promise_arg)) {}
   };
 
   auto ctx = std::make_shared<WhenAllCtx>(sizeof...(Futures), std::move(future_tuple), std::move(promise));
 
-  auto subscribe_one = [&](auto &f) {
-    f.subscribe([ctx]() mutable {
+  auto subscribe_one = [&](auto &future_item) {
+    future_item.subscribe([ctx]() mutable {
       if (ctx->remaining_.fetch_sub(1) == 1) {
         auto results = std::apply(
             [](auto &...ready_futures) {
@@ -1778,16 +1788,16 @@ auto when_all(Futures &&...futures)
     });
   };
 
-  std::apply([&](auto &...f) { (subscribe_one(f), ...); }, ctx->futures);
+  std::apply([&](auto &...future_item) { (subscribe_one(future_item), ...); }, ctx->futures);
 
   return combined_future;
 }
 
 template <typename... SharedResults>
-auto when_all(SharedResults &&...shared_results)
-    -> std::enable_if_t<detail::are_shared_results<SharedResults...>::value,
-                        future_result<std::tuple<std::decay_t<SharedResults>...>,
-                                      typename std::decay_t<std::tuple_element_t<0, std::tuple<SharedResults...>>>::error_type>> {
+std::enable_if_t<detail::are_shared_results<SharedResults...>::value,
+         future_result<std::tuple<std::decay_t<SharedResults>...>,
+                 typename std::decay_t<std::tuple_element_t<0, std::tuple<SharedResults...>>>::error_type>>
+when_all(SharedResults &&...shared_results) {
   using first_shared_t = std::decay_t<std::tuple_element_t<0, std::tuple<SharedResults...>>>;
   using error_t = typename first_shared_t::error_type;
   using shared_tuple_t = std::tuple<std::decay_t<SharedResults>...>;
@@ -1835,12 +1845,12 @@ auto when_all(SharedResults &&...shared_results)
 }
 
 template <typename... Handles>
-auto when_all(Handles &&...handles)
-    -> std::enable_if_t<detail::are_result_handles<Handles...>::value &&
-                            !detail::are_result_futures<Handles...>::value &&
-                            !detail::are_shared_results<Handles...>::value,
-                        future_result<std::tuple<std::decay_t<Handles>...>,
-                                      typename std::decay_t<std::tuple_element_t<0, std::tuple<Handles...>>>::error_type>> {
+std::enable_if_t<detail::are_result_handles<Handles...>::value &&
+           !detail::are_result_futures<Handles...>::value &&
+           !detail::are_shared_results<Handles...>::value,
+         future_result<std::tuple<std::decay_t<Handles>...>,
+                 typename std::decay_t<std::tuple_element_t<0, std::tuple<Handles...>>>::error_type>>
+when_all(Handles &&...handles) {
   using first_handle_t = std::decay_t<std::tuple_element_t<0, std::tuple<Handles...>>>;
   using error_t = typename first_handle_t::error_type;
   using handles_tuple_t = std::tuple<std::decay_t<Handles>...>;
@@ -1855,7 +1865,7 @@ auto when_all(Handles &&...handles)
   auto handle_tuple = std::make_tuple(std::forward<Handles>(handles)...);
 
   bool all_valid = true;
-  std::apply([&](auto &...h) { ((all_valid = all_valid && h.valid()), ...); }, handle_tuple);
+  std::apply([&](auto &...handle_item) { ((all_valid = all_valid && handle_item.valid()), ...); }, handle_tuple);
   if (!all_valid) {
     promise.set_error(error_t::no_state);
     return combined_future;
@@ -1882,16 +1892,16 @@ auto when_all(Handles &&...handles)
     });
   };
 
-  std::apply([&](auto &...h) { (subscribe_one(h), ...); }, ctx->handles);
+  std::apply([&](auto &...handle_item) { (subscribe_one(handle_item), ...); }, ctx->handles);
 
   return combined_future;
 }
 
 template <typename... Futures>
-auto when_any(Futures &&...futures)
-    -> std::enable_if_t<detail::are_result_handles<Futures...>::value,
-                        future_result<when_any_result<std::tuple<std::decay_t<Futures>...>>,
-                                      typename std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>::error_type>> {
+std::enable_if_t<detail::are_result_handles<Futures...>::value,
+         future_result<when_any_result<std::tuple<std::decay_t<Futures>...>>,
+                 typename std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>::error_type>>
+when_any(Futures &&...futures) {
   using first_future_t = std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>;
   using error_t = typename first_future_t::error_type;
   using futures_tuple_t = std::tuple<std::decay_t<Futures>...>;
@@ -1907,23 +1917,23 @@ auto when_any(Futures &&...futures)
   auto future_tuple = std::make_tuple(std::forward<Futures>(futures)...);
 
   bool all_valid = true;
-  std::apply([&](auto &...f) { ((all_valid = all_valid && f.valid()), ...); }, future_tuple);
+  std::apply([&](auto &...future_item) { ((all_valid = all_valid && future_item.valid()), ...); }, future_tuple);
   if (!all_valid) {
     promise.set_error(error_t::no_state);
     return combined_future;
   }
 
-  constexpr std::size_t npos = static_cast<std::size_t>(-1);
+  constexpr auto npos = static_cast<std::size_t>(-1);
   std::size_t ready_index = npos;
   {
     std::size_t idx = 0;
-    auto check_ready = [&](auto &f) {
-      if (ready_index == npos && f.is_ready()) {
+    auto check_ready = [&](auto &future_item) {
+      if (ready_index == npos && future_item.is_ready()) {
         ready_index = idx;
       }
       ++idx;
     };
-    std::apply([&](auto &...f) { (check_ready(f), ...); }, future_tuple);
+    std::apply([&](auto &...future_item) { (check_ready(future_item), ...); }, future_tuple);
   }
 
   if (ready_index != npos) {
@@ -1938,33 +1948,33 @@ auto when_any(Futures &&...futures)
     std::atomic<bool> done_{false};
     futures_tuple_t futures;
     promise_result<any_result_t, error_t> promise;
-    WhenAnyCtx(futures_tuple_t f, promise_result<any_result_t, error_t> p)
-        : futures(std::move(f)), promise(std::move(p)) {}
+    WhenAnyCtx(futures_tuple_t futures_arg, promise_result<any_result_t, error_t> promise_arg)
+      : futures(std::move(futures_arg)), promise(std::move(promise_arg)) {}
   };
 
   auto ctx = std::make_shared<WhenAnyCtx>(std::move(future_tuple), std::move(promise));
 
   std::size_t reg_idx = 0;
-  auto register_one = [&](auto &f) {
+  auto register_one = [&](auto &future_item) {
     const std::size_t my_idx = reg_idx++;
-    f.subscribe([ctx, my_idx]() mutable {
+    future_item.subscribe([ctx, my_idx]() mutable {
       bool expected = false;
       if (ctx->done_.compare_exchange_strong(expected, true)) {
         ctx->promise.set_value(any_result_t{my_idx, std::move(ctx->futures)});
       }
     });
   };
-  std::apply([&](auto &...f) { (register_one(f), ...); }, ctx->futures);
+  std::apply([&](auto &...future_item) { (register_one(future_item), ...); }, ctx->futures);
 
   return combined_future;
 }
 
 template <typename InputIt>
-auto when_all(InputIt first, InputIt last)
-    -> std::enable_if_t<
-        detail::is_result_future<typename std::iterator_traits<InputIt>::value_type>::value,
-        future_result<std::vector<typename std::decay_t<typename std::iterator_traits<InputIt>::value_type>::result_type>,
-                      typename std::decay_t<typename std::iterator_traits<InputIt>::value_type>::error_type>> {
+std::enable_if_t<
+  detail::is_result_future<typename std::iterator_traits<InputIt>::value_type>::value,
+  future_result<std::vector<typename std::decay_t<typename std::iterator_traits<InputIt>::value_type>::result_type>,
+          typename std::decay_t<typename std::iterator_traits<InputIt>::value_type>::error_type>>
+when_all(InputIt first, InputIt last) {
   using future_t = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
   using result_t = typename future_t::result_type;
   using error_t = typename future_t::error_type;
@@ -2020,11 +2030,11 @@ auto when_all(InputIt first, InputIt last)
 }
 
 template <typename Future, typename Alloc>
-auto when_all(std::vector<Future, Alloc> futures)
-    -> std::enable_if_t<detail::is_result_future<Future>::value,
-                        future_result<std::vector<typename Future::result_type,
-                                                  detail::rebind_alloc_t<Alloc, typename Future::result_type>>,
-                                      typename Future::error_type>> {
+std::enable_if_t<detail::is_result_future<Future>::value,
+         future_result<std::vector<typename Future::result_type,
+                       detail::rebind_alloc_t<Alloc, typename Future::result_type>>,
+                 typename Future::error_type>>
+when_all(std::vector<Future, Alloc> futures) {
   using future_t = Future;
   using result_t = typename future_t::result_type;
   using error_t = typename future_t::error_type;
@@ -2079,11 +2089,11 @@ auto when_all(std::vector<Future, Alloc> futures)
 }
 
 template <typename InputIt>
-auto when_all(InputIt first, InputIt last)
-    -> std::enable_if_t<
-        detail::is_shared_result<typename std::iterator_traits<InputIt>::value_type>::value,
-        future_result<std::vector<std::decay_t<typename std::iterator_traits<InputIt>::value_type>>,
-                      typename std::decay_t<typename std::iterator_traits<InputIt>::value_type>::error_type>> {
+std::enable_if_t<
+  detail::is_shared_result<typename std::iterator_traits<InputIt>::value_type>::value,
+  future_result<std::vector<std::decay_t<typename std::iterator_traits<InputIt>::value_type>>,
+          typename std::decay_t<typename std::iterator_traits<InputIt>::value_type>::error_type>>
+when_all(InputIt first, InputIt last) {
   using shared_t = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
   using error_t = typename shared_t::error_type;
   using shared_vector_t = std::vector<shared_t>;
@@ -2132,9 +2142,9 @@ auto when_all(InputIt first, InputIt last)
 }
 
 template <typename SharedResult, typename Alloc>
-auto when_all(std::vector<SharedResult, Alloc> shareds)
-    -> std::enable_if_t<detail::is_shared_result<SharedResult>::value,
-                        future_result<std::vector<SharedResult, Alloc>, typename SharedResult::error_type>> {
+std::enable_if_t<detail::is_shared_result<SharedResult>::value,
+         future_result<std::vector<SharedResult, Alloc>, typename SharedResult::error_type>>
+when_all(std::vector<SharedResult, Alloc> shareds) {
   using shared_t = SharedResult;
   using error_t = typename shared_t::error_type;
   using shared_vector_t = std::vector<shared_t, Alloc>;
@@ -2182,11 +2192,11 @@ auto when_all(std::vector<SharedResult, Alloc> shareds)
 }
 
 template <typename InputIt>
-auto when_any(InputIt first, InputIt last)
-    -> std::enable_if_t<
-        detail::is_result_handle<typename std::iterator_traits<InputIt>::value_type>::value,
-        future_result<when_any_result<std::vector<std::decay_t<typename std::iterator_traits<InputIt>::value_type>>>,
-                      typename std::decay_t<typename std::iterator_traits<InputIt>::value_type>::error_type>> {
+std::enable_if_t<
+  detail::is_result_handle<typename std::iterator_traits<InputIt>::value_type>::value,
+  future_result<when_any_result<std::vector<std::decay_t<typename std::iterator_traits<InputIt>::value_type>>>,
+          typename std::decay_t<typename std::iterator_traits<InputIt>::value_type>::error_type>>
+when_any(InputIt first, InputIt last) {
   using future_t = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
   using error_t = typename future_t::error_type;
   using futures_vector_t = std::vector<future_t>;
@@ -2248,9 +2258,9 @@ auto when_any(InputIt first, InputIt last)
 }
 
 template <typename Future, typename Alloc>
-auto when_any(std::vector<Future, Alloc> futures)
-    -> std::enable_if_t<detail::is_result_handle<Future>::value,
-                        future_result<when_any_result<std::vector<Future, Alloc>>, typename Future::error_type>> {
+std::enable_if_t<detail::is_result_handle<Future>::value,
+         future_result<when_any_result<std::vector<Future, Alloc>>, typename Future::error_type>>
+when_any(std::vector<Future, Alloc> futures) {
   using future_t = Future;
   using error_t = typename future_t::error_type;
   using futures_vector_t = std::vector<future_t, Alloc>;
@@ -2311,11 +2321,11 @@ auto when_any(std::vector<Future, Alloc> futures)
 }
 
 template <typename Exec, typename F, typename... A>
-auto async_result(Exec &&exec, F &&fn, A &&...args)
-    -> future_result<
-           typename detail::unwrapped_result_value<
-               typename detail::invoke_decay_t<F, A...>>::type,
-           result_error> {
+future_result<
+  typename detail::unwrapped_result_value<
+    typename detail::invoke_decay_t<F, A...>>::type,
+  result_error>
+async_result(Exec &&exec, F &&function_arg, A &&...args) {
   static_assert(is_executor<std::decay_t<Exec>>::value,
                 "Exec must satisfy pco::is_executor");
 
@@ -2341,15 +2351,15 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
     };
 
     auto task = [promise = std::move(promise),
-                 fn = std::forward<F>(fn),
+           function_arg = std::forward<F>(function_arg),
                  params = std::make_tuple(std::forward<A>(args)...)]() mutable {
       // Call the callable in an inner scope so fn/params (and any captured
       // shared_ptrs) are released before we subscribe on the inner handle.
       // This also frees the pool thread to pick up the inner task.
       raw_value_t inner = [&]() {
-        auto fn_local = std::move(fn);
+        auto function_local = std::move(function_arg);
         auto params_local = std::move(params);
-        return std::apply(std::move(fn_local), std::move(params_local));
+        return std::apply(std::move(function_local), std::move(params_local));
       }();
 
       auto ctx = std::make_shared<UnwrapCtx>(
@@ -2358,27 +2368,29 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
       if constexpr (detail::is_result_future<raw_value_t>::value) {
         // future_result: get_result() moves the value out (non-blocking when ready).
         ctx->inner.notify([ctx]() mutable {
-          auto r = ctx->inner.get_result();
-          if (r.has_value()) {
-            if constexpr (std::is_void_v<value_t>)
+          auto result_holder = ctx->inner.get_result();
+          if (result_holder.has_value()) {
+            if constexpr (std::is_void_v<value_t>) {
               ctx->outer.set_value();
-            else
-              ctx->outer.set_value(std::move(r).value());
+            } else {
+              ctx->outer.set_value(std::move(result_holder).value());
+            }
           } else {
-            ctx->outer.set_error(r.error());
+            ctx->outer.set_error(result_holder.error());
           }
         });
       } else {
         // shared_result: get_result() returns const ref, does not consume.
         ctx->inner.notify([ctx]() mutable {
-          const auto &r = ctx->inner.get_result();
-          if (r.has_value()) {
-            if constexpr (std::is_void_v<value_t>)
+          const auto &result_holder = ctx->inner.get_result();
+          if (result_holder.has_value()) {
+            if constexpr (std::is_void_v<value_t>) {
               ctx->outer.set_value();
-            else
-              ctx->outer.set_value(r.value());
+            } else {
+              ctx->outer.set_value(result_holder.value());
+            }
           } else {
-            ctx->outer.set_error(r.error());
+            ctx->outer.set_error(result_holder.error());
           }
         });
       }
@@ -2391,21 +2403,21 @@ auto async_result(Exec &&exec, F &&fn, A &&...args)
     // promise.set_value() is called; this ensures callable captures are
     // released before any waiter on the future can observe them.
     auto task = [promise = std::move(promise),
-                 fn = std::forward<F>(fn),
+                 function_arg = std::forward<F>(function_arg),
                  params = std::make_tuple(std::forward<A>(args)...)]() mutable {
       try {
         if constexpr (std::is_void_v<value_t>) {
           {
-            auto fn_local = std::move(fn);
+            auto function_local = std::move(function_arg);
             auto params_local = std::move(params);
-            std::apply(fn_local, std::move(params_local));
+            std::apply(function_local, std::move(params_local));
           }
           promise.set_value();
         } else {
           auto val = [&]() {
-            auto fn_local = std::move(fn);
+            auto function_local = std::move(function_arg);
             auto params_local = std::move(params);
-            return std::apply(fn_local, std::move(params_local));
+            return std::apply(function_local, std::move(params_local));
           }();
           promise.set_value(std::move(val));
         }

@@ -5,9 +5,9 @@
 
 #include <gtest/gtest.h>
 
-#include "portable_concurrency/p_execution.hpp"
-#include "portable_concurrency/p_future.hpp"
-#include "portable_concurrency/p_thread_pool.hpp"
+#include "portable_concurrency/execution.hpp"
+#include "portable_concurrency/future.hpp"
+#include "portable_concurrency/thread_pool.hpp"
 
 namespace
 {

@@ -6,12 +6,12 @@ Result-based async/future API for this repository.
 
 Use these headers:
 
-- `portable_concurrency/p_future.hpp` (primary unified entrypoint)
-- `portable_concurrency/p_execution.hpp`
-- `portable_concurrency/p_thread_pool.hpp`
-- `portable_concurrency/p_latch.hpp`
-- `portable_concurrency/p_functional.hpp`
-- `portable_concurrency/p_functional_fwd.hpp`
+- `portable_concurrency/future.hpp` (primary unified entrypoint)
+- `portable_concurrency/execution.hpp`
+- `portable_concurrency/thread_pool.hpp`
+- `portable_concurrency/latch.hpp`
+- `portable_concurrency/functional.hpp`
+- `portable_concurrency/functional_fwd.hpp`
 
 ## Migration Status
 
@@ -24,7 +24,7 @@ Use these headers:
 Use:
 
 ```cpp
-#include "portable_concurrency/p_future.hpp"
+#include "portable_concurrency/future.hpp"
 ```
 
 This exposes the result-based API via:

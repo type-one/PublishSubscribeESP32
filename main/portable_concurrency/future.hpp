@@ -1,5 +1,5 @@
 /**
- * @file p_future.hpp
+ * @file future.hpp
  * @brief Portable concurrency unified future API entrypoint.
  * @author Laurent Lardinois
  * @date April 2026
@@ -17,8 +17,8 @@
 #pragma once
 
 /**
- * @defgroup future_hdr <portable_concurrency/p_future>
- * @headerfile portable_concurrency/p_future
+ * @defgroup future_hdr <portable_concurrency/future>
+ * @headerfile portable_concurrency/future
  *
  * Unified public future API surface.
  *
@@ -27,8 +27,8 @@
 
 #include <utility>
 
-#include "bits/packaged_task_result.h"
-#include "bits/result_future.h"
+#include "bits/packaged_task_result.hpp"
+#include "bits/result_future.hpp"
 
 namespace pco {
 

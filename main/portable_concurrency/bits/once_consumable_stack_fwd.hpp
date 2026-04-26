@@ -1,5 +1,5 @@
 /**
- * @file once_consumable_stack.h
+ * @file once_consumable_stack_fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2017-07-26
@@ -20,12 +20,20 @@
 
 #include <atomic>
 #include <memory>
+#include <utility>
 
 namespace pco::detail {
 
 template <typename T> struct forward_list_node {
-  forward_list_node(T &&val, forward_list_node *next = nullptr)
-      : val(std::move(val)), next(next) {}
+  explicit forward_list_node(T &&value_arg)
+    : val(std::move(value_arg)), next(nullptr) {}
+  forward_list_node(T &&value_arg, forward_list_node *next_arg)
+    : val(std::move(value_arg)), next(next_arg) {}
+
+  forward_list_node(const forward_list_node &) = delete;
+  forward_list_node &operator=(const forward_list_node &) = delete;
+  forward_list_node(forward_list_node &&) = delete;
+  forward_list_node &operator=(forward_list_node &&) = delete;
 
   virtual void deallocate_self() = 0;
 
@@ -33,7 +41,7 @@ template <typename T> struct forward_list_node {
   forward_list_node *next;
 
 protected:
-  virtual ~forward_list_node() = default;
+  ~forward_list_node() = default;
 };
 
 template <typename T> struct forward_list_deleter {
@@ -46,11 +54,11 @@ using forward_list =
 
 template <typename T, typename Alloc>
 forward_list<T> allocate_list_node(T &&val, const Alloc &alloc) {
-  struct node final : Alloc, forward_list_node<T> {
-    node(T &&val, const Alloc &alloc)
-        : Alloc(alloc), forward_list_node<T>(std::move(val)) {}
+  struct node final : forward_list_node<T> {
+    node(T &&value_arg, const Alloc &alloc)
+        : forward_list_node<T>(std::move(value_arg)), m_allocator(alloc) {}
 
-    Alloc &get_allocator() { return *this; }
+    Alloc &get_allocator() { return m_allocator; }
 
     void deallocate_self() override {
       using node_allocator =
@@ -59,6 +67,8 @@ forward_list<T> allocate_list_node(T &&val, const Alloc &alloc) {
       std::allocator_traits<node_allocator>::destroy(alloc, this);
       std::allocator_traits<node_allocator>::deallocate(alloc, this, 1);
     }
+
+    Alloc m_allocator;
   };
 
   using node_allocator =
@@ -68,14 +78,14 @@ forward_list<T> allocate_list_node(T &&val, const Alloc &alloc) {
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
   try {
     std::allocator_traits<node_allocator>::construct(nalloc, result,
-                                                     std::move(val), alloc);
+                                                     std::forward<T>(val), alloc);
   } catch (...) {
     std::allocator_traits<node_allocator>::deallocate(nalloc, result, 1);
     throw;
   }
 #else
   std::allocator_traits<node_allocator>::construct(nalloc, result,
-                                                   std::move(val), alloc);
+                                                   std::forward<T>(val), alloc);
 #endif
   return forward_list<T>{result, forward_list_deleter<T>{}};
 }
@@ -98,6 +108,10 @@ forward_list<T> allocate_list_node(T &&val, const Alloc &alloc) {
 template <typename T> class once_consumable_stack {
 public:
   once_consumable_stack() noexcept = default;
+  once_consumable_stack(const once_consumable_stack &) = delete;
+  once_consumable_stack &operator=(const once_consumable_stack &) = delete;
+  once_consumable_stack(once_consumable_stack &&) = delete;
+  once_consumable_stack &operator=(once_consumable_stack &&) = delete;
   ~once_consumable_stack();
 
   /**
@@ -115,8 +129,9 @@ public:
 
   template <typename Alloc> bool push(T &val, const Alloc &alloc) {
     forward_list<T> node = allocate_list_node(std::move(val), alloc);
-    if (push(node))
+    if (push(node)) {
       return true;
+    }
     val = std::move(node->val);
     return false;
   }
@@ -126,7 +141,7 @@ public:
    *
    * @note Can be called from multiple threads.
    */
-  bool is_consumed() const noexcept;
+  [[nodiscard]] bool is_consumed() const noexcept;
 
   /**
    * Consumes the stack and switch it into @em consumed state. Running this
@@ -147,7 +162,6 @@ private:
 
   bool push(forward_list<T> &node) noexcept;
 
-private:
   std::atomic<forward_list_node<T> *> head_{nullptr};
 };
 

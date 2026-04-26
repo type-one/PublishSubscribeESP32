@@ -1,5 +1,5 @@
 /**
- * @file unique_function.h
+ * @file unique_function_fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2017-08-16
@@ -21,7 +21,7 @@
 #include <cstddef>
 #include <type_traits>
 
-#include "small_unique_function.h"
+#include "small_unique_function_fwd.hpp"
 
 namespace pco {
 
@@ -81,7 +81,7 @@ public:
   /**
    * Move @a rhs into newly created object.
    */
-  unique_function(unique_function &&) noexcept;
+  unique_function(unique_function &&rhs) noexcept;
 
   /// Unique function is not CopyConstructible
   unique_function(const unique_function &) = delete;
@@ -119,9 +119,11 @@ public:
   }
 
 private:
-  template <typename function_type> unique_function(function_type &&f_arg, std::true_type);
+  template <typename function_type>
+  unique_function(function_type &&f_arg, std::true_type unused);
 
-  template <typename function_type> unique_function(function_type f_arg, std::false_type);
+  template <typename function_type>
+  unique_function(function_type f_arg, std::false_type unused);
 
   detail::small_unique_function<R(A...)> func_;
 };

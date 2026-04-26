@@ -1,5 +1,5 @@
 /**
- * @file closable_queue.h
+ * @file thread_pool.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-10-13
@@ -18,25 +18,11 @@
 
 #pragma once
 
-#include <condition_variable>
-#include "tools/critical_section.hpp"
-#include "tools/cond_var.hpp"
-#include <mutex>
-#include <queue>
+/**
+ * @defgroup thread_pool <portable_concurrency/thread_pool>
+ * @headerfile portable_concurrency/thread_pool
+ *
+ * Statically sized thread pool implementation
+ */
 
-namespace pco::detail {
-
-template <typename T> class closable_queue {
-public:
-  bool pop(T &dest);
-  void push(T &&val);
-  void close();
-
-private:
-  tools::critical_section mutex_;
-  tools::cond_var cv_;
-  std::queue<T> queue_;
-  bool closed_ = false;
-};
-
-} // namespace pco::detail
+#include "bits/thread_pool_impl.hpp"

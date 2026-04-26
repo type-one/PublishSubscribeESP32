@@ -8,8 +8,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "portable_concurrency/p_functional.hpp"
-#include "portable_concurrency/p_future.hpp"
+#include "portable_concurrency/functional.hpp"
+#include "portable_concurrency/future.hpp"
 
 namespace
 {

@@ -1,5 +1,5 @@
 /**
- * @file thread_pool.h
+ * @file thread_pool_impl.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-10-13
@@ -25,8 +25,8 @@
 #include <thread>
 #include <type_traits>
 
-#include "closable_queue.h"
-#include "execution.h"
+#include "closable_queue_fwd.hpp"
+#include "execution_impl.hpp"
 #include "unique_function.hpp"
 
 namespace pco {
@@ -42,8 +42,6 @@ private:
   friend void post(queue_executor exec, unique_function<void()> fun) {
     exec.queue_->push(std::move(fun));
   }
-
-private:
   closable_queue<unique_function<void()>> *queue_;
 };
 
@@ -61,6 +59,8 @@ public:
 
   static_thread_pool(const static_thread_pool &) = delete;
   static_thread_pool &operator=(const static_thread_pool &) = delete;
+  static_thread_pool(static_thread_pool &&) = delete;
+  static_thread_pool &operator=(static_thread_pool &&) = delete;
 
   /// stop accepting incoming work and wait for work to drain
   ~static_thread_pool();

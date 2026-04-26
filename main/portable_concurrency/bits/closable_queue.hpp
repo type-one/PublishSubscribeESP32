@@ -1,5 +1,5 @@
 /**
- * @file closable_queue.hpp
+ * @file closable_queue_fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-10-13
@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "closable_queue.h"
+#include "closable_queue_fwd.hpp"
 namespace pco::detail {
 
 template <typename T> bool closable_queue<T>::pop(T &dest) {

@@ -1,5 +1,5 @@
 /**
- * @file latch.h
+ * @file latch_impl.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2017-06-14
@@ -42,11 +42,14 @@ public:
 
   latch(const latch &) = delete;
   latch &operator=(const latch &) = delete;
+  latch(latch &&) = delete;
+  latch &operator=(latch &&) = delete;
 
   ~latch();
 
   void count_down_and_wait();
-  void count_down(ptrdiff_t n = 1);
+  void count_down();
+  void count_down(ptrdiff_t n);
   bool is_ready() const noexcept;
   void wait() const;
 

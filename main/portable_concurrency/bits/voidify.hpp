@@ -1,5 +1,5 @@
 /**
- * @file voidify.h
+ * @file voidify.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-05-19

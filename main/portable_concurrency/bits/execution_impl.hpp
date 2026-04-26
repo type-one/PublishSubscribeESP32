@@ -1,5 +1,5 @@
 /**
- * @file execution.h
+ * @file execution_impl.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2017-10-27

@@ -1,5 +1,5 @@
 /**
- * @file continuations_stack.h
+ * @file continuations_stack.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-02-14
@@ -20,7 +20,7 @@
 
 #include <utility>
 
-#include "once_consumable_stack.h"
+#include "once_consumable_stack_fwd.hpp"
 #include "small_unique_function.hpp"
 
 namespace pco::detail {
@@ -41,7 +41,7 @@ public:
   }
 
   void execute();
-  bool executed() const;
+  [[nodiscard]] bool executed() const;
 
 private:
   once_consumable_stack<continuation> stack_;

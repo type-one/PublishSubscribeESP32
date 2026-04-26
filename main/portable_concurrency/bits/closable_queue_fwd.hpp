@@ -1,8 +1,8 @@
 /**
- * @file p_functional.hpp
+ * @file closable_queue_fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
- * @date 2017-08-16
+ * @date 2018-10-13
  * @license https://creativecommons.org/publicdomain/zero/1.0/
  * @see https://creativecommons.org/publicdomain/zero/1.0/
  */
@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------//
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
-// Original date: 2017-08-16                                                   //
+// Original date: 2018-10-13                                                   //
 // https://github.com/VestniK/portable_concurrency                             //
 // Public Domain (CC0 1.0)                                                     //
 // https://creativecommons.org/publicdomain/zero/1.0/                          //
@@ -18,11 +18,25 @@
 
 #pragma once
 
-/**
- * @defgroup functional <portable_concurrency/functional>
- * @headerfile portable_concurrency/functional
- *
- * Extra functional types usefull for writing concurrent code.
- */
+#include <condition_variable>
+#include "tools/critical_section.hpp"
+#include "tools/cond_var.hpp"
+#include <mutex>
+#include <queue>
 
-#include "bits/unique_function.hpp"
+namespace pco::detail {
+
+template <typename T> class closable_queue {
+public:
+  bool pop(T &dest);
+  void push(T &&val);
+  void close();
+
+private:
+  tools::critical_section mutex_;
+  tools::cond_var cv_;
+  std::queue<T> queue_;
+  bool closed_ = false;
+};
+
+} // namespace pco::detail

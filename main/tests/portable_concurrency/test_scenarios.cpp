@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#include "portable_concurrency/p_future.hpp"
+#include "portable_concurrency/future.hpp"
 #include "tools/periodic_task.hpp"
 #include "tools/worker_task.hpp"
 

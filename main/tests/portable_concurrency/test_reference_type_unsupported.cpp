@@ -39,7 +39,7 @@
 
 #include <gtest/gtest.h>
 
-#include "portable_concurrency/p_future.hpp"
+#include "portable_concurrency/future.hpp"
 
 namespace
 {

@@ -1,5 +1,5 @@
 /**
- * @file packaged_task_result.h
+ * @file packaged_task_result.hpp
  * @brief Portable concurrency component.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026
@@ -24,7 +24,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "result_future.h"
+#include "result_future.hpp"
 
 namespace pco {
 
@@ -92,6 +92,11 @@ private:
                 "This design constraint avoids move-semantics ambiguity and lifetime issues.");
 
   struct state_base {
+    state_base() = default;
+    state_base(const state_base &) = delete;
+    state_base &operator=(const state_base &) = delete;
+    state_base(state_base &&) = delete;
+    state_base &operator=(state_base &&) = delete;
     virtual ~state_base() = default;
     virtual future_type get_future() = 0;
     virtual void run(A... args) = 0;
@@ -99,26 +104,26 @@ private:
 
   template <typename F>
   struct state_impl final : state_base {
-    explicit state_impl(F &&f) : fn(std::forward<F>(f)) {}
+    explicit state_impl(F &&function_arg) : stored_function(std::move(function_arg)) {}
 
     future_type get_future() override {
-      auto f = promise.get_future();
+      auto future_value = promise.get_future();
       if constexpr (detail::is_shared_result<std::decay_t<R>>::value) {
-        return std::move(f).share();
+        return std::move(future_value).share();
       } else {
-        return f;
+        return future_value;
       }
     }
 
     void run(A... args) override {
-      if (!fn.has_value()) {
+      if (!stored_function.has_value()) {
         return;
       }
 
-      auto local_fn = std::move(*fn);
-      fn.reset();
+      auto local_function = std::move(*stored_function);
+      stored_function.reset();
 
-      invoke_and_set(local_fn, std::forward<A>(args)...);
+      invoke_and_set(local_function, std::forward<A>(args)...);
     }
 
     template <typename Fn, typename... Args>
@@ -135,16 +140,17 @@ private:
     }
 
     promise_result<value_type, error_type> promise;
-    std::optional<std::decay_t<F>> fn;
+    std::optional<std::decay_t<F>> stored_function;
   };
 
 public:
   packaged_task_result() noexcept = default;
   ~packaged_task_result() = default;
 
-  template <typename F>
-  explicit packaged_task_result(F &&f)
-      : state_(std::make_shared<state_impl<F>>(std::forward<F>(f))) {
+  template <typename F,
+            typename = std::enable_if_t<!std::is_same_v<std::decay_t<F>, packaged_task_result>>>
+  explicit packaged_task_result(F &&function_arg)
+      : state_(std::make_shared<state_impl<F>>(std::forward<F>(function_arg))) {
     static_assert(
         std::is_convertible<std::invoke_result_t<std::decay_t<F> &, A...>, R>::value,
         "F must be callable with signature R(A...)");

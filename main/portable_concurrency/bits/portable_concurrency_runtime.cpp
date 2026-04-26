@@ -24,11 +24,11 @@
 #include "tools/critical_section.hpp"
 
 #include "closable_queue.hpp"
-#include "continuations_stack.h"
-#include "latch.h"
+#include "continuations_stack.hpp"
+#include "latch_impl.hpp"
 #include "once_consumable_stack.hpp"
 #include "small_unique_function.hpp"
-#include "thread_pool.h"
+#include "thread_pool_impl.hpp"
 #include "unique_function.hpp"
 
 namespace pco {

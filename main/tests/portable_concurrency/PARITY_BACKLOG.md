@@ -23,7 +23,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - API and implementation in the result future layer.
     - New result-based tests covering all above behaviors.
   - Status:
-    - Implemented `then(...)` interruptible continuation overloads for both `future_result` and `shared_result` in `portable_concurrency/bits/result_future.h`.
+    - Implemented `then(...)` interruptible continuation overloads for both `future_result` and `shared_result` in `portable_concurrency/bits/result_future.hpp`.
     - Added no-exceptions parity tests in `tests/portable_concurrency/test_continuation_result_no_exceptions.cpp`.
 
 - [x] P0.2 Abandon/cancellation matrix parity
@@ -37,7 +37,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
   - Status:
     - Added `tests/portable_concurrency/test_abandon_result.cpp` with 14 parity tests covering dropped async work, dropped continuations, packaged task abandonment, promise abandonment, and invalid nested-handle returns.
     - Registered the new test file in host CMake variants (`CMakeLists.txt`, `CMakeLists_PC.txt`) at the time of implementation.
-    - Updated `resolve_nested_handle(...)` in `portable_concurrency/bits/result_future.h` to map invalid nested-handle (`no_state`) outcomes to `broken_promise`, matching v1 abandon semantics.
+    - Updated `resolve_nested_handle(...)` in `portable_concurrency/bits/result_future.hpp` to map invalid nested-handle (`no_state`) outcomes to `broken_promise`, matching v1 abandon semantics.
     - Fixed `promise_result` move-assignment abandonment behavior to avoid deadlock and correctly publish `broken_promise` for replaced pending states.
 
 ## P1 (High Value)
@@ -127,7 +127,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
       - `unwraps_nested_future_result`
       - `unwraps_nested_shared_result`
       - `destroys_callable_after_invocation`
-    - Updated `async_result(...)` in `portable_concurrency/bits/result_future.h` to preserve v1-style nested handle unwrapping and callable lifetime semantics.
+    - Updated `async_result(...)` in `portable_concurrency/bits/result_future.hpp` to preserve v1-style nested handle unwrapping and callable lifetime semantics.
     - Validation: all 4 pass (`AsyncResultTest.*`, 8 ms total).
 
 - [x] P2.3 packaged_task parity depth

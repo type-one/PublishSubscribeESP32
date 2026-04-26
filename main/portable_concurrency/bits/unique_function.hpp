@@ -1,5 +1,5 @@
 /**
- * @file unique_function.hpp
+ * @file unique_function_fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-01-28
@@ -21,9 +21,9 @@
 #include <memory>
 #include <type_traits>
 
-#include "invoke.h"
+#include "invoke.hpp"
 #include "small_unique_function.hpp"
-#include "unique_function.h"
+#include "unique_function_fwd.hpp"
 namespace pco {
 
 template <typename R, typename... A>

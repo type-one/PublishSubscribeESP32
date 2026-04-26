@@ -1,5 +1,5 @@
 /**
- * @file small_unique_function.hpp
+ * @file small_unique_function_fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-02-01
@@ -21,9 +21,9 @@
 #include <new>
 #include <type_traits>
 
-#include "invoke.h"
-#include "small_unique_function.h"
-#include "voidify.h"
+#include "invoke.hpp"
+#include "small_unique_function_fwd.hpp"
+#include "voidify.hpp"
 
 namespace pco::detail {
 

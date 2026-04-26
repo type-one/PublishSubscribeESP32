@@ -1,5 +1,5 @@
 /**
- * @file once_consumable_stack.hpp
+ * @file once_consumable_stack_fwd.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-01-30
@@ -22,7 +22,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "once_consumable_stack.h"
+#include "once_consumable_stack_fwd.hpp"
 
 namespace pco::detail {
 
