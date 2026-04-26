@@ -25,43 +25,100 @@
 namespace pco::detail
 {
 
+    /**
+     * @brief Inline storage size used by small_unique_function.
+     */
     constexpr size_t small_buffer_size = 5 * sizeof(void*);
+
+    /**
+     * @brief Inline storage alignment used by small_unique_function.
+     */
     constexpr size_t small_buffer_align = alignof(void*);
 
+    /**
+     * @brief Small-buffer storage block for in-place callable objects.
+     */
     struct small_buffer
     {
         alignas(small_buffer_align) std::array<std::byte, small_buffer_size> data;
     };
 
+    /**
+     * @brief Forward declaration for callable dispatch table.
+     * @tparam R Callable return type.
+     * @tparam A Callable argument types.
+     */
     template <typename R, typename... A>
     struct callable_vtbl;
 
+    /**
+     * @brief Forward declaration for small-buffer move-only callable wrapper.
+     * @tparam S Function signature type.
+     */
     template <typename S>
     class small_unique_function;
 
-    // Move-only type erasure for small NothrowMoveConstructible Callable object.
+    /**
+     * @brief Move-only type-erased wrapper for small nothrow-movable callables.
+     * @tparam R Callable return type.
+     * @tparam A Callable argument types.
+     */
     template <typename R, typename... A>
     class small_unique_function<R(A...)>
     {
     public:
+        /**
+         * @brief Creates an empty callable wrapper.
+         */
         small_unique_function() noexcept;
+
+        /**
+         * @brief Creates an empty callable wrapper.
+         * @param unused Null marker.
+         */
         small_unique_function(std::nullptr_t) noexcept;
 
+        /**
+         * @brief Stores a callable object in the inline buffer.
+         * @tparam function_type Callable type.
+         * @param f_arg Callable object to store.
+         */
         template <typename function_type,
             typename = std::enable_if_t<!std::is_same_v<std::decay_t<function_type>, small_unique_function>>>
         small_unique_function(function_type&& f_arg);
 
+        /**
+         * @brief Destroys the stored callable, if present.
+         */
         ~small_unique_function();
 
         small_unique_function(const small_unique_function&) = delete;
         small_unique_function& operator=(const small_unique_function&) = delete;
 
+        /**
+         * @brief Move-constructs from another wrapper.
+         * @param rhs Source wrapper.
+         */
         small_unique_function(small_unique_function&& rhs) noexcept;
 
+        /**
+         * @brief Move-assigns from another wrapper.
+         * @param rhs Source wrapper.
+         * @return Reference to this object.
+         */
         small_unique_function& operator=(small_unique_function&& rhs) noexcept;
 
+        /**
+         * @brief Invokes the stored callable.
+         * @param args Invocation arguments.
+         * @return Callable return value.
+         */
         R operator()(A... args) const;
 
+        /**
+         * @brief Checks whether a callable is currently stored.
+         * @return true when callable storage is non-empty.
+         */
         explicit operator bool() const noexcept
         {
             return vtbl_ != nullptr;

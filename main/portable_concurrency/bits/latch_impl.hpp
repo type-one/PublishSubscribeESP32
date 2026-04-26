@@ -41,6 +41,10 @@ namespace pco
     class latch
     {
     public:
+        /**
+         * @brief Constructs latch with initial counter value.
+         * @param count Initial countdown value.
+         */
         explicit latch(ptrdiff_t count)
             : counter_(count)
         {
@@ -51,18 +55,38 @@ namespace pco
         latch(latch&&) = delete;
         latch& operator=(latch&&) = delete;
 
+        /** @brief Destroys latch object. */
         ~latch();
 
+        /** @brief Decrements counter and blocks until latch is ready. */
         void count_down_and_wait();
+
+        /** @brief Decrements counter by one and notifies waiters when ready. */
         void count_down();
+
+        /**
+         * @brief Decrements counter by `n` and notifies waiters when ready.
+         * @param n Decrement amount.
+         */
         void count_down(ptrdiff_t n);
+
+        /**
+         * @brief Checks whether latch counter reached zero.
+         * @return true when ready; false otherwise.
+         */
         bool is_ready() const noexcept;
+
+        /** @brief Blocks until latch counter reaches zero. */
         void wait() const;
 
     private:
+        /** @brief Remaining countdown value. */
         ptrdiff_t counter_;
+        /** @brief Number of currently waiting threads. */
         mutable unsigned waiters_ = 0;
+        /** @brief Mutex protecting latch state. */
         mutable tools::critical_section mutex_;
+        /** @brief Condition variable used to wake waiting threads. */
         mutable tools::cond_var cv_;
     };
 

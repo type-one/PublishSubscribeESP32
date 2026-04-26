@@ -26,6 +26,10 @@
 namespace pco
 {
 
+    /**
+     * @brief Forward declaration for move-only callable wrapper.
+     * @tparam S Function signature type.
+     */
     template <typename S>
     class unique_function;
 
@@ -47,16 +51,19 @@ namespace pco
     {
     public:
         /**
-         * Creates empty `unique_function` object
+         * @brief Creates an empty `unique_function` object.
          */
         unique_function() noexcept;
         /**
-         * Creates empty `unique_function` object
+         * @brief Creates an empty `unique_function` object.
+         * @param unused Null marker.
          */
         unique_function(std::nullptr_t) noexcept;
 
         /**
-         * Creates `unique_function` holding a function @a f.
+         * @brief Creates `unique_function` holding a callable object.
+         * @tparam function_type Callable type.
+         * @param f_arg Callable value to store.
          *
          * Result of the expression `INVOKE(f, std::declval<A>()...)` must be
          * convertible to type `R`. Where `INVOKE` is an operation defined in the
@@ -83,34 +90,55 @@ namespace pco
         ~unique_function();
 
         /**
-         * Move @a rhs into newly created object.
+         * @brief Move-constructs from another `unique_function`.
+         * @param rhs Source object.
          */
         unique_function(unique_function&& rhs) noexcept;
 
-        /// Unique function is not CopyConstructible
+        /**
+         * @brief unique_function is move-only and not copy constructible.
+         */
         unique_function(const unique_function&) = delete;
-        /// Unique function is not CopyAssignable
+        /**
+         * @brief unique_function is move-only and not copy assignable.
+         */
         unique_function& operator=(const unique_function&) = delete;
 
         /**
-         * Destroy function object stored in this `unique_function` object (if any)
-         * and move function object from `rhs` to `*this`.
+         * @brief Move-assigns from another `unique_function`.
+         * @param rhs Source object.
+         * @return Reference to `*this`.
          */
         unique_function& operator=(unique_function&& rhs) noexcept;
 
+        /**
+         * @brief Constructs from small-buffer callable wrapper.
+         * @param rhs Source small-buffer wrapper.
+         */
         unique_function(detail::small_unique_function<R(A...)>&& rhs) noexcept;
+
+        /**
+         * @brief Assigns from small-buffer callable wrapper.
+         * @param rhs Source small-buffer wrapper.
+         * @return Reference to `*this`.
+         */
         unique_function& operator=(detail::small_unique_function<R(A...)>&& rhs) noexcept;
 
+        /**
+         * @brief Converts this object to rvalue small-buffer callable wrapper.
+         */
         operator detail::small_unique_function<R(A...)>&&() && noexcept;
 
         /**
-         * Calls stored function object with parameters @a args and returns result of
-         * the operation. If `this` object is empty throws `std::bad_function_call`.
+         * @brief Calls stored callable with forwarded arguments.
+         * @param args Call arguments.
+         * @return Callable return value.
+         * @note If this object is empty, throws `std::bad_function_call`.
          */
         R operator()(A... args) const;
 
         /**
-         * Checks if this object holds a function (not empty).
+         * @brief Checks whether this object currently stores a callable.
          */
         explicit operator bool() const noexcept
         {
@@ -118,7 +146,9 @@ namespace pco
         }
 
         /**
-         * Also checks if this object holds a function
+         * @brief Checks whether this object is empty.
+         * @param unused Null marker.
+         * @return true when object is empty, false otherwise.
          */
         bool operator==(std::nullptr_t) const noexcept
         {

@@ -1,5 +1,5 @@
 /**
- * @file result_future/result_shared_state_impl.hpp
+ * @file result_shared_state_impl.hpp
  * @brief Internal shared state type and helpers.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026

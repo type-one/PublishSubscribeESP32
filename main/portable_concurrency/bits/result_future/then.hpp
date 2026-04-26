@@ -1,5 +1,5 @@
 /**
- * @file result_future/then.hpp
+ * @file then.hpp
  * @brief Continuation method support.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026

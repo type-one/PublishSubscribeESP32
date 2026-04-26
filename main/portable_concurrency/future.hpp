@@ -32,33 +32,58 @@
 
 namespace pco
 {
-
-    /// Type alias for the default future: resolves to future_result<T, E>.
+    /**
+     * @brief Type alias for the default future policy.
+     * @tparam T Value type.
+     * @tparam E Error enum type.
+     */
     template <typename T, typename E = result_error>
     using future_t = future_result<T, E>;
 
-    /// Type alias for the default shared future: resolves to shared_result<T, E>.
+    /**
+     * @brief Type alias for the default shared-future policy.
+     * @tparam T Value type.
+     * @tparam E Error enum type.
+     */
     template <typename T, typename E = result_error>
     using shared_future_t = shared_result<T, E>;
 
-    /// Type alias for the default promise: resolves to promise_result<T, E>.
+    /**
+     * @brief Type alias for the default promise policy.
+     * @tparam T Value type.
+     * @tparam E Error enum type.
+     */
     template <typename T, typename E = result_error>
     using promise_t = promise_result<T, E>;
 
-    /// Unified ready-future factory.
+    /**
+     * @brief Creates an already-ready default-policy future with value.
+     * @tparam T Source value type.
+     * @param value Value to store in the ready future.
+     * @return Ready default-policy future.
+     */
     template <typename T>
     auto make_ready_default(T&& value) -> decltype(make_ready_result<T>(std::forward<T>(value)))
     {
         return make_ready_result<T>(std::forward<T>(value));
     }
 
-    /// Unified ready-future factory for void.
+    /**
+     * @brief Creates an already-ready default-policy void future.
+     * @return Ready default-policy future for void value type.
+     */
     inline auto make_ready_default() -> decltype(make_ready_result<>())
     {
         return make_ready_result<>();
     }
 
-    /// Unified error-future factory.
+    /**
+     * @brief Creates an already-failed default-policy future.
+     * @tparam T Success value type.
+     * @tparam E Error enum type.
+     * @param error Error value to store.
+     * @return Ready default-policy future containing the provided error.
+     */
     template <typename T, typename E = result_error>
     auto make_error_default(E error) -> decltype(make_error_result<T, E>(std::move(error)))
     {

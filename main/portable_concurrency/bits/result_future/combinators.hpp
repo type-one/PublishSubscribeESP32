@@ -1,5 +1,5 @@
 /**
- * @file result_future/combinators.hpp
+ * @file combinators.hpp
  * @brief Backward-compatible include for result_future factories and combinators.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026

@@ -1,5 +1,5 @@
 /**
- * @file closable_queue_fwd.hpp
+ * @file closable_queue.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2018-10-13
@@ -22,6 +22,12 @@
 namespace pco::detail
 {
 
+    /**
+     * @brief Waits for queued value or closed state, then pops one value if available.
+     * @tparam T Queue value type.
+     * @param dest Output destination for popped value.
+     * @return true when a value is popped, false when queue is closed and empty.
+     */
     template <typename T>
     bool closable_queue<T>::pop(T& dest)
     {
@@ -36,6 +42,11 @@ namespace pco::detail
         return true;
     }
 
+    /**
+     * @brief Pushes a value to queue and notifies one waiting consumer.
+     * @tparam T Queue value type.
+     * @param val Value to enqueue.
+     */
     template <typename T>
     void closable_queue<T>::push(T&& val)
     {
@@ -48,6 +59,10 @@ namespace pco::detail
         cv_.notify_one();
     }
 
+    /**
+     * @brief Marks queue as closed and notifies all waiting consumers.
+     * @tparam T Queue value type.
+     */
     template <typename T>
     void closable_queue<T>::close()
     {

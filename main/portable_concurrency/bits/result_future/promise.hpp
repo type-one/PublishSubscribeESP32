@@ -1,5 +1,5 @@
 /**
- * @file result_future/promise.hpp
+ * @file promise.hpp
  * @brief promise_result API and nested handle resolver.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026
@@ -20,6 +20,11 @@
 
 namespace pco
 {
+    /**
+     * @brief Producer-side handle for future_result/shared_result state.
+     * @tparam T Value type delivered on success. Use void for no payload.
+     * @tparam E Error enum type used on failure.
+     */
     template <typename T, typename E>
     class promise_result
     {
@@ -32,11 +37,20 @@ namespace pco
         using value_type = T;
         using error_type = E;
 
+        /**
+         * @brief Creates a promise with a fresh shared state.
+         */
         promise_result()
             : state_(std::make_shared<detail::result_shared_state<T, E>>())
         {
         }
 
+        /**
+         * @brief Creates a promise with cancellation callback support.
+         * @tparam F Cancellation callback type.
+         * @param tag Cancellation-tag selector.
+         * @param cancel_action Callback invoked when abandoned before readiness.
+         */
         template <typename F>
         promise_result(canceler_arg_t tag, F&& cancel_action)
             : state_(std::make_shared<detail::result_shared_state<T, E>>(tag, std::forward<F>(cancel_action)))
@@ -142,6 +156,10 @@ namespace pco
         }
 
     public:
+        /**
+         * @brief Retrieves the consumer-side future handle.
+         * @return Valid future_result on first call, invalid handle otherwise.
+         */
         future_result<T, E> get_future()
         {
             if (future_retrieved_ || !state_)
@@ -155,6 +173,10 @@ namespace pco
             return future;
         }
 
+        /**
+         * @brief Completes the state with an expected value or error.
+         * @param result Value/error payload to store.
+         */
         void set_result(tools::expected<T, E> result)
         {
             auto state = get_state();
@@ -183,23 +205,40 @@ namespace pco
             }
         }
 
+        /**
+         * @brief Completes the state with a success value.
+         * @tparam U Value helper type (non-void branch).
+         * @param value Success value to store.
+         */
         template <typename U = T, typename std::enable_if<!std::is_void<U>::value, int>::type = 0>
         void set_value(U value)
         {
             set_result(tools::expected<T, E>(std::move(value)));
         }
 
+        /**
+         * @brief Completes the state with a void success.
+         * @tparam U Value helper type (void branch).
+         */
         template <typename U = T, typename std::enable_if<std::is_void<U>::value, int>::type = 0>
         void set_value()
         {
             set_result(tools::expected<void, E>());
         }
 
+        /**
+         * @brief Completes the state with an error.
+         * @param error Error value to store.
+         */
         void set_error(E error)
         {
             set_result(tools::unexpected<E>(std::move(error)));
         }
 
+        /**
+         * @brief Reports whether the consumer side is still awaiting completion.
+         * @return true while state is still potentially observed by a consumer.
+         */
         [[nodiscard]] bool is_awaiten() const noexcept
         {
             return static_cast<bool>(state_) || !weak_state_.expired();

@@ -75,6 +75,9 @@ namespace pco
     constexpr inplace_executor_t inplace_executor;
 
     template <>
+    /**
+     * @brief Marks inplace_executor_t as a valid executor type.
+     */
     struct is_executor<inplace_executor_t> : std::true_type
     {
     };
@@ -90,15 +93,12 @@ namespace pco
 /**
  * @headerfile portable_concurrency/execution
  * @ingroup execution
- *
- * Function which must be ADL discoverable for user-provided executor classes.
- * This function must schedule execution of the function object from the second
- * argument on the executor provided with the first argument.
- *
- * The submitted function object must be invocable with signature `void()` and
- * is typically move-constructed into the executor path. Do not require
- * copying.
- *
+ * @brief ADL customization point for executor task submission.
+ * @tparam Executor Executor type participating in ADL lookup.
+ * @tparam Functor Callable task type.
+ * @param exec Executor instance used to schedule the task.
+ * @param func Callable object to schedule.
+ * @note Implementations should accept move-only callables and avoid copy-only constraints.
  * @sa pco::is_executor
  */
 template <typename Executor, typename Functor>

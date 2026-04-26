@@ -21,7 +21,10 @@
 namespace pco::detail
 {
 
-    // TODO: replace with std::void_t after migration to C++17
+    /**
+     * @brief C++11/14-compatible substitute for `std::void_t`.
+     * @tparam T Any type expression used for SFINAE detection.
+     */
     template <typename T>
     struct voidify
     {

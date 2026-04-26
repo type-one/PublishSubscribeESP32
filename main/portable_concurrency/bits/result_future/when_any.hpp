@@ -1,5 +1,5 @@
 /**
- * @file result_future/when_any.hpp
+ * @file when_any.hpp
  * @brief when_any combinator for racing multiple futures/shared_results.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026
@@ -22,6 +22,10 @@
 
 namespace pco
 {
+    /**
+     * @brief Returns an immediately-ready empty when_any aggregation.
+     * @return Future holding index -1 and an empty tuple.
+     */
     inline future_result<when_any_result<std::tuple<>>, result_error> when_any()
     {
         auto promise_and_future = make_result_promise<when_any_result<std::tuple<>>, result_error>();
@@ -31,6 +35,12 @@ namespace pco
         return future;
     }
 
+    /**
+     * @brief Races a variadic pack of result handles and resolves on first ready input.
+     * @tparam Futures Result handle types (must share the same error type).
+     * @param futures Handles to race.
+     * @return Future containing winner index and preserved handle tuple.
+     */
     template <typename... Futures>
     std::enable_if_t<detail::are_result_handles<Futures...>::value,
         future_result<when_any_result<std::tuple<std::decay_t<Futures>...>>,
@@ -83,10 +93,16 @@ namespace pco
         // No futures ready yet: register continuation callbacks — no polling thread.
         // Shared context keeps the futures tuple and promise alive until the first
         // callback fires and atomically claims ownership via done_.
+        /**
+         * @brief Shared state for variadic `when_any` race resolution.
+         */
         struct WhenAnyCtx
         {
+            /** @brief Atomic winner flag set by first completing input. */
             std::atomic<bool> done_ { false };
+            /** @brief Stored input futures/handles. */
             futures_tuple_t futures;
+            /** @brief Promise completing when_any output future. */
             promise_result<any_result_t, error_t> promise;
             WhenAnyCtx(futures_tuple_t futures_arg, promise_result<any_result_t, error_t> promise_arg)
                 : futures(std::move(futures_arg))
@@ -116,6 +132,13 @@ namespace pco
         return combined_future;
     }
 
+    /**
+     * @brief Races a range of result handles and resolves on first ready input.
+     * @tparam InputIt Iterator to result-handle-like values.
+     * @param first Range begin iterator.
+     * @param last Range end iterator.
+     * @return Future containing winner index and preserved handle vector.
+     */
     template <typename InputIt>
     std::enable_if_t<detail::is_result_handle<typename std::iterator_traits<InputIt>::value_type>::value,
         future_result<when_any_result<std::vector<std::decay_t<typename std::iterator_traits<InputIt>::value_type>>>,
@@ -164,10 +187,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for iterator-range `when_any` race resolution.
+         */
         struct WhenAnyVectorCtx
         {
+            /** @brief Atomic winner flag set by first completing input. */
             std::atomic<bool> done_ { false };
+            /** @brief Stored input futures/handles. */
             futures_vector_t futures;
+            /** @brief Promise completing when_any output future. */
             promise_result<any_result_t, error_t> promise;
 
             WhenAnyVectorCtx(futures_vector_t input_futures, promise_result<any_result_t, error_t> input_promise)
@@ -195,6 +224,13 @@ namespace pco
         return combined_future;
     }
 
+    /**
+     * @brief Races a vector of result handles and resolves on first ready input.
+     * @tparam Future Result handle type.
+     * @tparam Alloc Vector allocator type.
+     * @param futures Vector of handles to race.
+     * @return Future containing winner index and preserved handle vector.
+     */
     template <typename Future, typename Alloc>
     std::enable_if_t<detail::is_result_handle<Future>::value,
         future_result<when_any_result<std::vector<Future, Alloc>>, typename Future::error_type>>
@@ -241,10 +277,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for vector-based `when_any` race resolution.
+         */
         struct WhenAnyVectorCtx
         {
+            /** @brief Atomic winner flag set by first completing input. */
             std::atomic<bool> done_ { false };
+            /** @brief Stored input futures/handles. */
             futures_vector_t futures;
+            /** @brief Promise completing when_any output future. */
             promise_result<any_result_t, error_t> promise;
 
             WhenAnyVectorCtx(futures_vector_t input_futures, promise_result<any_result_t, error_t> input_promise)

@@ -1,6 +1,6 @@
 /**
- * @file unique_function_fwd.hpp
- * @brief Portable concurrency component.
+ * @file unique_function.hpp
+ * @brief unique_function implementation details.
  * @author Sergey Vidyuk
  * @date 2018-01-28
  * @license https://creativecommons.org/publicdomain/zero/1.0/
@@ -27,9 +27,16 @@
 namespace pco
 {
 
+    /**
+     * @brief Default constructor implementation.
+     */
     template <typename R, typename... A>
     unique_function<R(A...)>::unique_function() noexcept = default;
 
+    /**
+     * @brief nullptr constructor implementation.
+     * @param unused Null marker.
+     */
     template <typename R, typename... A>
     unique_function<R(A...)>::unique_function(std::nullptr_t unused) noexcept
     {

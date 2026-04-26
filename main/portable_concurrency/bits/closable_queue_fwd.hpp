@@ -28,12 +28,30 @@
 namespace pco::detail
 {
 
+    /**
+     * @brief Thread-safe queue with close semantics for producer/consumer coordination.
+     * @tparam T Value type stored in the queue.
+     */
     template <typename T>
     class closable_queue
     {
     public:
+        /**
+         * @brief Pops a value from the queue, waiting until data is available or queue is closed.
+         * @param dest Destination receiving the popped value.
+         * @return true when a value was popped, false when queue is closed and empty.
+         */
         bool pop(T& dest);
+
+        /**
+         * @brief Pushes a value into the queue.
+         * @param val Value to enqueue.
+         */
         void push(T&& val);
+
+        /**
+         * @brief Closes the queue and wakes waiting consumers.
+         */
         void close();
 
     private:

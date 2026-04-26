@@ -1,5 +1,5 @@
 /**
- * @file result_future/shared.hpp
+ * @file shared.hpp
  * @brief shared_result handle for shared async values.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026
@@ -21,6 +21,13 @@
 
 namespace pco
 {
+    /**
+     * @brief Copyable asynchronous result handle.
+     * @tparam T Value type delivered on success. Use void for no payload.
+     * @tparam E Error enum type used on failure.
+     *
+     * Unlike future_result, shared_result can be copied and queried repeatedly.
+     */
     template <typename T, typename E>
     class shared_result
     {
@@ -60,11 +67,18 @@ namespace pco
         shared_result& operator=(shared_result&&) noexcept = default;
         ~shared_result() = default;
 
+        /**
+         * @brief Checks whether this handle currently references a shared state.
+         * @return true when the handle has state, false otherwise.
+         */
         [[nodiscard]] bool valid() const noexcept
         {
             return static_cast<bool>(state_);
         }
 
+        /**
+         * @brief Blocks until the asynchronous state is marked ready.
+         */
         void wait() const
         {
             if (!state_)
@@ -76,18 +90,36 @@ namespace pco
             state_->cv_.wait(lock, [this] { return state_->ready_; });
         }
 
+        /**
+         * @brief Waits for readiness until timeout duration expires.
+         * @tparam Rep Duration representation type.
+         * @tparam Period Duration period type.
+         * @param rel_time Relative timeout duration.
+         * @return future_status::ready if ready before timeout, otherwise future_status::timeout.
+         */
         template <typename Rep, typename Period>
         [[nodiscard]] future_status wait_for(const std::chrono::duration<Rep, Period>& rel_time) const
         {
             return wait_until(std::chrono::steady_clock::now() + rel_time);
         }
 
+        /**
+         * @brief Waits for readiness until an absolute time-point.
+         * @tparam Clock Clock type.
+         * @tparam Duration Duration type.
+         * @param abs_time Absolute timeout time-point.
+         * @return future_status::ready if ready before timeout, otherwise future_status::timeout.
+         */
         template <typename Clock, typename Duration>
         [[nodiscard]] future_status wait_until(const std::chrono::time_point<Clock, Duration>& abs_time) const
         {
             return detail::wait_until_ready(state_, abs_time);
         }
 
+        /**
+         * @brief Checks whether the state is already ready without blocking.
+         * @return true when ready, false otherwise.
+         */
         [[nodiscard]] bool is_ready() const
         {
             if (!state_)
@@ -98,6 +130,10 @@ namespace pco
             return state_->ready_;
         }
 
+        /**
+         * @brief Waits and returns a stable reference to the stored expected result.
+         * @return Reference to the shared expected payload.
+         */
         const result_type& get_result() const
         {
             if (!state_)
@@ -114,6 +150,10 @@ namespace pco
             return *state_->result_;
         }
 
+        /**
+         * @brief Registers a callback invoked once this shared_result becomes ready.
+         * @param callback Callback function.
+         */
         void subscribe(std::function<void()> callback) const
         {
             if (!state_)
@@ -130,6 +170,11 @@ namespace pco
             state_->on_ready_cbs_.push_back(std::move(callback));
         }
 
+        /**
+         * @brief Registers a lightweight notification callback on readiness.
+         * @tparam F Callback type.
+         * @param notification Callback callable.
+         */
         template <typename F>
         void notify(F&& notification) const
         {
@@ -137,6 +182,13 @@ namespace pco
             subscribe([callback]() mutable { (*callback)(); });
         }
 
+        /**
+         * @brief Registers notification callback dispatched through an executor.
+         * @tparam Exec Executor type satisfying is_executor.
+         * @tparam F Callback type.
+         * @param exec Executor used to schedule callback execution.
+         * @param notification Callback callable.
+         */
         template <typename Exec, typename F>
         void notify(Exec&& exec, F&& notification) const
         {
@@ -147,8 +199,10 @@ namespace pco
             subscribe([exec_obj, callback]() mutable { post(*exec_obj, [callback]() mutable { (*callback)(); }); });
         }
 
-        // Keeps the shared state alive until readiness and transfers this handle
-        // out, leaving the source invalid.
+        /**
+         * @brief Transfers this handle while keeping pending state alive until readiness.
+         * @return Moved shared_result owning the same shared state.
+         */
         shared_result detach()
         {
             if (state_)
@@ -163,6 +217,12 @@ namespace pco
             return std::move(*this);
         }
 
+        /**
+         * @brief Runs a continuation on successful completion.
+         * @tparam F Continuation callable type.
+         * @param function_arg Continuation called with T (or no arg for void T).
+         * @return A new future containing the continuation result.
+         */
         template <typename F>
         future_result<detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>, E> then_value(
             F&& function_arg) const
@@ -172,10 +232,16 @@ namespace pco
             promise_result<next_value_t, E> next_promise;
             auto next_future = next_promise.get_future();
 
+            /**
+             * @brief Shared continuation context for `shared_result::then_value` chaining.
+             */
             struct Ctx
             {
+                /** @brief Source shared_result observed by continuation. */
                 shared_result self;
+                /** @brief Stored continuation callable. */
                 std::decay_t<F> fn;
+                /** @brief Promise fulfilling next future in chain. */
                 promise_result<next_value_t, E> promise;
             };
 
@@ -273,6 +339,14 @@ namespace pco
             return next_future;
         }
 
+        /**
+         * @brief Executor-aware then_value overload.
+         * @tparam Exec Executor type satisfying is_executor.
+         * @tparam F Continuation callable type.
+         * @param exec Executor used to schedule continuation execution.
+         * @param function_arg Continuation callable.
+         * @return Future with transformed continuation value.
+         */
         template <typename Exec, typename F>
         future_result<detail::unwrapped_result_value_t<detail::result_shared_then_value_type<F, T>>, E> then_value(
             Exec&& exec, F&& function_arg) const
@@ -284,11 +358,18 @@ namespace pco
             promise_result<next_value_t, E> next_promise;
             auto next_future = next_promise.get_future();
 
+            /**
+             * @brief Shared continuation context for executor-aware `then_value` chaining.
+             */
             struct Ctx
             {
+                /** @brief Source shared_result observed by continuation. */
                 shared_result self;
+                /** @brief Stored executor object. */
                 std::decay_t<Exec> exec;
+                /** @brief Stored value-continuation callable. */
                 std::decay_t<F> fn;
+                /** @brief Promise completing the chained future. */
                 promise_result<next_value_t, E> promise;
             };
 
@@ -396,12 +477,26 @@ namespace pco
             return next_future;
         }
 
+        /**
+         * @brief Executor-aware continuation that receives promise and source shared_result.
+         * @tparam F Continuation callable type.
+         * @param function_arg Continuation invoked on the inline executor.
+         * @return Future produced by the continuation contract.
+         */
         template <typename F>
         future_result<detail::interrupt_promise_arg_t<F, shared_result<T, E>, E>, E> then(F&& function_arg) const
         {
             return this->then(inplace_executor, std::forward<F>(function_arg));
         }
 
+        /**
+         * @brief Executor-aware continuation that receives promise and source shared_result.
+         * @tparam Exec Executor type satisfying is_executor.
+         * @tparam F Continuation callable type.
+         * @param exec Executor used to schedule continuation execution.
+         * @param function_arg Continuation callable.
+         * @return Future produced by the continuation contract.
+         */
         template <typename Exec, typename F>
         future_result<detail::interrupt_promise_arg_t<F, shared_result<T, E>, E>, E> then(
             Exec&& exec, F&& function_arg) const
@@ -418,11 +513,18 @@ namespace pco
                 return next_future;
             }
 
+            /**
+             * @brief Shared continuation context for executor-aware `then` chaining.
+             */
             struct Ctx
             {
+                /** @brief Source shared_result observed by continuation. */
                 shared_result self;
+                /** @brief Stored executor object. */
                 std::decay_t<Exec> exec;
+                /** @brief Stored continuation callable. */
                 std::decay_t<F> fn;
+                /** @brief Promise completing the chained future. */
                 promise_result<next_value_t, E> promise;
             };
 
@@ -451,12 +553,26 @@ namespace pco
             return next_future;
         }
 
+        /**
+         * @brief Alias of then_value for v1 compatibility naming.
+         * @tparam F Continuation callable type.
+         * @param function_arg Continuation callable.
+         * @return Same result as then_value(function_arg).
+         */
         template <typename F>
         auto next(F&& function_arg) const -> decltype(this->then_value(std::forward<F>(function_arg)))
         {
             return this->then_value(std::forward<F>(function_arg));
         }
 
+        /**
+         * @brief Executor-aware alias of then_value.
+         * @tparam Exec Executor type.
+         * @tparam F Continuation callable type.
+         * @param exec Executor used to schedule continuation execution.
+         * @param function_arg Continuation callable.
+         * @return Same result as then_value(exec, function_arg).
+         */
         template <typename Exec, typename F>
         auto next(Exec&& exec, F&& function_arg) const -> decltype(this->then_value(
                                                            std::forward<Exec>(exec), std::forward<F>(function_arg)))
@@ -471,10 +587,16 @@ namespace pco
             promise_result<T, E> next_promise;
             auto next_future = next_promise.get_future();
 
+            /**
+             * @brief Shared continuation context for `then_error` chaining on shared_result.
+             */
             struct Ctx
             {
+                /** @brief Source shared_result observed by continuation. */
                 shared_result self;
+                /** @brief Stored error-continuation callable. */
                 std::decay_t<F> fn;
+                /** @brief Promise completing the chained future. */
                 promise_result<T, E> promise;
             };
 
@@ -542,11 +664,18 @@ namespace pco
             promise_result<T, E> next_promise;
             auto next_future = next_promise.get_future();
 
+            /**
+             * @brief Shared continuation context for executor-aware `then_error` chaining.
+             */
             struct Ctx
             {
+                /** @brief Source shared_result observed by continuation. */
                 shared_result self;
+                /** @brief Stored executor object. */
                 std::decay_t<Exec> exec;
+                /** @brief Stored error-continuation callable. */
                 std::decay_t<F> fn;
+                /** @brief Promise completing the chained future. */
                 promise_result<T, E> promise;
             };
 
@@ -625,10 +754,16 @@ namespace pco
             promise_result<next_value_t, E> next_promise;
             auto next_future = next_promise.get_future();
 
+            /**
+             * @brief Shared continuation context for `then_result` chaining on shared_result.
+             */
             struct Ctx
             {
+                /** @brief Source shared_result observed by continuation. */
                 shared_result self;
+                /** @brief Stored result-continuation callable. */
                 std::decay_t<F> fn;
+                /** @brief Promise completing the chained future. */
                 promise_result<next_value_t, E> promise;
             };
 
@@ -694,11 +829,18 @@ namespace pco
             promise_result<next_value_t, E> next_promise;
             auto next_future = next_promise.get_future();
 
+            /**
+             * @brief Shared continuation context for executor-aware `then_result` chaining.
+             */
             struct Ctx
             {
+                /** @brief Source shared_result observed by continuation. */
                 shared_result self;
+                /** @brief Stored executor object. */
                 std::decay_t<Exec> exec;
+                /** @brief Stored result-continuation callable. */
                 std::decay_t<F> fn;
+                /** @brief Promise completing the chained future. */
                 promise_result<next_value_t, E> promise;
             };
 
@@ -766,6 +908,12 @@ namespace pco
         mutable std::unique_ptr<result_type> invalid_result_;
     };
 
+    /**
+     * @brief Creates a promise/future pair sharing the same state.
+     * @tparam T Value type delivered on success.
+     * @tparam E Error enum type.
+     * @return Pair of {promise_result, future_result}.
+     */
     template <typename T, typename E = result_error>
     std::pair<promise_result<T, E>, future_result<T, E>> make_result_promise()
     {
@@ -774,6 +922,15 @@ namespace pco
         return { std::move(promise), std::move(future) };
     }
 
+    /**
+     * @brief Creates a promise/future pair with cancellation callback support.
+     * @tparam T Value type delivered on success.
+     * @tparam E Error enum type.
+     * @tparam F Cancellation callback type.
+     * @param tag Cancellation-tag selector.
+     * @param cancel_action Callback invoked when abandoned before readiness.
+     * @return Pair of {promise_result, future_result}.
+     */
     template <typename T, typename E = result_error, typename F>
     std::pair<promise_result<T, E>, future_result<T, E>> make_result_promise(canceler_arg_t tag, F&& cancel_action)
     {

@@ -1,5 +1,5 @@
 /**
- * @file result_future/when_all.hpp
+ * @file when_all.hpp
  * @brief when_all combinator for synchronizing multiple futures/shared_results.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026
@@ -22,6 +22,10 @@
 
 namespace pco
 {
+    /**
+     * @brief Returns an immediately-ready empty when_all aggregation.
+     * @return Future holding an empty tuple.
+     */
     inline future_result<std::tuple<>, result_error> when_all()
     {
         auto promise_and_future = make_result_promise<std::tuple<>, result_error>();
@@ -31,6 +35,12 @@ namespace pco
         return future;
     }
 
+    /**
+     * @brief Aggregates a variadic pack of future_result handles.
+     * @tparam Futures Future handle types (must share the same error type).
+     * @param futures Futures to wait for.
+     * @return Future containing a tuple of each input future result_type.
+     */
     template <typename... Futures>
     std::enable_if_t<detail::are_result_futures<Futures...>::value,
         future_result<std::tuple<typename std::decay_t<Futures>::result_type...>,
@@ -59,10 +69,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for variadic future_result `when_all` aggregation.
+         */
         struct WhenAllCtx
         {
+            /** @brief Remaining input futures not yet completed. */
             std::atomic<std::size_t> remaining_;
+            /** @brief Stored input futures. */
             std::tuple<std::decay_t<Futures>...> futures;
+            /** @brief Promise completing aggregated output future. */
             promise_result<results_tuple_t, error_t> promise;
 
             WhenAllCtx(std::size_t remaining, std::tuple<std::decay_t<Futures>...> futures_arg,
@@ -95,6 +111,12 @@ namespace pco
         return combined_future;
     }
 
+    /**
+     * @brief Aggregates a variadic pack of shared_result handles.
+     * @tparam SharedResults Shared handle types (must share the same error type).
+     * @param shared_results Shared results to wait for.
+     * @return Future containing a tuple with the input shared handles.
+     */
     template <typename... SharedResults>
     std::enable_if_t<detail::are_shared_results<SharedResults...>::value,
         future_result<std::tuple<std::decay_t<SharedResults>...>,
@@ -122,10 +144,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for variadic shared_result `when_all` aggregation.
+         */
         struct WhenAllSharedCtx
         {
+            /** @brief Remaining input shared results not yet observed ready. */
             std::atomic<std::size_t> remaining_;
+            /** @brief Stored input shared results. */
             shared_tuple_t shareds;
+            /** @brief Promise completing aggregated output future. */
             promise_result<shared_tuple_t, error_t> promise;
 
             WhenAllSharedCtx(std::size_t remaining, shared_tuple_t input_shareds,
@@ -157,6 +185,12 @@ namespace pco
         return combined_future;
     }
 
+    /**
+     * @brief Aggregates a variadic mixed pack of result handles.
+     * @tparam Handles Result handle types (must share the same error type).
+     * @param handles Handles to wait for.
+     * @return Future containing a tuple with the input handles.
+     */
     template <typename... Handles>
     std::enable_if_t<detail::are_result_handles<Handles...>::value && !detail::are_result_futures<Handles...>::value
             && !detail::are_shared_results<Handles...>::value,
@@ -185,10 +219,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for mixed-handle variadic `when_all` aggregation.
+         */
         struct WhenAllMixedCtx
         {
+            /** @brief Remaining input handles not yet observed ready. */
             std::atomic<std::size_t> remaining_;
+            /** @brief Stored mixed input handles. */
             handles_tuple_t handles;
+            /** @brief Promise completing aggregated output future. */
             promise_result<handles_tuple_t, error_t> promise;
 
             WhenAllMixedCtx(std::size_t remaining, handles_tuple_t input_handles,
@@ -219,6 +259,13 @@ namespace pco
         return combined_future;
     }
 
+    /**
+     * @brief Aggregates a range of future_result handles.
+     * @tparam InputIt Iterator to future_result-like values.
+     * @param first Range begin iterator.
+     * @param last Range end iterator.
+     * @return Future with a vector of input result payloads.
+     */
     template <typename InputIt>
     std::enable_if_t<detail::is_result_future<typename std::iterator_traits<InputIt>::value_type>::value,
         future_result<
@@ -254,10 +301,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for iterator-range future_result `when_all` aggregation.
+         */
         struct WhenAllVectorCtx
         {
+            /** @brief Remaining input futures not yet completed. */
             std::atomic<std::size_t> remaining_;
+            /** @brief Stored input futures. */
             futures_vector_t futures;
+            /** @brief Promise completing aggregated output future. */
             promise_result<results_vector_t, error_t> promise;
 
             WhenAllVectorCtx(std::size_t remaining, futures_vector_t input_futures,
@@ -292,6 +345,13 @@ namespace pco
         return combined_future;
     }
 
+    /**
+     * @brief Aggregates a vector of future_result handles.
+     * @tparam Future Future handle type.
+     * @tparam Alloc Vector allocator type.
+     * @param futures Vector of futures to wait for.
+     * @return Future with a vector of input result payloads.
+     */
     template <typename Future, typename Alloc>
     std::enable_if_t<detail::is_result_future<Future>::value,
         future_result<
@@ -326,10 +386,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for vector-based future_result `when_all` aggregation.
+         */
         struct WhenAllVectorCtx
         {
+            /** @brief Remaining input futures not yet completed. */
             std::atomic<std::size_t> remaining_;
+            /** @brief Stored input futures. */
             futures_vector_t futures;
+            /** @brief Promise completing aggregated output future. */
             promise_result<results_vector_t, error_t> promise;
 
             WhenAllVectorCtx(std::size_t remaining, futures_vector_t input_futures,
@@ -364,6 +430,13 @@ namespace pco
         return combined_future;
     }
 
+    /**
+     * @brief Aggregates a range of shared_result handles.
+     * @tparam InputIt Iterator to shared_result-like values.
+     * @param first Range begin iterator.
+     * @param last Range end iterator.
+     * @return Future with a vector of shared handles.
+     */
     template <typename InputIt>
     std::enable_if_t<detail::is_shared_result<typename std::iterator_traits<InputIt>::value_type>::value,
         future_result<std::vector<std::decay_t<typename std::iterator_traits<InputIt>::value_type>>,
@@ -396,10 +469,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for iterator-range shared_result `when_all` aggregation.
+         */
         struct WhenAllSharedVectorCtx
         {
+            /** @brief Remaining input shared results not yet observed ready. */
             std::atomic<std::size_t> remaining_;
+            /** @brief Stored input shared results. */
             shared_vector_t shareds;
+            /** @brief Promise completing aggregated output future. */
             promise_result<shared_vector_t, error_t> promise;
 
             WhenAllSharedVectorCtx(std::size_t remaining, shared_vector_t input_shareds,
@@ -428,6 +507,13 @@ namespace pco
         return combined_future;
     }
 
+    /**
+     * @brief Aggregates a vector of shared_result handles.
+     * @tparam SharedResult Shared handle type.
+     * @tparam Alloc Vector allocator type.
+     * @param shareds Vector of shared handles to wait for.
+     * @return Future with a vector of shared handles.
+     */
     template <typename SharedResult, typename Alloc>
     std::enable_if_t<detail::is_shared_result<SharedResult>::value,
         future_result<std::vector<SharedResult, Alloc>, typename SharedResult::error_type>>
@@ -458,10 +544,16 @@ namespace pco
             return combined_future;
         }
 
+        /**
+         * @brief Shared state for vector-based shared_result `when_all` aggregation.
+         */
         struct WhenAllSharedVectorCtx
         {
+            /** @brief Remaining input shared results not yet observed ready. */
             std::atomic<std::size_t> remaining_;
+            /** @brief Stored input shared results. */
             shared_vector_t shareds;
+            /** @brief Promise completing aggregated output future. */
             promise_result<shared_vector_t, error_t> promise;
 
             WhenAllSharedVectorCtx(std::size_t remaining, shared_vector_t input_shareds,

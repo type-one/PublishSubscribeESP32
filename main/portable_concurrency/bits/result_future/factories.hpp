@@ -1,5 +1,5 @@
 /**
- * @file result_future/factories.hpp
+ * @file factories.hpp
  * @brief result_future ready/error factories and async_result helper.
  * @author Laurent Lardinois, Sergey Vidyuk
  * @date April 2026
@@ -21,6 +21,13 @@
 
 namespace pco
 {
+    /**
+     * @brief Creates an already-ready future_result from a value.
+     * @tparam T Source value type.
+     * @tparam E Error enum type.
+     * @param value Value to store in the ready future.
+     * @return Ready future_result holding the provided value.
+     */
     template <typename T, typename E = result_error>
     future_result<std::decay_t<T>, E> make_ready_result(T&& value)
     {
@@ -29,6 +36,11 @@ namespace pco
         return std::move(promise_and_future.second);
     }
 
+    /**
+     * @brief Creates an already-ready void future_result.
+     * @tparam E Error enum type.
+     * @return Ready future_result<void, E>.
+     */
     template <typename E = result_error>
     future_result<void, E> make_ready_result()
     {
@@ -37,6 +49,13 @@ namespace pco
         return std::move(promise_and_future.second);
     }
 
+    /**
+     * @brief Creates an already-failed future_result.
+     * @tparam T Success value type.
+     * @tparam E Error enum type.
+     * @param error Error value to store.
+     * @return Ready future_result containing the provided error.
+     */
     template <typename T, typename E = result_error>
     future_result<T, E> make_error_result(E error)
     {
@@ -45,6 +64,16 @@ namespace pco
         return std::move(promise_and_future.second);
     }
 
+    /**
+     * @brief Posts callable execution to an executor and returns a result-based future.
+     * @tparam Exec Executor type satisfying is_executor.
+     * @tparam F Callable type.
+     * @tparam A Callable argument types.
+     * @param exec Executor used to schedule callable execution.
+     * @param function_arg Callable to run asynchronously.
+     * @param args Callable arguments forwarded to function_arg.
+     * @return Future containing callable result, nested-handle unwrapped when needed.
+     */
     template <typename Exec, typename F, typename... A>
     future_result<typename detail::unwrapped_result_value<typename detail::invoke_decay_t<F, A...>>::type, result_error>
     async_result(Exec&& exec, F&& function_arg, A&&... args)
@@ -60,6 +89,9 @@ namespace pco
 
         if constexpr (detail::is_result_handle<raw_value_t>::value)
         {
+            /**
+             * @brief Shared state for flattening nested result handles in `async_result`.
+             */
             struct UnwrapCtx
             {
                 raw_value_t inner;
