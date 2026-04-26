@@ -52,7 +52,8 @@ template <typename E> struct is_executor : std::false_type {};
  */
 class inplace_executor_t {
 private:
-  template <typename Task> friend void post(inplace_executor_t, Task &&task) {
+  template <typename Task> friend void post(inplace_executor_t exec, Task &&task) {
+    static_cast<void>(exec);
     std::forward<Task>(task)();
   }
 };
@@ -70,6 +71,11 @@ template <> struct is_executor<inplace_executor_t> : std::true_type {};
 
 } // namespace pco
 
+// Documentation-only declaration for the ADL customization point used by
+// user-provided executors. Doxygen sees this block when configured with the
+// DOXYGEN define, while normal builds ignore it. The declaration is
+// conceptual: actual overloads can take parameters by value or reference as
+// long as an unqualified call to post(exec, func) is valid via ADL.
 #ifdef DOXYGEN
 /**
  * @headerfile portable_concurrency/execution
@@ -79,11 +85,12 @@ template <> struct is_executor<inplace_executor_t> : std::true_type {};
  * This function must schedule execution of the function object from the second
  * argument on the executor provided with the first argument.
  *
- * Function object type meets MoveConstructible, MoveAssignable and Callable
- * (with signature `void()`) standard library named requirements.
+ * The submitted function object must be invocable with signature `void()` and
+ * is typically move-constructed into the executor path. Do not require
+ * copying.
  *
  * @sa pco::is_executor
  */
 template <typename Executor, typename Functor>
-void post(Executor exec, Functor func);
+void post(Executor&& exec, Functor&& func);
 #endif
