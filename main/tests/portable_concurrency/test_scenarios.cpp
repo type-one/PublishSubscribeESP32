@@ -149,7 +149,7 @@ TEST(ConcurrencyScenarios, WhenAnyBrokenPromiseWinnerFallbackScenario)
 TEST(ConcurrencyScenarios, ComputationChainOnWorkerTask)
 {
     auto context = std::make_shared<scenario_worker_context>();
-    auto worker = make_worker_task(context, "v2_chain_worker");
+    auto worker = make_worker_task(context, "chain_worker");
 
     auto result = worker
                       ->delegate_async(
@@ -180,7 +180,7 @@ TEST(ConcurrencyScenarios, ComputationChainOnWorkerTask)
 TEST(ConcurrencyScenarios, GatherSeveralComputationsWithWhenAll)
 {
     auto context = std::make_shared<scenario_worker_context>();
-    auto worker = make_worker_task(context, "v2_fanout_worker");
+    auto worker = make_worker_task(context, "fanout_worker");
 
     std::vector<pco::future_result<int>> jobs;
     jobs.reserve(5);
@@ -231,8 +231,8 @@ TEST(ConcurrencyScenarios, ChainAcrossDifferentExecutors)
     auto context_a = std::make_shared<scenario_worker_context>();
     auto context_b = std::make_shared<scenario_worker_context>();
 
-    auto worker_a = make_worker_task(context_a, "v2_worker_a");
-    auto worker_b = make_worker_task(context_b, "v2_worker_b");
+    auto worker_a = make_worker_task(context_a, "worker_a");
+    auto worker_b = make_worker_task(context_b, "worker_b");
 
     auto result = worker_a
                       ->delegate_async(
@@ -262,7 +262,7 @@ TEST(ConcurrencyScenarios, ChainAcrossDifferentExecutors)
 TEST(ConcurrencyScenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
 {
     auto worker_context = std::make_shared<scenario_worker_context>();
-    auto worker = make_worker_task(worker_context, "v2_long_compute_worker");
+    auto worker = make_worker_task(worker_context, "long_compute_worker");
 
     auto long_future = worker->delegate_async(
         [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int value)
@@ -293,7 +293,7 @@ TEST(ConcurrencyScenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
 
     {
         polling_periodic_task poller(
-            std::move(startup), std::move(periodic), periodic_context, "v2_future_polling_periodic", period, periodic_stack_size);
+            std::move(startup), std::move(periodic), periodic_context, "future_polling_periodic", period, periodic_stack_size);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(320));
     }

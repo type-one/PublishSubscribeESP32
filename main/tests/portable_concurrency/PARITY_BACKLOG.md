@@ -16,12 +16,12 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
   - Target parity from v1:
     - `tests/portable_concurrency/test_cancelation.cpp` (InterruptableContinuation tests)
   - Scope:
-    - Add v2 continuation form(s) that allow continuation-side control over destination completion.
+    - Add result-based continuation form(s) that allow continuation-side control over destination completion.
     - Ensure continuation can observe destination await state (`is_awaiten`-style).
     - Preserve broken-promise behavior when continuation does not fulfill destination.
   - Deliverables:
-    - API and implementation in v2 result future layer.
-    - New v2 tests covering all above behaviors.
+    - API and implementation in the result future layer.
+    - New result-based tests covering all above behaviors.
   - Status:
     - Implemented `then(...)` interruptible continuation overloads for both `future_result` and `shared_result` in `portable_concurrency/bits/result_future.h`.
     - Added no-exceptions parity tests in `tests/portable_concurrency/test_continuation_result_no_exceptions.cpp`.
@@ -33,7 +33,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - Cover async/next/then paths, future/shared variants, and invalid nested-handle returns.
     - Verify destruction semantics of stored callables and promise state transitions.
   - Deliverables:
-    - New `test_abandon_result.cpp` (or equivalent split) in v2 test folder.
+    - New `test_abandon_result.cpp` (or equivalent split) in the result-based test folder.
   - Status:
     - Added `tests/portable_concurrency/test_abandon_result.cpp` with 14 parity tests covering dropped async work, dropped continuations, packaged task abandonment, promise abandonment, and invalid nested-handle returns.
     - Registered the new test file in host CMake variants (`CMakeLists.txt`, `CMakeLists_PC.txt`) at the time of implementation.
@@ -45,7 +45,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
 - [x] P1.1 Notify edge-case parity
   - Target parity from v1:
     - `tests/portable_concurrency/test_notify.cpp`
-  - Add missing v2 checks:
+  - Add missing result-based checks:
     - notify on broken promise
     - notify not called when handle destroyed before completion
     - async completion path
@@ -66,10 +66,10 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
 - [x] P1.2 Promise parity completion
   - Target parity from v1:
     - `tests/portable_concurrency/test_promise.cpp`
-  - Add missing v2 checks:
+  - Add missing result-based checks:
     - set-before-get_future retrieval behavior
     - moved-from no_state behavior
-    - repeated completion semantics under v2 rules
+    - repeated completion semantics under result-based rules
     - allocator behavior decision (implement or explicitly mark unsupported)
   - Status:
     - Added promise parity tests in `tests/portable_concurrency/test_promise_result.cpp`:
@@ -171,9 +171,9 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
 
 ## Definition of Done
 - Every v1 behavior in async/future/promise/packaged_task/notify/when_all/when_any/cancelation is either:
-  - implemented and tested in v2 exceptions-off, or
+  - implemented and tested in the result-based exceptions-off flow, or
   - explicitly documented as intentional divergence with rationale.
-- v2 tests compile and pass in host build variants used in this repo.
+- Result-based tests compile and pass in host build variants used in this repo.
 - New tests are linked into the active host CMake paths (`CMakeLists.txt`, `CMakeLists_PC.txt`) when needed.
 
 ## Progress Tracker

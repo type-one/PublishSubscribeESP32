@@ -33,7 +33,7 @@
 
 namespace {
 
-struct worker_v2_context {
+struct worker_result_context {
     std::atomic<int> loop_counter { 0 };
 };
 
@@ -61,20 +61,20 @@ public:
     }
 };
 
-using worker_v2_task = tools::worker_task<worker_v2_context>;
+using worker_result_task = tools::worker_task<worker_result_context>;
 using periodic_stress_task = tools::periodic_task<periodic_stress_context>;
 
-std::unique_ptr<worker_v2_task> make_worker_v2_task(
-    const std::shared_ptr<worker_v2_context>& context, const std::string& name)
+std::unique_ptr<worker_result_task> make_worker_result_task(
+    const std::shared_ptr<worker_result_context>& context, const std::string& name)
 {
-    auto startup = [](const std::shared_ptr<worker_v2_context>&, const std::string&) {};
+    auto startup = [](const std::shared_ptr<worker_result_context>&, const std::string&) {};
     constexpr std::size_t stack_size = 4096U;
-    return std::make_unique<worker_v2_task>(std::move(startup), context, name, stack_size);
+    return std::make_unique<worker_result_task>(std::move(startup), context, name, stack_size);
 }
 
 #if defined(PS_PC_HAS_COROUTINES)
 pco::future_result<int> coroutine_schedule_job(
-    worker_v2_task& worker, const std::shared_ptr<worker_v2_context>& context, int value)
+    worker_result_task& worker, const std::shared_ptr<worker_result_context>& context, int value)
 {
     co_await worker.schedule();
     context->loop_counter.fetch_add(1);
@@ -82,8 +82,8 @@ pco::future_result<int> coroutine_schedule_job(
 }
 
 pco::future_result<int> coroutine_await_future_job(
-    worker_v2_task& worker,
-    const std::shared_ptr<worker_v2_context>& context,
+    worker_result_task& worker,
+    const std::shared_ptr<worker_result_context>& context,
     pco::future_result<int> upstream)
 {
     co_await worker.schedule();
@@ -93,8 +93,8 @@ pco::future_result<int> coroutine_await_future_job(
 }
 
 pco::future_result<int> coroutine_process_sample_on_worker(
-    worker_v2_task& worker,
-    const std::shared_ptr<worker_v2_context>& context,
+    worker_result_task& worker,
+    const std::shared_ptr<worker_result_context>& context,
     const std::shared_ptr<stress_worker_processor>& processor,
     int input_value)
 {
@@ -103,10 +103,10 @@ pco::future_result<int> coroutine_process_sample_on_worker(
     co_return processor->process_sample(input_value);
 }
 
-pco::future_result<int> coroutine_alternating_chain_on_two_workers(worker_v2_task& worker_first,
-    worker_v2_task& worker_second,
-    const std::shared_ptr<worker_v2_context>& context_first,
-    const std::shared_ptr<worker_v2_context>& context_second,
+pco::future_result<int> coroutine_alternating_chain_on_two_workers(worker_result_task& worker_first,
+    worker_result_task& worker_second,
+    const std::shared_ptr<worker_result_context>& context_first,
+    const std::shared_ptr<worker_result_context>& context_second,
     const std::shared_ptr<stress_worker_processor>& processor,
     int input_value,
     int stage_count)
@@ -134,13 +134,13 @@ pco::future_result<int> coroutine_alternating_chain_on_two_workers(worker_v2_tas
 
 } // namespace
 
-TEST(PortableConcurrencyV2WorkerTaskTest, AsyncResultChainOnWorkerExecutor)
+TEST(PortableConcurrencyWorkerTaskResultTest, AsyncResultChainOnWorkerExecutor)
 {
-    auto context = std::make_shared<worker_v2_context>();
-    auto worker = make_worker_v2_task(context, "v2_chain_worker_test");
+    auto context = std::make_shared<worker_result_context>();
+    auto worker = make_worker_result_task(context, "chain_worker_test");
 
     auto future = worker->delegate_async(
-        [](const std::shared_ptr<worker_v2_context>& ctx, const std::string&, int value)
+        [](const std::shared_ptr<worker_result_context>& ctx, const std::string&, int value)
         {
             ctx->loop_counter.fetch_add(1);
             return value * 7;
@@ -163,10 +163,10 @@ TEST(PortableConcurrencyV2WorkerTaskTest, AsyncResultChainOnWorkerExecutor)
     EXPECT_EQ(context->loop_counter.load(), 1);
 }
 
-TEST(PortableConcurrencyV2WorkerTaskTest, GatherComputationsWithWorkerExecutor)
+TEST(PortableConcurrencyWorkerTaskResultTest, GatherComputationsWithWorkerExecutor)
 {
-    auto context = std::make_shared<worker_v2_context>();
-    auto worker = make_worker_v2_task(context, "v2_gather_worker_test");
+    auto context = std::make_shared<worker_result_context>();
+    auto worker = make_worker_result_task(context, "gather_worker_test");
 
     std::vector<pco::future_result<int>> jobs;
     jobs.reserve(5);
@@ -174,7 +174,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, GatherComputationsWithWorkerExecutor)
     for (int value = 1; value <= 5; ++value)
     {
         jobs.emplace_back(worker->delegate_async(
-            [](const std::shared_ptr<worker_v2_context>& ctx, const std::string&, int input)
+            [](const std::shared_ptr<worker_result_context>& ctx, const std::string&, int input)
             {
                 ctx->loop_counter.fetch_add(1);
                 return input * input + 10;
@@ -194,10 +194,10 @@ TEST(PortableConcurrencyV2WorkerTaskTest, GatherComputationsWithWorkerExecutor)
     EXPECT_EQ(context->loop_counter.load(), 5);
 }
 
-TEST(PortableConcurrencyV2WorkerTaskTest, PromiseResultManualFulfillment)
+TEST(PortableConcurrencyWorkerTaskResultTest, PromiseResultManualFulfillment)
 {
-    auto context = std::make_shared<worker_v2_context>();
-    auto worker = make_worker_v2_task(context, "v2_promise_worker_test");
+    auto context = std::make_shared<worker_result_context>();
+    auto worker = make_worker_result_task(context, "promise_worker_test");
 
     auto pair = pco::make_result_promise<int>();
     auto promise = std::move(pair.first);
@@ -205,7 +205,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PromiseResultManualFulfillment)
 
     auto shared_promise = std::make_shared<decltype(promise)>(std::move(promise));
     worker->delegate(
-        [shared_promise](const std::shared_ptr<worker_v2_context>& ctx, const std::string&)
+        [shared_promise](const std::shared_ptr<worker_result_context>& ctx, const std::string&)
         {
             ctx->loop_counter.fetch_add(1);
             shared_promise->set_value(99);
@@ -222,7 +222,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PromiseResultManualFulfillment)
     EXPECT_EQ(context->loop_counter.load(), 1);
 }
 
-TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCoroutines)
+TEST(PortableConcurrencyWorkerTaskResultTest, PeriodicTaskFeedsWorkerStressWithoutCoroutines)
 {
 
     constexpr int target_job_count = 80;
@@ -231,8 +231,8 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
     constexpr auto wait_poll_interval = std::chrono::milliseconds(5);
     constexpr auto completion_timeout = std::chrono::seconds(5);
 
-    auto worker_context = std::make_shared<worker_v2_context>();
-    auto worker = make_worker_v2_task(worker_context, "v2_periodic_stress_worker");
+    auto worker_context = std::make_shared<worker_result_context>();
+    auto worker = make_worker_result_task(worker_context, "periodic_stress_worker");
     auto stress_context = std::make_shared<periodic_stress_context>();
     auto processor = std::make_shared<stress_worker_processor>();
     stress_context->scheduled_results.reserve(static_cast<std::size_t>(target_job_count));
@@ -258,7 +258,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
 
         auto chained = worker_ptr
                            ->delegate_async(
-                               [processor](const std::shared_ptr<worker_v2_context>& worker_ctx,
+                               [processor](const std::shared_ptr<worker_result_context>& worker_ctx,
                                    const std::string&,
                                    int input_value)
                                {
@@ -283,7 +283,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
 
     {
         periodic_stress_task producer(
-            std::move(startup), std::move(periodic), stress_context, "v2_periodic_stress_producer", periodic_interval, periodic_stack_size);
+            std::move(startup), std::move(periodic), stress_context, "periodic_stress_producer", periodic_interval, periodic_stack_size);
 
         const auto deadline = std::chrono::steady_clock::now() + completion_timeout;
         while ((std::chrono::steady_clock::now() < deadline)
@@ -315,16 +315,16 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithoutCo
     EXPECT_EQ(worker_context->loop_counter.load(), target_job_count);
 }
 
-TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithoutCoroutines)
+TEST(PortableConcurrencyWorkerTaskResultTest, AlternatingChainAcrossTwoWorkersWithoutCoroutines)
 {
 
     constexpr int initial_value = 10;
     constexpr int stage_count = 6;
 
-    auto context_first = std::make_shared<worker_v2_context>();
-    auto context_second = std::make_shared<worker_v2_context>();
-    auto worker_first = make_worker_v2_task(context_first, "v2_alternating_chain_worker_a");
-    auto worker_second = make_worker_v2_task(context_second, "v2_alternating_chain_worker_b");
+    auto context_first = std::make_shared<worker_result_context>();
+    auto context_second = std::make_shared<worker_result_context>();
+    auto worker_first = make_worker_result_task(context_first, "alternating_chain_worker_a");
+    auto worker_second = make_worker_result_task(context_second, "alternating_chain_worker_b");
     auto processor = std::make_shared<stress_worker_processor>();
 
     int chain_value = initial_value;
@@ -334,7 +334,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithou
         auto active_context = ((stage_index % 2) == 0) ? context_first : context_second;
 
         auto stage_future = active_worker->delegate_async(
-            [processor](const std::shared_ptr<worker_v2_context>& local_context,
+            [processor](const std::shared_ptr<worker_result_context>& local_context,
                 const std::string&,
                 int input_chain_value,
                 int current_stage)
@@ -364,10 +364,10 @@ TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithou
 }
 
 #if defined(PS_PC_HAS_COROUTINES)
-TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineScheduleFlow)
+TEST(PortableConcurrencyWorkerTaskResultTest, CoroutineScheduleFlow)
 {
-    auto context = std::make_shared<worker_v2_context>();
-    auto worker = make_worker_v2_task(context, "v2_coro_schedule_test");
+    auto context = std::make_shared<worker_result_context>();
+    auto worker = make_worker_result_task(context, "coro_schedule_test");
 
     auto scheduled = coroutine_schedule_job(*worker, context, 5).then_value([](int value)
     {
@@ -380,13 +380,13 @@ TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineScheduleFlow)
     EXPECT_EQ(context->loop_counter.load(), 1);
 }
 
-TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineAwaitsFutureResult)
+TEST(PortableConcurrencyWorkerTaskResultTest, CoroutineAwaitsFutureResult)
 {
-    auto context = std::make_shared<worker_v2_context>();
-    auto worker = make_worker_v2_task(context, "v2_coro_await_test");
+    auto context = std::make_shared<worker_result_context>();
+    auto worker = make_worker_result_task(context, "coro_await_test");
 
     auto upstream = worker->delegate_async(
-        [](const std::shared_ptr<worker_v2_context>& ctx, const std::string&, int value)
+        [](const std::shared_ptr<worker_result_context>& ctx, const std::string&, int value)
         {
             ctx->loop_counter.fetch_add(1);
             return value * 4;
@@ -401,7 +401,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, CoroutineAwaitsFutureResult)
     EXPECT_EQ(context->loop_counter.load(), 2);
 }
 
-TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCoroutines)
+TEST(PortableConcurrencyWorkerTaskResultTest, PeriodicTaskFeedsWorkerStressWithCoroutines)
 {
 
     constexpr int target_job_count = 80;
@@ -410,8 +410,8 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCorou
     constexpr auto wait_poll_interval = std::chrono::milliseconds(5);
     constexpr auto completion_timeout = std::chrono::seconds(5);
 
-    auto worker_context = std::make_shared<worker_v2_context>();
-    auto worker = make_worker_v2_task(worker_context, "v2_periodic_coro_stress_worker");
+    auto worker_context = std::make_shared<worker_result_context>();
+    auto worker = make_worker_result_task(worker_context, "periodic_coro_stress_worker");
     auto stress_context = std::make_shared<periodic_stress_context>();
     auto processor = std::make_shared<stress_worker_processor>();
     stress_context->scheduled_results.reserve(static_cast<std::size_t>(target_job_count));
@@ -455,7 +455,7 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCorou
         periodic_stress_task producer(std::move(startup),
             std::move(periodic),
             stress_context,
-            "v2_periodic_coro_stress_producer",
+            "periodic_coro_stress_producer",
             periodic_interval,
             periodic_stack_size);
 
@@ -489,16 +489,16 @@ TEST(PortableConcurrencyV2WorkerTaskTest, PeriodicTaskFeedsWorkerStressWithCorou
     EXPECT_EQ(worker_context->loop_counter.load(), target_job_count);
 }
 
-TEST(PortableConcurrencyV2WorkerTaskTest, AlternatingChainAcrossTwoWorkersWithCoroutines)
+TEST(PortableConcurrencyWorkerTaskResultTest, AlternatingChainAcrossTwoWorkersWithCoroutines)
 {
 
     constexpr int initial_value = 10;
     constexpr int stage_count = 6;
 
-    auto context_first = std::make_shared<worker_v2_context>();
-    auto context_second = std::make_shared<worker_v2_context>();
-    auto worker_first = make_worker_v2_task(context_first, "v2_alternating_coro_chain_worker_a");
-    auto worker_second = make_worker_v2_task(context_second, "v2_alternating_coro_chain_worker_b");
+    auto context_first = std::make_shared<worker_result_context>();
+    auto context_second = std::make_shared<worker_result_context>();
+    auto worker_first = make_worker_result_task(context_first, "alternating_coro_chain_worker_a");
+    auto worker_second = make_worker_result_task(context_second, "alternating_coro_chain_worker_b");
     auto processor = std::make_shared<stress_worker_processor>();
 
     auto chained_future = coroutine_alternating_chain_on_two_workers(

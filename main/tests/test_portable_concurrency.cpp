@@ -19,7 +19,7 @@ namespace
  * This checks the common happy path: async computation succeeds and
  * continuation transforms the produced value.
  */
-TEST(PortableConcurrencyV2Test, AsyncResultThenValueSuccess)
+TEST(PortableConcurrencyResultTest, AsyncResultThenValueSuccess)
 {
     auto future = pco::async_result(pco::inplace_executor,
         [](int value)
@@ -41,7 +41,7 @@ TEST(PortableConcurrencyV2Test, AsyncResultThenValueSuccess)
 /**
  * @brief Verifies that a default-constructed pco::future_result reports no_state.
  */
-TEST(PortableConcurrencyV2Test, DefaultConstructedFutureReturnsNoState)
+TEST(PortableConcurrencyResultTest, DefaultConstructedFutureReturnsNoState)
 {
     pco::future_result<int> future;
 
@@ -53,7 +53,7 @@ TEST(PortableConcurrencyV2Test, DefaultConstructedFutureReturnsNoState)
 /**
  * @brief Verifies broken_promise when pco::promise_result is destroyed unsatisfied.
  */
-TEST(PortableConcurrencyV2Test, PromiseDestructionWithoutValueReturnsBrokenPromise)
+TEST(PortableConcurrencyResultTest, PromiseDestructionWithoutValueReturnsBrokenPromise)
 {
     pco::future_result<int> future;
     {
@@ -69,7 +69,7 @@ TEST(PortableConcurrencyV2Test, PromiseDestructionWithoutValueReturnsBrokenPromi
 /**
  * @brief Verifies then_value does not run on error and propagates the same error.
  */
-TEST(PortableConcurrencyV2Test, ThenValuePropagatesExistingError)
+TEST(PortableConcurrencyResultTest, ThenValuePropagatesExistingError)
 {
     auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
@@ -90,7 +90,7 @@ TEST(PortableConcurrencyV2Test, ThenValuePropagatesExistingError)
 /**
  * @brief Verifies then_error can recover from an error and produce a value.
  */
-TEST(PortableConcurrencyV2Test, ThenErrorRecoversFromError)
+TEST(PortableConcurrencyResultTest, ThenErrorRecoversFromError)
 {
     auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
@@ -115,7 +115,7 @@ TEST(PortableConcurrencyV2Test, ThenErrorRecoversFromError)
  * The test intentionally starts in an error state, recovers with then_error,
  * then continues as a normal value flow with then_value.
  */
-TEST(PortableConcurrencyV2Test, ThenErrorThenValueSimplifiesBranching)
+TEST(PortableConcurrencyResultTest, ThenErrorThenValueSimplifiesBranching)
 {
     auto promise_and_future = pco::make_result_promise<int>();
     auto promise = std::move(promise_and_future.first);
@@ -142,7 +142,7 @@ TEST(PortableConcurrencyV2Test, ThenErrorThenValueSimplifiesBranching)
 /**
  * @brief Verifies thrown continuation exceptions map to continuation_failure.
  */
-TEST(PortableConcurrencyV2Test, ThenResultMapsThrownExceptionToContinuationFailure)
+TEST(PortableConcurrencyResultTest, ThenResultMapsThrownExceptionToContinuationFailure)
 {
     auto future = pco::async_result(pco::inplace_executor,
         []()

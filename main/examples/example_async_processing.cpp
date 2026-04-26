@@ -183,7 +183,7 @@ namespace
      */
     void test_async_result_chain()
     {
-        LOG_INFO("-- v2: pco::async_result + then_value + then_error --");
+        LOG_INFO("-- pco::async_result + then_value + then_error --");
         print_stats();
 
 
@@ -217,7 +217,7 @@ namespace
      */
     void test_then_result_inspection()
     {
-        LOG_INFO("-- v2: then_result full pco::expected inspection --");
+        LOG_INFO("-- then_result full pco::expected inspection --");
         print_stats();
 
 
@@ -256,7 +256,7 @@ namespace
      */
     void test_error_recovery()
     {
-        LOG_INFO("-- v2: error recovery via then_error --");
+        LOG_INFO("-- error recovery via then_error --");
         print_stats();
 
 
@@ -292,7 +292,7 @@ namespace
      */
     void test_packaged_task()
     {
-        LOG_INFO("-- v2: pco::packaged_task_result --");
+        LOG_INFO("-- pco::packaged_task_result --");
         print_stats();
 
 
@@ -320,7 +320,7 @@ namespace
      */
     void test_packaged_task_reference_wrapper()
     {
-        LOG_INFO("-- v2: pco::packaged_task_result with reference_wrapper --");
+        LOG_INFO("-- pco::packaged_task_result with reference_wrapper --");
         print_stats();
 
 
@@ -355,7 +355,7 @@ namespace
      */
     void test_manual_promise_fulfillment()
     {
-        LOG_INFO("-- v2: manual pco::promise_result fulfilled from worker --");
+        LOG_INFO("-- manual pco::promise_result fulfilled from worker --");
         print_stats();
 
 
@@ -398,7 +398,7 @@ namespace
      */
     void test_delegate_async_chain()
     {
-        LOG_INFO("-- v2: delegate_async chain --");
+        LOG_INFO("-- delegate_async chain --");
         print_stats();
 
 
@@ -407,7 +407,7 @@ namespace
         constexpr int input_val = 7;
 
         auto context = std::make_shared<async_context>();
-        auto worker = make_async_worker(context, "v2_chain_worker");
+        auto worker = make_async_worker(context, "chain_worker");
 
         auto future = worker->delegate_async(
             [](const std::shared_ptr<async_context>& ctx, const std::string&, int value_input)
@@ -438,12 +438,12 @@ namespace
      */
     void test_fan_out_gather()
     {
-        LOG_INFO("-- v2: fan-out / fan-in gather --");
+        LOG_INFO("-- fan-out / fan-in gather --");
         print_stats();
 
 
         auto context = std::make_shared<async_context>();
-        auto worker = make_async_worker(context, "v2_gather_worker");
+        auto worker = make_async_worker(context, "gather_worker");
 
         constexpr int job_count = 5;
         std::vector<pco::future_result<int>> jobs;
@@ -484,12 +484,12 @@ namespace
      */
     void test_when_all_gather()
     {
-        LOG_INFO("-- v2: pco::when_all gather --");
+        LOG_INFO("-- pco::when_all gather --");
         print_stats();
 
 
         auto context = std::make_shared<async_context>();
-        auto worker = make_async_worker(context, "v2_when_all_worker");
+        auto worker = make_async_worker(context, "when_all_worker");
 
         constexpr int triple_multiplier = 3;
         constexpr int first_input = 10;
@@ -552,11 +552,11 @@ namespace
      */
     void test_coroutine_schedule_and_await()
     {
-        LOG_INFO("-- v2: coroutine schedule() + co_await pco::future_result --");
+        LOG_INFO("-- coroutine schedule() + co_await pco::future_result --");
         print_stats();
 
         auto context = std::make_shared<async_context>();
-        auto worker = make_async_worker(context, "v2_coro_worker");
+        auto worker = make_async_worker(context, "coro_worker");
 
         constexpr int upstream_input_value = 5;
         constexpr int scheduled_input_value = 8;
@@ -606,7 +606,7 @@ namespace
      */
     void test_timeout_detection()
     {
-        LOG_INFO("-- v2: timeout detection with wait_for() --");
+        LOG_INFO("-- timeout detection with wait_for() --");
         print_stats();
 
         using namespace std::chrono_literals;
@@ -662,7 +662,7 @@ namespace
      */
     void test_timeout_and_cancellation()
     {
-        LOG_INFO("-- v2: timeout and cancellation with cleanup action --");
+        LOG_INFO("-- timeout and cancellation with cleanup action --");
         print_stats();
 
         using namespace std::chrono_literals;
@@ -724,7 +724,7 @@ namespace
      */
     void test_periodic_feeds_worker_stress_no_coroutines()
     {
-        LOG_INFO("-- v2: periodic -> worker stress (no coroutine) --");
+        LOG_INFO("-- periodic -> worker stress (no coroutine) --");
         print_stats();
 
 
@@ -735,7 +735,7 @@ namespace
         constexpr auto wait_poll_interval = std::chrono::milliseconds(5);
 
         auto async_worker_context = std::make_shared<async_context>();
-        auto worker = make_async_worker(async_worker_context, "v2_periodic_feed_worker");
+        auto worker = make_async_worker(async_worker_context, "periodic_feed_worker");
         auto feed_context = std::make_shared<periodic_feed_context>();
         auto processor = std::make_shared<async_processing_worker_model>();
         feed_context->pending_results.reserve(static_cast<std::size_t>(target_sample_count));
@@ -786,7 +786,7 @@ namespace
 
         {
             periodic_feed_task producer(
-                std::move(startup), std::move(periodic), feed_context, "v2_periodic_feed_producer", periodic_interval, periodic_stack_size);
+                std::move(startup), std::move(periodic), feed_context, "periodic_feed_producer", periodic_interval, periodic_stack_size);
 
             const auto deadline = std::chrono::steady_clock::now() + completion_timeout;
             while ((std::chrono::steady_clock::now() < deadline)
@@ -819,7 +819,7 @@ namespace
      */
     void test_alternating_chain_two_workers_no_coroutines()
     {
-        LOG_INFO("-- v2: alternating chain across two workers (no coroutine) --");
+        LOG_INFO("-- alternating chain across two workers (no coroutine) --");
         print_stats();
 
         constexpr int initial_value = 10;
@@ -828,8 +828,8 @@ namespace
 
         auto context_first = std::make_shared<async_context>();
         auto context_second = std::make_shared<async_context>();
-        auto worker_first = make_async_worker(context_first, "v2_alt_chain_worker_a");
-        auto worker_second = make_async_worker(context_second, "v2_alt_chain_worker_b");
+        auto worker_first = make_async_worker(context_first, "alt_chain_worker_a");
+        auto worker_second = make_async_worker(context_second, "alt_chain_worker_b");
 
         int chain_value = initial_value;
         for (int stage_index = 0; stage_index < stage_count; ++stage_index)
@@ -880,7 +880,7 @@ namespace
      */
     void test_periodic_feeds_worker_stress_coroutines()
     {
-        LOG_INFO("-- v2: periodic -> worker stress (coroutine) --");
+        LOG_INFO("-- periodic -> worker stress (coroutine) --");
         print_stats();
 
 
@@ -891,7 +891,7 @@ namespace
         constexpr auto wait_poll_interval = std::chrono::milliseconds(5);
 
         auto async_worker_context = std::make_shared<async_context>();
-        auto worker = make_async_worker(async_worker_context, "v2_periodic_feed_coro_worker");
+        auto worker = make_async_worker(async_worker_context, "periodic_feed_coro_worker");
         auto feed_context = std::make_shared<periodic_feed_context>();
         auto processor = std::make_shared<async_processing_worker_model>();
         feed_context->pending_results.reserve(static_cast<std::size_t>(target_sample_count));
@@ -935,7 +935,7 @@ namespace
             periodic_feed_task producer(std::move(startup),
                 std::move(periodic),
                 feed_context,
-                "v2_periodic_feed_coro_producer",
+                "periodic_feed_coro_producer",
                 periodic_interval,
                 periodic_stack_size);
 
@@ -970,7 +970,7 @@ namespace
      */
     void test_alternating_chain_two_workers_coroutines()
     {
-        LOG_INFO("-- v2: alternating chain across two workers (coroutine) --");
+        LOG_INFO("-- alternating chain across two workers (coroutine) --");
         print_stats();
 
         constexpr int initial_value = 10;
@@ -979,8 +979,8 @@ namespace
 
         auto context_first = std::make_shared<async_context>();
         auto context_second = std::make_shared<async_context>();
-        auto worker_first = make_async_worker(context_first, "v2_alt_coro_chain_worker_a");
-        auto worker_second = make_async_worker(context_second, "v2_alt_coro_chain_worker_b");
+        auto worker_first = make_async_worker(context_first, "alt_coro_chain_worker_a");
+        auto worker_second = make_async_worker(context_second, "alt_coro_chain_worker_b");
         auto processor = std::make_shared<async_processing_worker_model>();
 
         alternating_chain_request request;
@@ -1017,7 +1017,7 @@ namespace
 
 void run_example_async_processing()
 {
-    LOG_INFO("=== async processing (portable_concurrency v2) ===");
+    LOG_INFO("=== async processing (portable_concurrency) ===");
 
     test_async_result_chain();
     test_then_result_inspection();
