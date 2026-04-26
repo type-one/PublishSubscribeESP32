@@ -78,13 +78,4 @@ auto make_async_default(Exec&& exec, F&& callable, A&&... args)
 		std::forward<Exec>(exec), std::forward<F>(callable), std::forward<A>(args)...);
 }
 
-/// Tag type identifying the active result-based async policy.
-struct async_policy_v2_tag {};
-
-/// Resolves to the tag type of the currently active async policy.
-using active_async_policy = async_policy_v2_tag;
-
-/// True when the result-based policy is active.
-static constexpr bool uses_v2_policy = true;
-
 } // namespace pco
