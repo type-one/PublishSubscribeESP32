@@ -11,9 +11,9 @@
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
 // Original date: 2018-02-01                                                   //
-// https://github.com/VestniK/portable_concurrency                            //
-// Public Domain (CC0 1.0)                                                    //
-// https://creativecommons.org/publicdomain/zero/1.0/                         //
+// https://github.com/VestniK/portable_concurrency                             //
+// Public Domain (CC0 1.0)                                                     //
+// https://creativecommons.org/publicdomain/zero/1.0/                          //
 //-----------------------------------------------------------------------------//
 
 #pragma once
@@ -22,9 +22,7 @@
 #include <cstddef>
 #include <type_traits>
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces,bugprone-forwarding-reference-overload)
-namespace pco {
-namespace detail {
+namespace pco::detail {
 
 constexpr size_t small_buffer_size = 5 * sizeof(void *);
 constexpr size_t small_buffer_align = alignof(void *);
@@ -68,6 +66,4 @@ private:
 
 extern template class small_unique_function<void()>;
 
-} // namespace detail
-} // namespace pco
-// NOLINTEND(modernize-concat-nested-namespaces,bugprone-forwarding-reference-overload)
+} // namespace pco::detail

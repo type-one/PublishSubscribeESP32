@@ -11,9 +11,9 @@
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
 // Original date: 2017-10-05                                                   //
-// https://github.com/VestniK/portable_concurrency                            //
-// Public Domain (CC0 1.0)                                                    //
-// https://creativecommons.org/publicdomain/zero/1.0/                         //
+// https://github.com/VestniK/portable_concurrency                             //
+// Public Domain (CC0 1.0)                                                     //
+// https://creativecommons.org/publicdomain/zero/1.0/                          //
 //-----------------------------------------------------------------------------//
 
 #include <atomic>
@@ -31,7 +31,6 @@
 #include "thread_pool.h"
 #include "unique_function.hpp"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces,cppcoreguidelines-rvalue-reference-param-not-moved)
 namespace pco {
 namespace detail {
 
@@ -65,7 +64,6 @@ bool continuations_stack::executed() const { return stack_.is_consumed(); }
 template class closable_queue<unique_function<void()>>;
 
 } // namespace detail
-// NOLINTEND(modernize-concat-nested-namespaces,cppcoreguidelines-rvalue-reference-param-not-moved)
 
 namespace {
 

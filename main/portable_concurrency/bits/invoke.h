@@ -11,9 +11,9 @@
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
 // Original date: 2017-06-14                                                   //
-// https://github.com/VestniK/portable_concurrency                            //
-// Public Domain (CC0 1.0)                                                    //
-// https://creativecommons.org/publicdomain/zero/1.0/                         //
+// https://github.com/VestniK/portable_concurrency                             //
+// Public Domain (CC0 1.0)                                                     //
+// https://creativecommons.org/publicdomain/zero/1.0/                          //
 //-----------------------------------------------------------------------------//
 
 #pragma once
@@ -21,8 +21,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace pco {
-namespace detail {
+namespace pco::detail {
 
 template <typename T> struct is_reference_wrapper : std::false_type {};
 template <typename U>
@@ -92,5 +91,4 @@ auto invoke(F &&f, A &&...args) noexcept(
   return std::forward<F>(f)(std::forward<A>(args)...);
 }
 
-} // namespace detail
-} // namespace pco
+} // namespace pco::detail

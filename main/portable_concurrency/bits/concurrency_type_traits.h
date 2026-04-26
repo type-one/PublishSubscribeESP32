@@ -11,9 +11,9 @@
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
 // Original date: 2017-06-14                                                   //
-// https://github.com/VestniK/portable_concurrency                            //
-// Public Domain (CC0 1.0)                                                    //
-// https://creativecommons.org/publicdomain/zero/1.0/                         //
+// https://github.com/VestniK/portable_concurrency                             //
+// Public Domain (CC0 1.0)                                                     //
+// https://creativecommons.org/publicdomain/zero/1.0/                          //
 //-----------------------------------------------------------------------------//
 
 #pragma once
@@ -23,8 +23,7 @@
 #include "fwd.h"
 #include "voidify.h"
 
-namespace pco {
-namespace detail {
+namespace pco::detail {
 
 #if defined(__cpp_lib_is_invocable)
 template <typename F, typename... A>
@@ -143,5 +142,4 @@ struct swallow {
   swallow(...) {}
 };
 
-} // namespace detail
-} // namespace pco
+} // namespace pco::detail

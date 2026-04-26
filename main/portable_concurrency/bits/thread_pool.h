@@ -11,9 +11,9 @@
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
 // Original date: 2018-10-13                                                   //
-// https://github.com/VestniK/portable_concurrency                            //
-// Public Domain (CC0 1.0)                                                    //
-// https://creativecommons.org/publicdomain/zero/1.0/                         //
+// https://github.com/VestniK/portable_concurrency                             //
+// Public Domain (CC0 1.0)                                                     //
+// https://creativecommons.org/publicdomain/zero/1.0/                          //
 //-----------------------------------------------------------------------------//
 
 #pragma once
@@ -30,7 +30,6 @@
 #include "unique_function.hpp"
 
 namespace pco {
-
 namespace detail {
 extern template class closable_queue<unique_function<void()>>;
 

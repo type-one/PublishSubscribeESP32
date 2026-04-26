@@ -11,9 +11,9 @@
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
 // Original date: 2017-10-25                                                   //
-// https://github.com/VestniK/portable_concurrency                            //
-// Public Domain (CC0 1.0)                                                    //
-// https://creativecommons.org/publicdomain/zero/1.0/                         //
+// https://github.com/VestniK/portable_concurrency                             //
+// Public Domain (CC0 1.0)                                                     //
+// https://creativecommons.org/publicdomain/zero/1.0/                          //
 //-----------------------------------------------------------------------------//
 
 #pragma once
@@ -27,8 +27,7 @@
 
 #include "concurrency_type_traits.h"
 
-namespace pco {
-namespace detail {
+namespace pco::detail {
 
 #if defined(__has_builtin)
 #if __has_builtin(__type_pack_element)
@@ -180,5 +179,4 @@ template <typename... T> struct scope_either_cleaner<either<monostate, T...>> {
   ~scope_either_cleaner() { target.clean(); }
 };
 
-} // namespace detail
-} // namespace pco
+} // namespace pco::detail

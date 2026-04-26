@@ -11,18 +11,15 @@
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
 // Original date: 2018-10-13                                                   //
-// https://github.com/VestniK/portable_concurrency                            //
-// Public Domain (CC0 1.0)                                                    //
-// https://creativecommons.org/publicdomain/zero/1.0/                         //
+// https://github.com/VestniK/portable_concurrency                             //
+// Public Domain (CC0 1.0)                                                     //
+// https://creativecommons.org/publicdomain/zero/1.0/                          //
 //-----------------------------------------------------------------------------//
 
 #pragma once
 
 #include "closable_queue.h"
-
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace pco {
-namespace detail {
+namespace pco::detail {
 
 template <typename T> bool closable_queue<T>::pop(T &dest) {
   std::unique_lock<tools::critical_section> lock(mutex_);
@@ -50,6 +47,4 @@ template <typename T> void closable_queue<T>::close() {
   cv_.notify_all();
 }
 
-} // namespace detail
-} // namespace pco
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace pco::detail

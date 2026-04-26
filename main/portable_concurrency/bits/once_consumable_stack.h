@@ -11,9 +11,9 @@
 // Portable Concurrency Framework                                              //
 // Original author: Sergey Vidyuk                                              //
 // Original date: 2017-07-26                                                   //
-// https://github.com/VestniK/portable_concurrency                            //
-// Public Domain (CC0 1.0)                                                    //
-// https://creativecommons.org/publicdomain/zero/1.0/                         //
+// https://github.com/VestniK/portable_concurrency                             //
+// Public Domain (CC0 1.0)                                                     //
+// https://creativecommons.org/publicdomain/zero/1.0/                          //
 //-----------------------------------------------------------------------------//
 
 #pragma once
@@ -21,8 +21,7 @@
 #include <atomic>
 #include <memory>
 
-namespace pco {
-namespace detail {
+namespace pco::detail {
 
 template <typename T> struct forward_list_node {
   forward_list_node(T &&val, forward_list_node *next = nullptr)
@@ -151,5 +150,4 @@ private:
   std::atomic<forward_list_node<T> *> head_{nullptr};
 };
 
-} // namespace detail
-} // namespace pco
+} // namespace pco::detail
