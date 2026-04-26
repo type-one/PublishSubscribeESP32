@@ -133,10 +133,7 @@ if(WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
-# Async future API policy: v2 only.
-add_compile_definitions(PORTABLE_CONCURRENCY_V2_DEFAULT)
 add_compile_definitions(CJSONPP_NO_EXCEPTION)
-message(STATUS "Async policy: v2 (result-based, no-exception); v1 public API removed")
 #add_compile_definitions(USE_MEM_POOL_ALLOCATOR_WARMUP)
 
 # display actual compiling definitions
