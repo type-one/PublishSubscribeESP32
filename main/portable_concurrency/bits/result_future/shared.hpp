@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "result_shared_state_impl.hpp"
 #include "promise.hpp"
+#include "result_shared_state_impl.hpp"
 
 namespace pco
 {
