@@ -23,7 +23,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <portable_concurrency/bits/config.hpp>
+#include <portable_concurrency/bits/concurrency_config.hpp>
 
 #include "concurrency_type_traits.hpp"
 

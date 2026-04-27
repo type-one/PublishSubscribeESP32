@@ -1,5 +1,5 @@
 /**
- * @file config.hpp
+ * @file concurrency_config.hpp
  * @brief Portable concurrency component.
  * @author Sergey Vidyuk
  * @date 2019-08-14
