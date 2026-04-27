@@ -5,6 +5,8 @@
 
 #include <gtest/gtest.h>
 
+#include "tools/platform_detection.hpp"
+
 #include "portable_concurrency/execution.hpp"
 #include "portable_concurrency/future.hpp"
 #include "portable_concurrency/thread_pool.hpp"
@@ -74,7 +76,7 @@ TEST(AsyncResultTest, supports_void_callable)
     EXPECT_TRUE(executed);
 }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
 /**
  * @brief Verifies thrown callable exceptions map to execution_failure.
  */

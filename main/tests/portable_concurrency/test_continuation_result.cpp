@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "tools/platform_detection.hpp"
+
 #include "portable_concurrency/functional.hpp"
 #include "portable_concurrency/future.hpp"
 
@@ -477,7 +479,7 @@ namespace
         EXPECT_EQ(result.error(), pco::result_error::execution_failure);
     }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
     /**
      * @brief Verifies a throw in then_value maps to continuation_failure.
      */
@@ -693,7 +695,7 @@ namespace
         EXPECT_EQ(result.value(), 30);
     }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
     /**
      * @brief Verifies executor-based then_value throw maps to continuation_failure.
      */

@@ -9,6 +9,8 @@
 #include <memory>
 #include <utility>
 
+#include "tools/platform_detection.hpp"
+
 #include "portable_concurrency/future.hpp"
 
 namespace
@@ -105,7 +107,7 @@ TEST(PackagedTaskResultTest, unsatisfied_task_destruction_yields_broken_promise)
     EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
 TEST(PackagedTaskResultTest, thrown_exception_propagates)
 {
     pco::packaged_task_result<int()> task([]() -> int

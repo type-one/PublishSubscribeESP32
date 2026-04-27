@@ -7,7 +7,9 @@
  * focusing on the direct execution paths that are used in embedded/no-exception builds.
  */
 
-#if !defined(__cpp_exceptions) && !defined(__EXCEPTIONS) && !defined(_CPPUNWIND)
+#include "tools/platform_detection.hpp"
+
+#if !defined(CPP_EXCEPTIONS_ENABLED)
 
 #include <gtest/gtest.h>
 

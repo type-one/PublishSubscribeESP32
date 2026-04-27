@@ -22,6 +22,8 @@
 #include <memory>
 #include <utility>
 
+#include "tools/platform_detection.hpp"
+
 namespace pco::detail
 {
 
@@ -147,7 +149,7 @@ namespace pco::detail
         using node_allocator = typename std::allocator_traits<Alloc>::template rebind_alloc<node>;
         node_allocator nalloc { alloc };
         auto result = std::allocator_traits<node_allocator>::allocate(nalloc, 1);
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
         try
         {
             std::allocator_traits<node_allocator>::construct(nalloc, result, std::forward<T>(val), alloc);

@@ -22,6 +22,7 @@
 
 #include "tools/cond_var.hpp"
 #include "tools/critical_section.hpp"
+#include "tools/platform_detection.hpp"
 
 #include "closable_queue.hpp"
 #include "continuations_stack.hpp"
@@ -38,7 +39,7 @@ namespace pco
 
         [[noreturn]] void throw_bad_func_call()
         {
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
             throw std::bad_function_call {};
 #else
             std::terminate();
@@ -85,7 +86,7 @@ namespace pco
             unique_function<void()> task;
             while (!stopped.load(std::memory_order_relaxed) && queue.pop(task))
             {
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                 try
                 {
                     task();

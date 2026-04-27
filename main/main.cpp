@@ -34,15 +34,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <exception>
 
 #include "examples/examples.hpp"
-#include "tools/platform_detection.hpp"
-
-#if defined(CPP_EXCEPTIONS_ENABLED)
-#include <exception>
-#endif
 
 #include "tools/logger.hpp"
+#include "tools/platform_detection.hpp"
 
 #if defined(FREERTOS_PLATFORM)
 #include <freertos/FreeRTOS.h>
@@ -99,13 +96,8 @@ void v_task_code(void* pv_parameters)
 
 void launch_runner() noexcept
 {
-    TaskHandle_t x_handle = xTaskCreateStatic(v_task_code,
-        "RUNNER",
-        stack_size,
-        reinterpret_cast<void*>(1),
-        tskIDLE_PRIORITY,
-        x_stack.data(),
-        &x_task_buffer);
+    TaskHandle_t x_handle = xTaskCreateStatic(v_task_code, "RUNNER", stack_size, reinterpret_cast<void*>(1),
+        tskIDLE_PRIORITY, x_stack.data(), &x_task_buffer);
 
     (void)x_handle;
 
@@ -117,7 +109,6 @@ void launch_runner() noexcept
 #if defined(CPP_EXCEPTIONS_ENABLED)
 void runner_except_catch()
 {
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
     try
     {
         runner();
@@ -126,9 +117,6 @@ void runner_except_catch()
     {
         LOG_ERROR("Exception catched - %s", exc.what());
     }
-#else
-    runner();
-#endif
 }
 #else
 void runner_no_except()

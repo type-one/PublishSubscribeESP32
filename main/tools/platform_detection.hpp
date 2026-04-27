@@ -51,7 +51,7 @@
 #define FREERTOS_PLATFORM
 #endif
 
-#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
 #define CPP_EXCEPTIONS_ENABLED
 #endif
 

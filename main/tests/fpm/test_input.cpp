@@ -8,6 +8,9 @@
 
 #include "common.hpp"
 #include "fpm/ios.hpp"
+
+#include "tools/platform_detection.hpp"
+
 #include <sstream>
 
 using ::testing::Combine;
@@ -22,14 +25,30 @@ namespace
             : m_decimal_point(decimal_point)
             , m_thousands_sep(thousands_sep)
             , m_grouping(grouping)
-        {}
+        {
+        }
 
     protected:
-        char do_decimal_point() const override { return m_decimal_point; }
-        char do_thousands_sep() const override { return m_thousands_sep; }
-        std::string do_grouping() const override { return m_grouping; }
-        std::string do_truename() const override { return "unused"; }
-        std::string do_falsename() const override { return "unused"; }
+        char do_decimal_point() const override
+        {
+            return m_decimal_point;
+        }
+        char do_thousands_sep() const override
+        {
+            return m_thousands_sep;
+        }
+        std::string do_grouping() const override
+        {
+            return m_grouping;
+        }
+        std::string do_truename() const override
+        {
+            return "unused";
+        }
+        std::string do_falsename() const override
+        {
+            return "unused";
+        }
 
     private:
         char m_decimal_point;
@@ -40,7 +59,8 @@ namespace
     class input : public ::testing::Test
     {
     protected:
-        input() : m_locale("C")
+        input()
+            : m_locale("C")
         {
         }
 
@@ -50,7 +70,8 @@ namespace
         }
 
         template <typename B, typename I, unsigned int F>
-        void test_conversion(const std::string& text, fpm::fixed<B, I, F> expected, const std::string& expected_remaining = "")
+        void test_conversion(
+            const std::string& text, fpm::fixed<B, I, F> expected, const std::string& expected_remaining = "")
         {
             std::istringstream ss(text);
             ss.imbue(m_locale);
@@ -74,9 +95,12 @@ namespace
             ss >> value;
 
             // Stream should have a parse error
-            EXPECT_TRUE(ss.fail()) << "for text: \"" << text << "\"";;
-            EXPECT_FALSE(ss.bad()) << "for text: \"" << text << "\"";;
-            EXPECT_FALSE(ss.good()) << "for text: \"" << text << "\"";;
+            EXPECT_TRUE(ss.fail()) << "for text: \"" << text << "\"";
+            ;
+            EXPECT_FALSE(ss.bad()) << "for text: \"" << text << "\"";
+            ;
+            EXPECT_FALSE(ss.good()) << "for text: \"" << text << "\"";
+            ;
 
             EXPECT_EQ(get_remainder(ss), expected_remaining) << "for text: \"" << text << "\"";
         }
@@ -199,7 +223,7 @@ TEST_F(input, decimal_point)
     // Multiple decimal points stop parsing after the first one
     test_conversion("1..5", P(1), ".5");
 
-   // Switch to a fake locale with a specific decimal separator
+    // Switch to a fake locale with a specific decimal separator
     setlocale(std::locale(std::locale(""), new fake_numpunct('\'', ',', "\001\002")));
     test_conversion("1\'234", P(1.234));
 }
@@ -230,7 +254,7 @@ TEST_F(input, thousands_separator)
 /**
  * @brief Verifies extraction stops when the stream is already in a bad state.
  */
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
 TEST_F(input, fails_on_badbit)
 {
     using P = fpm::fixed_16_16;
@@ -247,7 +271,7 @@ TEST_F(input, fails_on_badbit)
 /**
  * @brief Verifies extraction handles end-of-file correctly.
  */
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
 TEST_F(input, handles_eof)
 {
     using P = fpm::fixed_16_16;
