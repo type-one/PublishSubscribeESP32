@@ -22,7 +22,9 @@
  * @defgroup functional <portable_concurrency/functional>
  * @headerfile portable_concurrency/functional
  *
- * Extra functional types usefull for writing concurrent code.
+ * Extra functional types useful for writing concurrent code.
+ *
+ * `unique_function` invocation is provided via `try_invoke(...)`.
  */
 
 #include "bits/unique_function.hpp"

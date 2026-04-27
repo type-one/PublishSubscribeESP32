@@ -28,12 +28,6 @@
 namespace pco::detail
 {
 
-    /**
-     * @brief Throws bad_function_call for empty callable invocation.
-     * @note Marked noreturn because invocation always fails.
-     */
-    [[noreturn]] void throw_bad_func_call();
-
     // R(A...) is incomplete type so it is illegal to use sizeof(F)/alignof(F) for
     // decayed function reference to turn it into function pointer which is
     // implicitly constructible from function reference
@@ -240,19 +234,6 @@ namespace pco::detail
         }
         vtbl_ = rhs.vtbl_;
         return *this;
-    }
-
-    /**
-     * @brief Invocation operator implementation.
-     */
-    template <typename R, typename... A>
-    R small_unique_function<R(A...)>::operator()(A... args) const
-    {
-        if (!vtbl_)
-        {
-            throw_bad_func_call();
-        }
-        return vtbl_->call(buffer_, std::forward<A>(args)...);
     }
 
     /**

@@ -23,7 +23,8 @@ struct queued_executor {
         tasks.clear();
         for (auto &task : pending)
         {
-            task();
+            const auto invocation_result = task.try_invoke();
+            ASSERT_TRUE(invocation_result.has_value());
         }
     }
 };

@@ -18,7 +18,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <functional>
 #include <future>
 
 #include "tools/cond_var.hpp"
@@ -38,15 +37,6 @@ namespace pco
 {
     namespace detail
     {
-
-        [[noreturn]] void throw_bad_func_call()
-        {
-#if defined(CPP_EXCEPTIONS_ENABLED)
-            throw std::bad_function_call {};
-#else
-            std::terminate();
-#endif
-        }
 
         template class small_unique_function<void()>;
         template struct forward_list_deleter<continuation>;

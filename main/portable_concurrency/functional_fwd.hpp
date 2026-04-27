@@ -22,8 +22,10 @@
  * @ingroup functional <portable_concurrency/functional>
  * @file portable_concurrency/functional_fwd
  *
- * Forward declarations for extra functional types usefull for writing
- * concurrent code
+ * Forward declarations for extra functional types useful for writing
+ * concurrent code.
+ *
+ * `unique_function` invocation is provided via `try_invoke(...)`.
  */
 
 #include "bits/unique_function_fwd.hpp"

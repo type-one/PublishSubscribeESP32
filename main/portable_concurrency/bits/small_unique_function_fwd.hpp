@@ -76,6 +76,7 @@ namespace pco::detail
      * @brief Move-only type-erased wrapper for small nothrow-movable callables.
      * @tparam R Callable return type.
      * @tparam A Callable argument types.
+        * @note Invocation is performed via `try_invoke(...)`.
      */
     template <typename R, typename... A>
     class small_unique_function<R(A...)>
@@ -121,13 +122,6 @@ namespace pco::detail
          * @return Reference to this object.
          */
         small_unique_function& operator=(small_unique_function&& rhs) noexcept;
-
-        /**
-         * @brief Invokes the stored callable.
-         * @param args Invocation arguments.
-         * @return Callable return value.
-         */
-        R operator()(A... args) const;
 
         /**
          * @brief Invokes the stored callable without throwing.

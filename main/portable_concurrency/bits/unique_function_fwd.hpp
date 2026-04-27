@@ -37,6 +37,7 @@ namespace pco
      * @headerfile portable_concurrency/functional
      * @ingroup functional
      * @brief Move-only type erasure for arbitrary callable object.
+    * @note Invocation is performed via `try_invoke(...)`.
      *
      * Implementation of
      * http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf proposal.
@@ -130,15 +131,7 @@ namespace pco
         operator detail::small_unique_function<R(A...)>&&() && noexcept;
 
         /**
-         * @brief Calls stored callable with forwarded arguments.
-         * @param args Call arguments.
-         * @return Callable return value.
-         * @note If this object is empty, throws `std::bad_function_call`.
-         */
-        R operator()(A... args) const;
-
-        /**
-         * @brief Calls the stored callable without throwing.
+         * @brief Invokes the stored callable without throwing.
          * @param args Call arguments.
          * @return Success value or invocation error.
          */

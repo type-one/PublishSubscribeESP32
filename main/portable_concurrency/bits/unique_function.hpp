@@ -83,12 +83,6 @@ namespace pco
     unique_function<R(A...)>& unique_function<R(A...)>::operator=(unique_function<R(A...)>&&) noexcept = default;
 
     template <typename R, typename... A>
-    R unique_function<R(A...)>::operator()(A... args) const
-    {
-        return func_(std::forward<A>(args)...);
-    }
-
-    template <typename R, typename... A>
     tools::expected<R, detail::function_invocation_error> unique_function<R(A...)>::try_invoke(A... args) const noexcept
     {
         return func_.try_invoke(std::forward<A>(args)...);
