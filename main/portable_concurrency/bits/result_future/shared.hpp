@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "tools/platform_detection.hpp"
+
 #include "promise.hpp"
 #include "result_shared_state_impl.hpp"
 
@@ -260,7 +262,7 @@ namespace pco
                         return;
                     }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                     try
                     {
                         if constexpr (std::is_void<T>::value)
@@ -397,7 +399,7 @@ namespace pco
                                 return;
                             }
                             const auto& ready = ctx->self.get_result();
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                             try
                             {
                                 if constexpr (std::is_void<T>::value)
@@ -622,7 +624,7 @@ namespace pco
                         return;
                     }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                     try
                     {
                         if constexpr (std::is_void<T>::value)
@@ -710,7 +712,7 @@ namespace pco
                                 return;
                             }
                             const auto& ready = ctx->self.get_result();
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                             try
                             {
                                 if constexpr (std::is_void<T>::value)
@@ -776,7 +778,7 @@ namespace pco
                         return;
                     }
                     const auto& current = ctx->self.get_result();
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                     try
                     {
                         if constexpr (detail::is_result_handle<next_raw_t>::value)
@@ -861,7 +863,7 @@ namespace pco
                                 return;
                             }
                             const auto& current = ctx->self.get_result();
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                             try
                             {
                                 if constexpr (detail::is_result_handle<next_raw_t>::value)

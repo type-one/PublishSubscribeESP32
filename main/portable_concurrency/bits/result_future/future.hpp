@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "tools/platform_detection.hpp"
+
 #include "promise.hpp"
 
 namespace pco
@@ -140,7 +142,7 @@ namespace pco
             auto result = get_result();
             if (!result.has_value())
             {
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                 throw std::runtime_error("future_result await_resume failed");
 #else
                 std::terminate();
@@ -251,7 +253,7 @@ namespace pco
                         return;
                     }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                     try
                     {
                         if constexpr (std::is_void<T>::value)
@@ -344,7 +346,7 @@ namespace pco
 
             if (!state_)
             {
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                 try
                 {
                     if constexpr (std::is_void<T>::value)
@@ -405,7 +407,7 @@ namespace pco
                         return;
                     }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                     try
                     {
                         if constexpr (std::is_void<T>::value)
@@ -457,7 +459,7 @@ namespace pco
             if (!state_)
             {
                 result_type current = tools::unexpected<E>(E::no_state);
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                 try
                 {
                     if constexpr (detail::is_result_handle<next_raw_t>::value)
@@ -521,7 +523,7 @@ namespace pco
 
                     result_type current = ctx->self.take_ready_result();
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                     try
                     {
                         if constexpr (detail::is_result_handle<next_raw_t>::value)
@@ -760,7 +762,7 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                                 try
                                 {
                                     if constexpr (std::is_void<T>::value)
@@ -847,7 +849,7 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                                 try
                                 {
                                     if constexpr (std::is_void<T>::value)
@@ -973,7 +975,7 @@ namespace pco
                         {
                             return;
                         }
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                         try
                         {
                             if constexpr (std::is_void<T>::value)
@@ -1058,7 +1060,7 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                                 try
                                 {
                                     if constexpr (std::is_void<T>::value)
@@ -1097,7 +1099,7 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                                 try
                                 {
                                     if constexpr (std::is_void<T>::value)
@@ -1165,7 +1167,7 @@ namespace pco
                         {
                             return;
                         }
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                         try
                         {
                             if constexpr (detail::is_result_handle<next_raw_t>::value)
@@ -1252,7 +1254,7 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                                 try
                                 {
                                     if constexpr (detail::is_result_handle<next_raw_t>::value)
@@ -1299,7 +1301,7 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                                 try
                                 {
                                     if constexpr (detail::is_result_handle<next_raw_t>::value)

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "tools/platform_detection.hpp"
+
 #include "future.hpp"
 #include "shared.hpp"
 
@@ -165,7 +167,7 @@ namespace pco
             auto task = [promise = std::move(promise), function_arg = std::forward<F>(function_arg),
                             params = std::make_tuple(std::forward<A>(args)...)]() mutable
             {
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#if defined(CPP_EXCEPTIONS_ENABLED)
                 try
                 {
                     if constexpr (std::is_void_v<value_t>)
