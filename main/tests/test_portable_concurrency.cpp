@@ -10,6 +10,7 @@
 #include "tools/platform_detection.hpp"
 
 #include "portable_concurrency/execution.hpp"
+#include "portable_concurrency/functional.hpp"
 #include "portable_concurrency/future.hpp"
 
 namespace
@@ -124,6 +125,18 @@ namespace
         EXPECT_EQ(result.value(), 15);
     }
 
+    /**
+     * @brief Verifies unique_function::try_invoke reports empty_target on default construction.
+     */
+    TEST(PortableConcurrencyResultTest, UniqueFunctionTryInvokeReportsEmptyTarget)
+    {
+        pco::unique_function<void()> task;
+
+        const auto result = task.try_invoke();
+        ASSERT_FALSE(result.has_value());
+        EXPECT_EQ(result.error(), pco::detail::function_invocation_error::empty_target);
+    }
+
 #if defined(CPP_EXCEPTIONS_ENABLED)
     /**
      * @brief Verifies thrown continuation exceptions map to continuation_failure.
@@ -138,6 +151,18 @@ namespace
         auto result = chained.get_result();
         ASSERT_FALSE(result.has_value());
         EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
+    }
+
+    /**
+     * @brief Verifies unique_function::try_invoke maps thrown callables to execution_failure.
+     */
+    TEST(PortableConcurrencyResultTest, UniqueFunctionTryInvokeMapsThrownCallableToExecutionFailure)
+    {
+        pco::unique_function<void()> task([]() { throw std::runtime_error("boom"); });
+
+        const auto result = task.try_invoke();
+        ASSERT_FALSE(result.has_value());
+        EXPECT_EQ(result.error(), pco::detail::function_invocation_error::execution_failure);
     }
 #endif
 

@@ -255,4 +255,37 @@ namespace pco::detail
         return vtbl_->call(buffer_, std::forward<A>(args)...);
     }
 
+    /**
+     * @brief Non-throwing invocation implementation.
+     */
+    template <typename R, typename... A>
+    tools::expected<R, function_invocation_error> small_unique_function<R(A...)>::try_invoke(A... args) const noexcept
+    {
+        if (!vtbl_)
+        {
+            return tools::unexpected<function_invocation_error>(function_invocation_error::empty_target);
+        }
+
+#if defined(CPP_EXCEPTIONS_ENABLED)
+        try
+        {
+#endif
+            if constexpr (std::is_void_v<R>)
+            {
+                vtbl_->call(buffer_, std::forward<A>(args)...);
+                return tools::expected<void, function_invocation_error> {};
+            }
+            else
+            {
+                return tools::expected<R, function_invocation_error>(vtbl_->call(buffer_, std::forward<A>(args)...));
+            }
+#if defined(CPP_EXCEPTIONS_ENABLED)
+        }
+        catch (...)
+        {
+            return tools::unexpected<function_invocation_error>(function_invocation_error::execution_failure);
+        }
+#endif
+    }
+
 } // namespace pco::detail

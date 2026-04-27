@@ -20,10 +20,24 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
+
+#include "tools/expected.hpp"
+
+#include "tools/platform_detection.hpp"
 
 namespace pco::detail
 {
+
+    /**
+     * @brief Error codes produced by non-throwing callable invocation helpers.
+     */
+    enum class function_invocation_error : std::uint8_t
+    {
+        empty_target = 1,
+        execution_failure,
+    };
 
     /**
      * @brief Inline storage size used by small_unique_function.
@@ -114,6 +128,13 @@ namespace pco::detail
          * @return Callable return value.
          */
         R operator()(A... args) const;
+
+        /**
+         * @brief Invokes the stored callable without throwing.
+         * @param args Invocation arguments.
+         * @return Success value or invocation error.
+         */
+        [[nodiscard]] tools::expected<R, function_invocation_error> try_invoke(A... args) const noexcept;
 
         /**
          * @brief Checks whether a callable is currently stored.

@@ -36,41 +36,6 @@
 
 namespace pco
 {
-    namespace
-    {
-
-        enum class task_exec_error : std::uint8_t
-        {
-            empty_task = 1,
-            execution_failure,
-        };
-
-        template <typename Callable>
-        [[nodiscard]] tools::expected<void, task_exec_error> execute_task(Callable& task) noexcept
-        {
-            if (!task)
-            {
-                return tools::unexpected<task_exec_error>(task_exec_error::empty_task);
-            }
-
-#if defined(CPP_EXCEPTIONS_ENABLED)
-            try
-            {
-                task();
-                return tools::expected<void, task_exec_error> {};
-            }
-            catch (...)
-            {
-                return tools::unexpected<task_exec_error>(task_exec_error::execution_failure);
-            }
-#else
-            task();
-            return tools::expected<void, task_exec_error> {};
-#endif
-        }
-
-    } // namespace
-
     namespace detail
     {
 
@@ -92,8 +57,7 @@ namespace pco
             auto continuation_local = std::move(continuation_fn);
             if (!stack_.push(continuation_local))
             {
-                const auto run_result = execute_task(continuation_local);
-                static_cast<void>(run_result);
+                static_cast<void>(continuation_local.try_invoke());
             }
         }
 
@@ -102,8 +66,7 @@ namespace pco
             auto continuations = stack_.consume();
             for (auto& continuation_fn : continuations)
             {
-                const auto run_result = execute_task(continuation_fn);
-                static_cast<void>(run_result);
+                static_cast<void>(continuation_fn.try_invoke());
             }
         }
 
@@ -125,11 +88,7 @@ namespace pco
             unique_function<void()> task;
             while (!stopped.load(std::memory_order_relaxed) && queue.pop(task))
             {
-                const auto run_result = execute_task(task);
-                if (!run_result.has_value())
-                {
-                    continue;
-                }
+                static_cast<void>(task.try_invoke());
             }
         }
 

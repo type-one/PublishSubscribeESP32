@@ -138,6 +138,13 @@ namespace pco
         R operator()(A... args) const;
 
         /**
+         * @brief Calls the stored callable without throwing.
+         * @param args Call arguments.
+         * @return Success value or invocation error.
+         */
+        [[nodiscard]] tools::expected<R, detail::function_invocation_error> try_invoke(A... args) const noexcept;
+
+        /**
          * @brief Checks whether this object currently stores a callable.
          */
         explicit operator bool() const noexcept

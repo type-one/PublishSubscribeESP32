@@ -28,6 +28,63 @@ namespace pco::detail
 {
 
     /**
+     * @brief RAII guard for managing allocator memory with automatic deallocation on scope exit.
+     * @tparam NodeAllocator Rebound allocator type for node allocation.
+     *
+     * Used to ensure allocated memory is deallocated if construction fails.
+     * On destruction, deallocates memory if it has not been released via release().
+     */
+    template <typename NodeAllocator>
+    class alloc_mem_guard
+    {
+    public:
+        using allocator_type = NodeAllocator;
+        using pointer = typename std::allocator_traits<allocator_type>::pointer;
+
+        /**
+         * @brief Constructs guard for given allocation.
+         * @param allocator Allocator instance.
+         * @param allocated_ptr Allocated memory pointer to manage.
+         */
+        alloc_mem_guard(allocator_type& allocator, pointer allocated_ptr) noexcept
+            : m_allocator(std::addressof(allocator))
+            , m_ptr(allocated_ptr)
+        {
+        }
+
+        /**
+         * @brief Deallocates memory on destruction if not released.
+         */
+        ~alloc_mem_guard() noexcept
+        {
+            if (m_ptr != nullptr) {
+                std::allocator_traits<allocator_type>::deallocate(*m_allocator, m_ptr, 1);
+            }
+        }
+
+        /**
+         * @brief Releases ownership of allocated memory (no deallocation on destruction).
+         * @return Pointer to allocated memory.
+         */
+        pointer release() noexcept
+        {
+            auto result = m_ptr;
+            m_ptr = nullptr;
+            return result;
+        }
+
+        // Non-copyable and non-movable
+        alloc_mem_guard(const alloc_mem_guard&) = delete;
+        alloc_mem_guard& operator=(const alloc_mem_guard&) = delete;
+        alloc_mem_guard(alloc_mem_guard&&) = delete;
+        alloc_mem_guard& operator=(alloc_mem_guard&&) = delete;
+
+    private:
+        allocator_type* m_allocator;
+        pointer m_ptr;
+    };
+
+    /**
      * @brief Singly linked node used by lock-free stack list storage.
      * @tparam T Stored value type.
      */
@@ -149,19 +206,16 @@ namespace pco::detail
         using node_allocator = typename std::allocator_traits<Alloc>::template rebind_alloc<node>;
         node_allocator nalloc { alloc };
         auto result = std::allocator_traits<node_allocator>::allocate(nalloc, 1);
-#if defined(CPP_EXCEPTIONS_ENABLED)
-        try
-        {
-            std::allocator_traits<node_allocator>::construct(nalloc, result, std::forward<T>(val), alloc);
-        }
-        catch (...)
-        {
-            std::allocator_traits<node_allocator>::deallocate(nalloc, result, 1);
-            throw;
-        }
-#else
+
+        // RAII guard ensures memory is deallocated if construction fails
+        alloc_mem_guard<node_allocator> mem_guard { nalloc, result };
+
+        // Construct node (may throw if exceptions enabled)
         std::allocator_traits<node_allocator>::construct(nalloc, result, std::forward<T>(val), alloc);
-#endif
+
+        // Construction succeeded; release memory to prevent deallocation in guard destructor
+        mem_guard.release();
+
         return forward_list<T> { result, forward_list_deleter<T> {} };
     }
 

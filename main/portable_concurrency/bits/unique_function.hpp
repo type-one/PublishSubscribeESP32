@@ -89,6 +89,12 @@ namespace pco
     }
 
     template <typename R, typename... A>
+    tools::expected<R, detail::function_invocation_error> unique_function<R(A...)>::try_invoke(A... args) const noexcept
+    {
+        return func_.try_invoke(std::forward<A>(args)...);
+    }
+
+    template <typename R, typename... A>
     unique_function<R(A...)>::unique_function(detail::small_unique_function<R(A...)>&& rhs) noexcept
         : func_(std::move(rhs))
     {
