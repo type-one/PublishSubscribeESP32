@@ -167,34 +167,6 @@ namespace pco
             auto task = [promise = std::move(promise), function_arg = std::forward<F>(function_arg),
                             params = std::make_tuple(std::forward<A>(args)...)]() mutable
             {
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                try
-                {
-                    if constexpr (std::is_void_v<value_t>)
-                    {
-                        {
-                            auto function_local = std::move(function_arg);
-                            auto params_local = std::move(params);
-                            std::apply(function_local, std::move(params_local));
-                        }
-                        promise.set_value();
-                    }
-                    else
-                    {
-                        auto val = [&]()
-                        {
-                            auto function_local = std::move(function_arg);
-                            auto params_local = std::move(params);
-                            return std::apply(function_local, std::move(params_local));
-                        }();
-                        promise.set_value(std::move(val));
-                    }
-                }
-                catch (...)
-                {
-                    promise.set_error(result_error::execution_failure);
-                }
-#else
                 if constexpr (std::is_void_v<value_t>)
                 {
                     {
@@ -214,7 +186,6 @@ namespace pco
                     }();
                     promise.set_value(std::move(val));
                 }
-#endif
             };
 
             post(std::forward<Exec>(exec), std::move(task));

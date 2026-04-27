@@ -76,23 +76,6 @@ TEST(AsyncResultTest, supports_void_callable)
     EXPECT_TRUE(executed);
 }
 
-#if defined(CPP_EXCEPTIONS_ENABLED)
-/**
- * @brief Verifies thrown callable exceptions map to execution_failure.
- */
-TEST(AsyncResultTest, thrown_callable_exception_maps_to_execution_failure)
-{
-    auto future = pco::async_result(pco::inplace_executor, []() -> int
-    {
-        throw 42;
-    });
-
-    auto result = future.get_result();
-    ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), pco::result_error::execution_failure);
-}
-#endif
-
 /**
  * @brief Verifies then_value can transform an pco::async_result success value.
  */

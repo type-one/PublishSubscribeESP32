@@ -107,29 +107,6 @@ TEST(PackagedTaskResultTest, unsatisfied_task_destruction_yields_broken_promise)
     EXPECT_EQ(result.error(), pco::result_error::broken_promise);
 }
 
-#if defined(CPP_EXCEPTIONS_ENABLED)
-TEST(PackagedTaskResultTest, thrown_exception_propagates)
-{
-    pco::packaged_task_result<int()> task([]() -> int
-    {
-        throw 7;
-    });
-
-    auto future = task.get_future();
-
-    // the result-based API no longer catches exceptions in pco::packaged_task_result internals.
-    // In exception-enabled builds, the callable exception propagates to caller.
-    EXPECT_THROW(task(), int);
-
-    // Promise was not fulfilled due to propagation; when task goes out of scope,
-    // future transitions to broken_promise.
-    task = pco::packaged_task_result<int()>{};
-    auto result = future.get_result();
-    ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), pco::result_error::broken_promise);
-}
-#endif
-
 
 // ---------------------------------------------------------------------------
 // P2.3 — packaged_task parity depth

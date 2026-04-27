@@ -236,47 +236,6 @@ namespace pco
                         return;
                     }
 
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                    try
-                    {
-                        if constexpr (std::is_void<T>::value)
-                        {
-                            if constexpr (detail::is_result_handle<next_raw_t>::value)
-                            {
-                                detail::resolve_nested_handle(ctx->promise, ctx->fn());
-                            }
-                            else if constexpr (std::is_void<next_value_t>::value)
-                            {
-                                ctx->fn();
-                                ctx->promise.set_value();
-                            }
-                            else
-                            {
-                                ctx->promise.set_value(ctx->fn());
-                            }
-                        }
-                        else
-                        {
-                            if constexpr (detail::is_result_handle<next_raw_t>::value)
-                            {
-                                detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current).value()));
-                            }
-                            else if constexpr (std::is_void<next_value_t>::value)
-                            {
-                                ctx->fn(std::move(current).value());
-                                ctx->promise.set_value();
-                            }
-                            else
-                            {
-                                ctx->promise.set_value(ctx->fn(std::move(current).value()));
-                            }
-                        }
-                    }
-                    catch (...)
-                    {
-                        ctx->promise.set_error(E::continuation_failure);
-                    }
-#else
                     if constexpr (std::is_void<T>::value)
                     {
                         if constexpr (detail::is_result_handle<next_raw_t>::value)
@@ -309,7 +268,6 @@ namespace pco
                             ctx->promise.set_value(ctx->fn(std::move(current).value()));
                         }
                     }
-#endif
                 });
 
             return next_future;
@@ -329,24 +287,6 @@ namespace pco
 
             if (!state_)
             {
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                try
-                {
-                    if constexpr (std::is_void<T>::value)
-                    {
-                        std::forward<F>(function_arg)(E::no_state);
-                        next_promise.set_value();
-                    }
-                    else
-                    {
-                        next_promise.set_value(std::forward<F>(function_arg)(E::no_state));
-                    }
-                }
-                catch (...)
-                {
-                    next_promise.set_error(E::continuation_failure);
-                }
-#else
                 if constexpr (std::is_void<T>::value)
                 {
                     std::forward<F>(function_arg)(E::no_state);
@@ -356,7 +296,6 @@ namespace pco
                 {
                     next_promise.set_value(std::forward<F>(function_arg)(E::no_state));
                 }
-#endif
                 return next_future;
             }
 
@@ -390,24 +329,6 @@ namespace pco
                         return;
                     }
 
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                    try
-                    {
-                        if constexpr (std::is_void<T>::value)
-                        {
-                            ctx->fn(current.error());
-                            ctx->promise.set_value();
-                        }
-                        else
-                        {
-                            ctx->promise.set_value(ctx->fn(current.error()));
-                        }
-                    }
-                    catch (...)
-                    {
-                        ctx->promise.set_error(E::continuation_failure);
-                    }
-#else
                     if constexpr (std::is_void<T>::value)
                     {
                         ctx->fn(current.error());
@@ -417,7 +338,6 @@ namespace pco
                     {
                         ctx->promise.set_value(ctx->fn(current.error()));
                     }
-#endif
                 });
 
             return next_future;
@@ -442,28 +362,6 @@ namespace pco
             if (!state_)
             {
                 result_type current = tools::unexpected<E>(E::no_state);
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                try
-                {
-                    if constexpr (detail::is_result_handle<next_raw_t>::value)
-                    {
-                        detail::resolve_nested_handle(next_promise, std::forward<F>(function_arg)(std::move(current)));
-                    }
-                    else if constexpr (std::is_void<next_value_t>::value)
-                    {
-                        std::forward<F>(function_arg)(std::move(current));
-                        next_promise.set_value();
-                    }
-                    else
-                    {
-                        next_promise.set_value(std::forward<F>(function_arg)(std::move(current)));
-                    }
-                }
-                catch (...)
-                {
-                    next_promise.set_error(E::continuation_failure);
-                }
-#else
                 if constexpr (detail::is_result_handle<next_raw_t>::value)
                 {
                     detail::resolve_nested_handle(next_promise, std::forward<F>(function_arg)(std::move(current)));
@@ -477,7 +375,6 @@ namespace pco
                 {
                     next_promise.set_value(std::forward<F>(function_arg)(std::move(current)));
                 }
-#endif
                 return next_future;
             }
 
@@ -506,28 +403,6 @@ namespace pco
 
                     result_type current = ctx->self.take_ready_result();
 
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                    try
-                    {
-                        if constexpr (detail::is_result_handle<next_raw_t>::value)
-                        {
-                            detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
-                        }
-                        else if constexpr (std::is_void<next_value_t>::value)
-                        {
-                            ctx->fn(std::move(current));
-                            ctx->promise.set_value();
-                        }
-                        else
-                        {
-                            ctx->promise.set_value(ctx->fn(std::move(current)));
-                        }
-                    }
-                    catch (...)
-                    {
-                        ctx->promise.set_error(E::continuation_failure);
-                    }
-#else
                     if constexpr (detail::is_result_handle<next_raw_t>::value)
                     {
                         detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
@@ -541,7 +416,6 @@ namespace pco
                     {
                         ctx->promise.set_value(ctx->fn(std::move(current)));
                     }
-#endif
                 });
 
             return next_future;
@@ -745,48 +619,6 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                                try
-                                {
-                                    if constexpr (std::is_void<T>::value)
-                                    {
-                                        if constexpr (detail::is_result_handle<next_raw_t>::value)
-                                        {
-                                            detail::resolve_nested_handle(ctx->promise, ctx->fn());
-                                        }
-                                        else if constexpr (std::is_void<next_value_t>::value)
-                                        {
-                                            ctx->fn();
-                                            ctx->promise.set_value();
-                                        }
-                                        else
-                                        {
-                                            ctx->promise.set_value(ctx->fn());
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if constexpr (detail::is_result_handle<next_raw_t>::value)
-                                        {
-                                            detail::resolve_nested_handle(
-                                                ctx->promise, ctx->fn(std::move(current).value()));
-                                        }
-                                        else if constexpr (std::is_void<next_value_t>::value)
-                                        {
-                                            ctx->fn(std::move(current).value());
-                                            ctx->promise.set_value();
-                                        }
-                                        else
-                                        {
-                                            ctx->promise.set_value(ctx->fn(std::move(current).value()));
-                                        }
-                                    }
-                                }
-                                catch (...)
-                                {
-                                    ctx->promise.set_error(E::continuation_failure);
-                                }
-#else
                                 if constexpr (std::is_void<T>::value)
                                 {
                                     if constexpr (detail::is_result_handle<next_raw_t>::value)
@@ -820,7 +652,6 @@ namespace pco
                                         ctx->promise.set_value(ctx->fn(std::move(current).value()));
                                     }
                                 }
-#endif
                             });
                     }
                     else
@@ -832,48 +663,6 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                                try
-                                {
-                                    if constexpr (std::is_void<T>::value)
-                                    {
-                                        if constexpr (detail::is_result_handle<next_raw_t>::value)
-                                        {
-                                            detail::resolve_nested_handle(ctx->promise, ctx->fn());
-                                        }
-                                        else if constexpr (std::is_void<next_value_t>::value)
-                                        {
-                                            ctx->fn();
-                                            ctx->promise.set_value();
-                                        }
-                                        else
-                                        {
-                                            ctx->promise.set_value(ctx->fn());
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if constexpr (detail::is_result_handle<next_raw_t>::value)
-                                        {
-                                            detail::resolve_nested_handle(
-                                                ctx->promise, ctx->fn(std::move(current).value()));
-                                        }
-                                        else if constexpr (std::is_void<next_value_t>::value)
-                                        {
-                                            ctx->fn(std::move(current).value());
-                                            ctx->promise.set_value();
-                                        }
-                                        else
-                                        {
-                                            ctx->promise.set_value(ctx->fn(std::move(current).value()));
-                                        }
-                                    }
-                                }
-                                catch (...)
-                                {
-                                    ctx->promise.set_error(E::continuation_failure);
-                                }
-#else
                                 if constexpr (std::is_void<T>::value)
                                 {
                                     if constexpr (detail::is_result_handle<next_raw_t>::value)
@@ -907,7 +696,6 @@ namespace pco
                                         ctx->promise.set_value(ctx->fn(std::move(current).value()));
                                     }
                                 }
-#endif
                             });
                     }
                 });
@@ -958,24 +746,6 @@ namespace pco
                         {
                             return;
                         }
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                        try
-                        {
-                            if constexpr (std::is_void<T>::value)
-                            {
-                                function_arg(E::no_state);
-                                promise.set_value();
-                            }
-                            else
-                            {
-                                promise.set_value(function_arg(E::no_state));
-                            }
-                        }
-                        catch (...)
-                        {
-                            promise.set_error(E::continuation_failure);
-                        }
-#else
                         if constexpr (std::is_void<T>::value)
                         {
                             function_arg(E::no_state);
@@ -985,7 +755,6 @@ namespace pco
                         {
                             promise.set_value(function_arg(E::no_state));
                         }
-#endif
                     });
                 return next_future;
             }
@@ -1043,24 +812,6 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                                try
-                                {
-                                    if constexpr (std::is_void<T>::value)
-                                    {
-                                        ctx->fn(error);
-                                        ctx->promise.set_value();
-                                    }
-                                    else
-                                    {
-                                        ctx->promise.set_value(ctx->fn(error));
-                                    }
-                                }
-                                catch (...)
-                                {
-                                    ctx->promise.set_error(E::continuation_failure);
-                                }
-#else
                                 if constexpr (std::is_void<T>::value)
                                 {
                                     ctx->fn(error);
@@ -1070,7 +821,6 @@ namespace pco
                                 {
                                     ctx->promise.set_value(ctx->fn(error));
                                 }
-#endif
                             });
                     }
                     else
@@ -1082,24 +832,6 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                                try
-                                {
-                                    if constexpr (std::is_void<T>::value)
-                                    {
-                                        ctx->fn(error);
-                                        ctx->promise.set_value();
-                                    }
-                                    else
-                                    {
-                                        ctx->promise.set_value(ctx->fn(error));
-                                    }
-                                }
-                                catch (...)
-                                {
-                                    ctx->promise.set_error(E::continuation_failure);
-                                }
-#else
                                 if constexpr (std::is_void<T>::value)
                                 {
                                     ctx->fn(error);
@@ -1109,7 +841,6 @@ namespace pco
                                 {
                                     ctx->promise.set_value(ctx->fn(error));
                                 }
-#endif
                             });
                     }
                 });
@@ -1150,28 +881,6 @@ namespace pco
                         {
                             return;
                         }
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                        try
-                        {
-                            if constexpr (detail::is_result_handle<next_raw_t>::value)
-                            {
-                                detail::resolve_nested_handle(promise, function_arg(std::move(current)));
-                            }
-                            else if constexpr (std::is_void<next_value_t>::value)
-                            {
-                                function_arg(std::move(current));
-                                promise.set_value();
-                            }
-                            else
-                            {
-                                promise.set_value(function_arg(std::move(current)));
-                            }
-                        }
-                        catch (...)
-                        {
-                            promise.set_error(E::continuation_failure);
-                        }
-#else
                         if constexpr (detail::is_result_handle<next_raw_t>::value)
                         {
                             detail::resolve_nested_handle(promise, function_arg(std::move(current)));
@@ -1185,7 +894,6 @@ namespace pco
                         {
                             promise.set_value(function_arg(std::move(current)));
                         }
-#endif
                     });
                 return next_future;
             }
@@ -1237,28 +945,6 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                                try
-                                {
-                                    if constexpr (detail::is_result_handle<next_raw_t>::value)
-                                    {
-                                        detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
-                                    }
-                                    else if constexpr (std::is_void<next_value_t>::value)
-                                    {
-                                        ctx->fn(std::move(current));
-                                        ctx->promise.set_value();
-                                    }
-                                    else
-                                    {
-                                        ctx->promise.set_value(ctx->fn(std::move(current)));
-                                    }
-                                }
-                                catch (...)
-                                {
-                                    ctx->promise.set_error(E::continuation_failure);
-                                }
-#else
                                 if constexpr (detail::is_result_handle<next_raw_t>::value)
                                 {
                                     detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
@@ -1272,7 +958,6 @@ namespace pco
                                 {
                                     ctx->promise.set_value(ctx->fn(std::move(current)));
                                 }
-#endif
                             });
                     }
                     else
@@ -1284,28 +969,6 @@ namespace pco
                                 {
                                     return;
                                 }
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                                try
-                                {
-                                    if constexpr (detail::is_result_handle<next_raw_t>::value)
-                                    {
-                                        detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
-                                    }
-                                    else if constexpr (std::is_void<next_value_t>::value)
-                                    {
-                                        ctx->fn(std::move(current));
-                                        ctx->promise.set_value();
-                                    }
-                                    else
-                                    {
-                                        ctx->promise.set_value(ctx->fn(std::move(current)));
-                                    }
-                                }
-                                catch (...)
-                                {
-                                    ctx->promise.set_error(E::continuation_failure);
-                                }
-#else
                                 if constexpr (detail::is_result_handle<next_raw_t>::value)
                                 {
                                     detail::resolve_nested_handle(ctx->promise, ctx->fn(std::move(current)));
@@ -1319,7 +982,6 @@ namespace pco
                                 {
                                     ctx->promise.set_value(ctx->fn(std::move(current)));
                                 }
-#endif
                             });
                     }
                 });

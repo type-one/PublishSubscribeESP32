@@ -37,7 +37,7 @@ namespace pco
      * @headerfile portable_concurrency/functional
      * @ingroup functional
      * @brief Move-only type erasure for arbitrary callable object.
-    * @note Invocation is performed via `invoke(...)`.
+     * @note Invocation is performed via `invoke(...)`.
      *
      * Implementation of
      * http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf proposal.

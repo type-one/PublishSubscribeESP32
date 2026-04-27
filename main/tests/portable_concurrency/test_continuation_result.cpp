@@ -584,63 +584,6 @@ namespace
         EXPECT_EQ(result.error(), pco::result_error::execution_failure);
     }
 
-#if defined(CPP_EXCEPTIONS_ENABLED)
-    /**
-     * @brief Verifies a throw in then_value maps to continuation_failure.
-     */
-    TEST(ContinuationResultTest, then_value_throw_maps_to_continuation_failure)
-    {
-        auto promise_and_future = pco::make_result_promise<int>();
-        auto promise = std::move(promise_and_future.first);
-        auto source = std::move(promise_and_future.second);
-
-        promise.set_value(42);
-
-        auto chained = std::move(source).then_value([](int) -> int { throw std::runtime_error("boom"); });
-
-        auto result = chained.get_result();
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
-    }
-
-    /**
-     * @brief Verifies a throw in then_error maps to continuation_failure.
-     */
-    TEST(ContinuationResultTest, then_error_throw_maps_to_continuation_failure)
-    {
-        auto promise_and_future = pco::make_result_promise<int>();
-        auto promise = std::move(promise_and_future.first);
-        auto source = std::move(promise_and_future.second);
-
-        promise.set_error(pco::result_error::execution_failure);
-
-        auto chained = std::move(source).then_error([](pco::result_error) -> int { throw std::runtime_error("boom"); });
-
-        auto result = chained.get_result();
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
-    }
-
-    /**
-     * @brief Verifies a throw in then_result maps to continuation_failure.
-     */
-    TEST(ContinuationResultTest, then_result_throw_maps_to_continuation_failure)
-    {
-        auto promise_and_future = pco::make_result_promise<int>();
-        auto promise = std::move(promise_and_future.first);
-        auto source = std::move(promise_and_future.second);
-
-        promise.set_value(42);
-
-        auto chained = std::move(source).then_result(
-            [](pco::expected<int, pco::result_error>) -> int { throw std::runtime_error("boom"); });
-
-        auto result = chained.get_result();
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
-    }
-#endif
-
     /**
      * @brief Verifies then_value with executor dispatches to the executor and transforms value.
      */
@@ -799,65 +742,5 @@ namespace
         ASSERT_TRUE(result.has_value());
         EXPECT_EQ(result.value(), 30);
     }
-
-#if defined(CPP_EXCEPTIONS_ENABLED)
-    /**
-     * @brief Verifies executor-based then_value throw maps to continuation_failure.
-     */
-    TEST(ContinuationResultTest, then_value_executor_throw_maps_to_continuation_failure)
-    {
-        auto promise_and_future = pco::make_result_promise<int>();
-        auto promise = std::move(promise_and_future.first);
-        auto source = std::move(promise_and_future.second);
-
-        promise.set_value(42);
-
-        auto chained = std::move(source).then_value(
-            pco::inplace_executor, [](int) -> int { throw std::runtime_error("executor continuation failed"); });
-
-        auto result = chained.get_result();
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
-    }
-
-    /**
-     * @brief Verifies executor-based then_error throw maps to continuation_failure.
-     */
-    TEST(ContinuationResultTest, then_error_executor_throw_maps_to_continuation_failure)
-    {
-        auto promise_and_future = pco::make_result_promise<int>();
-        auto promise = std::move(promise_and_future.first);
-        auto source = std::move(promise_and_future.second);
-
-        promise.set_error(pco::result_error::execution_failure);
-
-        auto chained = std::move(source).then_error(pco::inplace_executor,
-            [](pco::result_error) -> int { throw std::runtime_error("executor error handler failed"); });
-
-        auto result = chained.get_result();
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
-    }
-
-    /**
-     * @brief Verifies executor-based then_result throw maps to continuation_failure.
-     */
-    TEST(ContinuationResultTest, then_result_executor_throw_maps_to_continuation_failure)
-    {
-        auto promise_and_future = pco::make_result_promise<int>();
-        auto promise = std::move(promise_and_future.first);
-        auto source = std::move(promise_and_future.second);
-
-        promise.set_value(42);
-
-        auto chained
-            = std::move(source).then_result(pco::inplace_executor, [](pco::expected<int, pco::result_error>) -> int
-                { throw std::runtime_error("executor result handler failed"); });
-
-        auto result = chained.get_result();
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
-    }
-#endif
 
 } // namespace

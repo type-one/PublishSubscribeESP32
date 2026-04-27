@@ -247,26 +247,15 @@ namespace pco::detail
             return tools::unexpected<function_invocation_error>(function_invocation_error::empty_target);
         }
 
-#if defined(CPP_EXCEPTIONS_ENABLED)
-        try
+        if constexpr (std::is_void_v<R>)
         {
-#endif
-            if constexpr (std::is_void_v<R>)
-            {
-                vtbl_->call(buffer_, std::forward<A>(args)...);
-                return tools::expected<void, function_invocation_error> {};
-            }
-            else
-            {
-                return tools::expected<R, function_invocation_error>(vtbl_->call(buffer_, std::forward<A>(args)...));
-            }
-#if defined(CPP_EXCEPTIONS_ENABLED)
+            vtbl_->call(buffer_, std::forward<A>(args)...);
+            return tools::expected<void, function_invocation_error> {};
         }
-        catch (...)
+        else
         {
-            return tools::unexpected<function_invocation_error>(function_invocation_error::execution_failure);
+            return tools::expected<R, function_invocation_error>(vtbl_->call(buffer_, std::forward<A>(args)...));
         }
-#endif
     }
 
 } // namespace pco::detail

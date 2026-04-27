@@ -137,33 +137,4 @@ namespace
         EXPECT_EQ(result.error(), pco::detail::function_invocation_error::empty_target);
     }
 
-#if defined(CPP_EXCEPTIONS_ENABLED)
-    /**
-     * @brief Verifies thrown continuation exceptions map to continuation_failure.
-     */
-    TEST(PortableConcurrencyResultTest, ThenResultMapsThrownExceptionToContinuationFailure)
-    {
-        auto future = pco::async_result(pco::inplace_executor, []() { return 1; });
-
-        auto chained = std::move(future).then_result(
-            [](pco::expected<int, pco::result_error>) -> int { throw std::runtime_error("boom"); });
-
-        auto result = chained.get_result();
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error(), pco::result_error::continuation_failure);
-    }
-
-    /**
-    * @brief Verifies unique_function::invoke maps thrown callables to execution_failure.
-     */
-    TEST(PortableConcurrencyResultTest, UniqueFunctionTryInvokeMapsThrownCallableToExecutionFailure)
-    {
-        pco::unique_function<void()> task([]() { throw std::runtime_error("boom"); });
-
-        const auto result = task.invoke();
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error(), pco::detail::function_invocation_error::execution_failure);
-    }
-#endif
-
 } // namespace
