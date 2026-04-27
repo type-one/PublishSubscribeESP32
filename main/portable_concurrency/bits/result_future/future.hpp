@@ -42,7 +42,7 @@ namespace pco
     class future_result
     {
         static_assert(!std::is_reference_v<T>,
-            "portable_concurrency v2 does not support reference return types. "
+            "portable_concurrency does not support reference return types. "
             "Use pointers or std::reference_wrapper<T> instead. "
             "This design constraint avoids move-semantics ambiguity and lifetime issues.");
 
@@ -654,7 +654,7 @@ namespace pco
         }
 
         /**
-         * @brief Alias of then_value for v1 compatibility naming.
+         * @brief Alias of then_value.
          * @tparam F Continuation callable type.
          * @param function_arg Continuation callable.
          * @return Same result as then_value(function_arg).

@@ -53,7 +53,7 @@ namespace pco
         using any_result_t = when_any_result<futures_tuple_t>;
 
         static_assert((std::is_same<error_t, typename std::decay_t<Futures>::error_type>::value && ...),
-            "All futures passed to v2::when_any must share the same error type");
+            "All futures passed to when_any must share the same error type");
 
         auto promise_and_future = make_result_promise<any_result_t, error_t>();
         auto promise = std::move(promise_and_future.first);

@@ -51,7 +51,7 @@ namespace pco
         using error_t = typename first_future_t::error_type;
 
         static_assert((std::is_same<error_t, typename std::decay_t<Futures>::error_type>::value && ...),
-            "All futures passed to v2::when_all must share the same error type");
+            "All futures passed to when_all must share the same error type");
 
         using results_tuple_t = std::tuple<typename std::decay_t<Futures>::result_type...>;
 
@@ -128,7 +128,7 @@ namespace pco
         using shared_tuple_t = std::tuple<std::decay_t<SharedResults>...>;
 
         static_assert((std::is_same<error_t, typename std::decay_t<SharedResults>::error_type>::value && ...),
-            "All shared_results passed to v2::when_all must share the same error type");
+            "All shared_results passed to when_all must share the same error type");
 
         auto promise_and_future = make_result_promise<shared_tuple_t, error_t>();
         auto promise = std::move(promise_and_future.first);
@@ -203,7 +203,7 @@ namespace pco
         using handles_tuple_t = std::tuple<std::decay_t<Handles>...>;
 
         static_assert((std::is_same<error_t, typename std::decay_t<Handles>::error_type>::value && ...),
-            "All handles passed to v2::when_all must share the same error type");
+            "All handles passed to when_all must share the same error type");
 
         auto promise_and_future = make_result_promise<handles_tuple_t, error_t>();
         auto promise = std::move(promise_and_future.first);

@@ -131,14 +131,13 @@ namespace pco::detail
     template <typename... T>
     class either;
 
-    // Minimalistic backport of std::variant<std::monostate, T...> from C++17:
-    // MoveConstructible && !CopyConstructible
+    // Minimalistic discriminated union: std::variant<std::monostate, T...>.
+    // MoveConstructible && !CopyConstructible.
     //
-    // Move operaton is explicitly marked as noexcept(true) and only used by library
+    // Move operation is explicitly marked as noexcept(true) and only used by library
     // for instantiations on types which are nothrow move constructible.
     //
-    // First state (monostate) is used as valueless by exception. Some steps are
-    // required to shift to std::variant after switch to C++17
+    // First state (monostate) is used as the valueless-by-exception sentinel.
     template <typename... T>
     class either<monostate, T...>
     {

@@ -152,7 +152,7 @@ namespace pco
         using future_type = typename detail::packaged_task_result_future<R, error_type>::type;
 
         static_assert(!std::is_reference_v<value_type>,
-            "portable_concurrency v2 does not support reference return types. "
+            "portable_concurrency does not support reference return types. "
             "Use pointers or std::reference_wrapper<T> instead. "
             "This design constraint avoids move-semantics ambiguity and lifetime issues.");
 

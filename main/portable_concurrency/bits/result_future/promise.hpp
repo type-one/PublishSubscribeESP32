@@ -31,7 +31,7 @@ namespace pco
     class promise_result
     {
         static_assert(!std::is_reference_v<T>,
-            "portable_concurrency v2 does not support reference return types. "
+            "portable_concurrency does not support reference return types. "
             "Use pointers or std::reference_wrapper<T> instead. "
             "This design constraint avoids move-semantics ambiguity and lifetime issues.");
 
@@ -323,8 +323,8 @@ namespace pco
                 {
                     if (nested.error() == E::no_state)
                     {
-                        // Continuation returned an invalid nested handle; match v1 behavior
-                        // by surfacing broken_promise on the outer result.
+                        // Continuation returned an invalid nested handle;
+                        // surface broken_promise on the outer result.
                         promise.set_error(E::broken_promise);
                     }
                     else
