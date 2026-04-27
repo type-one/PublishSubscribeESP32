@@ -137,22 +137,9 @@ namespace pco
             return !state_ || is_ready();
         }
 
-        auto await_resume()
+        result_type await_resume()
         {
-            auto result = get_result();
-            if (!result.has_value())
-            {
-                throw std::runtime_error("future_result await_resume failed");
-            }
-
-            if constexpr (std::is_void_v<T>)
-            {
-                return;
-            }
-            else
-            {
-                return std::move(*result);
-            }
+            return get_result();
         }
 
         void await_suspend(::pco::detail::coroutine_handle<> handle)

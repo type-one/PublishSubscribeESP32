@@ -136,7 +136,13 @@ namespace
         int offset_value)
     {
         co_await worker_ptr->schedule();
-        const int base = co_await upstream;
+        const auto upstream_result = co_await upstream;
+        if (!upstream_result.has_value())
+        {
+            co_return -1;
+        }
+
+        const int base = upstream_result.value();
         context->call_count.fetch_add(1);
         co_return base + offset_value;
     }

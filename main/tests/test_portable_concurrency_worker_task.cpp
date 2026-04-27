@@ -87,7 +87,13 @@ pco::future_result<int> coroutine_await_future_job(
     pco::future_result<int> upstream)
 {
     co_await worker.schedule();
-    const int upstream_value = co_await upstream;
+    const auto upstream_result = co_await upstream;
+    if (!upstream_result.has_value())
+    {
+        co_return -1;
+    }
+
+    const int upstream_value = upstream_result.value();
     context->loop_counter.fetch_add(1);
     co_return upstream_value + 5;
 }
