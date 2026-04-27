@@ -59,7 +59,7 @@ namespace pco::detail
             auto continuation_local = std::move(continuation_fn);
             if (!stack_.push(continuation_local, alloc))
             {
-                static_cast<void>(continuation_local.try_invoke());
+                static_cast<void>(continuation_local.invoke());
             }
         }
 

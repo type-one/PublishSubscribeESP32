@@ -240,7 +240,7 @@ namespace pco::detail
      * @brief Non-throwing invocation implementation.
      */
     template <typename R, typename... A>
-    tools::expected<R, function_invocation_error> small_unique_function<R(A...)>::try_invoke(A... args) const noexcept
+    tools::expected<R, function_invocation_error> small_unique_function<R(A...)>::invoke(A... args) const noexcept
     {
         if (!vtbl_)
         {

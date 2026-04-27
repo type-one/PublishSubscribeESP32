@@ -126,13 +126,13 @@ namespace
     }
 
     /**
-     * @brief Verifies unique_function::try_invoke reports empty_target on default construction.
+    * @brief Verifies unique_function::invoke reports empty_target on default construction.
      */
     TEST(PortableConcurrencyResultTest, UniqueFunctionTryInvokeReportsEmptyTarget)
     {
         pco::unique_function<void()> task;
 
-        const auto result = task.try_invoke();
+        const auto result = task.invoke();
         ASSERT_FALSE(result.has_value());
         EXPECT_EQ(result.error(), pco::detail::function_invocation_error::empty_target);
     }
@@ -154,13 +154,13 @@ namespace
     }
 
     /**
-     * @brief Verifies unique_function::try_invoke maps thrown callables to execution_failure.
+    * @brief Verifies unique_function::invoke maps thrown callables to execution_failure.
      */
     TEST(PortableConcurrencyResultTest, UniqueFunctionTryInvokeMapsThrownCallableToExecutionFailure)
     {
         pco::unique_function<void()> task([]() { throw std::runtime_error("boom"); });
 
-        const auto result = task.try_invoke();
+        const auto result = task.invoke();
         ASSERT_FALSE(result.has_value());
         EXPECT_EQ(result.error(), pco::detail::function_invocation_error::execution_failure);
     }

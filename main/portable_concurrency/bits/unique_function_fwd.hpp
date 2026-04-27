@@ -37,7 +37,7 @@ namespace pco
      * @headerfile portable_concurrency/functional
      * @ingroup functional
      * @brief Move-only type erasure for arbitrary callable object.
-    * @note Invocation is performed via `try_invoke(...)`.
+    * @note Invocation is performed via `invoke(...)`.
      *
      * Implementation of
      * http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4543.pdf proposal.
@@ -135,7 +135,7 @@ namespace pco
          * @param args Call arguments.
          * @return Success value or invocation error.
          */
-        [[nodiscard]] tools::expected<R, detail::function_invocation_error> try_invoke(A... args) const noexcept;
+        [[nodiscard]] tools::expected<R, detail::function_invocation_error> invoke(A... args) const noexcept;
 
         /**
          * @brief Checks whether this object currently stores a callable.

@@ -47,7 +47,7 @@ namespace pco
             auto continuation_local = std::move(continuation_fn);
             if (!stack_.push(continuation_local))
             {
-                static_cast<void>(continuation_local.try_invoke());
+                static_cast<void>(continuation_local.invoke());
             }
         }
 
@@ -56,7 +56,7 @@ namespace pco
             auto continuations = stack_.consume();
             for (auto& continuation_fn : continuations)
             {
-                static_cast<void>(continuation_fn.try_invoke());
+                static_cast<void>(continuation_fn.invoke());
             }
         }
 
@@ -78,7 +78,7 @@ namespace pco
             unique_function<void()> task;
             while (!stopped.load(std::memory_order_relaxed) && queue.pop(task))
             {
-                static_cast<void>(task.try_invoke());
+                static_cast<void>(task.invoke());
             }
         }
 

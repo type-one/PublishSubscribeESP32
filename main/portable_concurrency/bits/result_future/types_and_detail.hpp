@@ -231,7 +231,7 @@ namespace pco
             {
                 if (!ready_ && cancel_action_)
                 {
-                    static_cast<void>(cancel_action_.try_invoke());
+                    static_cast<void>(cancel_action_.invoke());
                 }
             }
 

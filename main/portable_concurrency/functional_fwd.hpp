@@ -25,7 +25,7 @@
  * Forward declarations for extra functional types useful for writing
  * concurrent code.
  *
- * `unique_function` invocation is provided via `try_invoke(...)`.
+ * `unique_function` invocation is provided via `invoke(...)`.
  */
 
 #include "bits/unique_function_fwd.hpp"
