@@ -222,7 +222,10 @@ namespace CppTime
 
                     // Invoke the handler
                     lock.unlock();
-                    events.at(tev.ref).handler(tev.ref);
+                    if (events.at(tev.ref).handler)
+                    {
+                        events.at(tev.ref).handler(tev.ref);
+                    }
                     lock.lock();
 
                     if (events.at(tev.ref).valid && events.at(tev.ref).period.count() > 0)

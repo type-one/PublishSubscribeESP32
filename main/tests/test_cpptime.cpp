@@ -359,33 +359,53 @@ TEST_F(TimerTest, TestTwoIdenticalTimeouts)
  * @brief Test case for verifying timer timeouts from the past.
  *
  * This test case checks the behavior of the timer when timeouts are set in the past.
- * It verifies that the callbacks are executed immediately if the timeout is in the past.
+ * It verifies that the callbacks are executed immediately (or very quickly) if the timeout
+ * is in the past, using synchronization primitives instead of fixed sleeps for stability.
  *
  * @test
- * - Sets two timeouts in the past and verifies that the callbacks are executed immediately.
- * - Sets two timeouts in the future, with one callback causing a delay, and verifies that the second callback is
- * executed after the delay.
- *
- * @param TimerTest The test fixture class.
+ * - Sets two timeouts in the past and waits for both to execute.
+ * - Verifies that past timeouts execute before reasonable future deadlines.
  */
-TEST_F(TimerTest, DISABLED_TestTimeoutsFromThePast) // unstable test, disabled for now
+TEST_F(TimerTest, TestTimeoutsFromThePast)
 {
+    // Part 1: Verify that timeouts in the past execute immediately
     std::atomic<int> i { 0 };
     std::atomic<int> j { 0 };
+    std::promise<void> past_done;
+    auto past_done_future = past_done.get_future();
+
     CppTime::timestamp ts1 = CppTime::clock::now() - milliseconds(10);
     CppTime::timestamp ts2 = CppTime::clock::now() - milliseconds(20);
+    
     timer->add(ts1, [&](CppTime::timer_id) { i.store(42); });
-    timer->add(ts2, [&](CppTime::timer_id) { j.store(43); });
-    std::this_thread::sleep_for(microseconds(20));
+    timer->add(ts2, [&](CppTime::timer_id) {
+        j.store(43);
+        past_done.set_value();
+    });
+    
+    // Wait for past timeouts to execute with a reasonable timeout
+    EXPECT_EQ(past_done_future.wait_for(milliseconds(100)), std::future_status::ready);
     EXPECT_EQ(i.load(), 42);
     EXPECT_EQ(j.load(), 43);
 
+    // Part 2: Verify future timeouts still work correctly
     i.store(0);
-    CppTime::timestamp ts3 = CppTime::clock::now() + milliseconds(10);
-    CppTime::timestamp ts4 = CppTime::clock::now() + milliseconds(20);
-    timer->add(ts3, [&](CppTime::timer_id) { std::this_thread::sleep_for(milliseconds(20)); });
-    timer->add(ts4, [&](CppTime::timer_id) { i.store(42); });
-    std::this_thread::sleep_for(milliseconds(50));
+    std::promise<void> future_done;
+    auto future_done_future = future_done.get_future();
+
+    CppTime::timestamp ts3 = CppTime::clock::now() + milliseconds(30);
+    CppTime::timestamp ts4 = CppTime::clock::now() + milliseconds(60);
+    
+    timer->add(ts3, [&](CppTime::timer_id) { 
+        std::this_thread::sleep_for(milliseconds(20)); 
+    });
+    timer->add(ts4, [&](CppTime::timer_id) {
+        i.store(42);
+        future_done.set_value();
+    });
+    
+    // Wait for future timeouts with sufficient timeout
+    EXPECT_EQ(future_done_future.wait_for(milliseconds(200)), std::future_status::ready);
     EXPECT_EQ(i.load(), 42);
 }
 
