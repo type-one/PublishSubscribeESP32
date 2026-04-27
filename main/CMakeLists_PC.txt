@@ -356,7 +356,6 @@ set(PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES
     tests/portable_concurrency/test_abandon_result.cpp
     tests/portable_concurrency/test_async_result.cpp
     tests/portable_concurrency/test_continuation_result.cpp
-    tests/portable_concurrency/test_continuation_result_no_exceptions.cpp
     tests/portable_concurrency/test_future_result.cpp
     tests/portable_concurrency/test_next_result.cpp
     tests/portable_concurrency/test_packaged_task_result.cpp

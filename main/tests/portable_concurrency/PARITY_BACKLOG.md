@@ -24,8 +24,7 @@ Historical note: references to `tests/portable_concurrency/*` in this backlog ar
     - New result-based tests covering all above behaviors.
   - Status:
     - Implemented `then(...)` interruptible continuation overloads for both `future_result` and `shared_result` in `portable_concurrency/bits/result_future.hpp`.
-    - Added no-exceptions parity tests in `tests/portable_concurrency/test_continuation_result_no_exceptions.cpp`.
-
+    - Consolidated parity coverage into `tests/portable_concurrency/test_continuation_result.cpp` (single-source continuation suite).
 - [x] P0.2 Abandon/cancellation matrix parity
   - Target parity from v1:
     - `tests/portable_concurrency/test_abandon.cpp`

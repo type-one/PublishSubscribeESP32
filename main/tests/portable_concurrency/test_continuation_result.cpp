@@ -361,6 +361,110 @@ namespace
     }
 
     /**
+     * @brief Verifies a multi-stage continuation chain on successful input.
+     */
+    TEST(ContinuationResultTest, multiple_chained_continuations)
+    {
+        auto promise_and_future = pco::make_result_promise<int>();
+        auto promise = std::move(promise_and_future.first);
+        auto source = std::move(promise_and_future.second);
+
+        promise.set_value(5);
+
+        auto chained = std::move(source)
+                           .then_value([](int value) { return value * 2; })
+                           .then_value([](int value) { return value + 3; })
+                           .then_value([](int value) { return value * 4; });
+
+        auto result = chained.get_result();
+        ASSERT_TRUE(result.has_value());
+        EXPECT_EQ(result.value(), 52);
+    }
+
+    /**
+     * @brief Verifies a mixed recovery chain from error to value to expected-aware continuation.
+     */
+    TEST(ContinuationResultTest, complex_error_recovery_chain)
+    {
+        auto promise_and_future = pco::make_result_promise<int>();
+        auto promise = std::move(promise_and_future.first);
+        auto source = std::move(promise_and_future.second);
+
+        promise.set_error(pco::result_error::broken_promise);
+
+        auto chained = std::move(source)
+                           .then_error(
+                               [](pco::result_error error)
+                               {
+                                   if (error == pco::result_error::broken_promise)
+                                   {
+                                       return 100;
+                                   }
+                                   return 0;
+                               })
+                           .then_value([](int value) { return value / 2; })
+                           .then_result(
+                               [](pco::expected<int, pco::result_error> result)
+                               {
+                                   EXPECT_TRUE(result.has_value());
+                                   return result.value() + 10;
+                               });
+
+        auto out = chained.get_result();
+        ASSERT_TRUE(out.has_value());
+        EXPECT_EQ(out.value(), 60);
+    }
+
+    /**
+     * @brief Verifies a simple continuation runs exactly once and preserves the value.
+     */
+    TEST(ContinuationResultTest, lightweight_continuation_execution)
+    {
+        auto promise_and_future = pco::make_result_promise<int>();
+        auto promise = std::move(promise_and_future.first);
+        auto source = std::move(promise_and_future.second);
+
+        int callback_count = 0;
+        promise.set_value(1);
+
+        auto chained = std::move(source).then_value(
+            [&callback_count](int value)
+            {
+                ++callback_count;
+                return value;
+            });
+
+        EXPECT_EQ(callback_count, 1);
+        auto result = chained.get_result();
+        ASSERT_TRUE(result.has_value());
+        EXPECT_EQ(result.value(), 1);
+    }
+
+    /**
+     * @brief Verifies void-source error can be transformed into a value via then_result.
+     */
+    TEST(ContinuationResultTest, void_promise_error_recovery_via_then_result)
+    {
+        auto promise_and_future = pco::make_result_promise<void>();
+        auto promise = std::move(promise_and_future.first);
+        auto source = std::move(promise_and_future.second);
+
+        promise.set_error(pco::result_error::execution_failure);
+
+        auto chained = std::move(source).then_result(
+            [](pco::expected<void, pco::result_error> result)
+            {
+                EXPECT_FALSE(result.has_value());
+                EXPECT_EQ(result.error(), pco::result_error::execution_failure);
+                return 99;
+            });
+
+        auto final_result = chained.get_result();
+        ASSERT_TRUE(final_result.has_value());
+        EXPECT_EQ(final_result.value(), 99);
+    }
+
+    /**
      * @brief Tests then value unwraps nested future result.
      */
     TEST(ContinuationResultTest, then_value_unwraps_nested_future_result)
