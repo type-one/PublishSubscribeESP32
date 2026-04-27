@@ -269,8 +269,17 @@ namespace tools
                 object_instance);
 
             auto x_last_wake_time = xTaskGetTickCount();
-            const auto us = std::chrono::duration_cast<std::chrono::microseconds>(instance->m_period);
-            const TickType_t x_period = static_cast<TickType_t>((pdMS_TO_TICKS(us.count()) / 1000U));
+            const auto period_us = std::chrono::duration_cast<std::chrono::microseconds>(instance->m_period).count();
+            constexpr std::uint64_t us_per_ms = 1000ULL;
+            const auto period_ms_ceil = static_cast<std::uint64_t>((period_us + (us_per_ms - 1ULL)) / us_per_ms);
+            TickType_t x_period = pdMS_TO_TICKS(period_ms_ceil);
+
+            // Keep xTaskDelayUntil precondition true even when the requested period
+            // is shorter than one scheduler tick.
+            if (x_period == 0U)
+            {
+                x_period = 1U;
+            }
 
             const std::string& task_name = instance->task_name();
 

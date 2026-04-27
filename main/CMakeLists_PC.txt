@@ -133,13 +133,6 @@ if(WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
-# mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
-# note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
-
-# uncomment to use mem pool allocator instead of regular heap allocation (requires C++ 20 or above)
-add_compile_definitions(USE_MEM_POOL_ALLOCATOR)
-
-# uncomment to warmup the mem pool with pre-allocated chunks of memory
 #add_compile_definitions(USE_MEM_POOL_ALLOCATOR_WARMUP)
 
 # display actual compiling definitions
@@ -187,12 +180,17 @@ set(TARGET_TOOLS_SRC
         tools/timer_scheduler.cpp
 )
 
+set(TARGET_PORTABLE_CONCURRENCY_SRC
+    portable_concurrency/bits/portable_concurrency_runtime.cpp
+)
+
 file(GLOB TARGET_EXAMPLES_SRC
     examples/*.cpp
 )
 
 set(TARGET_SRC
         "${TARGET_TOOLS_SRC}"
+        "${TARGET_PORTABLE_CONCURRENCY_SRC}"
         "${TARGET_CEXCEPTION_SRC}"
         "${TARGET_CJSON_SRC}"
         "${TARGET_UZLIB_SRC}"
@@ -327,6 +325,7 @@ set(TEST_SOURCES
     tests/test_bytepack.cpp
     tests/test_cexception.cpp
     tests/test_cjsonpp.cpp
+    tests/test_cond_var.cpp
     tests/test_cpptime.cpp
     tests/test_critical_section.cpp
     tests/test_data_task.cpp
@@ -336,6 +335,8 @@ set(TEST_SOURCES
     tests/test_lock_free_ring_buffer.cpp
     tests/test_memory_pipe.cpp
     tests/test_periodic_task.cpp
+    tests/test_portable_concurrency.cpp
+    tests/test_portable_concurrency_worker_task.cpp
     tests/test_ring_buffer.cpp
     tests/test_ring_vector.cpp
     tests/test_sync_dictionary.cpp
@@ -349,6 +350,24 @@ set(TEST_SOURCES
     ${TEST_FPM_SOURCES}
     # Add more test files as needed
 )
+
+
+set(PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES
+    tests/portable_concurrency/test_abandon_result.cpp
+    tests/portable_concurrency/test_async_result.cpp
+    tests/portable_concurrency/test_continuation_result.cpp
+    tests/portable_concurrency/test_future_result.cpp
+    tests/portable_concurrency/test_next_result.cpp
+    tests/portable_concurrency/test_packaged_task_result.cpp
+    tests/portable_concurrency/test_promise_result.cpp
+    tests/portable_concurrency/test_reference_type_unsupported.cpp
+    tests/portable_concurrency/test_shared_result.cpp
+    tests/portable_concurrency/test_scenarios.cpp
+    tests/portable_concurrency/test_when_all_result.cpp
+    tests/portable_concurrency/test_when_any_result.cpp
+)
+
+list(APPEND TEST_SOURCES ${PORTABLE_CONCURRENCY_BUNDLE_V2_TEST_SOURCES})
 
 # Create an executable for running tests.
 # Do not use `run_tests` on Visual Studio because CTest generates a built-in
@@ -396,4 +415,6 @@ add_custom_target(
     DEPENDS ${RUN_TESTS_TARGET}
 )
 
-gtest_discover_tests(${RUN_TESTS_TARGET})
+# On WSL/DrvFs, POST_BUILD discovery can race with the linker and fail with
+# transient "Text file busy" or "executable does not exist" errors.
+gtest_discover_tests(${RUN_TESTS_TARGET} DISCOVERY_MODE PRE_TEST)

@@ -86,3 +86,8 @@ void run_example_hardware_timer_interrupt();
  * @brief Runs the allocator stress example.
  */
 void run_example_allocator_stress();
+
+/**
+ * @brief Runs the async processing example.
+ */
+void run_example_async_processing();

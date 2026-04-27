@@ -142,7 +142,7 @@ TEST_F(SyncObjectTest, WaitForSignal)
  * - The elapsed time is calculated and checked to ensure it is greater than or equal to 100 milliseconds.
  *
  * @note This test assumes that the system clock is accurate and that the `wait_for_signal`
- * method behaves as expected.
+ * method behaves as pco::expected.
  */
 TEST_F(SyncObjectTest, WaitForSignalWithTimeout)
 {

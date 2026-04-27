@@ -54,11 +54,40 @@
 #include <freertos/task.h>
 
 #include "tools/base_task.hpp"
+#include "portable_concurrency/bits/coro.hpp"
+#include "portable_concurrency/future.hpp"
 #include "tools/platform_helpers.hpp"
 #include "tools/sync_queue.hpp"
 
 namespace tools
 {
+    template <typename Context>
+    class worker_task;
+
+    template <typename Context>
+    class worker_task_executor
+    {
+    public:
+        explicit worker_task_executor(worker_task<Context>* owner)
+            : m_owner(owner)
+        {
+        }
+
+    private:
+        worker_task<Context>* m_owner = nullptr;
+
+        template <typename Ctx, typename Task>
+        friend void post(worker_task_executor<Ctx> exec, Task&& task);
+    };
+
+    template <typename Context, typename Task>
+    void post(worker_task_executor<Context> exec, Task&& task)
+    {
+        auto shared_task = std::make_shared<std::decay_t<Task>>(std::forward<Task>(task));
+        exec.m_owner->delegate(
+            [shared_task](const std::shared_ptr<Context>&, const std::string&) mutable { (*shared_task)(); });
+    }
+
     /**
      * @brief A worker task class template for FreeRTOS.
      *
@@ -84,6 +113,7 @@ namespace tools
          * @param task_name The name of the task as a string.
          */
         using call_back = std::function<void(const std::shared_ptr<Context>& context, const std::string& task_name)>;
+        using executor_type = worker_task_executor<Context>;
 
         /**
          * @brief Constructs a worker_task object and initializes the FreeRTOS task.
@@ -232,6 +262,11 @@ namespace tools
             do_delegate(std::move(work));
         }
 
+        void delegate(const call_back& work)
+        {
+            do_delegate(call_back(work));
+        }
+
         /**
          * @brief Delegates a task using perfect forwarding.
          */
@@ -276,6 +311,16 @@ namespace tools
             }
         }
 
+        template <typename InputIt>
+        void delegate_range(InputIt first, InputIt last)
+        {
+            m_work_queue.push_range(first, last);
+            if (m_task_created)
+            {
+                xTaskNotify(m_task, 0x01 /* BIT */, eSetBits);
+            }
+        }
+
         /**
          * @brief Delegates a batch of work callbacks from an initializer-list.
          */
@@ -294,6 +339,55 @@ namespace tools
                 do_delegate(call_back(work));
             }
         }
+
+        [[nodiscard]] executor_type as_executor()
+        {
+            return executor_type { this };
+        }
+
+        template <typename Callable, typename... Args>
+        auto delegate_async(Callable&& work, Args&&... args)
+            -> decltype(pco::async_result(std::declval<executor_type>(),
+                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
+                std::forward<Args>(args)...))
+        {
+            return pco::async_result(
+                as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
+        }
+
+#if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines) || (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        class schedule_awaitable
+        {
+        public:
+            explicit schedule_awaitable(worker_task* owner)
+                : m_owner(owner)
+            {
+            }
+
+            [[nodiscard]] bool await_ready() const noexcept
+            {
+                return false;
+            }
+
+            void await_suspend(pco::detail::coroutine_handle<> handle)
+            {
+                m_owner->delegate(
+                    [handle](const std::shared_ptr<Context>&, const std::string&) mutable { handle.resume(); });
+            }
+
+            void await_resume() const noexcept
+            {
+            }
+
+        private:
+            worker_task* m_owner = nullptr;
+        };
+
+        [[nodiscard]] schedule_awaitable schedule()
+        {
+            return schedule_awaitable { this };
+        }
+#endif // coroutine support
 
     private:
         void do_delegate(call_back&& work)
@@ -374,5 +468,13 @@ namespace tools
 
         TaskHandle_t m_task = {};
         bool m_task_created = false;
+    };
+}
+
+namespace pco
+{
+    template <typename Context>
+    struct is_executor<tools::worker_task_executor<Context>> : std::true_type
+    {
     };
 }

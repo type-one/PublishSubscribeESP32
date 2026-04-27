@@ -4,7 +4,7 @@
  * 
  * This file contains unit tests for the WorkerTask class, verifying the correct
  * execution of startup and work delegates, and ensuring the context's computation
- * result is set as expected.
+ * result is set as pco::expected.
  * 
  * The tests include:
  * - DestructorTest: Verifies the WorkerTask destructor calls the startup and work delegates.
@@ -145,14 +145,14 @@ namespace
  * @brief Unit test for the WorkerTask destructor.
  *
  * This test verifies that the WorkerTask correctly calls the startup and work delegates,
- * and that the context's computation result is set to the expected value.
+ * and that the context's computation result is set to the pco::expected value.
  *
  * @test
  * - Creates a WorkerTask with a startup delegate that sets a flag and performs some computation.
  * - Assigns a work delegate to the WorkerTask that sets another flag and performs the same computation.
  * - Waits for a short duration to allow the task to execute.
  * - Checks that the startup and work delegates were called.
- * - Verifies that the context's computation result is as expected.
+ * - Verifies that the context's computation result is as pco::expected.
  */
 TEST_F(WorkerTaskTest, DestructorTest)
 {
@@ -188,7 +188,7 @@ TEST_F(WorkerTaskTest, DestructorTest)
  * @brief Unit test for the WorkerTask class using a free function as work.
  *
  * This test verifies that the WorkerTask correctly executes a free function
- * and updates the context as expected.
+ * and updates the context as pco::expected.
  *
  * @details
  * - A WorkerTask is created with a lambda function that sets a flag and performs

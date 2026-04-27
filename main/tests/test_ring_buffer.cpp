@@ -120,7 +120,7 @@ TYPED_TEST(RingBufferTest, PushAndPop)
  * @brief Test case for the emplace functionality of the RingBuffer.
  *
  * This test verifies that elements can be emplaced into the RingBuffer
- * and that the size, front, and back elements are as expected after
+ * and that the size, front, and back elements are as pco::expected after
  * emplacement.
  *
  * @tparam TypeParam The type of elements stored in the RingBuffer.
@@ -267,7 +267,7 @@ TEST(RingBufferOverwriteApiTest, RangeOverwriteReportsInsertedVsOverwritten)
  * from the original buffer to the new buffer. It pushes three elements into
  * the original buffer and then creates a copy of it. The test checks that the
  * size of the copied buffer is correct and that the front and back elements
- * match the expected values.
+ * match the pco::expected values.
  *
  * @tparam TypeParam The type of elements stored in the ring buffer.
  */
@@ -290,7 +290,7 @@ TYPED_TEST(RingBufferTest, CopyConstructor)
  * This test verifies that the move constructor correctly transfers the contents
  * of one ring buffer to another. It pushes three elements into the original buffer,
  * then moves the buffer to a new instance. The test checks that the new buffer has
- * the correct size and that the front and back elements are as expected.
+ * the correct size and that the front and back elements are as pco::expected.
  *
  * @tparam TypeParam The type of elements stored in the ring buffer.
  */
@@ -361,7 +361,7 @@ namespace
      * @brief Probe type used to observe copy/move operations in forwarding tests.
      *
      * This helper tracks copy/move constructor and assignment usage so tests can
-     * verify whether lvalue/rvalue forwarding reaches the expected assignment path
+     * verify whether lvalue/rvalue forwarding reaches the pco::expected assignment path
      * in the ring buffer slot.
      */
     struct forwarding_probe

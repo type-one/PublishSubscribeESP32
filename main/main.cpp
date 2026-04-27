@@ -34,15 +34,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <exception>
 
 #include "examples/examples.hpp"
-#include "tools/platform_detection.hpp"
-
-#if defined(CPP_EXCEPTIONS_ENABLED)
-#include <exception>
-#endif
 
 #include "tools/logger.hpp"
+#include "tools/platform_detection.hpp"
 
 #if defined(FREERTOS_PLATFORM)
 #include <freertos/FreeRTOS.h>
@@ -72,6 +69,7 @@ void runner()
     run_example_timer_and_date();
     run_example_smp();
     run_example_allocator_stress();
+    run_example_async_processing();
 
 #if defined(USE_MEM_POOL_ALLOCATOR)
     std::printf("Destroy mem pool allocator\n");
@@ -98,13 +96,8 @@ void v_task_code(void* pv_parameters)
 
 void launch_runner() noexcept
 {
-    TaskHandle_t x_handle = xTaskCreateStatic(v_task_code,
-        "RUNNER",
-        stack_size,
-        reinterpret_cast<void*>(1),
-        tskIDLE_PRIORITY,
-        x_stack.data(),
-        &x_task_buffer);
+    TaskHandle_t x_handle = xTaskCreateStatic(v_task_code, "RUNNER", stack_size, reinterpret_cast<void*>(1),
+        tskIDLE_PRIORITY, x_stack.data(), &x_task_buffer);
 
     (void)x_handle;
 

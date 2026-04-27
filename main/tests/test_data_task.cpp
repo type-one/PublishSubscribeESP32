@@ -403,7 +403,7 @@ protected:
  *
  * This test verifies the communication between two tasks using a ping-pong mechanism.
  * It submits a "ping" message to task1 and allows some time for the tasks to process.
- * The test then checks if the ping and pong counts have reached the expected values.
+ * The test then checks if the ping and pong counts have reached the pco::expected values.
  *
  * @test
  * - Submits a "ping" message to task1.

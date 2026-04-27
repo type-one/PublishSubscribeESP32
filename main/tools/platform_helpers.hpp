@@ -36,4 +36,26 @@
 #include "tools/standard/platform_helpers_std.inl"
 #endif
 
+#if defined(ESP_PLATFORM)
+#include <esp_chip_info.h>
+#include <esp_system.h>
+#endif
+
+namespace tools
+{
+    /** @brief Get the number of CPU cores available. */
+    inline int get_nb_of_cpu_cores()
+    {
+#if defined(ESP_PLATFORM)
+        esp_chip_info_t chip_info;
+        esp_chip_info(&chip_info);
+        return static_cast<int>(chip_info.cores);
+#elif defined(FREERTOS_PLATFORM)
+        return 1; // default to single core on other FreeRTOS platform
+#else
+        return 2; // assume we have a PC with at least two cores
+#endif
+    }
+}
+
 #endif //  PLATFORM_HELPERS_HPP_

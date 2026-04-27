@@ -143,11 +143,11 @@ TEST_F(JSONObjectTest, CreateStringObject)
  * @brief Test case for parsing a JSON string.
  *
  * This test verifies that a JSON object can be correctly parsed from a JSON string.
- * It checks that the parsed object has the expected keys and values.
+ * It checks that the parsed object has the pco::expected keys and values.
  *
  * @test
  * - Parse a JSON string and check the type of the resulting object.
- * - Verify that the parsed object contains the expected keys.
+ * - Verify that the parsed object contains the pco::expected keys.
  */
 TEST_F(JSONObjectTest, ParseJSONString)
 {
@@ -380,7 +380,7 @@ TEST_F(JSONObjectTest, TryGetMissingItemResultApi)
  * @brief Test case for parsing a JSON string and checking the array in the JSON object.
  *
  * This test verifies that a JSON string containing an array is correctly parsed into a cjsonpp::JSONObject.
- * It checks that the object type is correct, the array exists, and the array elements are of the expected type and
+ * It checks that the object type is correct, the array exists, and the array elements are of the pco::expected type and
  * value.
  *
  * @test
@@ -418,7 +418,7 @@ TEST_F(JSONObjectTest, ParseAndCheckArrayInJSON)
  *
  * This test verifies that a nested JSON object can be correctly set and retrieved.
  * It checks that the outer object contains the inner object and that the inner object
- * has the expected key and value.
+ * has the pco::expected key and value.
  *
  * @test
  * - Create an inner JSON object with a string value.
@@ -507,7 +507,7 @@ TEST_F(JSONObjectTest, RemoveNonExistentObjectItem)
  * @brief Test case for removing a non-existent array item from a JSONObject.
  *
  * This test case verifies that attempting to remove an item from an empty
- * JSONObject array throws an exception with the expected error message.
+ * JSONObject array throws an exception with the pco::expected error message.
  *
  * @throws std::exception if the item does not exist in the array.
  */

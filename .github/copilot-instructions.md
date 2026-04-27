@@ -31,11 +31,13 @@ Fallback guidance:
 
 - Follow repository `.clang-format` and `.clang-tidy` (root files are authoritative).
 - Use snake_case naming for functions/methods/variables.
+- Use variable and parameter names with at least 3 characters (except conventional loop indices in tiny local scopes).
 - Prefix class members with `m_`.
 - Enforce constness whenever possible:
   - prefer `const` methods,
   - prefer `const auto` for intermediate computations,
   - use `constexpr` whenever values or computations can be made compile-time.
+- Do not use magic numbers; replace literals with named constants (`constexpr` when possible).
 - Include style:
   - use `#include "..."` for headers from this project,
   - use `#include <...>` for STL, POSIX, FreeRTOS, ESP32, and other system/platform headers.

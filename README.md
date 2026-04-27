@@ -83,6 +83,18 @@ adapted for other platforms (micro-computers, micro-controllers)
 
 On FreeRTOS/ESP32 and [Expressif-IDF SDK](https://github.com/espressif/esp-idf) and [Expressif Doc](https://docs.espressif.com).
 
+You can install the Expressif SDK easily under Linux or WSL2
+
+```bash
+git clone --recursive https://github.com/espressif/esp-idf.git
+cd esp-idf
+git checkout v5.2.3
+git submodule update --init --recursive
+./install.sh
+cd ..
+```
+Change the version of the SDK accordingly in the `git checkout` command.
+
 Assuming the ESP32 device is connected to an USB port on your PC
 
 If you have an ESP32-S3, you can then use the following settings
@@ -100,8 +112,24 @@ Note: `Ctrl-T Ctrl-X will exit the monitor.`
 
 For an ESP32 classic, just type `idf.py set-target esp32` above instead.
 
+If you have an ESP32-C5, type `idf.py set-target esp32c5` and use a SDK that supports the Risc-V toolchain (ex. 5.5.1 or above).
+
 If you develop under Windows/WSL2, this tool is useful to bind the serial port:
 [usbipd-win](https://github.com/dorssel/usbipd-win).
+
+Use then Powershell as admin and type
+
+```bash
+usbipd list
+```
+to get the list of USB devices.
+
+Then bind and attach the USB device by typing with the proper `BUSID`
+
+```bash
+usbipd bind --busid=<BUSID>
+usbipd attach --wsl --busid=<BUSID>
+```
 
 Note: Under WSL2 if you got `usbipd: error: Loading vhci_hcd failed.` when launching `usbipd attach --wsl` try `sudo modprobe vhci_hcd` in you linux shell.
 

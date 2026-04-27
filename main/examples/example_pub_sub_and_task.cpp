@@ -482,6 +482,35 @@ void test_histogram_perfect_forwarding()
     std::printf("histogram total=%d top=%f occ=%d\n", hist.total_count(), hist.top(), hist.top_occurence());
 }
 
+/** @brief Demonstrates histogram statistics on @c fpm::fixed_16_16 samples without converting storage to floating-point. */
+void test_histogram_fixed_16_16()
+{
+    LOG_INFO("-- histogram fpm::fixed_16_16 --");
+    print_stats();
+
+    using fixed_scalar = fpm::fixed_16_16;
+    tools::histogram<fixed_scalar> hist;
+
+    // Keep samples deterministic and exactly representable in 16.16 fixed-point.
+    const std::array<fixed_scalar, 8U> samples = {
+        fixed_scalar(1.5), fixed_scalar(0.5), fixed_scalar(1.5), fixed_scalar(-0.5),
+        fixed_scalar(0.25), fixed_scalar(0.25), fixed_scalar(1.5), fixed_scalar(0.5)
+    };
+
+    hist.add_range(samples);
+
+    const auto average = hist.average();
+    const auto variance = hist.variance(average);
+    const auto stddev = hist.standard_deviation(variance);
+    const auto median = hist.median();
+    const auto density_at_top = hist.gaussian_density(hist.top(), average, stddev);
+
+    std::printf("histogram fixed16 total=%d top=%.6f occ=%d\n", hist.total_count(), static_cast<double>(hist.top()),
+        hist.top_occurence());
+    std::printf("fixed16 avg=%.6f median=%.6f var=%.6f stdev=%.6f density(top)=%.6f\n", average, median, variance,
+        stddev, density_at_top);
+}
+
 class my_collector : public base_observer
 {
 public:
@@ -581,6 +610,8 @@ void run_example_pub_sub_and_task()
 {
     // Begin with histogram API forwarding so statistical sinks are easy to integrate in observers.
     test_histogram_perfect_forwarding();
+    // Show histogram behavior directly on fixed-point values (fpm::fixed_16_16).
+    test_histogram_fixed_16_16();
     // Validate sync observer forwarding behaviour for low-latency in-thread delivery.
     test_sync_observer_perfect_forwarding();
     // Then validate async observer forwarding and queued event draining.

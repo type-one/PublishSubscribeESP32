@@ -283,6 +283,23 @@ namespace tools
         }
 
         /**
+         * @brief Pushes all elements from an iterator pair into the queue.
+         *
+         * @tparam InputIt Input iterator type.
+         * @param first Begin iterator.
+         * @param last End iterator.
+         */
+        template <typename InputIt>
+        void push_range(InputIt first, InputIt last)
+        {
+            std::lock_guard<tools::critical_section> guard(m_mutex);
+            for (; first != last; ++first)
+            {
+                m_queue.push(T(*first));
+            }
+        }
+
+        /**
          * @brief Pushes all elements from a range into the queue.
          *
          * In C++20, accepts any std::ranges::input_range whose value type is constructible to T.
@@ -458,6 +475,23 @@ namespace tools
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
             return m_queue.size();
+        }
+
+        /**
+         * @brief Pushes all elements from an iterator pair into the queue in an ISR-safe manner.
+         *
+         * @tparam InputIt Input iterator type.
+         * @param first Begin iterator.
+         * @param last End iterator.
+         */
+        template <typename InputIt>
+        void isr_push_range(InputIt first, InputIt last)
+        {
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            for (; first != last; ++first)
+            {
+                m_queue.push(T(*first));
+            }
         }
 
         /**

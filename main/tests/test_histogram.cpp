@@ -51,6 +51,7 @@
 #include <ranges>
 #endif
 
+#include "fpm/fixed.hpp"
 #include "tests/test_helper.hpp"
 #include "tools/histogram.hpp"
 
@@ -102,6 +103,38 @@ concept has_histogram_add_range_call = requires(Hist& hist_ref, Collection&& col
     hist_ref.add_range(std::forward<Collection>(collection));
 };
 #endif
+
+/**
+ * @brief Verifies histogram statistics are computed correctly for fpm::fixed_16_16 values.
+ *
+ * This test intentionally avoids gaussian_probability because that path relies on
+ * std::uniform_real_distribution<T>, which is only defined for standard floating-point
+ * types. gaussian_density is still exercised with fixed-point inputs.
+ */
+TEST(HistogramFpmTest, Fixed16_16Statistics)
+{
+    using fixed_scalar = fpm::fixed_16_16;
+
+    tools::histogram<fixed_scalar> hist;
+    hist.add_range({ fixed_scalar(1.5), fixed_scalar(0.5), fixed_scalar(1.5), fixed_scalar(-0.5),
+        fixed_scalar(0.25), fixed_scalar(0.25), fixed_scalar(1.5), fixed_scalar(0.5) });
+
+    EXPECT_EQ(hist.total_count(), 8);
+    EXPECT_EQ(hist.top_occurence(), 3);
+    EXPECT_NEAR(static_cast<double>(hist.top()), 1.5, 1e-6);
+
+    const auto average = hist.average();
+    const auto variance = hist.variance(average);
+    const auto stddev = hist.standard_deviation(variance);
+    const auto median = hist.median();
+    const auto density_at_top = hist.gaussian_density(hist.top(), average, stddev);
+
+    EXPECT_NEAR(average, 0.6875, 1e-6);
+    EXPECT_NEAR(variance, 0.48046875, 1e-6);
+    EXPECT_NEAR(median, 0.5, 1e-6);
+    EXPECT_GT(stddev, 0.0);
+    EXPECT_GT(density_at_top, 0.0);
+}
 
 /**
  * @brief Probe type used to validate copy/move forwarding behavior in histogram::add.
@@ -221,7 +254,7 @@ TYPED_TEST(HistogramTest, Average)
  * @brief Test case for calculating the variance of the histogram.
  *
  * This test adds a series of values to the histogram and then checks if the
- * calculated variance matches the expected value.
+ * calculated variance matches the pco::expected value.
  *
  * @tparam TypeParam The data type used for the histogram values.
  *

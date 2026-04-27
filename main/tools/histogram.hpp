@@ -372,7 +372,10 @@ namespace tools
             else
             {
                 // even case
-                value = static_cast<double>(0.5 * (to_sort[idx] + to_sort[idx - 1])); // NOLINT math formula
+                constexpr double median_even_divisor = 2.0;
+                const auto lhs_value = static_cast<double>(to_sort[idx]);
+                const auto rhs_value = static_cast<double>(to_sort[idx - 1]);
+                value = (lhs_value + rhs_value) / median_even_divisor; // NOLINT math formula
             }
 
             return value;

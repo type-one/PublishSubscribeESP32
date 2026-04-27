@@ -215,13 +215,13 @@ TEST(AsyncObserverCompileTimeChecks, PerfectForwardingInformConstraints)
  * This test case verifies that a single observer can correctly receive and process a single event.
  * It creates an async observer for events with an integer and a string, starts a thread to wait for events,
  * and then informs the observer of an event. The test checks that the observer correctly receives the event
- * and that the event data matches the expected values.
+ * and that the event data matches the pco::expected values.
  *
  * @test This test case covers the following scenarios:
  * - An observer is created and waits for events.
  * - An event is informed to the observer.
  * - The observer correctly receives the event.
- * - The event data matches the expected values.
+ * - The event data matches the pco::expected values.
  */
 TEST_F(AsyncObserverTest, SingleObserverSingleEvent)
 {
@@ -373,7 +373,7 @@ TEST_F(AsyncObserverTest, SingleObserverMultipleEventsSameTopic)
  * - Creates two async observers: observer1 and observer2.
  * - Starts two threads to wait for events on each observer.
  * - Informs both observers of the same event.
- * - Verifies that each observer receives exactly one event with the expected values.
+ * - Verifies that each observer receives exactly one event with the pco::expected values.
  *
  * @test
  * - observer1 and observer2 should each receive one event.
@@ -515,7 +515,7 @@ TEST_F(AsyncObserverTest, MultipleObserversMultipleEvents)
  *
  * @test This test case verifies the following:
  * - Both observers receive exactly 3 events.
- * - The events received by each observer match the expected values.
+ * - The events received by each observer match the pco::expected values.
  *
  * @note The test uses threads to simulate concurrent event handling.
  */
@@ -599,7 +599,7 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEvents)
  * This test creates two async observers and a publisher thread. The publisher thread
  * informs both observers of three events each. The observer threads wait for events
  * with a timeout of 100 milliseconds, then pop all events and verify that the events
- * received match the expected values.
+ * received match the pco::expected values.
  *
  * @test This test verifies that:
  * - Each observer receives exactly three events.
@@ -858,7 +858,7 @@ TEST_F(AsyncObserverTest, MultipleObserversConcurrentEventsWithTimeoutAndUnsubsc
  *
  * This test creates two async_observer instances and two threads to wait for events.
  * Each observer is informed with a single event and the test verifies that the events
- * are correctly received and match the expected values.
+ * are correctly received and match the pco::expected values.
  *
  * @test This test case verifies that:
  * - Each observer receives exactly one event.
@@ -1088,7 +1088,7 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEvents)
  *
  * This test creates two async observers and a publisher thread. The publisher thread informs
  * both observers with different events. Each observer waits for events with a timeout of 100 milliseconds,
- * then pops all events and verifies that the received events match the expected values.
+ * then pops all events and verifies that the received events match the pco::expected values.
  *
  * @test
  * - Observer1 should receive three events with the following values:
