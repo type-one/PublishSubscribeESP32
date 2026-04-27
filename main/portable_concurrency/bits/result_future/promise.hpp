@@ -251,7 +251,7 @@ namespace pco
             return is_awaiten();
         }
 
-#if defined(PC_HAS_COROUTINES) && defined(CPP_EXCEPTIONS_ENABLED)
+#if defined(PC_HAS_COROUTINES)
         [[nodiscard]] ::pco::detail::suspend_never initial_suspend() const noexcept
         {
             return {};
