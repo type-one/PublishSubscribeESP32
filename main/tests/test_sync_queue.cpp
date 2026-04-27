@@ -322,11 +322,10 @@ TYPED_TEST(SyncQueueTest, MultipleProducersMultipleConsumers)
     {
         for (int i = 0; i < num_elements; ++i)
         {
-            while (this->queue->empty())
+            while (!this->queue->front_pop().has_value())
             {
                 std::this_thread::yield();
             }
-            this->queue->pop();
         }
     };
 
@@ -389,11 +388,10 @@ TYPED_TEST(SyncQueueTest, SingleProducerMultipleConsumers)
     {
         for (int i = 0; i < num_elements / num_consumers; ++i)
         {
-            while (this->queue->empty())
+            while (!this->queue->front_pop().has_value())
             {
                 std::this_thread::yield();
             }
-            this->queue->pop();
         }
     };
 
@@ -447,11 +445,10 @@ TYPED_TEST(SyncQueueTest, MultipleProducersSingleConsumer)
     {
         for (int i = 0; i < num_producers * num_elements; ++i)
         {
-            while (this->queue->empty())
+            while (!this->queue->front_pop().has_value())
             {
                 std::this_thread::yield();
             }
-            this->queue->pop();
         }
     };
 
