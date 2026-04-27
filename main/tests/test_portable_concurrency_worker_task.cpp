@@ -16,11 +16,15 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <thread>
 #include <utility>
 #include <vector>
+
+#include "fpm/fixed.hpp"
 
 #include "portable_concurrency/bits/coro.hpp"
 #include "portable_concurrency/future.hpp"
@@ -61,6 +65,134 @@ public:
     }
 };
 
+constexpr std::size_t matrix_dimension = 4U;
+constexpr std::size_t matrix_element_count = matrix_dimension * matrix_dimension;
+constexpr std::size_t matrix_input_count = 16U;
+constexpr std::size_t matrix_worker_count = 4U;
+
+template <typename scalar_t>
+struct matrix_4x4
+{
+    /** @brief Row-major 4x4 matrix coefficients. */
+    std::vector<scalar_t> values;
+
+    matrix_4x4()
+        : values(matrix_element_count, scalar_t { 0 })
+    {
+    }
+};
+
+struct matrix_generation_options
+{
+    /** @brief Number of matrices to generate. */
+    std::size_t matrix_count = 0U;
+    /** @brief Start offset in the pre-generated coefficient table. */
+    std::uint32_t seed_offset = 0U;
+};
+
+/** @brief Deterministic coefficient table constrained to [-1.5, 1.5]. */
+const std::vector<float>& matrix_coefficients()
+{
+    static const std::vector<float> coefficients = {
+        -1.50F, -1.25F, -1.00F, -0.75F, -0.50F, -0.25F, 0.00F, 0.25F,
+        0.50F, 0.75F, 1.00F, 1.25F, 1.50F, 1.10F, 0.90F, 0.70F,
+        0.30F, 0.10F, -0.10F, -0.30F, -0.70F, -0.90F, -1.10F, -1.30F,
+        1.40F, 1.20F, 0.80F, 0.60F, 0.40F, 0.20F, -0.20F, -0.40F,
+        -0.60F, -0.80F, -1.20F, -1.40F, 1.35F, 1.05F, 0.55F, 0.15F,
+        -0.15F, -0.55F, -1.05F, -1.35F, 1.45F, 0.95F, 0.45F, -0.05F,
+        -0.45F, -0.95F, -1.45F, 1.30F, 0.85F, 0.35F, -0.35F, -0.85F,
+        -1.30F, 1.15F, 0.65F, 0.05F, -0.65F, -1.15F, 1.50F, -1.50F
+    };
+    return coefficients;
+}
+
+template <typename scalar_t>
+/** @brief Multiplies two 4x4 matrices. */
+matrix_4x4<scalar_t> multiply_matrix_4x4(const matrix_4x4<scalar_t>& left, const matrix_4x4<scalar_t>& right)
+{
+    matrix_4x4<scalar_t> output;
+
+    for (std::size_t row = 0U; row < matrix_dimension; ++row)
+    {
+        for (std::size_t col = 0U; col < matrix_dimension; ++col)
+        {
+            scalar_t accumulator { 0 };
+            for (std::size_t idx = 0U; idx < matrix_dimension; ++idx)
+            {
+                const std::size_t left_index = (row * matrix_dimension) + idx;
+                const std::size_t right_index = (idx * matrix_dimension) + col;
+                accumulator += left.values.at(left_index) * right.values.at(right_index);
+            }
+
+            output.values.at((row * matrix_dimension) + col) = accumulator;
+        }
+    }
+
+    return output;
+}
+
+template <typename scalar_t>
+/** @brief Builds deterministic matrix inputs from the static coefficient table. */
+std::vector<matrix_4x4<scalar_t>> make_matrix_inputs(const matrix_generation_options& options)
+{
+    std::vector<matrix_4x4<scalar_t>> matrices;
+    matrices.resize(options.matrix_count);
+
+    const auto& coefficients = matrix_coefficients();
+    const std::size_t coefficient_count = coefficients.size();
+    const std::size_t start_index = static_cast<std::size_t>(options.seed_offset) % coefficient_count;
+    std::size_t sequence_index = 0U;
+
+    for (auto& matrix_item : matrices)
+    {
+        for (auto& coeff : matrix_item.values)
+        {
+            const std::size_t coeff_index = (start_index + sequence_index) % coefficient_count;
+            coeff = scalar_t { coefficients.at(coeff_index) };
+            ++sequence_index;
+        }
+    }
+
+    return matrices;
+}
+
+template <typename scalar_t>
+/** @brief Computes the sequential pairwise-reduction reference result. */
+matrix_4x4<scalar_t> reduce_sequential(std::vector<matrix_4x4<scalar_t>> pending)
+{
+    while (pending.size() > 1U)
+    {
+        std::vector<matrix_4x4<scalar_t>> next_round;
+        next_round.reserve((pending.size() / 2U) + (pending.size() % 2U));
+
+        for (std::size_t pair_index = 0U; (pair_index + 1U) < pending.size(); pair_index += 2U)
+        {
+            next_round.emplace_back(multiply_matrix_4x4(pending.at(pair_index), pending.at(pair_index + 1U)));
+        }
+
+        if ((pending.size() % 2U) != 0U)
+        {
+            next_round.emplace_back(std::move(pending.back()));
+        }
+
+        pending = std::move(next_round);
+    }
+
+    return pending.front();
+}
+
+template <typename scalar_t>
+/** @brief Summarizes matrix values into a scalar for tolerant equality checks. */
+double matrix_checksum(const matrix_4x4<scalar_t>& matrix_value)
+{
+    scalar_t sum_value { 0 };
+    for (const auto& coeff : matrix_value.values)
+    {
+        sum_value += coeff;
+    }
+    return static_cast<double>(sum_value);
+}
+
 using worker_result_task = tools::worker_task<worker_result_context>;
 using periodic_stress_task = tools::periodic_task<periodic_stress_context>;
 
@@ -73,6 +205,30 @@ std::unique_ptr<worker_result_task> make_worker_result_task(
 }
 
 #if defined(PS_PC_HAS_COROUTINES)
+/** @brief Coroutine matrix multiply helper on worker executor for float matrices. */
+pco::future_result<matrix_4x4<float>> coroutine_matrix_multiply_float(
+    worker_result_task& worker,
+    const std::shared_ptr<worker_result_context>& context,
+    matrix_4x4<float> left,
+    matrix_4x4<float> right)
+{
+    co_await worker.schedule();
+    context->loop_counter.fetch_add(1);
+    co_return multiply_matrix_4x4(left, right);
+}
+
+/** @brief Coroutine matrix multiply helper on worker executor for fixed-point matrices. */
+pco::future_result<matrix_4x4<fpm::fixed_16_16>> coroutine_matrix_multiply_fixed(
+    worker_result_task& worker,
+    const std::shared_ptr<worker_result_context>& context,
+    matrix_4x4<fpm::fixed_16_16> left,
+    matrix_4x4<fpm::fixed_16_16> right)
+{
+    co_await worker.schedule();
+    context->loop_counter.fetch_add(1);
+    co_return multiply_matrix_4x4(left, right);
+}
+
 pco::future_result<int> coroutine_schedule_job(
     worker_result_task& worker, const std::shared_ptr<worker_result_context>& context, int value)
 {
@@ -369,6 +525,134 @@ TEST(PortableConcurrencyWorkerTaskResultTest, AlternatingChainAcrossTwoWorkersWi
     EXPECT_EQ(context_second->loop_counter.load(), expected_calls_per_worker);
 }
 
+TEST(PortableConcurrencyWorkerTaskResultTest, MatrixPairwiseReductionAcrossWorkersWithoutCoroutines)
+{
+    // Two deterministic input sets validate both floating-point and fixed-point reduction flows.
+    auto input_float = make_matrix_inputs<float>(matrix_generation_options { matrix_input_count, 12345U });
+    auto input_fixed = make_matrix_inputs<fpm::fixed_16_16>(matrix_generation_options { matrix_input_count, 54321U });
+
+    const auto expected_float = reduce_sequential(input_float);
+    const auto expected_fixed = reduce_sequential(input_fixed);
+
+    std::vector<std::shared_ptr<worker_result_context>> contexts;
+    contexts.reserve(matrix_worker_count);
+    std::vector<std::unique_ptr<worker_result_task>> workers;
+    workers.reserve(matrix_worker_count);
+
+    for (std::size_t worker_index = 0U; worker_index < matrix_worker_count; ++worker_index)
+    {
+        auto context = std::make_shared<worker_result_context>();
+        contexts.emplace_back(context);
+        workers.emplace_back(make_worker_result_task(context, "matrix_no_coro_worker_" + std::to_string(worker_index)));
+    }
+
+    auto reduce_float = input_float;
+    while (reduce_float.size() > 1U)
+    {
+        // Launch one multiply per matrix pair and gather each round with when_all.
+        std::vector<pco::future_result<matrix_4x4<float>>> jobs;
+        jobs.reserve(reduce_float.size() / 2U);
+
+        for (std::size_t pair_index = 0U; (pair_index + 1U) < reduce_float.size(); pair_index += 2U)
+        {
+            const std::size_t worker_index = (pair_index / 2U) % matrix_worker_count;
+            auto* worker_ptr = workers.at(worker_index).get();
+
+            jobs.emplace_back(worker_ptr->delegate_async(
+                [](const std::shared_ptr<worker_result_context>& context,
+                    const std::string&,
+                    matrix_4x4<float> left,
+                    matrix_4x4<float> right)
+                {
+                    context->loop_counter.fetch_add(1);
+                    return multiply_matrix_4x4(left, right);
+                },
+                reduce_float.at(pair_index),
+                reduce_float.at(pair_index + 1U)));
+        }
+
+        const auto gathered = pco::when_all(std::move(jobs)).get_result();
+        ASSERT_TRUE(gathered.has_value());
+
+        std::vector<matrix_4x4<float>> next_round;
+        next_round.reserve((reduce_float.size() / 2U) + (reduce_float.size() % 2U));
+
+        for (const auto& item : gathered.value())
+        {
+            ASSERT_TRUE(item.has_value());
+            next_round.emplace_back(item.value());
+        }
+
+        if ((reduce_float.size() % 2U) != 0U)
+        {
+            next_round.emplace_back(std::move(reduce_float.back()));
+        }
+
+        reduce_float = std::move(next_round);
+    }
+
+    auto reduce_fixed = input_fixed;
+    while (reduce_fixed.size() > 1U)
+    {
+        // Repeat the same reduction topology for fixed_16_16 values.
+        std::vector<pco::future_result<matrix_4x4<fpm::fixed_16_16>>> jobs;
+        jobs.reserve(reduce_fixed.size() / 2U);
+
+        for (std::size_t pair_index = 0U; (pair_index + 1U) < reduce_fixed.size(); pair_index += 2U)
+        {
+            const std::size_t worker_index = (pair_index / 2U) % matrix_worker_count;
+            auto* worker_ptr = workers.at(worker_index).get();
+
+            jobs.emplace_back(worker_ptr->delegate_async(
+                [](const std::shared_ptr<worker_result_context>& context,
+                    const std::string&,
+                    matrix_4x4<fpm::fixed_16_16> left,
+                    matrix_4x4<fpm::fixed_16_16> right)
+                {
+                    context->loop_counter.fetch_add(1);
+                    return multiply_matrix_4x4(left, right);
+                },
+                reduce_fixed.at(pair_index),
+                reduce_fixed.at(pair_index + 1U)));
+        }
+
+        const auto gathered = pco::when_all(std::move(jobs)).get_result();
+        ASSERT_TRUE(gathered.has_value());
+
+        std::vector<matrix_4x4<fpm::fixed_16_16>> next_round;
+        next_round.reserve((reduce_fixed.size() / 2U) + (reduce_fixed.size() % 2U));
+
+        for (const auto& item : gathered.value())
+        {
+            ASSERT_TRUE(item.has_value());
+            next_round.emplace_back(item.value());
+        }
+
+        if ((reduce_fixed.size() % 2U) != 0U)
+        {
+            next_round.emplace_back(std::move(reduce_fixed.back()));
+        }
+
+        reduce_fixed = std::move(next_round);
+    }
+
+    ASSERT_EQ(reduce_float.size(), 1U);
+    ASSERT_EQ(reduce_fixed.size(), 1U);
+
+    EXPECT_NEAR(matrix_checksum(reduce_float.front()), matrix_checksum(expected_float), 1e-4);
+    EXPECT_NEAR(matrix_checksum(reduce_fixed.front()), matrix_checksum(expected_fixed), 1e-4);
+
+    const int expected_total_multiplications = static_cast<int>(matrix_input_count - 1U);
+    int observed_calls = 0;
+    for (const auto& context : contexts)
+    {
+        observed_calls += context->loop_counter.load();
+    }
+
+    // We run one complete reduction for float and one for fixed_16_16.
+    EXPECT_EQ(observed_calls, expected_total_multiplications * 2);
+}
+
 #if defined(PS_PC_HAS_COROUTINES)
 TEST(PortableConcurrencyWorkerTaskResultTest, CoroutineScheduleFlow)
 {
@@ -522,5 +806,117 @@ TEST(PortableConcurrencyWorkerTaskResultTest, AlternatingChainAcrossTwoWorkersWi
     EXPECT_EQ(chained_result.value(), expected_value);
     EXPECT_EQ(context_first->loop_counter.load(), expected_calls_per_worker);
     EXPECT_EQ(context_second->loop_counter.load(), expected_calls_per_worker);
+}
+
+TEST(PortableConcurrencyWorkerTaskResultTest, MatrixPairwiseReductionAcrossWorkersWithCoroutines)
+{
+    // Same deterministic data and topology as non-coroutine test, but execution hops use co_await schedule().
+    auto input_float = make_matrix_inputs<float>(matrix_generation_options { matrix_input_count, 22345U });
+    auto input_fixed = make_matrix_inputs<fpm::fixed_16_16>(matrix_generation_options { matrix_input_count, 64321U });
+
+    const auto expected_float = reduce_sequential(input_float);
+    const auto expected_fixed = reduce_sequential(input_fixed);
+
+    std::vector<std::shared_ptr<worker_result_context>> contexts;
+    contexts.reserve(matrix_worker_count);
+    std::vector<std::unique_ptr<worker_result_task>> workers;
+    workers.reserve(matrix_worker_count);
+
+    for (std::size_t worker_index = 0U; worker_index < matrix_worker_count; ++worker_index)
+    {
+        auto context = std::make_shared<worker_result_context>();
+        contexts.emplace_back(context);
+        workers.emplace_back(make_worker_result_task(context, "matrix_coro_worker_" + std::to_string(worker_index)));
+    }
+
+    auto reduce_float = input_float;
+    while (reduce_float.size() > 1U)
+    {
+        // Submit coroutine jobs for each pair, then gather synchronously per reduction round.
+        std::vector<pco::future_result<matrix_4x4<float>>> jobs;
+        jobs.reserve(reduce_float.size() / 2U);
+
+        for (std::size_t pair_index = 0U; (pair_index + 1U) < reduce_float.size(); pair_index += 2U)
+        {
+            const std::size_t worker_index = (pair_index / 2U) % matrix_worker_count;
+            jobs.emplace_back(coroutine_matrix_multiply_float(
+                *workers.at(worker_index),
+                contexts.at(worker_index),
+                reduce_float.at(pair_index),
+                reduce_float.at(pair_index + 1U)));
+        }
+
+        const auto gathered = pco::when_all(std::move(jobs)).get_result();
+        ASSERT_TRUE(gathered.has_value());
+
+        std::vector<matrix_4x4<float>> next_round;
+        next_round.reserve((reduce_float.size() / 2U) + (reduce_float.size() % 2U));
+
+        for (const auto& item : gathered.value())
+        {
+            ASSERT_TRUE(item.has_value());
+            next_round.emplace_back(item.value());
+        }
+
+        if ((reduce_float.size() % 2U) != 0U)
+        {
+            next_round.emplace_back(std::move(reduce_float.back()));
+        }
+
+        reduce_float = std::move(next_round);
+    }
+
+    auto reduce_fixed = input_fixed;
+    while (reduce_fixed.size() > 1U)
+    {
+        // Mirror the coroutine reduction path for fixed-point values.
+        std::vector<pco::future_result<matrix_4x4<fpm::fixed_16_16>>> jobs;
+        jobs.reserve(reduce_fixed.size() / 2U);
+
+        for (std::size_t pair_index = 0U; (pair_index + 1U) < reduce_fixed.size(); pair_index += 2U)
+        {
+            const std::size_t worker_index = (pair_index / 2U) % matrix_worker_count;
+            jobs.emplace_back(coroutine_matrix_multiply_fixed(
+                *workers.at(worker_index),
+                contexts.at(worker_index),
+                reduce_fixed.at(pair_index),
+                reduce_fixed.at(pair_index + 1U)));
+        }
+
+        const auto gathered = pco::when_all(std::move(jobs)).get_result();
+        ASSERT_TRUE(gathered.has_value());
+
+        std::vector<matrix_4x4<fpm::fixed_16_16>> next_round;
+        next_round.reserve((reduce_fixed.size() / 2U) + (reduce_fixed.size() % 2U));
+
+        for (const auto& item : gathered.value())
+        {
+            ASSERT_TRUE(item.has_value());
+            next_round.emplace_back(item.value());
+        }
+
+        if ((reduce_fixed.size() % 2U) != 0U)
+        {
+            next_round.emplace_back(std::move(reduce_fixed.back()));
+        }
+
+        reduce_fixed = std::move(next_round);
+    }
+
+    ASSERT_EQ(reduce_float.size(), 1U);
+    ASSERT_EQ(reduce_fixed.size(), 1U);
+
+    EXPECT_NEAR(matrix_checksum(reduce_float.front()), matrix_checksum(expected_float), 1e-4);
+    EXPECT_NEAR(matrix_checksum(reduce_fixed.front()), matrix_checksum(expected_fixed), 1e-4);
+
+    const int expected_total_multiplications = static_cast<int>(matrix_input_count - 1U);
+    int observed_calls = 0;
+    for (const auto& context : contexts)
+    {
+        observed_calls += context->loop_counter.load();
+    }
+
+    // We run one complete reduction for float and one for fixed_16_16.
+    EXPECT_EQ(observed_calls, expected_total_multiplications * 2);
 }
 #endif

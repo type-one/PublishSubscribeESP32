@@ -42,18 +42,18 @@
 #endif
 
 namespace tools
-{   
+{
     /** @brief Get the number of CPU cores available. */
     inline int get_nb_of_cpu_cores()
     {
 #if defined(ESP_PLATFORM)
         esp_chip_info_t chip_info;
         esp_chip_info(&chip_info);
-        return static_cast<int>(chip_info.cores);        
+        return static_cast<int>(chip_info.cores);
 #elif defined(FREERTOS_PLATFORM)
         return 1; // default to single core on other FreeRTOS platform
 #else
-        return 2; // assume we have a PC with at least two cores       
+        return 2; // assume we have a PC with at least two cores
 #endif
     }
 }
