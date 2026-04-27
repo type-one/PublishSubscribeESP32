@@ -115,7 +115,7 @@ namespace
     constexpr int log2_pow2(std::size_t value)
     {
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-        return static_cast<int>(std::countr_zero(value));
+        return std::countr_zero(value);
 #else
         int log2_value = 0;
         while ((value >>= 1U) != 0U)

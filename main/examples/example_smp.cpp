@@ -33,8 +33,11 @@
 #include "example_common.hpp"
 #include "examples.hpp"
 
+#include "tools/platform_helpers.hpp"
+
 namespace
 {
+
 /** @brief Empty shared context used by basic SMP affinity and priority task demos. */
 struct smp_task_context
 {
@@ -58,7 +61,7 @@ void test_smp_tasks_cpu_affinity()
     auto context = std::make_shared<smp_task_context>();
 
     constexpr const std::size_t task1_stack_size = 2048U;
-    constexpr const int core1 = 1;
+    const int core1 = tools::get_nb_of_cpu_cores() - 1;
     // Pin worker task to core 1, then drive it from a periodic producer pinned to core 0.
     worker_task1 task1(startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
 
@@ -112,7 +115,7 @@ void test_smp_tasks_lock_free_ring_buffer()
     auto context = std::make_shared<smp_ring_task_context>();
 
     constexpr const std::size_t task1_stack_size = 2048U;
-    constexpr const int core1 = 1;
+    const int core1 = tools::get_nb_of_cpu_cores() - 1;
     worker_ring_task1 task1(startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
 
     auto periodic_lambda = [&task1](const std::shared_ptr<smp_ring_task_context>& local_context, const std::string& task_name)
@@ -200,7 +203,7 @@ void test_smp_tasks_memory_pipe()
 
     {
         constexpr const std::size_t task1_stack_size = 2048U;
-        constexpr const int core1 = 1;
+        const int core1 = tools::get_nb_of_cpu_cores() - 1;
         worker_mem_task1 task1(startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
 
         static const std::string label = "this\nis\na\ntest\nto\ntransmit\nseveral\nmessages\nbetween\ntwo\ncores\n";

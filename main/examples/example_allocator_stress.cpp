@@ -33,6 +33,8 @@
 #include "example_common.hpp"
 #include "examples.hpp"
 
+#include "tools/platform_helpers.hpp"
+
 namespace
 {
     /** @brief Minimal empty context used by the allocator stress worker task. */
@@ -88,7 +90,7 @@ namespace
         auto context = std::make_shared<smp_task_context>();
 
         constexpr const std::size_t task_stack_size = 4096U;
-        constexpr const int core1 = 1;
+        const int core1 = tools::get_nb_of_cpu_cores() - 1;
 
         worker_task1 task1(
             startup, context, "worker_task1", task_stack_size, core1, tools::base_task::default_priority);
