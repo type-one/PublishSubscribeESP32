@@ -51,7 +51,7 @@ namespace pco
         using error_type = E;
         using result_type = tools::expected<T, E>;
 
-#if defined(PC_HAS_COROUTINES)
+#if defined(PC_HAS_COROUTINES) && defined(CPP_EXCEPTIONS_ENABLED)
         using promise_type = promise_result<T, E>;
 #endif
 
@@ -131,7 +131,7 @@ namespace pco
             return state_->ready_;
         }
 
-#if defined(PC_HAS_COROUTINES)
+#if defined(PC_HAS_COROUTINES) && defined(CPP_EXCEPTIONS_ENABLED)
         [[nodiscard]] bool await_ready() const noexcept
         {
             return !state_ || is_ready();
@@ -142,11 +142,7 @@ namespace pco
             auto result = get_result();
             if (!result.has_value())
             {
-#if defined(CPP_EXCEPTIONS_ENABLED)
                 throw std::runtime_error("future_result await_resume failed");
-#else
-                std::terminate();
-#endif
             }
 
             if constexpr (std::is_void_v<T>)

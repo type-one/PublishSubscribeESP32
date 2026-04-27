@@ -17,11 +17,13 @@
 //-----------------------------------------------------------------------------//
 
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <future>
 
 #include "tools/cond_var.hpp"
 #include "tools/critical_section.hpp"
+#include "tools/expected.hpp"
 #include "tools/platform_detection.hpp"
 
 #include "closable_queue.hpp"
@@ -80,24 +82,46 @@ namespace pco
     namespace
     {
 
+        enum class task_exec_error : std::uint8_t
+        {
+            empty_task = 1,
+            execution_failure,
+        };
+
+        [[nodiscard]] tools::expected<void, task_exec_error> execute_task(unique_function<void()>& task) noexcept
+        {
+            if (!task)
+            {
+                return tools::unexpected<task_exec_error>(task_exec_error::empty_task);
+            }
+
+#if defined(CPP_EXCEPTIONS_ENABLED)
+            try
+            {
+                task();
+                return tools::expected<void, task_exec_error> {};
+            }
+            catch (...)
+            {
+                return tools::unexpected<task_exec_error>(task_exec_error::execution_failure);
+            }
+#else
+            task();
+            return tools::expected<void, task_exec_error> {};
+#endif
+        }
+
         void process_queue(
             detail::closable_queue<unique_function<void()>>& queue, const std::atomic<bool>& stopped) noexcept
         {
             unique_function<void()> task;
             while (!stopped.load(std::memory_order_relaxed) && queue.pop(task))
             {
-#if defined(CPP_EXCEPTIONS_ENABLED)
-                try
+                const auto run_result = execute_task(task);
+                if (!run_result.has_value())
                 {
-                    task();
+                    continue;
                 }
-                catch (...)
-                {
-                    std::terminate();
-                }
-#else
-                task();
-#endif
             }
         }
 

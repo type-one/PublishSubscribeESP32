@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "tools/platform_detection.hpp"
+
 #include "types_and_detail.hpp"
 
 namespace pco
@@ -249,7 +251,7 @@ namespace pco
             return is_awaiten();
         }
 
-#if defined(PC_HAS_COROUTINES)
+#if defined(PC_HAS_COROUTINES) && defined(CPP_EXCEPTIONS_ENABLED)
         [[nodiscard]] ::pco::detail::suspend_never initial_suspend() const noexcept
         {
             return {};
@@ -269,9 +271,13 @@ namespace pco
             {
                 set_error(result_error::execution_failure);
             }
+            else if constexpr (requires { E::execution_failure; })
+            {
+                set_error(E::execution_failure);
+            }
             else
             {
-                std::terminate();
+                set_error(E {});
             }
         }
 
