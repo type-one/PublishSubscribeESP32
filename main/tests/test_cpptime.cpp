@@ -371,18 +371,30 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
     // Part 1: Verify that timeouts in the past execute immediately
     std::atomic<int> i { 0 };
     std::atomic<int> j { 0 };
+    std::atomic<int> past_callback_count { 0 };
     std::promise<void> past_done;
     auto past_done_future = past_done.get_future();
 
     CppTime::timestamp ts1 = CppTime::clock::now() - milliseconds(10);
     CppTime::timestamp ts2 = CppTime::clock::now() - milliseconds(20);
-    
-    timer->add(ts1, [&](CppTime::timer_id) { i.store(42); });
+
+    timer->add(ts1, [&](CppTime::timer_id) {
+        i.store(42);
+        const auto callback_count = past_callback_count.fetch_add(1) + 1;
+        if (callback_count == 2)
+        {
+            past_done.set_value();
+        }
+    });
     timer->add(ts2, [&](CppTime::timer_id) {
         j.store(43);
-        past_done.set_value();
+        const auto callback_count = past_callback_count.fetch_add(1) + 1;
+        if (callback_count == 2)
+        {
+            past_done.set_value();
+        }
     });
-    
+
     // Wait for past timeouts to execute with a reasonable timeout
     EXPECT_EQ(past_done_future.wait_for(milliseconds(100)), std::future_status::ready);
     EXPECT_EQ(i.load(), 42);
@@ -395,15 +407,15 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
 
     CppTime::timestamp ts3 = CppTime::clock::now() + milliseconds(30);
     CppTime::timestamp ts4 = CppTime::clock::now() + milliseconds(60);
-    
-    timer->add(ts3, [&](CppTime::timer_id) { 
-        std::this_thread::sleep_for(milliseconds(20)); 
+
+    timer->add(ts3, [&](CppTime::timer_id) {
+        std::this_thread::sleep_for(milliseconds(20));
     });
     timer->add(ts4, [&](CppTime::timer_id) {
         i.store(42);
         future_done.set_value();
     });
-    
+
     // Wait for future timeouts with sufficient timeout
     EXPECT_EQ(future_done_future.wait_for(milliseconds(200)), std::future_status::ready);
     EXPECT_EQ(i.load(), 42);
@@ -530,11 +542,16 @@ TEST_F(TimerTest, PassAnArgumentToAnAction)
     auto push_me = std::make_shared<PushMe>();
     push_me->i.store(41);
 
-    int res = 0;
+    std::atomic<int> res { 0 };
+    std::promise<void> callback_done;
+    auto callback_done_future = callback_done.get_future();
 
-    timer->add(milliseconds(20), [&res, push_me](CppTime::timer_id) { res = push_me->i.load() + 1; });
+    timer->add(milliseconds(20), [&res, push_me, &callback_done](CppTime::timer_id) {
+        res.store(push_me->i.load() + 1);
+        callback_done.set_value();
+    });
 
-    EXPECT_EQ(res, 0);
-    std::this_thread::sleep_for(milliseconds(30));
-    EXPECT_EQ(res, 42);
+    EXPECT_EQ(res.load(), 0);
+    EXPECT_EQ(callback_done_future.wait_for(milliseconds(100)), std::future_status::ready);
+    EXPECT_EQ(res.load(), 42);
 }
