@@ -35,79 +35,81 @@
 
 namespace
 {
-/** @brief Minimal empty context used by the allocator stress worker task. */
-struct smp_task_context
-{
-};
-
-using worker_task1 = tools::worker_task<smp_task_context>;
-
-constexpr std::size_t alloc_max_size = 512;
-constexpr std::size_t alloc_iterations = 100000;
-
-/** @brief Data block holding a heap-allocated byte buffer for allocation stress tests. */
-struct alloc_data
-{
-    std::vector<std::uint8_t> data;
-
-    explicit alloc_data(std::size_t size)
-        : data(size)
+    /** @brief Minimal empty context used by the allocator stress worker task. */
+    struct smp_task_context
     {
-    }
-};
-
-/**
- * @brief Performs repeated heap allocations and deallocations of increasing sizes.
- * @param wid Worker identifier printed at the start of the run.
- */
-void alloc_dealloc_worker(int wid)
-{
-    std::printf("-- worker %d\n", wid);
-
-    for (std::size_t i = 0; i < alloc_iterations; ++i)
-    {
-        // Vary allocation size to exercise allocator fast-path and fragmentation paths.
-        auto heap_block = std::make_unique<alloc_data>((i % alloc_max_size) + 1);
-        (void)heap_block;
-    }
-}
-
-/** @brief Runs a concurrent allocator stress test across two workers executing on separate cores. */
-void test_allocator_stress()
-{
-    std::printf("-- allocator stress --\n");
-
-    print_stats();
-
-    auto startup = [](const std::shared_ptr<smp_task_context>& context, const std::string& task_name)
-    {
-        (void)context;
-        (void)task_name;
     };
 
-    auto context = std::make_shared<smp_task_context>();
+    using worker_task1 = tools::worker_task<smp_task_context>;
 
-    constexpr const std::size_t task_stack_size = 4096U;
-    constexpr const int core1 = 1;
+    constexpr std::size_t alloc_max_size = 512;
+    constexpr std::size_t alloc_iterations = 100000;
 
-    worker_task1 task1(startup, context, "worker_task1", task_stack_size, core1, tools::base_task::default_priority);
-
-    const auto start = std::chrono::high_resolution_clock::now();
-
-    // Run one worker on a separate core while the caller thread runs the same stress loop.
-    task1.delegate([](auto delegate_context, const auto& delegate_task_name)
+    /** @brief Data block holding a heap-allocated byte buffer for allocation stress tests. */
+    struct alloc_data
     {
-        (void)delegate_context;
-        (void)delegate_task_name;
-        alloc_dealloc_worker(2);
-    });
+        std::vector<std::uint8_t> data;
 
-    alloc_dealloc_worker(1);
+        explicit alloc_data(std::size_t size)
+            : data(size)
+        {
+        }
+    };
 
-    const auto end = std::chrono::high_resolution_clock::now();
-    const auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::printf("allocation/deallocation total time: %d ms\n", static_cast<int>(millis));
-}
+    /**
+     * @brief Performs repeated heap allocations and deallocations of increasing sizes.
+     * @param wid Worker identifier printed at the start of the run.
+     */
+    void alloc_dealloc_worker(int wid)
+    {
+        std::printf("-- worker %d\n", wid);
+
+        for (std::size_t i = 0; i < alloc_iterations; ++i)
+        {
+            // Vary allocation size to exercise allocator fast-path and fragmentation paths.
+            auto heap_block = std::make_unique<alloc_data>((i % alloc_max_size) + 1);
+            (void)heap_block;
+        }
+    }
+
+    /** @brief Runs a concurrent allocator stress test across two workers executing on separate cores. */
+    void test_allocator_stress()
+    {
+        std::printf("-- allocator stress --\n");
+
+        print_stats();
+
+        auto startup = [](const std::shared_ptr<smp_task_context>& context, const std::string& task_name)
+        {
+            (void)context;
+            (void)task_name;
+        };
+
+        auto context = std::make_shared<smp_task_context>();
+
+        constexpr const std::size_t task_stack_size = 4096U;
+        constexpr const int core1 = 1;
+
+        worker_task1 task1(
+            startup, context, "worker_task1", task_stack_size, core1, tools::base_task::default_priority);
+
+        const auto start = std::chrono::high_resolution_clock::now();
+
+        // Run one worker on a separate core while the caller thread runs the same stress loop.
+        task1.delegate(
+            [](auto delegate_context, const auto& delegate_task_name)
+            {
+                (void)delegate_context;
+                (void)delegate_task_name;
+                alloc_dealloc_worker(2);
+            });
+
+        alloc_dealloc_worker(1);
+
+        const auto end = std::chrono::high_resolution_clock::now();
+        const auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::printf("allocation/deallocation total time: %d ms\n", static_cast<int>(millis));
+    }
 } // namespace
 
 /** @brief Example entry point: runs the allocator stress test. */
