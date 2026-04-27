@@ -36,49 +36,6 @@
 
 namespace pco
 {
-    namespace detail
-    {
-
-        [[noreturn]] void throw_bad_func_call()
-        {
-#if defined(CPP_EXCEPTIONS_ENABLED)
-            throw std::bad_function_call {};
-#else
-            std::terminate();
-#endif
-        }
-
-        template class small_unique_function<void()>;
-        template struct forward_list_deleter<continuation>;
-        template class once_consumable_stack<continuation>;
-
-        void continuations_stack::push(continuation&& continuation_fn)
-        {
-            auto continuation_local = std::move(continuation_fn);
-            if (!stack_.push(continuation_local))
-            {
-                continuation_local();
-            }
-        }
-
-        void continuations_stack::execute()
-        {
-            auto continuations = stack_.consume();
-            for (auto& continuation_fn : continuations)
-            {
-                continuation_fn();
-            }
-        }
-
-        bool continuations_stack::executed() const
-        {
-            return stack_.is_consumed();
-        }
-
-        template class closable_queue<unique_function<void()>>;
-
-    } // namespace detail
-
     namespace
     {
 
@@ -88,7 +45,8 @@ namespace pco
             execution_failure,
         };
 
-        [[nodiscard]] tools::expected<void, task_exec_error> execute_task(unique_function<void()>& task) noexcept
+        template <typename Callable>
+        [[nodiscard]] tools::expected<void, task_exec_error> execute_task(Callable& task) noexcept
         {
             if (!task)
             {
@@ -110,6 +68,56 @@ namespace pco
             return tools::expected<void, task_exec_error> {};
 #endif
         }
+
+    } // namespace
+
+    namespace detail
+    {
+
+        [[noreturn]] void throw_bad_func_call()
+        {
+#if defined(CPP_EXCEPTIONS_ENABLED)
+            throw std::bad_function_call {};
+#else
+            std::terminate();
+#endif
+        }
+
+        template class small_unique_function<void()>;
+        template struct forward_list_deleter<continuation>;
+        template class once_consumable_stack<continuation>;
+
+        void continuations_stack::push(continuation&& continuation_fn)
+        {
+            auto continuation_local = std::move(continuation_fn);
+            if (!stack_.push(continuation_local))
+            {
+                const auto run_result = execute_task(continuation_local);
+                static_cast<void>(run_result);
+            }
+        }
+
+        void continuations_stack::execute()
+        {
+            auto continuations = stack_.consume();
+            for (auto& continuation_fn : continuations)
+            {
+                const auto run_result = execute_task(continuation_fn);
+                static_cast<void>(run_result);
+            }
+        }
+
+        bool continuations_stack::executed() const
+        {
+            return stack_.is_consumed();
+        }
+
+        template class closable_queue<unique_function<void()>>;
+
+    } // namespace detail
+
+    namespace
+    {
 
         void process_queue(
             detail::closable_queue<unique_function<void()>>& queue, const std::atomic<bool>& stopped) noexcept
