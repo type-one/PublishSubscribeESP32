@@ -46,13 +46,106 @@
 #include "portable_concurrency/execution.hpp"
 #include "portable_concurrency/future.hpp"
 
-#if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines) \
+#if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines)                           \
     || (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 #define ASYNC_EXAMPLE_HAS_COROUTINES
 #endif
 
+namespace matrix_async_detail
+{
+    constexpr std::size_t matrix_dim = 4U;
+    constexpr std::size_t matrix_element_count = matrix_dim * matrix_dim;
+
+    // Pre-generated coefficients in [-1.5, 1.5] to avoid RNG state on the stack.
+    const std::vector<float>& matrix_coefficients()
+    {
+        static const std::vector<float> coeffs = { -1.50F, -1.25F, -1.00F, -0.75F, -0.50F, -0.25F, 0.00F, 0.25F, 0.50F,
+            0.75F, 1.00F, 1.25F, 1.50F, 1.10F, 0.90F, 0.70F, 0.30F, 0.10F, -0.10F, -0.30F, -0.70F, -0.90F, -1.10F,
+            -1.30F, 1.40F, 1.20F, 0.80F, 0.60F, 0.40F, 0.20F, -0.20F, -0.40F, -0.60F, -0.80F, -1.20F, -1.40F, 1.35F,
+            1.05F, 0.55F, 0.15F, -0.15F, -0.55F, -1.05F, -1.35F, 1.45F, 0.95F, 0.45F, -0.05F, -0.45F, -0.95F, -1.45F,
+            1.30F, 0.85F, 0.35F, -0.35F, -0.85F, -1.30F, 1.15F, 0.65F, 0.05F, -0.65F, -1.15F, 1.50F, -1.50F };
+        return coeffs;
+    }
+
+    template <typename scalar_t>
+    struct matrix_4x4
+    {
+        /** @brief Row-major 4x4 coefficient storage. */
+        std::vector<scalar_t> values;
+
+        matrix_4x4()
+            : values(matrix_element_count, scalar_t { 0 })
+        {
+        }
+    };
+
+    struct matrix_input_generation_options
+    {
+        std::size_t matrix_count = 0U;
+        std::uint32_t seed_value = 0U;
+    };
+
+    template <typename scalar_t>
+    auto multiply_matrix_4x4(const matrix_4x4<scalar_t>& left, const matrix_4x4<scalar_t>& right)
+    {
+        matrix_4x4<scalar_t> output {};
+
+        for (std::size_t row = 0U; row < matrix_dim; ++row)
+        {
+            for (std::size_t col = 0U; col < matrix_dim; ++col)
+            {
+                scalar_t accumulator { 0 };
+                for (std::size_t idx = 0U; idx < matrix_dim; ++idx)
+                {
+                    const auto left_index = (row * matrix_dim) + idx;
+                    const auto right_index = (idx * matrix_dim) + col;
+                    accumulator += left.values.at(left_index) * right.values.at(right_index);
+                }
+
+                output.values.at((row * matrix_dim) + col) = accumulator;
+            }
+        }
+
+        return output;
+    }
+
+    template <typename scalar_t>
+    std::vector<matrix_4x4<scalar_t>> make_input_matrices(const matrix_input_generation_options& options)
+    {
+        std::vector<matrix_4x4<scalar_t>> generated;
+        generated.resize(options.matrix_count);
+
+        const auto& coeffs = matrix_coefficients();
+        const std::size_t table_size = coeffs.size();
+        const auto start_index = static_cast<std::size_t>(options.seed_value) % table_size;
+        std::size_t sequence_index = 0U;
+
+        for (auto& matrix_item : generated)
+        {
+            for (auto& coeff : matrix_item.values)
+            {
+                const std::size_t coeff_index = (start_index + sequence_index) % table_size;
+                coeff = scalar_t { coeffs.at(coeff_index) };
+                ++sequence_index;
+            }
+        }
+
+        return generated;
+    }
+
+    template <typename scalar_t>
+    double matrix_checksum(const matrix_4x4<scalar_t>& matrix_value)
+    {
+        const auto sum_value = std::accumulate(matrix_value.values.begin(), matrix_value.values.end(), scalar_t { 0 },
+            [](scalar_t left, scalar_t right) { return left + right; });
+        return static_cast<double>(sum_value);
+    }
+
+} // namespace matrix_async_detail
+
 namespace
 {
+
     // -----------------------------------------------------------------------
     // Shared worker context
 
@@ -104,6 +197,17 @@ namespace
     // coroutine helpers for the result-based API — compiled only when coroutine support is present
 
 #if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
+    template <typename scalar_t>
+    pco::future_result<matrix_async_detail::matrix_4x4<scalar_t>> schedule_and_multiply_matrix_pair(
+        async_worker* worker_ptr, std::shared_ptr<async_context> context,
+        matrix_async_detail::matrix_4x4<scalar_t> left, matrix_async_detail::matrix_4x4<scalar_t> right)
+    {
+        // Hop to the worker thread before executing the multiply so coroutine jobs use the same execution model.
+        co_await worker_ptr->schedule();
+        context->call_count.fetch_add(1);
+        co_return matrix_async_detail::multiply_matrix_4x4(left, right);
+    }
+
     struct alternating_chain_request
     {
         std::shared_ptr<async_context> context_first;
@@ -129,11 +233,8 @@ namespace
      * @brief Coroutine that hops onto @p worker, awaits @p upstream, and
      *        adds an offset to the resolved value.
      */
-    pco::future_result<int> schedule_and_await(
-        async_worker* worker_ptr,
-        std::shared_ptr<async_context> context,
-        pco::future_result<int> upstream,
-        int offset_value)
+    pco::future_result<int> schedule_and_await(async_worker* worker_ptr, std::shared_ptr<async_context> context,
+        pco::future_result<int> upstream, int offset_value)
     {
         co_await worker_ptr->schedule();
         const auto upstream_result = co_await upstream;
@@ -147,10 +248,8 @@ namespace
         co_return base + offset_value;
     }
 
-    pco::future_result<int> schedule_and_process_sample(
-        async_worker* worker_ptr,
-        std::shared_ptr<async_context> context,
-        std::shared_ptr<async_processing_worker_model> processor,
+    pco::future_result<int> schedule_and_process_sample(async_worker* worker_ptr,
+        std::shared_ptr<async_context> context, std::shared_ptr<async_processing_worker_model> processor,
         int sample_value)
     {
         co_await worker_ptr->schedule();
@@ -164,7 +263,8 @@ namespace
         int chain_value = request.initial_value;
         for (int stage_index = 0; stage_index < request.chain_stage_count; ++stage_index)
         {
-            if ((stage_index % 2) == 0)
+            const bool use_first_worker = ((stage_index % 2) == 0);
+            if (use_first_worker)
             {
                 co_await worker_first_ptr->schedule();
                 request.context_first->call_count.fetch_add(1);
@@ -179,6 +279,238 @@ namespace
         co_return chain_value;
     }
 #endif // ASYNC_EXAMPLE_HAS_COROUTINES
+
+    template <typename scalar_t>
+    void run_matrix_reduction_no_coroutines(const char* scalar_name, std::uint32_t seed_value)
+    {
+        /** @brief 16 inputs reduce as 8 + 4 + 2 + 1 pairwise multiplication rounds. */
+        constexpr std::size_t total_matrix_count = 16U;
+        constexpr std::size_t worker_count = 4U;
+
+        auto pending = matrix_async_detail::make_input_matrices<scalar_t>(
+            matrix_async_detail::matrix_input_generation_options { total_matrix_count, seed_value });
+        if (pending.empty())
+        {
+            std::printf("matrix reduction (%s, no coroutine): no input\n", scalar_name);
+            return;
+        }
+
+        std::vector<std::shared_ptr<async_context>> contexts;
+        contexts.reserve(worker_count);
+        std::vector<std::unique_ptr<async_worker>> workers;
+        workers.reserve(worker_count);
+
+        for (std::size_t idx = 0U; idx < worker_count; ++idx)
+        {
+            auto context = std::make_shared<async_context>();
+            contexts.emplace_back(context);
+            workers.emplace_back(make_async_worker(context, "matrix_worker_no_coro_" + std::to_string(idx)));
+        }
+
+        std::size_t round_index = 0U;
+        while (pending.size() > 1U)
+        {
+            using expected_matrix_t = tools::expected<matrix_async_detail::matrix_4x4<scalar_t>, pco::result_error>;
+
+            std::vector<pco::future_result<matrix_async_detail::matrix_4x4<scalar_t>>> jobs;
+            jobs.reserve(pending.size() / 2U);
+
+            std::vector<matrix_async_detail::matrix_4x4<scalar_t>> carry_over;
+            if ((pending.size() % 2U) != 0U)
+            {
+                // Preserve odd tail unchanged for the next reduction round.
+                carry_over.emplace_back(pending.back());
+            }
+
+            for (std::size_t pair_index = 0U; (pair_index + 1U) < pending.size(); pair_index += 2U)
+            {
+                // Distribute pair jobs round-robin across workers to maximize overlap.
+                const std::size_t worker_index = (pair_index / 2U) % worker_count;
+                auto* worker_ptr = workers[worker_index].get();
+
+                jobs.emplace_back(worker_ptr->delegate_async(
+                    [](const std::shared_ptr<async_context>& context, const std::string&,
+                        matrix_async_detail::matrix_4x4<scalar_t> left, matrix_async_detail::matrix_4x4<scalar_t> right)
+                    {
+                        context->call_count.fetch_add(1);
+                        return matrix_async_detail::multiply_matrix_4x4(left, right);
+                    },
+                    pending[pair_index], pending[pair_index + 1U]));
+            }
+
+            auto gathered = pco::when_all(std::move(jobs)).get_result();
+            if (!gathered.has_value())
+            {
+                std::printf("matrix reduction (%s, no coroutine): round %zu failed\n", scalar_name, round_index);
+                return;
+            }
+
+            std::vector<matrix_async_detail::matrix_4x4<scalar_t>> next_round;
+            next_round.reserve(gathered.value().size() + carry_over.size());
+            bool has_failure = false;
+            for (const expected_matrix_t& matrix_result : gathered.value())
+            {
+                if (!matrix_result.has_value())
+                {
+                    has_failure = true;
+                    break;
+                }
+                next_round.emplace_back(matrix_result.value());
+            }
+            if (has_failure)
+            {
+                std::printf(
+                    "matrix reduction (%s, no coroutine): round %zu sub-task failure\n", scalar_name, round_index);
+                return;
+            }
+
+            for (auto& carried : carry_over)
+            {
+                next_round.emplace_back(std::move(carried));
+            }
+
+            // Next stage consumes the reduced set produced by this round.
+            pending = std::move(next_round);
+            ++round_index;
+        }
+
+        int total_calls = 0;
+        for (const auto& context : contexts)
+        {
+            total_calls += context->call_count.load();
+        }
+
+        std::printf(
+            "matrix reduction (%s, no coroutine): matrices=%zu range=[-1.5,1.5] rounds=%zu calls=%d checksum=%.6f\n",
+            scalar_name, total_matrix_count, round_index, total_calls,
+            matrix_async_detail::matrix_checksum(pending.front()));
+    }
+
+#if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
+    template <typename scalar_t>
+    void run_matrix_reduction_coroutines(const char* scalar_name, std::uint32_t seed_value)
+    {
+        /** @brief Same reduction topology as non-coroutine mode, with worker schedule() coroutine hops. */
+        constexpr std::size_t total_matrix_count = 16U;
+        constexpr std::size_t worker_count = 4U;
+
+        auto pending = matrix_async_detail::make_input_matrices<scalar_t>(
+            matrix_async_detail::matrix_input_generation_options { total_matrix_count, seed_value });
+        if (pending.empty())
+        {
+            std::printf("matrix reduction (%s, coroutine): no input\n", scalar_name);
+            return;
+        }
+
+        std::vector<std::shared_ptr<async_context>> contexts;
+        contexts.reserve(worker_count);
+        std::vector<std::unique_ptr<async_worker>> workers;
+        workers.reserve(worker_count);
+
+        for (std::size_t idx = 0U; idx < worker_count; ++idx)
+        {
+            auto context = std::make_shared<async_context>();
+            contexts.emplace_back(context);
+            workers.emplace_back(make_async_worker(context, "matrix_worker_coro_" + std::to_string(idx)));
+        }
+
+        std::size_t round_index = 0U;
+        while (pending.size() > 1U)
+        {
+            using expected_matrix_t = tools::expected<matrix_async_detail::matrix_4x4<scalar_t>, pco::result_error>;
+
+            std::vector<pco::future_result<matrix_async_detail::matrix_4x4<scalar_t>>> jobs;
+            jobs.reserve(pending.size() / 2U);
+
+            std::vector<matrix_async_detail::matrix_4x4<scalar_t>> carry_over;
+            if ((pending.size() % 2U) != 0U)
+            {
+                // Preserve odd tail unchanged for the next reduction round.
+                carry_over.emplace_back(pending.back());
+            }
+
+            for (std::size_t pair_index = 0U; (pair_index + 1U) < pending.size(); pair_index += 2U)
+            {
+                // Distribute pair jobs round-robin across workers to maximize overlap.
+                const std::size_t worker_index = (pair_index / 2U) % worker_count;
+                auto* worker_ptr = workers[worker_index].get();
+                jobs.emplace_back(schedule_and_multiply_matrix_pair(
+                    worker_ptr, contexts[worker_index], pending[pair_index], pending[pair_index + 1U]));
+            }
+
+            auto gathered = pco::when_all(std::move(jobs)).get_result();
+            if (!gathered.has_value())
+            {
+                std::printf("matrix reduction (%s, coroutine): round %zu failed\n", scalar_name, round_index);
+                return;
+            }
+
+            std::vector<matrix_async_detail::matrix_4x4<scalar_t>> next_round;
+            next_round.reserve(gathered.value().size() + carry_over.size());
+            bool has_failure = false;
+            for (const expected_matrix_t& matrix_result : gathered.value())
+            {
+                if (!matrix_result.has_value())
+                {
+                    has_failure = true;
+                    break;
+                }
+                next_round.emplace_back(matrix_result.value());
+            }
+            if (has_failure)
+            {
+                std::printf("matrix reduction (%s, coroutine): round %zu sub-task failure\n", scalar_name, round_index);
+                return;
+            }
+
+            for (auto& carried : carry_over)
+            {
+                next_round.emplace_back(std::move(carried));
+            }
+
+            // Next stage consumes the reduced set produced by this round.
+            pending = std::move(next_round);
+            ++round_index;
+        }
+
+        int total_calls = 0;
+        for (const auto& context : contexts)
+        {
+            total_calls += context->call_count.load();
+        }
+
+        std::printf(
+            "matrix reduction (%s, coroutine): matrices=%zu range=[-1.5,1.5] rounds=%zu calls=%d checksum=%.6f\n",
+            scalar_name, total_matrix_count, round_index, total_calls,
+            matrix_async_detail::matrix_checksum(pending.front()));
+    }
+#endif
+
+    void test_matrix_multiplication_reduction_no_coroutines()
+    {
+        LOG_INFO("-- matrix 4x4 pairwise reduction on worker_task (no coroutine) --");
+        print_stats();
+
+        constexpr std::uint32_t float_seed = 12345U;
+        constexpr std::uint32_t fixed_seed = 54321U;
+
+        run_matrix_reduction_no_coroutines<float>("float", float_seed);
+        run_matrix_reduction_no_coroutines<fpm::fixed_16_16>("fpm_16_16", fixed_seed);
+    }
+
+#if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
+    void test_matrix_multiplication_reduction_coroutines()
+    {
+        LOG_INFO("-- matrix 4x4 pairwise reduction on worker_task (coroutine) --");
+        print_stats();
+
+        constexpr std::uint32_t float_seed = 22345U;
+        constexpr std::uint32_t fixed_seed = 64321U;
+
+        run_matrix_reduction_coroutines<float>("float", float_seed);
+        run_matrix_reduction_coroutines<fpm::fixed_16_16>("fpm_16_16", fixed_seed);
+    }
+#endif
 
     // -----------------------------------------------------------------------
     // Example 1: pco::async_result with inplace_executor + then_value / then_error
@@ -196,12 +528,7 @@ namespace
         constexpr int input_value = 7;
 
         auto future = pco::async_result(
-            pco::inplace_executor,
-            [](int squared_input)
-            {
-                return squared_input * squared_input;
-            },
-            input_value);
+            pco::inplace_executor, [](int squared_input) { return squared_input * squared_input; }, input_value);
 
         const auto result = std::move(future)
                                 .then_value([](int squared) { return squared + 1; })
@@ -231,9 +558,7 @@ namespace
         constexpr int input_base = 5;
 
         auto future = pco::async_result(
-            pco::inplace_executor,
-            [](int input_val) { return input_val + offset_value; },
-            input_base);
+            pco::inplace_executor, [](int input_val) { return input_val + offset_value; }, input_base);
 
         const auto description = std::move(future)
                                      .then_result(
@@ -336,10 +661,7 @@ namespace
 
         int value = initial_value;
 
-        pco::packaged_task_result<std::reference_wrapper<int>()> task { [&value]()
-            {
-                return std::ref(value);
-            } };
+        pco::packaged_task_result<std::reference_wrapper<int>()> task { [&value]() { return std::ref(value); } };
         auto future = task.get_future();
         task();
         const auto result = future.get_result();
@@ -348,7 +670,8 @@ namespace
         {
             // Modifying through the returned reference_wrapper affects the original.
             result.value().get() += increment_amount;
-            std::printf("reference_wrapper result: original value is now %d (pco::expected %d)\n", value, expected_result);
+            std::printf(
+                "reference_wrapper result: original value is now %d (pco::expected %d)\n", value, expected_result);
         }
     }
 
@@ -385,9 +708,8 @@ namespace
                 shared_promise->set_value(promise_value);
             });
 
-        const auto result = std::move(future)
-                                .then_value([](int val) { return val * multiplication_factor; })
-                                .get_result();
+        const auto result
+            = std::move(future).then_value([](int val) { return val * multiplication_factor; }).get_result();
 
         if (result.has_value())
         {
@@ -525,19 +847,20 @@ namespace
 
         using expected_int = tools::expected<int, pco::result_error>;
 
-        auto combined = pco::when_all(std::move(futures)).then_value(
-            [](const std::vector<expected_int>& results)
-            {
-                int sum = 0;
-                for (const auto& res : results)
-                {
-                    if (res.has_value())
-                    {
-                        sum += res.value();
-                    }
-                }
-                return sum;
-            });
+        auto combined = pco::when_all(std::move(futures))
+                            .then_value(
+                                [](const std::vector<expected_int>& results)
+                                {
+                                    int sum = 0;
+                                    for (const auto& res : results)
+                                    {
+                                        if (res.has_value())
+                                        {
+                                            sum += res.value();
+                                        }
+                                    }
+                                    return sum;
+                                });
 
         const auto result = combined.get_result();
         if (result.has_value())
@@ -642,12 +965,14 @@ namespace
                 std::printf("timeout_detection: computation ready in time, result=%d\n", result.value());
             }
         }
-        else if (status == pco::future_status::timeout)
+
+        if (status == pco::future_status::timeout)
         {
             status_str = "timeout";
             std::printf("timeout_detection: computation did NOT complete in 100ms\n");
         }
-        else
+
+        if ((status != pco::future_status::ready) && (status != pco::future_status::timeout))
         {
             status_str = "deferred";
         }
@@ -682,8 +1007,7 @@ namespace
             // Create a promise with a custom cancellation/cleanup action.
             // The lambda captures cleanup_called by reference; when the promise
             // is destroyed, the lambda fires.
-            auto pair = pco::make_result_promise<int>(
-                pco::canceler_arg,
+            auto pair = pco::make_result_promise<int>(pco::canceler_arg,
                 [&cleanup_called]()
                 {
                     std::printf("cancellation_action fired: cleanup logic triggered\n");
@@ -711,7 +1035,8 @@ namespace
             std::this_thread::sleep_for(cleanup_delay);
         }
 
-        if (cleanup_called.load())
+        const bool was_cleanup_called = cleanup_called.load();
+        if (was_cleanup_called)
         {
             std::printf("timeout_and_cancellation: cancellation action confirmed executed\n");
         }
@@ -750,8 +1075,7 @@ namespace
         auto* worker_ptr = worker.get();
 
         auto periodic = [worker_ptr, async_worker_context, processor](
-                    const std::shared_ptr<periodic_feed_context>& local_context,
-                    const std::string&)
+                            const std::shared_ptr<periodic_feed_context>& local_context, const std::string&)
         {
             int submitted_index = local_context->submitted_samples.load();
             const int target_value = target_sample_count;
@@ -768,31 +1092,32 @@ namespace
             auto chained = worker_ptr
                                ->delegate_async(
                                    [processor](const std::shared_ptr<async_context>& local_async_context,
-                                       const std::string&,
-                                       int sample_value)
+                                       const std::string&, int sample_value)
                                    {
                                        local_async_context->call_count.fetch_add(1);
                                        return processor->process_sample(sample_value);
                                    },
                                    submitted_index)
-                               .then_value([local_context](int processed_value)
-                               {
-                                   local_context->completed_samples.fetch_add(1);
-                                   local_context->aggregated_output.fetch_add(processed_value);
-                                   return processed_value;
-                               })
-                               .then_error([local_context](pco::result_error)
-                               {
-                                   local_context->failed_samples.fetch_add(1);
-                                   return -1;
-                               });
+                               .then_value(
+                                   [local_context](int processed_value)
+                                   {
+                                       local_context->completed_samples.fetch_add(1);
+                                       local_context->aggregated_output.fetch_add(processed_value);
+                                       return processed_value;
+                                   })
+                               .then_error(
+                                   [local_context](pco::result_error)
+                                   {
+                                       local_context->failed_samples.fetch_add(1);
+                                       return -1;
+                                   });
 
             local_context->pending_results.emplace_back(std::move(chained));
         };
 
         {
-            periodic_feed_task producer(
-                std::move(startup), std::move(periodic), feed_context, "periodic_feed_producer", periodic_interval, periodic_stack_size);
+            periodic_feed_task producer(std::move(startup), std::move(periodic), feed_context, "periodic_feed_producer",
+                periodic_interval, periodic_stack_size);
 
             const auto deadline = std::chrono::steady_clock::now() + completion_timeout;
             while ((std::chrono::steady_clock::now() < deadline)
@@ -804,16 +1129,13 @@ namespace
         }
 
         std::printf("periodic feed (no coroutine): submitted=%d completed=%d failed=%d worker_calls=%d\n",
-            feed_context->submitted_samples.load(),
-            feed_context->completed_samples.load(),
-            feed_context->failed_samples.load(),
-            async_worker_context->call_count.load());
+            feed_context->submitted_samples.load(), feed_context->completed_samples.load(),
+            feed_context->failed_samples.load(), async_worker_context->call_count.load());
 
         const std::int64_t expected_sum
             = static_cast<std::int64_t>(target_sample_count) * static_cast<std::int64_t>(target_sample_count);
         std::printf("periodic feed (no coroutine): aggregated=%" PRId64 " pco::expected=%" PRId64 "\n",
-            feed_context->aggregated_output.load(),
-            expected_sum);
+            feed_context->aggregated_output.load(), expected_sum);
     }
 
     // -----------------------------------------------------------------------
@@ -843,16 +1165,13 @@ namespace
             auto* active_worker = ((stage_index % 2) == 0) ? worker_first.get() : worker_second.get();
 
             auto stage_future = active_worker->delegate_async(
-                [](const std::shared_ptr<async_context>& local_context,
-                    const std::string&,
-                    int input_chain_value,
+                [](const std::shared_ptr<async_context>& local_context, const std::string&, int input_chain_value,
                     int current_stage)
                 {
                     local_context->call_count.fetch_add(1);
                     return async_processing_worker_model::process_chain_stage(input_chain_value, current_stage);
                 },
-                chain_value,
-                stage_index);
+                chain_value, stage_index);
 
             const auto stage_result = stage_future.get_result();
             if (!stage_result.has_value())
@@ -871,9 +1190,7 @@ namespace
 
         std::printf("alternating chain (no coroutine): result=%d pco::expected=%d\n", chain_value, expected_value);
         std::printf("alternating chain (no coroutine): worker_a_calls=%d worker_b_calls=%d expected_each=%d\n",
-            context_first->call_count.load(),
-            context_second->call_count.load(),
-            expected_calls_per_worker);
+            context_first->call_count.load(), context_second->call_count.load(), expected_calls_per_worker);
     }
 
 #if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
@@ -906,8 +1223,7 @@ namespace
         auto* worker_ptr = worker.get();
 
         auto periodic = [worker_ptr, async_worker_context, processor](
-                            const std::shared_ptr<periodic_feed_context>& local_context,
-                            const std::string&)
+                            const std::shared_ptr<periodic_feed_context>& local_context, const std::string&)
         {
             int submitted_index = local_context->submitted_samples.load();
             const int target_value = target_sample_count;
@@ -922,28 +1238,26 @@ namespace
             }
 
             auto chained = schedule_and_process_sample(worker_ptr, async_worker_context, processor, submitted_index)
-                               .then_value([local_context](int processed_value)
-                               {
-                                   local_context->completed_samples.fetch_add(1);
-                                   local_context->aggregated_output.fetch_add(processed_value);
-                                   return processed_value;
-                               })
-                               .then_error([local_context](pco::result_error)
-                               {
-                                   local_context->failed_samples.fetch_add(1);
-                                   return -1;
-                               });
+                               .then_value(
+                                   [local_context](int processed_value)
+                                   {
+                                       local_context->completed_samples.fetch_add(1);
+                                       local_context->aggregated_output.fetch_add(processed_value);
+                                       return processed_value;
+                                   })
+                               .then_error(
+                                   [local_context](pco::result_error)
+                                   {
+                                       local_context->failed_samples.fetch_add(1);
+                                       return -1;
+                                   });
 
             local_context->pending_results.emplace_back(std::move(chained));
         };
 
         {
-            periodic_feed_task producer(std::move(startup),
-                std::move(periodic),
-                feed_context,
-                "periodic_feed_coro_producer",
-                periodic_interval,
-                periodic_stack_size);
+            periodic_feed_task producer(std::move(startup), std::move(periodic), feed_context,
+                "periodic_feed_coro_producer", periodic_interval, periodic_stack_size);
 
             const auto deadline = std::chrono::steady_clock::now() + completion_timeout;
             while ((std::chrono::steady_clock::now() < deadline)
@@ -955,16 +1269,13 @@ namespace
         }
 
         std::printf("periodic feed (coroutine): submitted=%d completed=%d failed=%d worker_calls=%d\n",
-            feed_context->submitted_samples.load(),
-            feed_context->completed_samples.load(),
-            feed_context->failed_samples.load(),
-            async_worker_context->call_count.load());
+            feed_context->submitted_samples.load(), feed_context->completed_samples.load(),
+            feed_context->failed_samples.load(), async_worker_context->call_count.load());
 
         const std::int64_t expected_sum
             = static_cast<std::int64_t>(target_sample_count) * static_cast<std::int64_t>(target_sample_count);
         std::printf("periodic feed (coroutine): aggregated=%" PRId64 " pco::expected=%" PRId64 "\n",
-            feed_context->aggregated_output.load(),
-            expected_sum);
+            feed_context->aggregated_output.load(), expected_sum);
     }
 
     // -----------------------------------------------------------------------
@@ -996,7 +1307,8 @@ namespace
         request.initial_value = initial_value;
         request.chain_stage_count = stage_count;
 
-        auto chained_future = schedule_alternating_chain_on_two_workers(worker_first.get(), worker_second.get(), request);
+        auto chained_future
+            = schedule_alternating_chain_on_two_workers(worker_first.get(), worker_second.get(), request);
         const auto chained_result = chained_future.get_result();
 
         if (!chained_result.has_value())
@@ -1011,11 +1323,10 @@ namespace
             expected_value = async_processing_worker_model::process_chain_stage(expected_value, stage_index);
         }
 
-        std::printf("alternating chain (coroutine): result=%d pco::expected=%d\n", chained_result.value(), expected_value);
+        std::printf(
+            "alternating chain (coroutine): result=%d pco::expected=%d\n", chained_result.value(), expected_value);
         std::printf("alternating chain (coroutine): worker_a_calls=%d worker_b_calls=%d expected_each=%d\n",
-            context_first->call_count.load(),
-            context_second->call_count.load(),
-            expected_calls_per_worker);
+            context_first->call_count.load(), context_second->call_count.load(), expected_calls_per_worker);
     }
 #endif
 
@@ -1038,10 +1349,12 @@ void run_example_async_processing()
     test_timeout_and_cancellation();
     test_periodic_feeds_worker_stress_no_coroutines();
     test_alternating_chain_two_workers_no_coroutines();
+    test_matrix_multiplication_reduction_no_coroutines();
 
 #if defined(ASYNC_EXAMPLE_HAS_COROUTINES)
     test_coroutine_schedule_and_await();
     test_periodic_feeds_worker_stress_coroutines();
     test_alternating_chain_two_workers_coroutines();
+    test_matrix_multiplication_reduction_coroutines();
 #endif
 }
