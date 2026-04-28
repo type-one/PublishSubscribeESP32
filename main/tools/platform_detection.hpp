@@ -39,7 +39,9 @@
 #define PLATFORM_DETECTION_HPP_
 
 #if defined(ESP_PLATFORM)
+#if !defined(__linux__) && !defined(__unix__) && !defined(_WIN32)
 #define FREERTOS_PLATFORM
+#endif
 #elif defined(STM32F103xB) || defined(STM32F103xE) || defined(STM32F303xC) || defined(STM32F401xC)                     \
     || defined(STM32F401xE) || defined(STM32F407xx) || defined(STM32F411xE) || defined(STM32F412Vx)                    \
     || defined(STM32F446xx) || defined(STM32F756xx) || defined(STM32F765xx) || defined(STM32H743xx)                    \
