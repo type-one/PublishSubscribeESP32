@@ -423,7 +423,11 @@ void test_ring_buffer_iteration()
             const auto variance_val = std::sqrt(sqsum_val / static_cast<double>(snapshot.size()));
             std::printf("variance: %f\n", variance_val);
 
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            const auto [min_val_it, max_val_it] = std::ranges::minmax_element(snapshot);
+#else
             const auto [min_val_it, max_val_it] = std::minmax_element(snapshot.cbegin(), snapshot.cend());
+#endif
 
             std::printf("min: %f\n", *min_val_it);
             std::printf("max: %f\n", *max_val_it);
@@ -582,7 +586,11 @@ void test_ring_vector_iteration()
             const auto variance_val = std::sqrt(sqsum_val / static_cast<double>(snapshot.size()));
             std::printf("variance: %f\n", variance_val);
 
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            const auto [min_val_it, max_val_it] = std::ranges::minmax_element(snapshot);
+#else
             const auto [min_val_it, max_val_it] = std::minmax_element(snapshot.cbegin(), snapshot.cend());
+#endif
 
             std::printf("min: %f\n", *min_val_it);
             std::printf("max: %f\n", *max_val_it);
