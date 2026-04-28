@@ -189,31 +189,28 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    K,
-                    decltype(std::get<0>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))
-                >::value
-                && std::is_constructible<
-                    T,
-                    decltype(std::get<1>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<
+                std::is_constructible<K,
+                    decltype(std::get<0>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))>::value
+                && std::is_constructible<T,
+                    decltype(std::get<1>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))>::value>::
+                type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<K, decltype(std::get<0>(*std::begin(std::declval<TRange&>())))>
-                  && std::is_constructible_v<T, decltype(std::get<1>(*std::begin(std::declval<TRange&>())))>
+            && std::is_constructible_v<K, decltype(std::get<0>(*std::begin(std::declval<TRange&>())))>
+            && std::is_constructible_v<T, decltype(std::get<1>(*std::begin(std::declval<TRange&>())))>
 #endif
         void add_range(TRange&& values)
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (auto&& entry : std::forward<TRange>(values))
             {
-                m_dictionary.insert_or_assign(
-                    K(std::get<0>(std::forward<decltype(entry)>(entry))),
-                    T(std::get<1>(std::forward<decltype(entry)>(entry))));
+                K key_value(std::get<0>(entry));
+                T mapped_value(std::get<1>(entry));
+                m_dictionary.insert_or_assign(std::move(key_value), std::move(mapped_value));
             }
         }
 
@@ -252,22 +249,19 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    K,
-                    decltype(std::get<0>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))
-                >::value
-                && std::is_constructible<
-                    T,
-                    decltype(std::get<1>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<
+                std::is_constructible<K,
+                    decltype(std::get<0>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))>::value
+                && std::is_constructible<T,
+                    decltype(std::get<1>(*std::begin(std::declval<typename std::decay<TRange>::type&>())))>::value>::
+                type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<K, decltype(std::get<0>(*std::begin(std::declval<TRange&>())))>
-                  && std::is_constructible_v<T, decltype(std::get<1>(*std::begin(std::declval<TRange&>())))>
+            && std::is_constructible_v<K, decltype(std::get<0>(*std::begin(std::declval<TRange&>())))>
+            && std::is_constructible_v<T, decltype(std::get<1>(*std::begin(std::declval<TRange&>())))>
 #endif
         void add_collection(TRange&& collection)
         {
@@ -348,17 +342,14 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    K,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<K,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<K, decltype(*std::begin(std::declval<TRange&>()))>
+            && std::is_constructible_v<K, decltype(*std::begin(std::declval<TRange&>()))>
 #endif
         void remove_collection(TRange&& keys)
         {
