@@ -45,8 +45,9 @@
 #include <string>
 #include <vector>
 
-#include "cjsonpp/cjsonpp.hpp"
 #include "cJSON/cJSON.h"
+#include "cjsonpp/cjsonpp.hpp"
+
 
 /**
  * @class JSONObjectTest
@@ -77,31 +78,31 @@ protected:
 /**
  * @brief Test case for creating an empty JSON object.
  *
- * This test verifies that the type of the created JSON object is cjsonpp::Object.
+ * This test verifies that the type of the created JSON object is cjsonpp::JSONType::Object.
  */
 TEST_F(JSONObjectTest, CreateEmptyObject)
 {
     auto obj = cjsonpp::JSONObject();
     const auto type = obj.type();
-    EXPECT_EQ(type, cjsonpp::Object);
+    EXPECT_EQ(type, cjsonpp::JSONType::Object);
 }
 
 /**
  * @brief Test case for creating a boolean JSON object.
  *
- * This test verifies that the type of the created JSON object is cjsonpp::Bool.
+ * This test verifies that the type of the created JSON object is cjsonpp::JSONType::Bool.
  */
 TEST_F(JSONObjectTest, CreateBooleanObject)
 {
     {
         auto obj = cjsonpp::JSONObject(true);
         auto type = obj.type();
-        EXPECT_EQ(type, cjsonpp::Bool);
+        EXPECT_EQ(type, cjsonpp::JSONType::Bool);
     }
     {
         auto obj = cjsonpp::JSONObject(false);
         auto type = obj.type();
-        EXPECT_EQ(type, cjsonpp::Bool);
+        EXPECT_EQ(type, cjsonpp::JSONType::Bool);
     }
 }
 
@@ -119,24 +120,24 @@ TEST_F(JSONObjectTest, CreateNumberObject)
 {
     {
         auto obj = cjsonpp::JSONObject(42);
-        EXPECT_EQ(obj.type(), cjsonpp::Number);
+        EXPECT_EQ(obj.type(), cjsonpp::JSONType::Number);
     }
 
     {
         auto obj = cjsonpp::JSONObject(3.14);
-        EXPECT_EQ(obj.type(), cjsonpp::Number);
+        EXPECT_EQ(obj.type(), cjsonpp::JSONType::Number);
     }
 }
 
 /**
  * @brief Test case for creating a string JSON object.
  *
- * This test verifies that the type of the created JSON object is cjsonpp::String.
+ * This test verifies that the type of the created JSON object is cjsonpp::JSONType::String.
  */
 TEST_F(JSONObjectTest, CreateStringObject)
 {
     auto obj = cjsonpp::JSONObject("Hello, World!");
-    EXPECT_EQ(obj.type(), cjsonpp::String);
+    EXPECT_EQ(obj.type(), cjsonpp::JSONType::String);
 }
 
 /**
@@ -155,7 +156,7 @@ TEST_F(JSONObjectTest, ParseJSONString)
     const auto parse_res = cjsonpp::parse_result(jsonString);
     ASSERT_TRUE(parse_res.has_value());
     const auto& obj = parse_res.value();
-    EXPECT_EQ(obj.type(), cjsonpp::Object);
+    EXPECT_EQ(obj.type(), cjsonpp::JSONType::Object);
     EXPECT_TRUE(obj.has("key"));
     EXPECT_TRUE(obj.has("number"));
 }
@@ -169,7 +170,7 @@ TEST_F(JSONObjectTest, ParseJSONStringResultApi)
     auto parse_result = cjsonpp::parse_result(jsonString);
     ASSERT_TRUE(parse_result.has_value());
     const auto& obj = parse_result.value();
-    EXPECT_EQ(obj.type(), cjsonpp::Object);
+    EXPECT_EQ(obj.type(), cjsonpp::JSONType::Object);
     EXPECT_TRUE(obj.has("key"));
     EXPECT_TRUE(obj.has("number"));
 }
@@ -226,10 +227,10 @@ TEST_F(JSONObjectTest, AddArrayItem)
     auto obj = cjsonpp::arrayObject();
     cjsonpp::JSONObject value("test");
     ASSERT_TRUE(obj.add(value));
-    EXPECT_EQ(obj.type(), cjsonpp::Array);
+    EXPECT_EQ(obj.type(), cjsonpp::JSONType::Array);
     const auto item_res = obj.get(0);
     ASSERT_TRUE(item_res.has_value());
-    EXPECT_EQ(item_res.value().type(), cjsonpp::String);
+    EXPECT_EQ(item_res.value().type(), cjsonpp::JSONType::String);
 }
 
 /**
@@ -253,7 +254,7 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeBoolean)
     const auto parse_res = cjsonpp::parse_result(serialized);
     ASSERT_TRUE(parse_res.has_value());
     const auto& de_obj = parse_res.value();
-    EXPECT_EQ(de_obj.type(), cjsonpp::Bool);
+    EXPECT_EQ(de_obj.type(), cjsonpp::JSONType::Bool);
     EXPECT_TRUE(de_obj.obj()->valueint);
 }
 
@@ -278,7 +279,7 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeNumber)
     const auto parse_res = cjsonpp::parse_result(serialized);
     ASSERT_TRUE(parse_res.has_value());
     const auto& de_obj = parse_res.value();
-    EXPECT_EQ(de_obj.type(), cjsonpp::Number);
+    EXPECT_EQ(de_obj.type(), cjsonpp::JSONType::Number);
     EXPECT_DOUBLE_EQ(de_obj.obj()->valuedouble, 123.456);
 }
 
@@ -293,7 +294,7 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeNumber)
  * - Create a JSON object with the string "Test String".
  * - Serialize the JSON object to a string.
  * - Deserialize the string back to a JSON object.
- * - Verify that the type of the JSON object is cjsonpp::String.
+ * - Verify that the type of the JSON object is cjsonpp::JSONType::String.
  * - Verify that the value of the JSON object is "Test String".
  */
 TEST_F(JSONObjectTest, SerializeAndDeserializeString)
@@ -303,7 +304,7 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeString)
     const auto parse_res = cjsonpp::parse_result(serialized);
     ASSERT_TRUE(parse_res.has_value());
     const auto& de_obj = parse_res.value();
-    EXPECT_EQ(de_obj.type(), cjsonpp::String);
+    EXPECT_EQ(de_obj.type(), cjsonpp::JSONType::String);
     EXPECT_STREQ(de_obj.obj()->valuestring, "Test String");
 }
 
@@ -311,23 +312,23 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeString)
  * @brief Test case for creating and checking a null JSON object.
  *
  * This test case creates a JSON object using the cjsonpp::nullObject() method
- * and verifies that the type of the created object is cjsonpp::Null.
+ * and verifies that the type of the created object is cjsonpp::JSONType::Null.
  */
 TEST_F(JSONObjectTest, CreateAndCheckNullObject)
 {
     auto obj = cjsonpp::nullObject();
-    EXPECT_EQ(obj.type(), cjsonpp::Null);
+    EXPECT_EQ(obj.type(), cjsonpp::JSONType::Null);
 }
 
 /**
  * @brief Test case for creating and checking an array JSON object.
  *
- * This test verifies that the type of the created JSON object is cjsonpp::Array.
+ * This test verifies that the type of the created JSON object is cjsonpp::JSONType::Array.
  */
 TEST_F(JSONObjectTest, CreateAndCheckArrayObject)
 {
     auto obj = cjsonpp::arrayObject();
-    EXPECT_EQ(obj.type(), cjsonpp::Array);
+    EXPECT_EQ(obj.type(), cjsonpp::JSONType::Array);
 }
 
 /**
@@ -336,11 +337,11 @@ TEST_F(JSONObjectTest, CreateAndCheckArrayObject)
  * This test verifies that a nested JSON string is correctly parsed into a
  * cjsonpp::JSONObject and that the nested structure can be accessed and
  * validated. Specifically, it checks:
- * - The top-level object is of type cjsonpp::Object.
+ * - The top-level object is of type cjsonpp::JSONType::Object.
  * - The top-level object contains a key "outer".
  * - The "outer" object contains a key "inner".
  * - The "inner" object contains a key "key".
- * - The value associated with "key" is of type cjsonpp::String.
+ * - The value associated with "key" is of type cjsonpp::JSONType::String.
  * - The value associated with "key" is "value".
  */
 TEST_F(JSONObjectTest, ParseAndCheckNestedJSON)
@@ -349,7 +350,7 @@ TEST_F(JSONObjectTest, ParseAndCheckNestedJSON)
     const auto parse_res = cjsonpp::parse_result(jsonString);
     ASSERT_TRUE(parse_res.has_value());
     const auto& obj = parse_res.value();
-    EXPECT_EQ(obj.type(), cjsonpp::Object);
+    EXPECT_EQ(obj.type(), cjsonpp::JSONType::Object);
     EXPECT_TRUE(obj.has("outer"));
     const auto outer_res = obj.get("outer");
     ASSERT_TRUE(outer_res.has_value());
@@ -361,7 +362,7 @@ TEST_F(JSONObjectTest, ParseAndCheckNestedJSON)
     EXPECT_TRUE(inner.has("key"));
     const auto key_res = inner.get("key");
     ASSERT_TRUE(key_res.has_value());
-    EXPECT_EQ(key_res.value().type(), cjsonpp::String);
+    EXPECT_EQ(key_res.value().type(), cjsonpp::JSONType::String);
     EXPECT_STREQ(key_res.value().obj()->valuestring, "value");
 }
 
@@ -385,7 +386,7 @@ TEST_F(JSONObjectTest, TryGetMissingItemResultApi)
  *
  * @test
  * - Parses a JSON string with an array.
- * - Checks that the parsed object is of type cjsonpp::Object.
+ * - Checks that the parsed object is of type cjsonpp::JSONType::Object.
  * - Verifies the existence of the "array" key in the JSON object.
  * - Retrieves the array and checks its type and size.
  * - Iterates through the array and verifies each element's type and value.
@@ -396,12 +397,12 @@ TEST_F(JSONObjectTest, ParseAndCheckArrayInJSON)
     const auto parse_res = cjsonpp::parse_result(jsonString);
     ASSERT_TRUE(parse_res.has_value());
     const auto& obj = parse_res.value();
-    EXPECT_EQ(obj.type(), cjsonpp::Object);
+    EXPECT_EQ(obj.type(), cjsonpp::JSONType::Object);
     EXPECT_TRUE(obj.has("array"));
     const auto array_res = obj.get("array");
     ASSERT_TRUE(array_res.has_value());
     const auto& array = array_res.value();
-    EXPECT_EQ(array.type(), cjsonpp::Array);
+    EXPECT_EQ(array.type(), cjsonpp::JSONType::Array);
 
     constexpr int expected_size = 5;
     EXPECT_EQ(cJSON_GetArraySize(array.obj()), expected_size);
@@ -442,7 +443,7 @@ TEST_F(JSONObjectTest, SetAndGetNestedObject)
     EXPECT_TRUE(retrieved_outer.has("inner_key"));
     const auto inner_res = retrieved_outer.get("inner_key");
     ASSERT_TRUE(inner_res.has_value());
-    EXPECT_EQ(inner_res.value().type(), cjsonpp::String);
+    EXPECT_EQ(inner_res.value().type(), cjsonpp::JSONType::String);
     EXPECT_STREQ(inner_res.value().obj()->valuestring, "inner_value");
 }
 
@@ -481,7 +482,7 @@ TEST_F(JSONObjectTest, SerializeAndDeserializeNestedObject)
     EXPECT_TRUE(retrieved_outer.has("inner_key"));
     const auto inner_res = retrieved_outer.get("inner_key");
     ASSERT_TRUE(inner_res.has_value());
-    EXPECT_EQ(inner_res.value().type(), cjsonpp::String);
+    EXPECT_EQ(inner_res.value().type(), cjsonpp::JSONType::String);
     EXPECT_STREQ(inner_res.value().obj()->valuestring, "inner_value");
 }
 
