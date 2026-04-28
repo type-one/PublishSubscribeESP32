@@ -9,30 +9,24 @@ Checks:          "clang-diagnostic-*,\
                   -modernize-use-trailing-return-type,\
                   -modernize-type-traits,\
                   -modernize-use-constraints,\
-                  -performance-unnecessary-copy-initialization,
+                  -modernize-use-designated-initializers,\
+                  -performance-unnecessary-copy-initialization,\
+                  -performance-unnecessary-value-param,\
                   -cppcoreguidelines-avoid-do-while,\
                   -cppcoreguidelines-pro-type-vararg,\
                   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,\
                   -cppcoreguidelines-pro-bounds-pointer-arithmetic,\
                   -cppcoreguidelines-pro-type-reinterpret-cast,\
+                  -cppcoreguidelines-init-variables,\
+                  -cppcoreguidelines-pro-type-member-init,\
                   -bugprone-suspicious-include,\
                   -fuchsia-default-arguments-calls,\
                   -fuchsia-overloaded-operator,\
                   -readability-function-cognitive-complexity,\                 
                   -readability-use-concise-preprocessor-directives,\
-                  -modernize-use-scoped-lock,\
                   -readability-implicit-bool-conversion,\
-                  -modernize-use-designated-initializers,\
-                  -cppcoreguidelines-use-enum-class,\
-                  -modernize-use-ranges,\
-                  -performance-move-const-arg,\
-                  -modernize-use-equals-default,\
-                  -performance-unnecessary-value-param,\
-                  -readability-math-missing-parentheses,\
-                  -modernize-use-integer-sign-comparison,\
-                  -readability-static-accessed-through-instance,\
-                  -readability-identifier-length,\
-                  -bugprone-use-after-move"
+                  -readability-convert-member-functions-to-static"                
+                  
 
 WarningsAsErrors: "*"
 HeaderFilterRegex: '.hpp'
