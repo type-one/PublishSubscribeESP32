@@ -100,10 +100,10 @@ namespace tools
          */
         ring_buffer(ring_buffer&& other) noexcept
             : m_ring_buffer { std::move(other.m_ring_buffer) }
-            , m_push_index { std::move(other.m_push_index) }
-            , m_pop_index { std::move(other.m_pop_index) }
-            , m_last_index { std::move(other.m_last_index) }
-            , m_size { std::move(other.m_size) }
+            , m_push_index { other.m_push_index }
+            , m_pop_index { other.m_pop_index }
+            , m_last_index { other.m_last_index }
+            , m_size { other.m_size }
         {
         }
 
@@ -145,10 +145,10 @@ namespace tools
             if (this != &other)
             {
                 m_ring_buffer = std::move(other.m_ring_buffer);
-                m_push_index = std::move(other.m_push_index);
-                m_pop_index = std::move(other.m_pop_index);
-                m_last_index = std::move(other.m_last_index);
-                m_size = std::move(other.m_size);
+                m_push_index = other.m_push_index;
+                m_pop_index = other.m_pop_index;
+                m_last_index = other.m_last_index;
+                m_size = other.m_size;
             }
 
             return *this;
