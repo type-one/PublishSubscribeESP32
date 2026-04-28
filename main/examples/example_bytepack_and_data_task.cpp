@@ -447,7 +447,7 @@ void test_data_task_perfect_forwarding()
     auto context = std::make_shared<data_task_context>();
 
     constexpr const std::size_t queue_depth = 4U;
-    constexpr const std::size_t stack_size = 2048U;
+    constexpr const std::size_t stack_size = 4096U;
     constexpr const int first_value = 1;
     constexpr const int second_value = 2;
     constexpr const int function_pointer_value = 42;

@@ -37,6 +37,7 @@
 
 namespace
 {
+    constexpr const std::size_t smp_worker_stack_size = 4096U;
 
     /** @brief Empty shared context used by basic SMP affinity and priority task demos. */
     struct smp_task_context
@@ -61,11 +62,10 @@ namespace
 
         auto context = std::make_shared<smp_task_context>();
 
-        constexpr const std::size_t task1_stack_size = 2048U;
         const int core1 = tools::get_nb_of_cpu_cores() - 1;
         // Pin worker task to core 1, then drive it from a periodic producer pinned to core 0.
         worker_task1 task1(
-            startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
+            startup, context, "worker_task1", smp_worker_stack_size, core1, tools::base_task::default_priority);
 
         auto periodic_lambda = [&task1](const std::shared_ptr<smp_task_context>& context, const std::string& task_name)
         {
@@ -119,10 +119,9 @@ namespace
 
         auto context = std::make_shared<smp_ring_task_context>();
 
-        constexpr const std::size_t task1_stack_size = 2048U;
         const int core1 = tools::get_nb_of_cpu_cores() - 1;
         worker_ring_task1 task1(
-            startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
+            startup, context, "worker_task1", smp_worker_stack_size, core1, tools::base_task::default_priority);
 
         auto periodic_lambda
             = [&task1](const std::shared_ptr<smp_ring_task_context>& local_context, const std::string& task_name)
@@ -212,10 +211,9 @@ namespace
         auto context = std::make_shared<smp_mem_task_context>(static_storage.size());
 
         {
-            constexpr const std::size_t task1_stack_size = 2048U;
             const int core1 = tools::get_nb_of_cpu_cores() - 1;
             worker_mem_task1 task1(
-                startup, context, "worker_task1", task1_stack_size, core1, tools::base_task::default_priority);
+                startup, context, "worker_task1", smp_worker_stack_size, core1, tools::base_task::default_priority);
 
             static const std::string label
                 = "this\nis\na\ntest\nto\ntransmit\nseveral\nmessages\nbetween\ntwo\ncores\n";
@@ -355,10 +353,10 @@ namespace
 
         auto context = std::make_shared<smp_task_context>();
 
-        constexpr const auto task1_stack_size = 2048U;
         constexpr const auto task1_priority = 0;
         worker_task1 task1(
-            startup, context, "worker_task1", task1_stack_size, tools::base_task::run_on_all_cores, task1_priority);
+            startup, context, "worker_task1", smp_worker_stack_size, tools::base_task::run_on_all_cores,
+            task1_priority);
 
         auto periodic_lambda
             = [&task1](const std::shared_ptr<smp_task_context>& local_context, const std::string& task_name)
