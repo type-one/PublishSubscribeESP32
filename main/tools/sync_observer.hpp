@@ -280,11 +280,11 @@ namespace tools
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
 
-            for (auto [it, range_end] = m_subscribers.equal_range(topic); it != range_end; ++it)
+            for (auto [itr, range_end] = m_subscribers.equal_range(topic); itr != range_end; ++itr)
             {
-                if (it->second == observer)
+                if (itr->second == observer)
                 {
-                    m_subscribers.erase(it);
+                    m_subscribers.erase(itr);
                     break;
                 }
             }
@@ -303,11 +303,11 @@ namespace tools
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
 
-            for (auto [it, range_end] = m_handlers.equal_range(topic); it != range_end; ++it)
+            for (auto [itr, range_end] = m_handlers.equal_range(topic); itr != range_end; ++itr)
             {
-                if (it->second.first == handler_name)
+                if (itr->second.first == handler_name)
                 {
-                    m_handlers.erase(it);
+                    m_handlers.erase(itr);
                     break;
                 }
             }
@@ -362,14 +362,14 @@ namespace tools
             {
                 std::scoped_lock<tools::critical_section> guard(m_mutex);
 
-                for (auto [it, range_end] = m_subscribers.equal_range(topic); it != range_end; ++it)
+                for (auto [itr, range_end] = m_subscribers.equal_range(topic); itr != range_end; ++itr)
                 {
-                    to_inform.push_back(it->second);
+                    to_inform.push_back(itr->second);
                 }
 
-                for (auto [it, range_end] = m_handlers.equal_range(topic); it != range_end; ++it)
+                for (auto [itr, range_end] = m_handlers.equal_range(topic); itr != range_end; ++itr)
                 {
-                    to_invoke.emplace_back(it->second.second);
+                    to_invoke.emplace_back(itr->second.second);
                 }
             }
 
