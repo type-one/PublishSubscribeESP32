@@ -95,15 +95,7 @@ namespace tools
          *
          * @param other The ring_vector object to copy from.
          */
-        ring_vector(const ring_vector& other)
-            : m_ring_vector { other.m_ring_vector }
-            , m_push_index { other.m_push_index }
-            , m_pop_index { other.m_pop_index }
-            , m_last_index { other.m_last_index }
-            , m_size { other.m_size }
-            , m_capacity { other.m_capacity }
-        {
-        }
+        ring_vector(const ring_vector& other) = default;
 
         /**
          * @brief Move constructor for the ring_vector class.
