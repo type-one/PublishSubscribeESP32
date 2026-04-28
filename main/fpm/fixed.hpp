@@ -39,7 +39,7 @@ namespace fpm
 
         static_assert(std::is_integral<BaseType>::value, "BaseType must be an integral type");
         static_assert(FractionBits > 0, "FractionBits must be greater than zero");
-        static_assert(FractionBits <= sizeof(BaseType) * k_bits_per_byte - k_min_integral_bits,
+        static_assert(FractionBits <= ((sizeof(BaseType) * k_bits_per_byte) - k_min_integral_bits),
             "BaseType must at least be able to contain entire fraction, with space for at least one integral bit");
         static_assert(sizeof(IntermediateType) > sizeof(BaseType), "IntermediateType must be larger than BaseType");
         static_assert(std::is_signed<IntermediateType>::value == std::is_signed<BaseType>::value,

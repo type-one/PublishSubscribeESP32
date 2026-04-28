@@ -401,7 +401,7 @@ namespace tools
          */
         void isr_push(const T& elem)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_queue.push(elem);
         }
 
@@ -414,7 +414,7 @@ namespace tools
          */
         void isr_push(T&& elem)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_queue.push(std::move(elem));
         }
 
@@ -437,7 +437,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
 #endif
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_queue.push(std::forward<U>(elem));
         }
 
@@ -459,7 +459,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
 #endif
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_queue.emplace(std::forward<Args>(args)...);
         }
 
@@ -473,7 +473,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t isr_size() const
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_queue.size();
         }
 
@@ -487,7 +487,7 @@ namespace tools
         template <typename InputIt>
         void isr_push_range(InputIt first, InputIt last)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             for (; first != last; ++first)
             {
                 m_queue.push(T(*first));
@@ -515,7 +515,7 @@ namespace tools
 #endif
         void isr_push_range(TRange&& range)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             for (auto&& elem : std::forward<TRange>(range))
             {
                 m_queue.push(T(std::forward<decltype(elem)>(elem)));
@@ -542,7 +542,7 @@ namespace tools
 #endif
         void isr_push_range(std::initializer_list<U> range)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             for (const auto& elem : range)
             {
                 m_queue.push(T(elem));

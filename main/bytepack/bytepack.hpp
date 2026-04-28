@@ -314,7 +314,7 @@ namespace bytepack
             requires NetworkSerializableBasic<T>
         bool write(const std::array<T, N>& array) noexcept
         {
-            if (buffer_.size() < (write_index_ + N * sizeof(T)))
+            if (buffer_.size() < (write_index_ + (N * sizeof(T))))
             {
                 // Array elements cannot fit in the remaining buffer space
                 return false;
@@ -348,7 +348,7 @@ namespace bytepack
             // When serializing dynamic size containers (if fixed size is not given), always include the container's
             // size as metadata before the container data. This is crucial even for empty containers, as it allows the
             // deserializer to accurately determine if the container is empty or contains data.
-            if (buffer_.size() < (write_index_ + sizeof(SizeType) + vector.size() * sizeof(T)))
+            if (buffer_.size() < (write_index_ + sizeof(SizeType) + (vector.size() * sizeof(T))))
             {
                 // Vector size field and its elements cannot fit in the remaining buffer space
                 return false;
@@ -393,7 +393,7 @@ namespace bytepack
             requires NetworkSerializableBasic<T>
         bool write(const std::vector<T>& vector) noexcept
         {
-            if (vector.size() < N || buffer_.size() < (write_index_ + N * sizeof(T)))
+            if (vector.size() < N || buffer_.size() < (write_index_ + (N * sizeof(T))))
             {
                 return false;
             }
@@ -575,7 +575,7 @@ namespace bytepack
         bool read(std::array<T, N>& array) noexcept
         {
             // Check if there is enough data in the buffer to read the entire array
-            if (buffer_.size() < (read_index_ + N * sizeof(T)))
+            if (buffer_.size() < (read_index_ + (N * sizeof(T))))
             {
                 return false;
             }
@@ -615,7 +615,7 @@ namespace bytepack
             }
             const auto size = static_cast<std::size_t>(size_custom);
 
-            if (buffer_.size() < (read_index_ + size * sizeof(T)))
+            if (buffer_.size() < (read_index_ + (size * sizeof(T))))
             {
                 return false;
             }
@@ -647,7 +647,7 @@ namespace bytepack
             requires NetworkSerializableBasic<T>
         bool read(std::vector<T>& vector) noexcept
         {
-            if (buffer_.size() < (read_index_ + N * sizeof(T)))
+            if (buffer_.size() < (read_index_ + (N * sizeof(T))))
             {
                 return false;
             }

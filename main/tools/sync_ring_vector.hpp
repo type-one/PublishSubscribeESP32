@@ -526,7 +526,7 @@ namespace tools
          */
         void isr_push(const T& elem)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_ring_vector.push(elem);
         }
 
@@ -539,7 +539,7 @@ namespace tools
          */
         void isr_push(T&& elem)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_ring_vector.push(std::move(elem));
         }
 
@@ -560,7 +560,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
     #endif
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_ring_vector.push(std::forward<U>(elem));
         }
 
@@ -581,7 +581,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
     #endif
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_ring_vector.emplace(std::forward<Args>(args)...);
         }
 
@@ -610,7 +610,7 @@ namespace tools
 #endif
         std::size_t isr_push_range(TRange&& range)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.push_range(std::forward<TRange>(range));
         }
 
@@ -630,7 +630,7 @@ namespace tools
 #endif
         std::size_t isr_push_range(std::initializer_list<U> range)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.push_range(range);
         }
 
@@ -641,7 +641,7 @@ namespace tools
          */
         bool isr_push_overwrite(const T& elem)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.push_overwrite(elem);
         }
 
@@ -652,7 +652,7 @@ namespace tools
          */
         bool isr_push_overwrite(T&& elem)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.push_overwrite(std::move(elem));
         }
 
@@ -671,7 +671,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
     #endif
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.push_overwrite(std::forward<U>(elem));
         }
 
@@ -690,7 +690,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
     #endif
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.emplace_overwrite(std::forward<Args>(args)...);
         }
 
@@ -717,7 +717,7 @@ namespace tools
 #endif
         push_range_overwrite_result isr_push_range_overwrite(TRange&& range)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.push_range_overwrite(std::forward<TRange>(range));
         }
 
@@ -738,7 +738,7 @@ namespace tools
 #endif
         push_range_overwrite_result isr_push_range_overwrite(std::initializer_list<U> range)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.push_range_overwrite(range);
         }
 
@@ -751,7 +751,7 @@ namespace tools
          */
         [[nodiscard]] bool isr_full() const
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.full();
         }
 
@@ -766,7 +766,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t isr_size() const
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.size();
         }
 
@@ -777,7 +777,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t isr_capacity() const
         {
-             tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+             tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.capacity();
         }
 
@@ -791,7 +791,7 @@ namespace tools
          */
         void isr_resize(std::size_t new_size)
         {
-            tools::isr_lock_guard<tools::critical_section> guard(m_mutex);
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             if (new_size != m_ring_vector.size())
             {
                 m_ring_vector.resize(new_size);
