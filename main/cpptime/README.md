@@ -1,18 +1,18 @@
 # C++ Timeouts
 
-A portable, header-only C++11 timer component.
+A portable C++ timer component (local adaptation).
 
 https://github.com/eglimi/cpptime
 
 It manages a set of timeouts that, when expired, invoke a callback. It uses
-features of C++11 in order to avoid platform specific code.
+standard C++ facilities in order to avoid platform-specific timer APIs.
 
 It supports one-shot and periodic timeouts.
 
 ## Documentation
 
-Please see the documentation in [cpptime.h](./cpptime.h) for more detailed
-information about the implementation.
+Please see [cpptime.hpp](./cpptime.hpp) for the public API and
+[cpptime.cpp](./cpptime.cpp) for runtime implementation details.
 
 ## Implementation Status
 
@@ -73,16 +73,21 @@ See the tests for more examples.
 
 ## Usage
 
-To use the timer component, Simply copy [cpptime.h](./cpptime.h) into you
-project. Everything is contained in this single header file.
+Local integration in this repository uses:
 
-Tests can be compiled and executed with the following commands, assuming you
-are on a POSIX machine.
+- [cpptime.hpp](./cpptime.hpp) (declarations/public API)
+- [cpptime.cpp](./cpptime.cpp) (implementation)
+
+So this local copy is not header-only. Both files must be part of your build.
+
+Minimal standalone build example (POSIX-like toolchain):
 
 ~~~
-g++ -std=c++11 -Wall -Wextra -o test tests/timer_test.cpp -l pthread
-./test
+g++ -std=c++17 -Wall -Wextra -pthread -I main -c main/cpptime/cpptime.cpp -o cpptime.o
+g++ -std=c++17 -Wall -Wextra -pthread -I main your_timer_app.cpp cpptime.o -o your_timer_app
 ~~~
+
+Replace `your_timer_app.cpp` with your source file that includes `cpptime/cpptime.hpp`.
 
 ## Possible Features
 
@@ -96,7 +101,26 @@ are interested.
 - [ ] API to use client thread instead of creating its own.
 - [ ] API to use client mutex instead of its own.
 
-## Known issues
+## API Summary (local)
+
+Namespace: `CppTime`
+
+- Type aliases:
+  - `timer_id`
+  - `handler_t`
+  - `clock`
+  - `timestamp`
+  - `duration` (microseconds)
+- Main class: `Timer`
+  - `add(const timestamp&, handler_t, const duration&)`
+  - `add(const timestamp&, handler_t)`
+  - `add(const std::chrono::duration<...>&, handler_t, const duration&)`
+  - `add(const std::chrono::duration<...>&, handler_t)`
+  - `add(std::uint64_t when_us, handler_t, std::uint64_t period_us)`
+  - `add(std::uint64_t when_us, handler_t)`
+  - `remove(timer_id)`
+
+## Known Issues
 
 GCC up to version 10 (e.g. used in Ubuntu 20.04 LTS) has [an issue][gcc-clock] where `conditional_variable` doesn't use the monotonic clock. This leads to unreliable programs when the system clock is moved backwards. See #5 for more details. The fix is to update to a GCC version with the fix applied, e.g. version 10 or greater.
 

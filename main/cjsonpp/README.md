@@ -5,19 +5,30 @@ Version 0.5 (result-based API)
 https://github.com/ancwrd1/cjsonpp
 
 This wrapper uses explicit result values for error handling.
-Public exception-style helpers are not part of the API anymore.
+Public exception-style helpers are not part of the API.
 
-Core concepts
+## Current Public API
 
-- Parse with `parse_result(...)`
-- Read values with `try_get<T>(...)` and `try_as<T>()`
-- Write values with `try_set(...)`, `try_add(...)`, `try_remove(...)`
-- Errors are returned as `result_error` with:
-  - `code` (`result_code`)
-  - `detail` (type/index detail)
-  - `message` (human-readable text)
+Core operations are:
 
-Quick start
+- Parse: `parse_result(...)`
+- Read: `get<T>(...)`, `as<T>()`, `has(...)`, `type()`
+- Write/mutate: `set(...)`, `add(...)`, `remove(...)`
+- Print/raw access: `print(...)`, `obj()`
+- Constructors/helpers: `JSONObject(...)`, `nullObject()`, `arrayObject()`
+
+Errors are returned as `cjsonpp::result_error` with:
+
+- `code` (`result_code`)
+- `detail` (type/index detail)
+- `message` (human-readable text)
+
+Result aliases:
+
+- `cjsonpp_result<T>`
+- `cjsonpp_status` (alias for `cjsonpp_result<void>`)
+
+## Quick Start
 
 ```cpp
 #include <iostream>
@@ -27,99 +38,99 @@ Quick start
 
 void parse_example(const std::string& json_text)
 {
-	auto parsed = cjsonpp::parse_result(json_text);
-	if (!parsed)
-	{
-		std::cerr << "parse failed: " << parsed.error().message << "\n";
-		return;
-	}
+    auto parsed = cjsonpp::parse_result(json_text);
+    if (!parsed)
+    {
+        std::cerr << "parse failed: " << parsed.error().message << "\n";
+        return;
+    }
 
-	const auto& obj = parsed.value();
+    const auto& obj = parsed.value();
 
-	auto int_value = obj.try_get<int>("intval");
-	if (int_value)
-	{
-		std::cout << "intval=" << int_value.value() << "\n";
-	}
+    auto int_value = obj.get<int>("intval");
+    if (int_value)
+    {
+        std::cout << "intval=" << int_value.value() << "\n";
+    }
 
-	auto nested = obj.try_get<cjsonpp::JSONObject>("nested");
-	if (nested)
-	{
-		auto nested_int = nested.value().try_get<int>("v");
-		if (nested_int)
-		{
-			std::cout << "nested.v=" << nested_int.value() << "\n";
-		}
-	}
+    auto nested = obj.get<cjsonpp::JSONObject>("nested");
+    if (nested)
+    {
+        auto nested_int = nested.value().get<int>("v");
+        if (nested_int)
+        {
+            std::cout << "nested.v=" << nested_int.value() << "\n";
+        }
+    }
 }
 ```
 
-Constructing objects
+## Constructing Objects
 
 ```cpp
 cjsonpp::JSONObject obj;
-std::vector<int> vec = { 1, 2, 3, 4 };
+std::vector<int> vec = {1, 2, 3, 4};
 
-obj.try_set("intval", 1234);
-obj.try_set("arrval", vec);
-obj.try_set("doubleval", 100.1);
-obj.try_set("nullval", cjsonpp::nullObject());
+static_cast<void>(obj.set("intval", 1234));
+static_cast<void>(obj.set("arrval", vec));
+static_cast<void>(obj.set("doubleval", 100.1));
+static_cast<void>(obj.set("nullval", cjsonpp::nullObject()));
 ```
 
-Constructing arrays
+## Constructing Arrays
 
 ```cpp
 cjsonpp::JSONObject arr = cjsonpp::arrayObject();
-arr.try_add("s1");
-arr.try_add("s2");
+static_cast<void>(arr.add("s1"));
+static_cast<void>(arr.add("s2"));
 
 cjsonpp::JSONObject obj;
-obj.try_set("arrval", arr);
+static_cast<void>(obj.set("arrval", arr));
 ```
 
-Reading arrays
+## Reading Arrays
 
 ```cpp
-auto arr_result = obj.try_get<cjsonpp::JSONObject>("arrval");
+auto arr_result = obj.get<cjsonpp::JSONObject>("arrval");
 if (arr_result)
 {
-	const auto& arr = arr_result.value();
-	const int count = cJSON_GetArraySize(arr.obj());
-	for (int idx = 0; idx < count; ++idx)
-	{
-		auto item = arr.try_get<std::string>(idx);
-		if (item)
-		{
-			std::cout << item.value() << "\n";
-		}
-	}
+    const auto& arr = arr_result.value();
+    const int count = cJSON_GetArraySize(arr.obj());
+    for (int idx = 0; idx < count; ++idx)
+    {
+        auto item = arr.get<std::string>(idx);
+        if (item)
+        {
+            std::cout << item.value() << "\n";
+        }
+    }
 }
 ```
 
-Supported value types
+## Supported Value Conversions
 
-- int
-- int64_t
-- double
-- std::string
-- bool
-- JSONObject
+`JSONObject::as<T>()` / `JSONObject::get<T>(...)` currently provide built-in support for:
 
-Extending type conversion
+- `int`
+- `std::int64_t`
+- `double`
+- `std::string`
+- `bool`
+- `JSONObject`
 
-To add support for custom value types, add a specialization of `JSONObject::as_result<T>(cJSON*)`.
+## JSON Type Enum
 
-Example:
+`JSONObject::type()` returns `cjsonpp::JSONType`:
 
-```cpp
-template <>
-inline cjsonpp::cjsonpp_result<QString> cjsonpp::JSONObject::as_result<QString>(cJSON* obj) const
-{
-	auto str_result = as_result<std::string>(obj);
-	if (!str_result)
-	{
-		return tools::unexpected<cjsonpp::result_error> { str_result.error() };
-	}
-	return QString::fromStdString(str_result.value());
-}
-```
+- `JSONType::Bool`
+- `JSONType::Null`
+- `JSONType::String`
+- `JSONType::Number`
+- `JSONType::Array`
+- `JSONType::Object`
+- `JSONType::Raw`
+- `JSONType::Invalid`
+
+## API Note
+
+Older `try_*` names (`try_get`, `try_as`, `try_set`, `try_add`, `try_remove`) are not the current public API names in this repository.

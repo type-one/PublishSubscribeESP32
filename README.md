@@ -211,6 +211,22 @@ More info on:
 [Valgrind manual](https://valgrind.org/docs/manual/ms-manual.html)
 [About custom allocators](https://www.rastergrid.com/blog/sw-eng/2021/03/custom-memory-allocators/)
 
+## Components In main/
+
+The `main/` folder combines first-party framework code and bundled third-party dependencies used by the project.
+
+- `bytepack/`: third-party binary serialization library used for compact payload encoding/decoding in examples and tests.
+- `CException/`: third-party lightweight C-style exception support used by some vendor-side integrations.
+- `cJSON/`: third-party C JSON parser/printer backend used as the low-level JSON engine.
+- `cjsonpp/`: C++ wrapper over cJSON adapted in this repository to use result-based (exception-free) error handling.
+- `cpptime/`: portable timer component (`CppTime::Timer`) used for one-shot and periodic timeout scheduling on desktop builds.
+- `fpm/`: third-party header-only fixed-point arithmetic library used where deterministic fixed-point math is preferred.
+- `portable_concurrency/`: future/promise/executor-style asynchronous framework integrated with this project (result-oriented adaptation).
+- `tools/`: core first-party abstraction layer (tasks, synchronization primitives, observer/pub-sub helpers, containers, logging, utilities) with FreeRTOS and desktop backends.
+- `uzlib/`: third-party compression/decompression backend used by the gzip wrapper.
+- `examples/`: runnable sample scenarios that demonstrate framework usage patterns and integrations.
+- `tests/`: unit tests and validation coverage for framework modules and adapters.
+
 ## Author
 
 Laurent Lardinois / Type One (TFL-TDV)
