@@ -101,7 +101,7 @@ namespace tools
          */
         bool push(const T& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push(elem);
         }
 
@@ -114,7 +114,7 @@ namespace tools
          */
         bool push(T&& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push(std::move(elem));
         }
 
@@ -135,7 +135,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
     #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push(std::forward<U>(elem));
         }
 
@@ -156,7 +156,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
     #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.emplace(std::forward<Args>(args)...);
         }
 
@@ -165,7 +165,7 @@ namespace tools
          */
         void pop()
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_ring_vector.empty())
             {
                 m_ring_vector.pop();
@@ -183,7 +183,7 @@ namespace tools
         [[nodiscard]] std::optional<T> front() const
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_ring_vector.empty())
             {
                 item = m_ring_vector.front();
@@ -202,7 +202,7 @@ namespace tools
         [[nodiscard]] std::optional<T> front_pop()
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_ring_vector.empty())
             {
                 item = m_ring_vector.front();
@@ -220,7 +220,7 @@ namespace tools
          */
         [[nodiscard]] std::optional<T> front_pop_move()
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.pop_move();
         }
 
@@ -235,7 +235,7 @@ namespace tools
         [[nodiscard]] std::optional<T> back() const
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_ring_vector.empty())
             {
                 item = m_ring_vector.back();
@@ -253,7 +253,7 @@ namespace tools
          */
         [[nodiscard]] tools::ring_vector<T> snapshot() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector;
         }
 
@@ -267,7 +267,7 @@ namespace tools
          */
         [[nodiscard]] bool empty() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.empty();
         }
 
@@ -281,7 +281,7 @@ namespace tools
          */
         [[nodiscard]] bool full() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.full();
         }
 
@@ -294,7 +294,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t size() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.size();
         }
 
@@ -305,7 +305,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t capacity() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.capacity();
         }
 
@@ -334,7 +334,7 @@ namespace tools
 #endif
         std::size_t push_range(TRange&& range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push_range(std::forward<TRange>(range));
         }
 
@@ -354,7 +354,7 @@ namespace tools
 #endif
         std::size_t push_range(std::initializer_list<U> range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push_range(range);
         }
 
@@ -370,7 +370,7 @@ namespace tools
          */
         bool push_overwrite(const T& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push_overwrite(elem);
         }
 
@@ -381,7 +381,7 @@ namespace tools
          */
         bool push_overwrite(T&& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push_overwrite(std::move(elem));
         }
 
@@ -400,7 +400,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
     #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push_overwrite(std::forward<U>(elem));
         }
 
@@ -419,7 +419,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
     #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.emplace_overwrite(std::forward<Args>(args)...);
         }
 
@@ -446,7 +446,7 @@ namespace tools
 #endif
         push_range_overwrite_result push_range_overwrite(TRange&& range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push_range_overwrite(std::forward<TRange>(range));
         }
 
@@ -467,7 +467,7 @@ namespace tools
 #endif
         push_range_overwrite_result push_range_overwrite(std::initializer_list<U> range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push_range_overwrite(range);
         }
 
@@ -482,7 +482,7 @@ namespace tools
         template <typename OutputIt>
         [[nodiscard]] std::size_t pop_range(OutputIt first, OutputIt last)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.pop_range(first, last);
         }
 
@@ -509,7 +509,7 @@ namespace tools
          */
         void resize(std::size_t new_size)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (new_size != m_ring_vector.size())
             {
                 m_ring_vector.resize(new_size);

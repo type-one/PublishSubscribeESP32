@@ -147,7 +147,7 @@ namespace
 
         {
             // reader
-            std::lock_guard<tools::critical_section> guard(cache_entry.m_pop_mtx);
+            std::scoped_lock<tools::critical_section> guard(cache_entry.m_pop_mtx);
             cache_entry.m_pool.pop(cached_ptr);
         }
 
@@ -163,7 +163,7 @@ namespace
         auto& cache_entry = g_mem_cache[idx]; // NOLINT no bounds checking and no except
 
         // writer
-        std::lock_guard<tools::critical_section> guard(cache_entry.m_push_mtx);
+        std::scoped_lock<tools::critical_section> guard(cache_entry.m_push_mtx);
 
         return cache_entry.m_pool.push(ptr);
     }

@@ -113,7 +113,7 @@ namespace pco
     void latch::count_down(ptrdiff_t n)
     {
         {
-            std::lock_guard<tools::critical_section> lock { mutex_ };
+            std::scoped_lock<tools::critical_section> lock { mutex_ };
             assert(counter_ >= n);
             assert(n >= 0);
             counter_ -= n;
@@ -127,7 +127,7 @@ namespace pco
 
     bool latch::is_ready() const noexcept
     {
-        std::lock_guard<tools::critical_section> lock { mutex_ };
+        std::scoped_lock<tools::critical_section> lock { mutex_ };
         return counter_ == 0;
     }
 
@@ -160,7 +160,7 @@ namespace pco
     void static_thread_pool::attach()
     {
         {
-            std::lock_guard<tools::critical_section> lock { mutex_ };
+            std::scoped_lock<tools::critical_section> lock { mutex_ };
             ++attached_threads_;
         }
         process_queue(queue_, stopped_);

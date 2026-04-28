@@ -128,7 +128,7 @@ namespace pco
             {
                 return false;
             }
-            std::lock_guard<tools::critical_section> guard(state_->mutex_);
+            std::scoped_lock<tools::critical_section> guard(state_->mutex_);
             return state_->ready_;
         }
 
@@ -148,7 +148,7 @@ namespace pco
             }
 
             wait();
-            std::lock_guard<tools::critical_section> guard(state_->mutex_);
+            std::scoped_lock<tools::critical_section> guard(state_->mutex_);
             return *state_->result_;
         }
 

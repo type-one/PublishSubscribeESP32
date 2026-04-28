@@ -61,7 +61,7 @@ TEST_F(CondVarTest, WaitReturnsAfterNotifyOne)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     {
-        std::lock_guard<tools::critical_section> lock(mutex_);
+        std::scoped_lock<tools::critical_section> lock(mutex_);
         ready = true;
         cv_.notify_one();
     }
@@ -99,7 +99,7 @@ TEST_F(CondVarTest, WaitUntilReturnsTrueWhenNotified)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     {
-        std::lock_guard<tools::critical_section> lock(mutex_);
+        std::scoped_lock<tools::critical_section> lock(mutex_);
         ready = true;
         cv_.notify_one();
     }
@@ -131,7 +131,7 @@ TEST_F(CondVarTest, NotifyAllWakesAllWaiters)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     {
-        std::lock_guard<tools::critical_section> lock(mutex_);
+        std::scoped_lock<tools::critical_section> lock(mutex_);
         ready = true;
         cv_.notify_all();
     }

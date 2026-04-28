@@ -92,7 +92,7 @@ namespace tools
          */
         void add(const K& key, const T& value)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_dictionary.insert_or_assign(key, value);
         }
 
@@ -107,7 +107,7 @@ namespace tools
          */
         void add(K&& key, T&& value)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_dictionary.insert_or_assign(std::move(key), std::move(value));
         }
 
@@ -132,7 +132,7 @@ namespace tools
                 void>::type
 #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_dictionary.insert_or_assign(std::forward<KU>(key), std::forward<TU>(value));
         }
 
@@ -146,7 +146,7 @@ namespace tools
          */
         void remove(const K& key)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_dictionary.erase(key);
         }
 
@@ -157,7 +157,7 @@ namespace tools
          */
         void add_range(const std::map<K, T>& collection)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
             {
                 m_dictionary.insert_or_assign(key, value);
@@ -171,7 +171,7 @@ namespace tools
          */
         void add_range(const std::unordered_map<K, T>& collection)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : collection)
             {
                 m_dictionary.insert_or_assign(key, value);
@@ -208,7 +208,7 @@ namespace tools
 #endif
         void add_range(TRange&& values)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (auto&& entry : std::forward<TRange>(values))
             {
                 m_dictionary.insert_or_assign(
@@ -224,7 +224,7 @@ namespace tools
          */
         void add_range(std::initializer_list<std::pair<K, T>> values)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (const auto& [key, value] : values)
             {
                 m_dictionary.insert_or_assign(key, value);
@@ -292,7 +292,7 @@ namespace tools
          */
         [[nodiscard]] std::map<K, T> snapshot() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_dictionary;
         }
 
@@ -310,7 +310,7 @@ namespace tools
         [[nodiscard]] std::optional<T> find(const K& key) const
         {
             std::optional<T> result;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             const auto& itr = m_dictionary.find(key);
             if (m_dictionary.cend() != itr)
             {
@@ -329,7 +329,7 @@ namespace tools
          */
         [[nodiscard]] bool contains(const K& key) const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             return m_dictionary.contains(key);
 #else
@@ -362,7 +362,7 @@ namespace tools
 #endif
         void remove_collection(TRange&& keys)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (auto&& key : std::forward<TRange>(keys))
             {
                 m_dictionary.erase(K(std::forward<decltype(key)>(key)));
@@ -376,7 +376,7 @@ namespace tools
          */
         void remove_collection(std::initializer_list<K> keys)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (const auto& key : keys)
             {
                 m_dictionary.erase(key);
@@ -393,7 +393,7 @@ namespace tools
          */
         [[nodiscard]] bool empty() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_dictionary.empty();
         }
 
@@ -407,7 +407,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t size() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_dictionary.size();
         }
 
@@ -419,7 +419,7 @@ namespace tools
          */
         void clear()
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_dictionary.clear();
         }
 

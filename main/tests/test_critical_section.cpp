@@ -124,7 +124,7 @@ TEST_F(CriticalSectionTest, TryLock)
 TEST_F(CriticalSectionTest, LockGuard)
 {
     {
-        std::lock_guard<tools::critical_section> lock(cs);
+        std::scoped_lock<tools::critical_section> lock(cs);
         EXPECT_FALSE(cs.try_lock()); // should fail to lock while lock_guard is holding the lock
     }
     EXPECT_TRUE(cs.try_lock()); // should succeed to lock after lock_guard is destroyed

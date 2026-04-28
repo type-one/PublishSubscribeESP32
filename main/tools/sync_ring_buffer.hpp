@@ -91,7 +91,7 @@ namespace tools
          */
         bool push(const T& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push(elem);
         }
 
@@ -104,7 +104,7 @@ namespace tools
          */
         bool push(T&& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push(std::move(elem));
         }
 
@@ -126,7 +126,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
     #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push(std::forward<U>(elem));
         }
 
@@ -148,7 +148,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
     #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.emplace(std::forward<Args>(args)...);
         }
 
@@ -157,7 +157,7 @@ namespace tools
          */
         void pop()
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_ring_buffer.empty())
             {
                 m_ring_buffer.pop();
@@ -174,7 +174,7 @@ namespace tools
         [[nodiscard]] std::optional<T> front() const
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_ring_buffer.empty())
             {
                 item = m_ring_buffer.front();
@@ -193,7 +193,7 @@ namespace tools
         [[nodiscard]] std::optional<T> front_pop()
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_ring_buffer.empty())
             {
                 item = m_ring_buffer.front();
@@ -212,7 +212,7 @@ namespace tools
          */
         [[nodiscard]] std::optional<T> front_pop_move()
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.pop_move();
         }
 
@@ -227,7 +227,7 @@ namespace tools
         [[nodiscard]] std::optional<T> back() const
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_ring_buffer.empty())
             {
                 item = m_ring_buffer.back();
@@ -245,7 +245,7 @@ namespace tools
          */
         [[nodiscard]] tools::ring_buffer<T, Capacity> snapshot() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer;
         }
 
@@ -259,7 +259,7 @@ namespace tools
          */
         [[nodiscard]] bool empty() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.empty();
         }
 
@@ -273,7 +273,7 @@ namespace tools
          */
         [[nodiscard]] bool full() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.full();
         }
 
@@ -287,7 +287,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t size() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.size();
         }
 
@@ -325,7 +325,7 @@ namespace tools
 #endif
         std::size_t push_range(TRange&& range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push_range(std::forward<TRange>(range));
         }
 
@@ -345,7 +345,7 @@ namespace tools
 #endif
         std::size_t push_range(std::initializer_list<U> range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push_range(range);
         }
 
@@ -361,7 +361,7 @@ namespace tools
          */
         bool push_overwrite(const T& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push_overwrite(elem);
         }
 
@@ -372,7 +372,7 @@ namespace tools
          */
         bool push_overwrite(T&& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push_overwrite(std::move(elem));
         }
 
@@ -391,7 +391,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
     #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push_overwrite(std::forward<U>(elem));
         }
 
@@ -410,7 +410,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
     #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.emplace_overwrite(std::forward<Args>(args)...);
         }
 
@@ -437,7 +437,7 @@ namespace tools
 #endif
         push_range_overwrite_result push_range_overwrite(TRange&& range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push_range_overwrite(std::forward<TRange>(range));
         }
 
@@ -458,7 +458,7 @@ namespace tools
 #endif
         push_range_overwrite_result push_range_overwrite(std::initializer_list<U> range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.push_range_overwrite(range);
         }
 
@@ -473,7 +473,7 @@ namespace tools
         template <typename OutputIt>
         [[nodiscard]] std::size_t pop_range(OutputIt first, OutputIt last)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_buffer.pop_range(first, last);
         }
 

@@ -88,7 +88,7 @@ namespace tools
          */
         void push(const T& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_queue.push(elem);
         }
 
@@ -101,7 +101,7 @@ namespace tools
          */
         void push(T&& elem)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_queue.push(std::move(elem));
         }
 
@@ -124,7 +124,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
 #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_queue.push(std::forward<U>(elem));
         }
 
@@ -146,7 +146,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
 #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_queue.emplace(std::forward<Args>(args)...);
         }
 
@@ -157,7 +157,7 @@ namespace tools
          */
         void pop()
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_queue.empty())
             {
                 m_queue.pop();
@@ -174,7 +174,7 @@ namespace tools
         [[nodiscard]] std::optional<T> front() const
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_queue.empty())
             {
                 item = m_queue.front();
@@ -192,7 +192,7 @@ namespace tools
         [[nodiscard]] std::optional<T> front_pop()
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_queue.empty())
             {
                 item = m_queue.front();
@@ -212,7 +212,7 @@ namespace tools
         [[nodiscard]] std::optional<T> front_pop_move()
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_queue.empty())
             {
                 item = std::move(m_queue.front());
@@ -232,7 +232,7 @@ namespace tools
         [[nodiscard]] std::optional<T> back() const
         {
             std::optional<T> item;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             if (!m_queue.empty())
             {
                 item = m_queue.back();
@@ -250,7 +250,7 @@ namespace tools
          */
         [[nodiscard]] std::queue<T> snapshot() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_queue;
         }
 
@@ -264,7 +264,7 @@ namespace tools
          */
         [[nodiscard]] bool empty() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_queue.empty();
         }
 
@@ -278,7 +278,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t size() const
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_queue.size();
         }
 
@@ -292,7 +292,7 @@ namespace tools
         template <typename InputIt>
         void push_range(InputIt first, InputIt last)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (; first != last; ++first)
             {
                 m_queue.push(T(*first));
@@ -320,7 +320,7 @@ namespace tools
 #endif
         void push_range(TRange&& range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (auto&& elem : std::forward<TRange>(range))
             {
                 m_queue.push(T(std::forward<decltype(elem)>(elem)));
@@ -347,7 +347,7 @@ namespace tools
 #endif
         void push_range(std::initializer_list<U> range)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             for (const auto& elem : range)
             {
                 m_queue.push(T(elem));
@@ -368,7 +368,7 @@ namespace tools
         [[nodiscard]] std::size_t pop_range(OutputIt first, OutputIt last)
         {
             std::size_t popped_count = 0U;
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             while ((first != last) && !m_queue.empty())
             {
                 *first = std::move(m_queue.front());

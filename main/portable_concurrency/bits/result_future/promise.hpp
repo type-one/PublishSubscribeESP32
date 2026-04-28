@@ -81,7 +81,7 @@ namespace pco
                     std::vector<std::function<void()>> callbacks;
                     if (new_state && old_state == new_state)
                     {
-                        std::lock_guard<tools::critical_section> guard(old_state->mutex_);
+                        std::scoped_lock<tools::critical_section> guard(old_state->mutex_);
                         if (!old_state->ready_)
                         {
                             old_state->result_.emplace(tools::unexpected<E>(E::broken_promise));
@@ -103,7 +103,7 @@ namespace pco
                     }
                     else
                     {
-                        std::lock_guard<tools::critical_section> guard(old_state->mutex_);
+                        std::scoped_lock<tools::critical_section> guard(old_state->mutex_);
                         if (!old_state->ready_)
                         {
                             old_state->result_.emplace(tools::unexpected<E>(E::broken_promise));
@@ -142,7 +142,7 @@ namespace pco
 
             std::vector<std::function<void()>> cbs;
             {
-                std::lock_guard<tools::critical_section> guard(state->mutex_);
+                std::scoped_lock<tools::critical_section> guard(state->mutex_);
                 if (!state->ready_)
                 {
                     state->result_.emplace(tools::unexpected<E>(E::broken_promise));
@@ -189,7 +189,7 @@ namespace pco
 
             std::vector<std::function<void()>> cbs;
             {
-                std::lock_guard<tools::critical_section> guard(state->mutex_);
+                std::scoped_lock<tools::critical_section> guard(state->mutex_);
                 if (state->ready_)
                 {
                     return;

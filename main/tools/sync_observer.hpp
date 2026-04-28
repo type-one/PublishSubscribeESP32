@@ -164,7 +164,7 @@ namespace tools
          */
         void subscribe(const Topic& topic, sync_observer_shared_ptr observer)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_subscribers.insert({ topic, observer });
         }
 
@@ -178,7 +178,7 @@ namespace tools
          */
         void subscribe(Topic&& topic, sync_observer_shared_ptr observer)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_subscribers.insert({ std::move(topic), std::move(observer) });
         }
 
@@ -201,7 +201,7 @@ namespace tools
             -> typename std::enable_if<std::is_constructible<Topic, UTopic>::value, void>::type
 #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_subscribers.insert({ Topic(std::forward<UTopic>(topic)), std::move(observer) });
         }
 
@@ -217,7 +217,7 @@ namespace tools
          */
         void subscribe(const Topic& topic, const std::string& handler_name, handler handler)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_handlers.insert({ topic, std::make_pair(handler_name, handler) });
         }
 
@@ -232,7 +232,7 @@ namespace tools
          */
         void subscribe(Topic&& topic, std::string&& handler_name, handler&& handler_fn)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_handlers.insert({ std::move(topic), std::make_pair(std::move(handler_name), std::move(handler_fn)) });
         }
 
@@ -262,7 +262,7 @@ namespace tools
                 void>::type
 #endif
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_handlers.insert({ Topic(std::forward<UTopic>(topic)),
                 std::make_pair(
                     std::string(std::forward<UName>(handler_name)), handler(std::forward<UHandler>(handler_fn))) });
@@ -278,7 +278,7 @@ namespace tools
          */
         void unsubscribe(const Topic& topic, sync_observer_shared_ptr observer)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
 
             for (auto [it, range_end] = m_subscribers.equal_range(topic); it != range_end; ++it)
             {
@@ -301,7 +301,7 @@ namespace tools
          */
         void unsubscribe(const Topic& topic, const std::string& handler_name)
         {
-            std::lock_guard<tools::critical_section> guard(m_mutex);
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
 
             for (auto [it, range_end] = m_handlers.equal_range(topic); it != range_end; ++it)
             {
@@ -360,7 +360,7 @@ namespace tools
             std::vector<handler> to_invoke;
 
             {
-                std::lock_guard<tools::critical_section> guard(m_mutex);
+                std::scoped_lock<tools::critical_section> guard(m_mutex);
 
                 for (auto [it, range_end] = m_subscribers.equal_range(topic); it != range_end; ++it)
                 {

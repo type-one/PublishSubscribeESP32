@@ -127,7 +127,7 @@ namespace pco
             {
                 return false;
             }
-            std::lock_guard<tools::critical_section> guard(state_->mutex_);
+            std::scoped_lock<tools::critical_section> guard(state_->mutex_);
             return state_->ready_;
         }
 
@@ -177,7 +177,7 @@ namespace pco
 
             result_type out = tools::unexpected<E>(E::no_state);
             {
-                std::lock_guard<tools::critical_section> guard(state_->mutex_);
+                std::scoped_lock<tools::critical_section> guard(state_->mutex_);
                 out = std::move(state_->result_).value_or(result_type { tools::unexpected<E>(E::no_state) });
                 state_->result_.reset();
             } // mutex released before shared_ptr drops its ref, preventing use-after-free

@@ -50,7 +50,7 @@ namespace pco::detail
     template <typename T>
     void closable_queue<T>::push(T&& val)
     {
-        std::lock_guard<tools::critical_section> guard(mutex_);
+        std::scoped_lock<tools::critical_section> guard(mutex_);
         if (closed_)
         {
             return;
@@ -66,7 +66,7 @@ namespace pco::detail
     template <typename T>
     void closable_queue<T>::close()
     {
-        std::lock_guard<tools::critical_section> guard(mutex_);
+        std::scoped_lock<tools::critical_section> guard(mutex_);
         closed_ = true;
         cv_.notify_all();
     }
