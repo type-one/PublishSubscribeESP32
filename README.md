@@ -88,7 +88,7 @@ You can install the Expressif SDK easily under Linux or WSL2
 ```bash
 git clone --recursive https://github.com/espressif/esp-idf.git
 cd esp-idf
-git checkout v5.2.3
+git checkout v5.5.4
 git submodule update --init --recursive
 ./install.sh
 cd ..
