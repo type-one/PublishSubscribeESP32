@@ -173,8 +173,13 @@ namespace tools
 
             {
                 std::scoped_lock<tools::critical_section> guard(m_mutex);
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+                auto itr = std::ranges::find_if(
+                    m_contexts, [&hnd](const auto& context) -> bool { return (context->m_timer_handle == hnd); });
+#else
                 auto itr = std::find_if(m_contexts.begin(), m_contexts.end(),
                     [&hnd](const auto& context) -> bool { return (context->m_timer_handle == hnd); });
+#endif
 
                 if (itr != m_contexts.end())
                 {
@@ -198,9 +203,13 @@ namespace tools
         {
             {
                 std::scoped_lock<tools::critical_section> guard(m_mutex);
-
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+                auto itr = std::ranges::find_if(
+                    m_active_timers, [&hnd](const auto* active_hnd) -> bool { return (active_hnd == hnd); });
+#else
                 auto itr = std::find_if(m_active_timers.begin(), m_active_timers.end(),
                     [&hnd](const auto* active_hnd) -> bool { return (active_hnd == hnd); });
+#endif
 
                 if (itr != m_active_timers.end())
                 {
