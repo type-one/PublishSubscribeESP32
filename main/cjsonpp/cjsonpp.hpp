@@ -48,7 +48,7 @@ namespace cjsonpp
     };
 
     /**
-    * @brief Create a cjsonpp error payload.
+     * @brief Create a cjsonpp error payload.
      */
     inline result_error make_error(result_code code_value, int detail_value, const char* message_text)
     {
@@ -321,6 +321,7 @@ namespace cjsonpp
          * @brief Try to cast the current value to T without throwing.
          */
         template <typename T>
+        [[nodiscard]]
         cjsonpp_result<T> as() const
         {
             return as_result<T>(obj_->o);
@@ -334,8 +335,8 @@ namespace cjsonpp
         {
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
-                return tools::unexpected<result_error> {
-                    make_error(result_code::invalid_type, (*obj_)->type & byte_mask, "Not an object") };
+                return tools::unexpected<result_error> { make_error(
+                    result_code::invalid_type, (*obj_)->type & byte_mask, "Not an object") };
             }
 
             cJSON* item = cJSON_GetObjectItem(obj_->o, name);
@@ -376,12 +377,13 @@ namespace cjsonpp
          * @brief Retrieves an item from an array by index without throwing.
          */
         template <typename T = JSONObject>
+        [[nodiscard]]
         cjsonpp_result<T> get(int index) const
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                return tools::unexpected<result_error> {
-                    make_error(result_code::invalid_type, (*obj_)->type & byte_mask, "Not an array type") };
+                return tools::unexpected<result_error> { make_error(
+                    result_code::invalid_type, (*obj_)->type & byte_mask, "Not an array type") };
             }
 
             cJSON* item = cJSON_GetArrayItem(obj_->o, index);
@@ -401,8 +403,8 @@ namespace cjsonpp
         {
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
-                return tools::unexpected<result_error> {
-                    make_error(result_code::invalid_type, (*obj_)->type & byte_mask, "Not an array type") };
+                return tools::unexpected<result_error> { make_error(
+                    result_code::invalid_type, (*obj_)->type & byte_mask, "Not an array type") };
             }
             JSONObject output(value);
             cJSON_AddItemReferenceToArray(obj_->o, output.obj_->o);
@@ -418,8 +420,8 @@ namespace cjsonpp
         {
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
-                return tools::unexpected<result_error> {
-                    make_error(result_code::invalid_type, (*obj_)->type & byte_mask, "Not an object type") };
+                return tools::unexpected<result_error> { make_error(
+                    result_code::invalid_type, (*obj_)->type & byte_mask, "Not an object type") };
             }
 
             JSONObject output(value);
@@ -492,8 +494,8 @@ namespace cjsonpp
     {
         if ((obj->type & byte_mask) != cJSON_Number)
         {
-            return tools::unexpected<result_error> {
-                make_error(result_code::invalid_type, obj->type & byte_mask, "Bad value type") };
+            return tools::unexpected<result_error> { make_error(
+                result_code::invalid_type, obj->type & byte_mask, "Bad value type") };
         }
         return obj->valueint;
     }
@@ -512,8 +514,8 @@ namespace cjsonpp
     {
         if ((obj->type & byte_mask) != cJSON_Number)
         {
-            return tools::unexpected<result_error> {
-                make_error(result_code::invalid_type, obj->type & byte_mask, "Not a number type") };
+            return tools::unexpected<result_error> { make_error(
+                result_code::invalid_type, obj->type & byte_mask, "Not a number type") };
         }
         return static_cast<std::int64_t>(obj->valuedouble);
     }
@@ -532,8 +534,8 @@ namespace cjsonpp
     {
         if ((obj->type & byte_mask) != cJSON_String)
         {
-            return tools::unexpected<result_error> {
-                make_error(result_code::invalid_type, obj->type & byte_mask, "Not a string type") };
+            return tools::unexpected<result_error> { make_error(
+                result_code::invalid_type, obj->type & byte_mask, "Not a string type") };
         }
         return cjsonpp_result<std::string> { std::string { obj->valuestring != nullptr ? obj->valuestring : "" } };
     }
@@ -552,8 +554,8 @@ namespace cjsonpp
     {
         if ((obj->type & byte_mask) != cJSON_Number)
         {
-            return tools::unexpected<result_error> {
-                make_error(result_code::invalid_type, obj->type & byte_mask, "Not a number type") };
+            return tools::unexpected<result_error> { make_error(
+                result_code::invalid_type, obj->type & byte_mask, "Not a number type") };
         }
         return obj->valuedouble;
     }
@@ -582,8 +584,8 @@ namespace cjsonpp
         }
         else
         {
-            return tools::unexpected<result_error> {
-                make_error(result_code::invalid_type, obj->type & byte_mask, "Not a boolean type") };
+            return tools::unexpected<result_error> { make_error(
+                result_code::invalid_type, obj->type & byte_mask, "Not a boolean type") };
         }
 
         return result;

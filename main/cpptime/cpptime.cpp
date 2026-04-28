@@ -140,7 +140,7 @@ namespace CppTime
      * \param handler The callable that is invoked when the timer fires.
      * \param period The periodicity at which the timer fires. Only used for periodic timers.
      */
-    timer_id Timer::add(const timestamp& when, handler_t&& handler, const duration& period)
+    timer_id Timer::add(const timestamp& when, handler_t handler, const duration& period)
     {
         std::unique_lock<std::mutex> lock(mutex);
         timer_id tid = 0;
@@ -149,14 +149,14 @@ namespace CppTime
         if (free_ids.empty())
         {
             tid = events.size();
-            detail::Event evt(tid, when, period, std::move(handler));
+            detail::Event evt(tid, period, when, std::move(handler));
             events.emplace_back(std::move(evt));
         }
         else
         {
             tid = free_ids.top();
             free_ids.pop();
-            detail::Event evt(tid, when, period, std::move(handler));
+            detail::Event evt(tid, period, when, std::move(handler));
             events.at(tid) = std::move(evt);
         }
         time_events.insert(detail::Time_event { when, tid });
@@ -169,7 +169,7 @@ namespace CppTime
      * Overloaded `add` function that uses a uint64_t instead of a `time_point` for
      * the first timeout and the period.
      */
-    timer_id Timer::add(std::uint64_t when, handler_t&& handler, std::uint64_t period)
+    timer_id Timer::add(std::uint64_t when, handler_t handler, std::uint64_t period)
     {
         return add(duration(when), std::move(handler), duration(period));
     }

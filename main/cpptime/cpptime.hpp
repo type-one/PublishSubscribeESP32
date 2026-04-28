@@ -137,12 +137,11 @@ namespace CppTime
 
             Event() = default;
 
-            template <typename Func>
-            Event(timer_id tid_, timestamp start, duration period, Func&& handler)
-                : tid(tid_)
-                , start(start)
-                , period(period)
-                , handler(std::forward<Func>(handler))
+            Event(timer_id tid_value, duration period_value, timestamp start_time, handler_t handler_value)
+                : tid(tid_value)
+                , start(start_time)
+                , period(period_value)
+                , handler(std::move(handler_value))
                 , valid(true)
             {
             }
@@ -157,7 +156,7 @@ namespace CppTime
         struct Time_event
         {
             timestamp next;
-            timer_id ref;
+            timer_id ref = 0;
         };
 
         inline bool operator<(const Time_event& left, const Time_event& right)
@@ -202,7 +201,7 @@ namespace CppTime
          * \param handler The callable that is invoked when the timer fires.
          * \param period The periodicity at which the timer fires. Only used for periodic timers.
          */
-        timer_id add(const timestamp& when, handler_t&& handler, const duration& period);
+        timer_id add(const timestamp& when, handler_t handler, const duration& period);
 
         /**
          * Add a oneshot new timer.
@@ -210,7 +209,7 @@ namespace CppTime
          * \param when The time at which the handler is invoked.
          * \param handler The callable that is invoked when the timer fires.
          */
-        timer_id add(const timestamp& when, handler_t&& handler)
+        timer_id add(const timestamp& when, handler_t handler)
         {
             return add(when, std::move(handler), duration::zero());
         }
@@ -220,14 +219,14 @@ namespace CppTime
          * `time_point` for the first timeout.
          */
         template <class Rep, class Period>
-        timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t&& handler, const duration& period)
+        timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t handler, const duration& period)
         {
             return add(
                 clock::now() + std::chrono::duration_cast<std::chrono::microseconds>(when), std::move(handler), period);
         }
 
         template <class Rep, class Period>
-        timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t&& handler)
+        timer_id add(const std::chrono::duration<Rep, Period>& when, handler_t handler)
         {
             return add<Rep, Period>(when, std::move(handler), duration::zero());
         }
@@ -236,13 +235,13 @@ namespace CppTime
          * Overloaded `add` function that uses a uint64_t instead of a `time_point` for
          * the first timeout and the period.
          */
-        timer_id add(std::uint64_t when, handler_t&& handler, std::uint64_t period);
+        timer_id add(std::uint64_t when, handler_t handler, std::uint64_t period);
 
         /**
          * Overloaded `add` function (one shot) that uses a uint64_t instead of a `time_point` for
          * the first timeout.
          */
-        timer_id add(std::uint64_t when, handler_t&& handler)
+        timer_id add(std::uint64_t when, handler_t handler)
         {
             return add(when, std::move(handler), 0U);
         }

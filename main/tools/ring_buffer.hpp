@@ -88,14 +88,7 @@ namespace tools
          *
          * @param other The ring_buffer object to copy from.
          */
-        ring_buffer(const ring_buffer& other)
-            : m_ring_buffer { other.m_ring_buffer }
-            , m_push_index { other.m_push_index }
-            , m_pop_index { other.m_pop_index }
-            , m_last_index { other.m_last_index }
-            , m_size { other.m_size }
-        {
-        }
+        ring_buffer(const ring_buffer& other) = default;
 
         /**
          * @brief Move constructor for the ring_buffer class.

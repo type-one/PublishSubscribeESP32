@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -66,7 +67,7 @@ namespace bytepack
          * @param array Reference to the array.
          */
         template <typename T, std::size_t N>
-        requires SerializableBuffer<T>
+            requires SerializableBuffer<T>
         explicit constexpr buffer_view(T (&array)[N]) noexcept // NOLINT keep original implementation
             : data_ { static_cast<void*>(array) }
             , size_ { N * sizeof(T) }
@@ -75,7 +76,7 @@ namespace bytepack
         }
 
         template <typename T>
-        requires SerializableBuffer<T>
+            requires SerializableBuffer<T>
         explicit constexpr buffer_view(T* ptr, const std::size_t size) noexcept
             : data_ { static_cast<void*>(ptr) }
             , size_ { size * sizeof(T) }
@@ -91,7 +92,7 @@ namespace bytepack
         }
 
         template <typename T, std::size_t N>
-        requires SerializableBuffer<T>
+            requires SerializableBuffer<T>
         explicit constexpr buffer_view(std::array<T, N>& array) noexcept
             : data_ { static_cast<void*>(array.data()) }
             , size_ { N * sizeof(T) }
@@ -120,7 +121,7 @@ namespace bytepack
          * @return T* Typed pointer to the buffer data.
          */
         template <typename T>
-        requires ValidBufferAccessType<T>
+            requires ValidBufferAccessType<T>
         [[nodiscard]] constexpr T* as() const noexcept
         {
             return static_cast<T*>(data_);
@@ -149,8 +150,14 @@ namespace bytepack
     private:
         static constexpr std::ptrdiff_t to_ssize(const std::size_t size) noexcept
         {
-            using R = std::common_type_t<std::ptrdiff_t, std::make_signed_t<decltype(size)>>;
-            return static_cast<R>(size);
+            constexpr std::size_t max_ssize = PTRDIFF_MAX;
+            if (size > max_ssize)
+            {
+                return std::numeric_limits<std::ptrdiff_t>::max();
+            }
+
+            // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+            return static_cast<std::ptrdiff_t>(size);
         }
 
         void* data_;
@@ -160,30 +167,27 @@ namespace bytepack
 
     template <typename T>
     concept NetworkSerializableBasic
-        = (std::is_fundamental_v<T> || std::is_enum_v<T>)&&!std::is_pointer_v<T> && !std::is_reference_v<T>;
+        = (std::is_fundamental_v<T> || std::is_enum_v<T>) && !std::is_pointer_v<T> && !std::is_reference_v<T>;
 
     template <typename T>
     concept NetworkSerializableBasicArray = std::is_array_v<T> && NetworkSerializableBasic<std::remove_extent_t<T>>;
 
     template <typename T>
-    concept NetworkSerializableArray = requires
-    {
+    concept NetworkSerializableArray = requires {
         typename T::value_type;
         { std::tuple_size<T>::value };
-    }
-    &&std::is_same_v<T, std::array<typename T::value_type, std::tuple_size<T>::value>>&&
-        NetworkSerializableBasic<typename T::value_type>;
+    } && std::is_same_v<T, std::array<typename T::value_type, std::tuple_size<T>::value>> && NetworkSerializableBasic<typename T::value_type>;
 
     template <typename T>
-    concept NetworkSerializableVector = std::is_same_v<T,
-        std::vector<typename T::value_type,
-            typename T::allocator_type>> && NetworkSerializableBasic<typename T::value_type>;
+    concept NetworkSerializableVector
+        = std::is_same_v<T, std::vector<typename T::value_type, typename T::allocator_type>>
+        && NetworkSerializableBasic<typename T::value_type>;
     template <typename T>
     concept NetworkSerializableString = std::same_as<T, std::string> || std::same_as<T, std::string_view>;
 
     template <typename T>
-    concept NetworkSerializableType = NetworkSerializableBasic<T> || NetworkSerializableBasicArray<
-        T> || NetworkSerializableArray<T> || NetworkSerializableString<T> || NetworkSerializableVector<T>;
+    concept NetworkSerializableType = NetworkSerializableBasic<T> || NetworkSerializableBasicArray<T>
+        || NetworkSerializableArray<T> || NetworkSerializableString<T> || NetworkSerializableVector<T>;
 
     template <typename T>
     concept IntegralType = std::is_integral_v<T>;
@@ -307,7 +311,7 @@ namespace bytepack
         }
 
         template <typename T, std::size_t N>
-        requires NetworkSerializableBasic<T>
+            requires NetworkSerializableBasic<T>
         bool write(const std::array<T, N>& array) noexcept
         {
             if (buffer_.size() < (write_index_ + N * sizeof(T)))
@@ -338,7 +342,7 @@ namespace bytepack
         }
 
         template <IntegralType SizeType = std::uint32_t, typename T>
-        requires NetworkSerializableBasic<T>
+            requires NetworkSerializableBasic<T>
         bool write(const std::vector<T>& vector) noexcept
         {
             // When serializing dynamic size containers (if fixed size is not given), always include the container's
@@ -386,7 +390,7 @@ namespace bytepack
         }
 
         template <std::size_t N, typename T>
-        requires NetworkSerializableBasic<T>
+            requires NetworkSerializableBasic<T>
         bool write(const std::vector<T>& vector) noexcept
         {
             if (vector.size() < N || buffer_.size() < (write_index_ + N * sizeof(T)))
@@ -567,7 +571,7 @@ namespace bytepack
         }
 
         template <typename T, std::size_t N>
-        requires NetworkSerializableBasic<T>
+            requires NetworkSerializableBasic<T>
         bool read(std::array<T, N>& array) noexcept
         {
             // Check if there is enough data in the buffer to read the entire array
@@ -599,7 +603,7 @@ namespace bytepack
         }
 
         template <IntegralType SizeType = std::uint32_t, typename T>
-        requires NetworkSerializableBasic<T>
+            requires NetworkSerializableBasic<T>
         bool read(std::vector<T>& vector) noexcept
         {
             SizeType size_custom {};
@@ -640,7 +644,7 @@ namespace bytepack
         }
 
         template <std::size_t N, typename T>
-        requires NetworkSerializableBasic<T>
+            requires NetworkSerializableBasic<T>
         bool read(std::vector<T>& vector) noexcept
         {
             if (buffer_.size() < (read_index_ + N * sizeof(T)))
