@@ -35,7 +35,7 @@ namespace cjsonpp
 {
 
     // JSON type wrapper enum
-    enum JSONType : std::uint8_t
+    enum class JSONType : std::uint8_t
     {
         Bool,
         Null,
