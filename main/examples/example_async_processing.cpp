@@ -253,7 +253,7 @@ namespace
     {
         co_await worker_ptr->schedule();
         context->call_count.fetch_add(1);
-        co_return processor->process_sample(sample_value);
+        co_return async_processing_worker_model::process_sample(sample_value);
     }
 
     pco::future_result<int> schedule_alternating_chain_on_two_workers(
@@ -273,7 +273,7 @@ namespace
                 co_await worker_second_ptr->schedule();
                 request.context_second->call_count.fetch_add(1);
             }
-            chain_value = request.processor->process_chain_stage(chain_value, stage_index);
+            chain_value = async_processing_worker_model::process_chain_stage(chain_value, stage_index);
         }
         co_return chain_value;
     }
@@ -1094,7 +1094,7 @@ namespace
                                        const std::string&, int sample_value)
                                    {
                                        local_async_context->call_count.fetch_add(1);
-                                       return processor->process_sample(sample_value);
+                                       return async_processing_worker_model::process_sample(sample_value);
                                    },
                                    submitted_index)
                                .then_value(
