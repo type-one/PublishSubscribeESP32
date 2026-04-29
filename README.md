@@ -53,7 +53,7 @@ Third Parties used in the examples:
 
 JSON integration note:
 
-- The project now uses the non-throwing cjsonpp API based on result values (`parse_result`, `try_get`, `try_set`, `try_add`, `try_remove`).
+- The project now uses the non-throwing cjsonpp API based on result values (`parse_result`, `get`, `set`, `add`, `remove`).
 - See `main/cjsonpp/README.md` for current usage examples.
 
 Publications:
