@@ -10,11 +10,23 @@ This repository contains a lightweight publish/subscribe framework that targets:
 Core first-party framework code lives in `main/tools/`.
 Other folders in `main/` may contain third-party vendor code.
 
+Current `main/` component map (see root README for details):
+
+- First-party focus: `main/tools/`, `main/examples/`, `main/tests/`, and project glue.
+- Third-party or externally sourced/adapted modules present in-tree: `main/bytepack/`, `main/CException/`, `main/cJSON/`,
+  `main/cjsonpp/`, `main/cpptime/`, `main/fpm/`, `main/portable_concurrency/`, `main/uzlib/`.
+- Treat third-party folders as vendor code by default; avoid broad edits there unless explicitly requested.
+
 ## Edit Scope Rules
 
 - Prefer edits in first-party code (`main/tools/`, tests, and project glue code).
 - Do not modify third-party library code unless explicitly requested.
 - When unsure whether a folder is third-party, ask before large edits.
+- For module-specific behavior and inventories, consult local docs before editing:
+  - `main/tools/README.md`
+  - `main/portable_concurrency/README.md`
+  - `main/cjsonpp/README.md`
+  - `main/cpptime/README.md`
 
 ## C++ Version Policy
 
@@ -80,16 +92,30 @@ Fallback guidance:
   - `modernize-use-trailing-return-type`
   - `modernize-type-traits`
   - `modernize-use-constraints`
+  - `modernize-use-designated-initializers`
   - `performance-unnecessary-copy-initialization`
+  - `performance-unnecessary-value-param`
   - `cppcoreguidelines-avoid-do-while`
   - `cppcoreguidelines-pro-type-vararg`
   - `cppcoreguidelines-pro-bounds-array-to-pointer-decay`
   - `cppcoreguidelines-pro-bounds-pointer-arithmetic`
   - `cppcoreguidelines-pro-type-reinterpret-cast`
+  - `cppcoreguidelines-init-variables`
+  - `cppcoreguidelines-pro-type-member-init`
   - `bugprone-suspicious-include`
   - `fuchsia-default-arguments-calls`
   - `fuchsia-overloaded-operator`
   - `readability-function-cognitive-complexity`
+  - `readability-use-concise-preprocessor-directives`
+  - `readability-implicit-bool-conversion`
+  - `readability-convert-member-functions-to-static`
+
+## Documentation Notes
+
+- Root README now includes a `Components In main/` section; keep guidance aligned with that structure.
+- `main/cjsonpp/README.md` documents current result-based API names (`parse_result`, `get`, `as`, `set`, `add`, `remove`,
+  `JSONType` enum class). Do not reintroduce legacy `try_*` names in new guidance.
+- `main/cpptime/README.md` reflects local split implementation (`cpptime.hpp` + `cpptime.cpp`), i.e. not header-only in this repository.
 
 ## Standard Library Usage
 
@@ -198,7 +224,11 @@ Fallback guidance:
   - `tools::sync_object` for signalling and waiting.
 - Methods prefixed `isr_` in `main/tools/` are interrupt-safe variants. Only call them from within an actual ISR context.
   The sole exception is Google Test mocks that simulate ISR behaviour: tests may call `isr_` methods directly to exercise interrupt paths.
+- Do not treat `tools::isr_lock_guard` (or ISR guard wrappers) as interchangeable with `std::lock_guard` / `std::scoped_lock`.
+  `tools::isr_lock_guard` intentionally invokes `isr_lock()` / `isr_unlock()`: on FreeRTOS these map to ISR-only primitives, while PC builds may alias to regular lock/unlock as a fallback. This fallback behavior must not be generalized to ISR-safe design rules.
 - From an ISR, only hand off data to a `tools::data_task` or to a lock-free ring buffer stored in the shared context.
+- Some containers and transfer primitives also expose ISR-facing APIs (for example `tools::sync_queue`, `tools::sync_ring_buffer`, `tools::sync_ring_vector`, and `tools::memory_pipe` via `isr_send`/`isr_receive`).
+  When used from an ISR, call only their `isr_*` methods and keep ISR-side work limited to minimal enqueue/dequeue/inspection operations.
 - ISR code must stay minimal: capture or enqueue the data and return; do not perform complex processing, publication, parsing, allocation-heavy work, or higher-level business logic there.
 - The receiving data task should typically publish the received data on the data hub.
 

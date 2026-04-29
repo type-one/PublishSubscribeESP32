@@ -1,37 +1,60 @@
-# CLAUDE.md
+# GitHub Copilot Instructions
 
-This file defines repository-specific guidance for AI coding agents.
+## Repository Intent
 
-## Project Scope
+This repository contains a lightweight publish/subscribe framework that targets:
 
-- Core framework reference code is under `main/tools/`.
-- Third-party code is under folders such as `main/cJSON/`, `main/cjsonpp/`, `main/CException/`, `main/uzlib/`, `main/bytepack/`, `main/cpptime/`.
-- Prefer implementing features and fixes in first-party framework code, not in third-party folders, unless explicitly requested.
-- When unsure whether a folder is third-party, ask before making large edits.
+- FreeRTOS/ESP32 (idf.py + ESP32 CMake flow)
+- Linux/Windows desktop (PC CMake flow)
 
-## Language and Standards
+Core first-party framework code lives in `main/tools/`.
+Other folders in `main/` may contain third-party vendor code.
 
-- Primary language: C++20.
-- Keep compatibility with C++17 where applicable.
-- C++23 is allowed only when a C++20/C++17 fallback is provided.
-- Typical fallback pattern:
-  - Use feature-test macros and/or `__cplusplus` / `_MSVC_LANG` checks.
-  - Provide equivalent implementation for older standards.
+Current `main/` component map (see root README for details):
 
-## Build Targets
+- First-party focus: `main/tools/`, `main/examples/`, `main/tests/`, and project glue.
+- Third-party or externally sourced/adapted modules present in-tree: `main/bytepack/`, `main/CException/`, `main/cJSON/`,
+  `main/cjsonpp/`, `main/cpptime/`, `main/fpm/`, `main/portable_concurrency/`, `main/uzlib/`.
+- Treat third-party folders as vendor code by default; avoid broad edits there unless explicitly requested.
 
-- ESP32 / FreeRTOS build path:
-  - Root `CMakeLists.txt` and `main/CMakeLists.ESP32`.
-  - Build/flash with `idf.py`.
-- Linux / Windows desktop build path:
-  - Use `main/CMakeLists_PC.txt` by renaming/copying as needed in local workflow.
-  - Build through CMake/Ninja or Visual Studio generator.
+## Edit Scope Rules
 
-## Formatting and Static Analysis
+- Prefer edits in first-party code (`main/tools/`, tests, and project glue code).
+- Do not modify third-party library code unless explicitly requested.
+- When unsure whether a folder is third-party, ask before large edits.
+- For module-specific behavior and inventories, consult local docs before editing:
+  - `main/tools/README.md`
+  - `main/portable_concurrency/README.md`
+  - `main/cjsonpp/README.md`
+  - `main/cpptime/README.md`
 
-- Formatting source of truth: `.clang-format` at repository root.
-- Static analysis source of truth: `.clang-tidy` at repository root.
-- Respect all enabled tidy checks and warnings-as-errors behavior.
+## C++ Version Policy
+
+- Default to C++20.
+- Maintain C++17 compatibility when applicable.
+- C++23 is acceptable only with a C++20/C++17 fallback.
+
+Fallback guidance:
+
+- Use feature checks (`__cplusplus`, `_MSVC_LANG`, feature-test macros).
+- Provide equivalent implementation paths for older standards.
+
+## Style and Naming
+
+- Follow repository `.clang-format` and `.clang-tidy` (root files are authoritative).
+- Use snake_case naming for functions/methods/variables.
+- Use variable and parameter names with at least 3 characters (except conventional loop indices in tiny local scopes).
+- Prefix class members with `m_`.
+- Enforce constness whenever possible:
+  - prefer `const` methods,
+  - prefer `const auto` for intermediate computations,
+  - use `constexpr` whenever values or computations can be made compile-time.
+- Do not use magic numbers; replace literals with named constants (`constexpr` when possible).
+- Include style:
+  - use `#include "..."` for headers from this project,
+  - use `#include <...>` for STL, POSIX, FreeRTOS, ESP32, and other system/platform headers.
+- If a class has private members, include an explicit `private:` section.
+- Avoid `protected:` sections unless explicitly required by the design.
 - For code changes, run formatting and static analysis on modified files before finalizing.
 
 ### Processed .clang-format Rules
@@ -39,22 +62,22 @@ This file defines repository-specific guidance for AI coding agents.
 - Base style: WebKit.
 - C++ formatting target: C++20 syntax.
 - Indentation: 4 spaces, no tabs (`UseTab: Never`).
-- Line length: 120 columns.
-- Brace style: Allman (`BreakBeforeBraces: Allman`).
+- Maximum line length: 120 columns.
+- Braces: Allman style.
 - Template declarations: always break.
-- Namespace indentation: indent all namespace contents.
-- Case labels: indented.
-- Trailing comments: aligned, one space before trailing comments.
-- Assignment operators: enforce surrounding spacing.
+- Namespace indentation: All.
+- Case labels are indented.
+- Trailing comments should be aligned with one leading space.
+- Space before assignment operators is required.
 - Keep at most 2 consecutive empty lines.
-- Do not keep short statements/functions on a single line:
-  - `if`
-  - loop statements
+- Do not compress short constructs onto one line:
+  - short `if`
+  - short loops
   - short functions
 
 ### Processed .clang-tidy Rules
 
-- Enabled check groups:
+- Enabled groups:
   - `clang-diagnostic-*`
   - `clang-analyzer-*`
   - `modernize-*`
@@ -63,53 +86,36 @@ This file defines repository-specific guidance for AI coding agents.
   - `bugprone-*`
   - `fuchsia-*`
   - `cppcoreguidelines-*`
-- Warnings are errors (`WarningsAsErrors: *`).
-- Header analysis filter is `.hpp` (`HeaderFilterRegex: '.hpp'`).
+- Treat all warnings as errors (`WarningsAsErrors: *`).
+- Header-focused analysis filter: `.hpp`.
 - Explicitly disabled checks:
   - `modernize-use-trailing-return-type`
   - `modernize-type-traits`
   - `modernize-use-constraints`
+  - `modernize-use-designated-initializers`
   - `performance-unnecessary-copy-initialization`
+  - `performance-unnecessary-value-param`
   - `cppcoreguidelines-avoid-do-while`
   - `cppcoreguidelines-pro-type-vararg`
   - `cppcoreguidelines-pro-bounds-array-to-pointer-decay`
   - `cppcoreguidelines-pro-bounds-pointer-arithmetic`
   - `cppcoreguidelines-pro-type-reinterpret-cast`
+  - `cppcoreguidelines-init-variables`
+  - `cppcoreguidelines-pro-type-member-init`
   - `bugprone-suspicious-include`
   - `fuchsia-default-arguments-calls`
   - `fuchsia-overloaded-operator`
   - `readability-function-cognitive-complexity`
+  - `readability-use-concise-preprocessor-directives`
+  - `readability-implicit-bool-conversion`
+  - `readability-convert-member-functions-to-static`
 
-## Coding Conventions
+## Documentation Notes
 
-- Naming:
-  - snake_case for functions, variables, and methods.
-  - variable and parameter names should be at least 3 characters (except conventional loop indices in tiny local scopes).
-  - class member variables must use `m_` prefix.
-- Avoid magic numbers; introduce named constants (prefer `constexpr`) instead of raw numeric literals.
-- Constness:
-  - enforce constness whenever possible.
-  - prefer `const` methods, `const auto` for intermediate computations, and `constexpr` whenever the value or computation can be made compile-time.
-- Includes:
-  - use `#include "..."` for files from this project.
-  - use `#include <...>` for system and platform headers such as STL, POSIX, FreeRTOS, and ESP32 SDK headers.
-- Class layout:
-  - If class has private members, use an explicit `private:` section.
-  - Avoid `protected:` sections unless explicitly required by the design.
-- File structure:
-  - New `.cpp` files should include the standard project banner/header style used in `main/tools/*`.
-  - Non-templated code should use a split layout: declarations in `.hpp` (no inline implementation body), definitions in `.cpp`.
-- Header hygiene:
-  - do not rely on implicit includes in `.cpp` or `.hpp` files.
-  - include every header needed directly, even if it currently arrives through another project header.
-  - in `.cpp` files, do not rely on headers transitively included by the corresponding `.hpp`.
-  - favor forward declarations in headers whenever possible to reduce coupling and rebuild cost.
-- Documentation:
-  - Each `.hpp` and `.cpp` file must start with a Doxygen file header using `/** @file ... */` with `@file`, `@brief`, `@author`, and `@date` tags, consistent with `main/tools/*` examples.
-  - Place Doxygen comments in `.hpp` files, not in `.cpp` files. Do not duplicate documentation between the declaration and the definition.
-  - Document all public classes, enums, methods, and non-obvious members in the `.hpp`.
-  - Use block-style Doxygen comments using `/** ... */` with `@brief`, `@param`, `@return`, and `@tparam` tags.
-  - Do not use `///` Doxygen comments.
+- Root README now includes a `Components In main/` section; keep guidance aligned with that structure.
+- `main/cjsonpp/README.md` documents current result-based API names (`parse_result`, `get`, `as`, `set`, `add`, `remove`,
+  `JSONType` enum class). Do not reintroduce legacy `try_*` names in new guidance.
+- `main/cpptime/README.md` reflects local split implementation (`cpptime.hpp` + `cpptime.cpp`), i.e. not header-only in this repository.
 
 ## Standard Library Usage
 
@@ -118,7 +124,7 @@ This file defines repository-specific guidance for AI coding agents.
 - Prefer `std::string` / `std::string_view` over raw C strings when ownership and lifetime are clear.
 - Use `<algorithm>` functions (`std::find`, `std::transform`, `std::accumulate`, `std::sort`, …) instead of hand-written loops whenever the intent becomes clearer.
 - Prefer range-based `for` loops over index-based loops when indexing is not part of the logic.
-- Prefer `auto` where it removes repetitive type spelling without hiding meaning.
+- Prefer `auto` where it removes noisy type spellings without obscuring meaning.
 - Prefer `constexpr` variables and functions over macros for compile-time constants and computations.
 - Prefer brace initialization when it improves clarity and avoids narrowing.
 - In C++20 code, prefer `<ranges>` pipelines (`std::views::filter`, `std::views::transform`, `std::ranges::sort`, …) for expressive, composable data processing.
@@ -131,47 +137,45 @@ This file defines repository-specific guidance for AI coding agents.
 
 ## Template API Design
 
-- In templated APIs, prefer the same pattern used in `main/tools/*.hpp`:
-  - keep exact-type `T` overloads where needed for clarity and compatibility,
-  - add perfect-forwarding template overloads (`U&&` / `Args&&...` with `std::forward`) to support conversion paths and avoid unnecessary copies.
-- Constrain forwarding templates appropriately (`requires` in C++20, SFINAE fallback for C++17) to avoid over-broad matches.
+- For templated APIs, follow the style used in `main/tools/*.hpp`:
+  - keep exact-type `T` overloads for explicit/common call paths,
+  - add perfect-forwarding overloads (`U&&` / `Args&&...`) and forward with `std::forward`.
+- Constrain forwarding overloads to intended types (`requires` on C++20, SFINAE fallback for C++17) to avoid ambiguous or overly-generic matches.
 
 ## Object Lifetime and API Signatures
 
 - Use RAII for resource management (memory, locks, file handles, timers, and other acquire/release lifecycles).
 - For class ownership semantics:
-  - Either implement the Rule of Five correctly,
-  - or explicitly inherit from `tools::non_copyable` when copying/moving must be forbidden.
-- Use smart pointers when applicable and model ownership explicitly (`std::unique_ptr` for unique ownership, `std::shared_ptr` for shared ownership).
-- Avoid raw pointers for ownership; use raw pointers/references only for non-owning access when justified.
-- Function/method argument policy:
+  - Apply the Rule of Five where needed,
+  - or inherit from `tools::non_copyable` when copy/move must be disallowed.
+- Use smart pointers when applicable and encode ownership intent (`std::unique_ptr` for unique ownership, `std::shared_ptr` for shared ownership).
+- Avoid raw pointers for ownership; allow raw pointers/references only for justified non-owning access.
+- Function/method parameter policy:
   - use pass-by-value for simple/scalar types,
-  - use pass-by-value for types with well-defined move operations when ownership transfer or local copy is intended,
-  - use `const T&` for heavier non-scalar types where copying is unnecessary.
+  - use pass-by-value for movable types when a local owning copy is intended,
+  - use `const T&` for heavier types when copy is not required.
 - Constructor policy:
-  - when parameters are passed by value and the type supports move semantics, move into members using `std::move(...)`.
+  - if a constructor takes a movable type by value, move it into members using `std::move(...)`.
 
 ### Good vs Bad (Ownership and API Design)
 
 - Good:
-  - choose `std::unique_ptr`/`std::shared_ptr` according to ownership semantics.
-  - pass small scalar parameters by value.
+  - model ownership with `std::unique_ptr` or `std::shared_ptr`.
+  - pass scalar/simple values by value.
   - pass heavy read-only objects by `const T&`.
-  - implement Rule of Five when a class manages resources.
-  - inherit from `tools::non_copyable` when copying/moving must be disallowed.
-  - move by-value constructor parameters into members.
+  - enforce Rule of Five or use `tools::non_copyable`.
+  - move by-value constructor inputs into members.
 - Bad:
-  - owning raw pointers without clear lifetime contracts.
-  - copying heavy objects in APIs without intent.
-  - exposing implementation details through inheritance.
-  - introducing `protected` members by default.
-  - mixing non-templated declarations and implementations inline in headers.
+  - owning raw pointers without explicit ownership semantics.
+  - unnecessary copies of heavy objects in API boundaries.
+  - public/protected inheritance exposing internal state by default.
+  - non-templated implementation bodies left inline in headers.
 
 ## OOP Design Constraints
 
-- Respect encapsulation and information hiding.
-- Avoid exposing internals through inheritance hierarchies unless required.
-- Respect Liskov substitution principle for all polymorphic interfaces and derived classes.
+- Respect information hiding and encapsulation.
+- Avoid inheritance exposure patterns that leak internals.
+- Respect Liskov substitution principle in polymorphic APIs.
 - Singleton pattern is not allowed unless explicitly justified by a narrow, concrete requirement.
 - Global variables are not allowed unless explicitly justified by a narrow, concrete requirement.
 
@@ -193,9 +197,9 @@ This file defines repository-specific guidance for AI coding agents.
 - Avoid deeply nested lambdas: extract named helper lambdas or free functions instead of nesting captures inside captures.
 - Prefer named lambdas stored in a local variable over immediately-invoked anonymous lambdas when the logic is non-trivial.
 - Avoid boolean parameter traps: prefer named enums or separate overloads over `bool` parameters that control behavior.
-- Avoid complex or obfuscated logical expressions with more than roughly 5 conditions, especially when conditions contain computed arguments, nested calls, or lambdas.
-- Do not force too much logic into a single statement or line; use intermediate variables, helper lambdas, helper functions, and early returns when they improve readability.
-- Free functions in anonymous namespaces are preferred for local reusable logic; if such logic is reused across files or components, promote it to a shared helper.
+- Avoid complex or obfuscated logical expressions with more than roughly 5 conditions, especially when conditions contain computed arguments or lambdas.
+- Do not compress too much logic into a single statement or line; split the work into intermediate variables, named lambdas, helper functions, or early-return branches when that improves readability.
+- Free functions in anonymous namespaces are a good default for file-local reusable logic; promote them to shared helpers when multiple components reuse them.
 - Keep cyclomatic complexity at a reasonable level.
 
 ### Good vs Bad (Clean Code)
@@ -220,7 +224,11 @@ This file defines repository-specific guidance for AI coding agents.
   - `tools::sync_object` for signalling and waiting.
 - Methods prefixed `isr_` in `main/tools/` are interrupt-safe variants. Only call them from within an actual ISR context.
   The sole exception is Google Test mocks that simulate ISR behaviour: tests may call `isr_` methods directly to exercise interrupt paths.
-- From an ISR, only push data into a `tools::data_task` or into a lock-free ring buffer stored in the shared context.
+- Do not treat `tools::isr_lock_guard` (or ISR guard wrappers) as interchangeable with `std::lock_guard` / `std::scoped_lock`.
+  `tools::isr_lock_guard` intentionally invokes `isr_lock()` / `isr_unlock()`: on FreeRTOS these map to ISR-only primitives, while PC builds may alias to regular lock/unlock as a fallback. This fallback behavior must not be generalized to ISR-safe design rules.
+- From an ISR, only hand off data to a `tools::data_task` or to a lock-free ring buffer stored in the shared context.
+- Some containers and transfer primitives also expose ISR-facing APIs (for example `tools::sync_queue`, `tools::sync_ring_buffer`, `tools::sync_ring_vector`, and `tools::memory_pipe` via `isr_send`/`isr_receive`).
+  When used from an ISR, call only their `isr_*` methods and keep ISR-side work limited to minimal enqueue/dequeue/inspection operations.
 - ISR code must stay minimal: capture or enqueue the data and return; do not perform complex processing, publication, parsing, allocation-heavy work, or higher-level business logic there.
 - The receiving data task should typically publish the received data on the data hub.
 
@@ -250,26 +258,45 @@ This file defines repository-specific guidance for AI coding agents.
 - The shared context may also carry a `tools::sync_dictionary` of `std::variant` values for keyed telemetry or configuration that any component can read and write.
 - Components react to incoming variants via `std::visit`, invoking focused private methods per alternative — never a monolithic handler.
 
-## Error Handling Model
+## Header and Documentation Conventions
 
-- Newly introduced classes should be exception-free by design.
-- Prefer result-based APIs using `tools::expected`.
-- Return explicit success/error results instead of throwing.
-- Keep error payloads descriptive and machine-checkable where possible.
+- New `.cpp` files should include the project banner/header style used by files under `main/tools/`.
+- Non-templated code should be split between `.hpp` (declarations only, no inline implementation bodies) and `.cpp` (definitions).
+- Do not rely on implicit or transitive includes in `.cpp` or `.hpp` files.
+- In a `.cpp` file, include what is used directly rather than relying on headers already included by the matching `.hpp`.
+- Favor forward declarations in headers whenever possible, as long as they do not obscure correctness or required completeness.
+- Each `.hpp` and `.cpp` file must begin with a Doxygen file header block using `@file`, `@brief`, `@author`, and `@date` tags, as used in `main/tools/*`.
+- Place Doxygen comments in `.hpp` files. Do not duplicate documentation in `.cpp` files.
+- Use Doxygen comments for:
+  - classes
+  - public methods, enums, and non-obvious members
+  - non-obvious behavior and constraints
+- Use block Doxygen comments `/** ... */` with `@brief`, `@param`, `@return`, and `@tparam` tags, as used in `main/tools/*`.
+- Do not use `///` Doxygen comments.
 
-## Testing
+## Error Handling Requirements
 
-- Unit tests are written with Google Test.
-- Add or update tests with every functional change.
-- Prefer behavior-focused tests (success + failure paths) for result-returning APIs.
+- New classes and new APIs should be exception-free.
+- Prefer `tools::expected` for operation results.
+- Return structured error information instead of throwing.
+- Favor explicit result checks in call sites and tests.
+
+## Testing Requirements
+
+- Tests use Google Test.
+- For new/changed behavior:
+  - add success-path tests
+  - add failure-path tests
 - For result-based APIs, assert both `.has_value()` and error payload semantics.
 
-## Change Strategy
+## Build Awareness
 
-- Keep changes minimal and localized.
-- Preserve public behavior unless the task explicitly requires API changes.
-- Avoid broad refactors in third-party code.
-- Update docs when API behavior or usage patterns change.
+When suggesting or validating changes, consider both build families:
+
+1. ESP32/FreeRTOS via `idf.py` and ESP32 CMake setup.
+2. Desktop via PC CMake setup (`main/CMakeLists_PC.txt` workflow).
+
+Do not introduce platform-specific code without guarding it appropriately.
 
 ## Preferred Contribution Pattern
 
@@ -279,14 +306,3 @@ This file defines repository-specific guidance for AI coding agents.
 4. Add/update Google Tests.
 5. Verify no conflicts with `.clang-tidy` and `.clang-format`.
 6. Update docs if API usage changed.
-
-## Practical Checklist for New Code
-
-1. Is the code in first-party framework scope (`main/tools/*`) unless requested otherwise?
-2. Does it compile for C++20 with C++17 fallback where needed?
-3. Is it exception-free and based on `tools::expected` for new APIs?
-4. Does naming follow snake_case and `m_` members?
-5. Are Doxygen comments and file header style present?
-6. Are tests added/updated in Google Test?
-7. Do `.clang-format` and `.clang-tidy` expectations remain satisfied?
-8. Are names meaningful, comments brief and justified, methods short, and lambdas non-nested?

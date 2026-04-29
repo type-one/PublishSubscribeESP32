@@ -107,4 +107,7 @@ These files are paired implementations of the same abstractions.
 - Prefer editing this folder (`main/tools/`) for framework behavior rather than vendor folders.
 - Keep API facades stable and place platform-specific behavior in backend `.inl` files.
 - If adding a new abstraction, mirror the existing facade + FreeRTOS/standard backend pattern.
+- Do not treat `tools::isr_lock_guard` (or ISR guard wrappers) as interchangeable with `std::lock_guard`/`std::scoped_lock`.
+   `tools::isr_lock_guard` is intended to call `isr_lock()`/`isr_unlock()`: on FreeRTOS those are ISR-only primitives.
+   PC/standard builds may alias ISR locking to regular lock/unlock as a fallback, but this must not be generalized as an ISR-safe rule.
 - If adding a new file here, update this README inventory accordingly.
