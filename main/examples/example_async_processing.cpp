@@ -211,7 +211,6 @@ namespace
     {
         std::shared_ptr<async_context> context_first;
         std::shared_ptr<async_context> context_second;
-        std::shared_ptr<async_processing_worker_model> processor;
         int initial_value = 0;
         int chain_stage_count = 0;
     };
@@ -247,9 +246,8 @@ namespace
         co_return base + offset_value;
     }
 
-    pco::future_result<int> schedule_and_process_sample(async_worker* worker_ptr,
-        std::shared_ptr<async_context> context, std::shared_ptr<async_processing_worker_model> processor,
-        int sample_value)
+    pco::future_result<int> schedule_and_process_sample(
+        async_worker* worker_ptr, std::shared_ptr<async_context> context, int sample_value)
     {
         co_await worker_ptr->schedule();
         context->call_count.fetch_add(1);
@@ -1067,13 +1065,12 @@ namespace
         auto async_worker_context = std::make_shared<async_context>();
         auto worker = make_async_worker(async_worker_context, "periodic_feed_worker");
         auto feed_context = std::make_shared<periodic_feed_context>();
-        auto processor = std::make_shared<async_processing_worker_model>();
         feed_context->pending_results.reserve(static_cast<std::size_t>(target_sample_count));
 
         auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) {};
         auto* worker_ptr = worker.get();
 
-        auto periodic = [worker_ptr, async_worker_context, processor](
+        auto periodic = [worker_ptr, async_worker_context](
                             const std::shared_ptr<periodic_feed_context>& local_context, const std::string&)
         {
             int submitted_index = local_context->submitted_samples.load();
@@ -1090,8 +1087,8 @@ namespace
 
             auto chained = worker_ptr
                                ->delegate_async(
-                                   [processor](const std::shared_ptr<async_context>& local_async_context,
-                                       const std::string&, int sample_value)
+                                   [](const std::shared_ptr<async_context>& local_async_context, const std::string&,
+                                       int sample_value)
                                    {
                                        local_async_context->call_count.fetch_add(1);
                                        return async_processing_worker_model::process_sample(sample_value);
@@ -1215,13 +1212,12 @@ namespace
         auto async_worker_context = std::make_shared<async_context>();
         auto worker = make_async_worker(async_worker_context, "periodic_feed_coro_worker");
         auto feed_context = std::make_shared<periodic_feed_context>();
-        auto processor = std::make_shared<async_processing_worker_model>();
         feed_context->pending_results.reserve(static_cast<std::size_t>(target_sample_count));
 
         auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) {};
         auto* worker_ptr = worker.get();
 
-        auto periodic = [worker_ptr, async_worker_context, processor](
+        auto periodic = [worker_ptr, async_worker_context](
                             const std::shared_ptr<periodic_feed_context>& local_context, const std::string&)
         {
             int submitted_index = local_context->submitted_samples.load();
@@ -1236,7 +1232,7 @@ namespace
                 return;
             }
 
-            auto chained = schedule_and_process_sample(worker_ptr, async_worker_context, processor, submitted_index)
+            auto chained = schedule_and_process_sample(worker_ptr, async_worker_context, submitted_index)
                                .then_value(
                                    [local_context](int processed_value)
                                    {
@@ -1297,12 +1293,10 @@ namespace
         auto context_second = std::make_shared<async_context>();
         auto worker_first = make_async_worker(context_first, "alt_coro_chain_worker_a");
         auto worker_second = make_async_worker(context_second, "alt_coro_chain_worker_b");
-        auto processor = std::make_shared<async_processing_worker_model>();
 
         alternating_chain_request request;
         request.context_first = context_first;
         request.context_second = context_second;
-        request.processor = processor;
         request.initial_value = initial_value;
         request.chain_stage_count = stage_count;
 
