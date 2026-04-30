@@ -1,7 +1,7 @@
 /**
  * @file when_all.hpp
  * @brief when_all combinator for synchronizing multiple futures/shared_results.
- * @author Laurent Lardinois, Sergey Vidyuk
+ * @author Laurent Lardinois (with the help of Github Copilot), Sergey Vidyuk
  * @date April 2026
  */
 

@@ -1,7 +1,7 @@
 /**
  * @file shared.hpp
  * @brief shared_result handle for shared async values.
- * @author Laurent Lardinois, Sergey Vidyuk
+ * @author Laurent Lardinois (with the help of Github Copilot), Sergey Vidyuk
  * @date April 2026
  */
 

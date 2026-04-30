@@ -1,7 +1,7 @@
 /**
  * @file result_future.hpp
  * @brief Portable concurrency result-future API entrypoint.
- * @author Laurent Lardinois, Sergey Vidyuk
+ * @author Laurent Lardinois (with the help of Github Copilot), Sergey Vidyuk
  * @date April 2026
  * @note Split into focused internal headers.
  */

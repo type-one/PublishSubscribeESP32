@@ -1,7 +1,7 @@
 /**
  * @file packaged_task_result.hpp
  * @brief Portable concurrency component.
- * @author Laurent Lardinois, Sergey Vidyuk
+ * @author Laurent Lardinois (with the help of Github Copilot), Sergey Vidyuk
  * @date April 2026
  * @note Refactored with the help of Copilot.
  */

@@ -1,7 +1,7 @@
 /**
  * @file when_any.hpp
  * @brief when_any combinator for racing multiple futures/shared_results.
- * @author Laurent Lardinois, Sergey Vidyuk
+ * @author Laurent Lardinois (with the help of Github Copilot), Sergey Vidyuk
  * @date April 2026
  */
 

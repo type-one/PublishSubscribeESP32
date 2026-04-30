@@ -1,7 +1,7 @@
 /**
  * @file combinators.hpp
  * @brief Backward-compatible include for result_future factories and combinators.
- * @author Laurent Lardinois, Sergey Vidyuk
+ * @author Laurent Lardinois (with the help of Github Copilot), Sergey Vidyuk
  * @date April 2026
  */
 

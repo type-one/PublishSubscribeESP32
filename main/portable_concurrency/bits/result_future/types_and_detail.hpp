@@ -1,7 +1,7 @@
 /**
  * @file types_and_detail.hpp
  * @brief Result-future shared types and detail utilities.
- * @author Laurent Lardinois, Sergey Vidyuk
+ * @author Laurent Lardinois (with the help of Github Copilot), Sergey Vidyuk
  * @date April 2026
  */
 

@@ -1,7 +1,7 @@
 /**
  * @file future.hpp
  * @brief Portable concurrency unified future API entrypoint.
- * @author Laurent Lardinois
+ * @author Laurent Lardinois (with the help of Github Copilot)
  * @date April 2026
  */
 

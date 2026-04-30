@@ -1,7 +1,7 @@
 /**
  * @file result_shared_state_impl.hpp
  * @brief Internal shared state type and helpers.
- * @author Laurent Lardinois, Sergey Vidyuk
+ * @author Laurent Lardinois (with the help of Github Copilot), Sergey Vidyuk
  * @date April 2026
  */
 
