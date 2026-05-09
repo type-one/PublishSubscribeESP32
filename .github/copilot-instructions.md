@@ -306,3 +306,20 @@ Do not introduce platform-specific code without guarding it appropriately.
 4. Add/update Google Tests.
 5. Verify no conflicts with `.clang-tidy` and `.clang-format`.
 6. Update docs if API usage changed.
+
+## Effective Modern C++ Add-ons (Non-Conflicting)
+
+These additions are inspired by Effective Modern C++ and should be applied only when they do not conflict with project-specific constraints above.
+
+- Prefer explicit lambda captures over `[=]` / `[&]` in non-trivial code to avoid accidental lifetime and ownership mistakes.
+- Use `nullptr` instead of `0` or `NULL` for null pointer intent.
+- Prefer `using` alias declarations over `typedef`, especially for template aliases.
+- Mark every overriding virtual method with `override`; use `final` only when extension must be prohibited by design.
+- Use `= delete` for disallowed operations instead of private declarations without definitions.
+- Be deliberate with initialization style (`{}` vs `()`), and avoid brace-init forms that accidentally bind `std::initializer_list` overloads.
+- Prefer `auto` when it improves correctness and maintainability, but use explicitly typed initializers when proxy or narrowing behavior would make deduction misleading.
+- For forwarding APIs: use `std::forward` for forwarding references and `std::move` for rvalue references; do not use `std::move` on forwarding references.
+- Avoid overload sets that combine forwarding-reference templates with nearby non-template overloads unless constraints make overload resolution unambiguous.
+- Assume move operations may not be available or cheap on all targets; prefer APIs and algorithms that remain correct and efficient with copies when required.
+- Prefer `emplace_*` only when it clearly avoids temporary materialization and preserves readability; otherwise keep `push_*` / `insert` for clarity.
+- When callability and ownership are needed without type erasure, prefer templated callables or `auto` parameters over `std::function` to avoid unnecessary allocations.
