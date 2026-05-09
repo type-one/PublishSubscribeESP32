@@ -1,0 +1,45 @@
+---
+# Relaxed configuration for third-party cJSON library
+# Inherits strictness from root config but disables checks inappropriate for C code
+Checks:          "clang-diagnostic-*,\
+                  clang-analyzer-*,\
+                  modernize-*,\
+                  performance-*,\
+                  readability-*,\
+                  bugprone-*,\
+                  fuchsia-*,\
+                  cppcoreguidelines-*,\
+                  -modernize-use-trailing-return-type,\
+                  -modernize-type-traits,\
+                  -modernize-use-constraints,\
+                  -modernize-use-designated-initializers,\
+                  -performance-unnecessary-copy-initialization,\
+                  -performance-unnecessary-value-param,\
+                  -cppcoreguidelines-avoid-do-while,\
+                  -cppcoreguidelines-pro-type-vararg,\
+                  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,\
+                  -cppcoreguidelines-pro-bounds-pointer-arithmetic,\
+                  -cppcoreguidelines-pro-type-reinterpret-cast,\
+                  -cppcoreguidelines-init-variables,\
+                  -cppcoreguidelines-pro-type-member-init,\
+                  -bugprone-suspicious-include,\
+                  -fuchsia-default-arguments-calls,\
+                  -fuchsia-overloaded-operator,\
+                  -readability-function-cognitive-complexity,\
+                  -readability-use-concise-preprocessor-directives,\
+                  -readability-implicit-bool-conversion,\
+                  -readability-convert-member-functions-to-static,\
+                  -cppcoreguidelines-avoid-magic-numbers,\
+                  -readability-magic-numbers,\
+                  -readability-identifier-length,\
+                  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,\
+                  -clang-analyzer-security.insecureAPI.strcpy,\
+                  -readability-avoid-const-params-in-decls,\
+                  -bugprone-macro-parentheses,\
+                  -bugprone-easily-swappable-parameters,\
+                  -readability-else-after-return,\
+                  -readability-redundant-casting,\
+                  -cppcoreguidelines-avoid-non-const-global-variables"
+
+WarningsAsErrors: ""
+HeaderFilterRegex: '.hpp'

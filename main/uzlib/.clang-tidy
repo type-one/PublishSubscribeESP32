@@ -1,0 +1,52 @@
+---
+# Relaxed configuration for third-party uzlib compression library
+# Inherits strictness from root config but disables checks inappropriate for compression algorithm C code
+Checks:          "clang-diagnostic-*,\
+                  clang-analyzer-*,\
+                  modernize-*,\
+                  performance-*,\
+                  readability-*,\
+                  bugprone-*,\
+                  fuchsia-*,\
+                  cppcoreguidelines-*,\
+                  -modernize-use-trailing-return-type,\
+                  -modernize-type-traits,\
+                  -modernize-use-constraints,\
+                  -modernize-use-designated-initializers,\
+                  -modernize-macro-to-enum,\
+                  -performance-unnecessary-copy-initialization,\
+                  -performance-unnecessary-value-param,\
+                  -cppcoreguidelines-avoid-do-while,\
+                  -cppcoreguidelines-pro-type-vararg,\
+                  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,\
+                  -cppcoreguidelines-pro-bounds-pointer-arithmetic,\
+                  -cppcoreguidelines-pro-type-reinterpret-cast,\
+                  -cppcoreguidelines-init-variables,\
+                  -cppcoreguidelines-pro-type-member-init,\
+                  -cppcoreguidelines-macro-to-enum,\
+                  -cppcoreguidelines-avoid-magic-numbers,\
+                  -cppcoreguidelines-narrowing-conversions,\
+                  -bugprone-suspicious-include,\
+                  -bugprone-easily-swappable-parameters,\
+                  -bugprone-narrowing-conversions,\
+                  -bugprone-implicit-widening-of-multiplication-result,\
+                  -bugprone-switch-missing-default-case,\
+                  -bugprone-macro-parentheses,\
+                  -bugprone-suspicious-realloc-usage,\
+                  -fuchsia-default-arguments-calls,\
+                  -fuchsia-overloaded-operator,\
+                  -readability-function-cognitive-complexity,\
+                  -readability-use-concise-preprocessor-directives,\
+                  -readability-implicit-bool-conversion,\
+                  -readability-convert-member-functions-to-static,\
+                  -readability-magic-numbers,\
+                  -readability-identifier-length,\
+                  -readability-isolate-declaration,\
+                  -readability-braces-around-statements,\
+                  -readability-avoid-nested-conditional-operator,\
+                  -readability-avoid-unconditional-preprocessor-if,\
+                  -readability-inconsistent-declaration-parameter-name,\
+                  -clang-analyzer-deadcode.DeadStores"
+
+WarningsAsErrors: ""
+HeaderFilterRegex: '.hpp'
