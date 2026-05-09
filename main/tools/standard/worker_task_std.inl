@@ -49,13 +49,14 @@
 #include <ranges>
 #endif
 
+#include "portable_concurrency/bits/coro.hpp"
+#include "portable_concurrency/future.hpp"
 #include "tools/base_task.hpp"
 #include "tools/platform_detection.hpp"
 #include "tools/platform_helpers.hpp"
-#include "portable_concurrency/future.hpp"
-#include "portable_concurrency/bits/coro.hpp"
 #include "tools/sync_object.hpp"
 #include "tools/sync_queue.hpp"
+
 
 namespace tools
 {
@@ -143,9 +144,7 @@ namespace tools
          * This overload supports conversion-based arguments beyond exact-type overloads.
          * In C++20, this constructor is constrained to constructible argument types.
          */
-        template <typename UStartup,
-            typename UContext,
-            typename UName
+        template <typename UStartup, typename UContext, typename UName
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             ,
             typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
@@ -192,9 +191,7 @@ namespace tools
          * @brief Constructs a worker_task object with default priority and default cpu affinity using perfect
          * forwarding.
          */
-        template <typename UStartup,
-            typename UContext,
-            typename UName
+        template <typename UStartup, typename UContext, typename UName
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             ,
             typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
@@ -204,12 +201,12 @@ namespace tools
             >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<call_back, UStartup>
-                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
-                         && std::is_constructible_v<std::string, UName>
+            && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+            && std::is_constructible_v<std::string, UName>
 #endif
         worker_task(UStartup&& startup_routine, UContext&& context, UName&& task_name, std::size_t stack_size)
             : worker_task(std::forward<UStartup>(startup_routine), std::forward<UContext>(context),
-                std::forward<UName>(task_name), stack_size, base_task::run_on_all_cores, base_task::default_priority)
+                  std::forward<UName>(task_name), stack_size, base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 
@@ -281,17 +278,14 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    call_back,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<call_back, std::ranges::range_value_t<TRange>>
+            && std::is_constructible_v<call_back, std::ranges::range_value_t<TRange>>
 #endif
         void delegate_range(TRange&& range)
         {
@@ -313,9 +307,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<call_back, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<call_back, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<call_back, const U&>
 #endif
@@ -333,16 +328,17 @@ namespace tools
         }
 
         template <typename Callable, typename... Args>
-        auto delegate_async(Callable&& work, Args&&... args)
-            -> decltype(pco::async_result(std::declval<executor_type>(),
-                std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(),
-                std::forward<Args>(args)...))
+        auto delegate_async(
+            Callable&& work, Args&&... args) -> decltype(pco::async_result(std::declval<executor_type>(),
+                                                 std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(),
+                                                 std::declval<std::string>(), std::forward<Args>(args)...))
         {
             return pco::async_result(
                 as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);
         }
 
-#if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines) || (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#if defined(PC_HAS_COROUTINES) || defined(__cpp_impl_coroutine) || defined(__cpp_coroutines)                           \
+    || (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
         class schedule_awaitable
         {
         public:

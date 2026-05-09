@@ -132,17 +132,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         void add_range(TRange&& values)
         {
@@ -173,17 +169,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         void add_collection(TRange&& values)
         {
@@ -232,7 +224,6 @@ namespace tools
         }
 
     public:
-
         /**
          * @brief Returns the top value of the histogram.
          *
@@ -392,7 +383,8 @@ namespace tools
          * @param standard_deviation The standard deviation (sigma) of the Gaussian distribution.
          * @return The density of the given value under the specified Gaussian distribution.
          */
-        [[nodiscard]] double gaussian_density(T value, double average, double standard_deviation) const // NOLINT keep it
+        [[nodiscard]] double gaussian_density(
+            T value, double average, double standard_deviation) const // NOLINT keep it
         {
             // https://fr.wikipedia.org/wiki/Loi_normale
             // https://www.savarese.org/math/gaussianintegral.html

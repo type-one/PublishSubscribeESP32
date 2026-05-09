@@ -67,13 +67,13 @@ namespace tools
 
     /**
      * @brief Yields the execution of the current thread to allow other threads to run.
-     * 
-     * This function is a wrapper around `std::this_thread::yield()` and is used to 
-     * signal to the operating system that the current thread is willing to yield 
-     * its remaining time slice to other threads. This can be useful in multi-threaded 
+     *
+     * This function is a wrapper around `std::this_thread::yield()` and is used to
+     * signal to the operating system that the current thread is willing to yield
+     * its remaining time slice to other threads. This can be useful in multi-threaded
      * applications to improve responsiveness or to avoid busy-waiting.
-     * 
-     * @note The behavior of this function depends on the operating system's thread 
+     *
+     * @note The behavior of this function depends on the operating system's thread
      * scheduler and may vary between platforms.
      */
     inline void yield()

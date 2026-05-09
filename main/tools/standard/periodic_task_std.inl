@@ -122,11 +122,7 @@ namespace tools
          * @tparam UName The deduced task name type.
          * @tparam UPeriod The deduced period type.
          */
-        template <typename UStartup,
-            typename UPeriodic,
-            typename UContext,
-            typename UName,
-            typename UPeriod
+        template <typename UStartup, typename UPeriodic, typename UContext, typename UName, typename UPeriod
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             ,
             typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
@@ -137,14 +133,13 @@ namespace tools
 #endif
             >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<call_back, UStartup>
-                         && std::is_constructible_v<call_back, UPeriodic>
+            requires std::is_constructible_v<call_back, UStartup> && std::is_constructible_v<call_back, UPeriodic>
                          && std::is_constructible_v<std::shared_ptr<Context>, UContext>
                          && std::is_constructible_v<std::string, UName>
                          && std::is_constructible_v<std::chrono::duration<std::uint64_t, std::micro>, UPeriod>
 #endif
-        periodic_task(UStartup&& startup_routine, UPeriodic&& periodic_routine, UContext&& context,
-            UName&& task_name, UPeriod&& period, std::size_t stack_size, int cpu_affinity, int priority)
+        periodic_task(UStartup&& startup_routine, UPeriodic&& periodic_routine, UContext&& context, UName&& task_name,
+            UPeriod&& period, std::size_t stack_size, int cpu_affinity, int priority)
             : base_task(std::string(std::forward<UName>(task_name)), stack_size, cpu_affinity, priority)
             , m_startup_routine(call_back(std::forward<UStartup>(startup_routine)))
             , m_periodic_routine(call_back(std::forward<UPeriodic>(periodic_routine)))
@@ -187,11 +182,7 @@ namespace tools
          * @tparam UName The deduced task name type.
          * @tparam UPeriod The deduced period type.
          */
-        template <typename UStartup,
-            typename UPeriodic,
-            typename UContext,
-            typename UName,
-            typename UPeriod
+        template <typename UStartup, typename UPeriodic, typename UContext, typename UName, typename UPeriod
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             ,
             typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
@@ -202,17 +193,16 @@ namespace tools
 #endif
             >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<call_back, UStartup>
-                         && std::is_constructible_v<call_back, UPeriodic>
-                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
-                         && std::is_constructible_v<std::string, UName>
-                         && std::is_constructible_v<std::chrono::duration<std::uint64_t, std::micro>, UPeriod>
+            requires std::is_constructible_v<call_back, UStartup> && std::is_constructible_v<call_back, UPeriodic>
+            && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+            && std::is_constructible_v<std::string, UName>
+            && std::is_constructible_v<std::chrono::duration<std::uint64_t, std::micro>, UPeriod>
 #endif
-        periodic_task(UStartup&& startup_routine, UPeriodic&& periodic_routine, UContext&& context,
-            UName&& task_name, UPeriod&& period, std::size_t stack_size)
+        periodic_task(UStartup&& startup_routine, UPeriodic&& periodic_routine, UContext&& context, UName&& task_name,
+            UPeriod&& period, std::size_t stack_size)
             : periodic_task(std::forward<UStartup>(startup_routine), std::forward<UPeriodic>(periodic_routine),
-            std::forward<UContext>(context), std::forward<UName>(task_name), std::forward<UPeriod>(period),
-            stack_size, base_task::run_on_all_cores, base_task::default_priority)
+                  std::forward<UContext>(context), std::forward<UName>(task_name), std::forward<UPeriod>(period),
+                  stack_size, base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 

@@ -1,11 +1,11 @@
 /**
  * @file critical_section_freertos.inl
  * @brief Implementation of a critical section using FreeRTOS mutexes.
- * 
+ *
  * This file contains the implementation of a critical section class and an ISR lock guard class
  * using FreeRTOS mutexes. It provides methods to manage critical sections and ensure that only
  * one task can enter the critical section at a time.
- * 
+ *
  * @author Laurent Lardinois
  * @date January 2025
  */

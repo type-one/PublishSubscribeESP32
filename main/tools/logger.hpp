@@ -115,14 +115,15 @@
     ESP_LOGV((FILE_ALIAS_STR + " [" + FUNCTION_ALIAS_ + ", line " + std::to_string(__LINE__) + "] ").c_str(),          \
         __VA_ARGS__) // NOLINT
 
-//#elif defined(STM32_PLATFORM)
-// TODO
-// https://wiki.st.com/stm32mcu/wiki/Connectivity:STM32CubeWBA_Trace_management
+// #elif defined(STM32_PLATFORM)
+//  TODO
+//  https://wiki.st.com/stm32mcu/wiki/Connectivity:STM32CubeWBA_Trace_management
 
 #else
 
 
-#if (((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))) && defined(__has_include) && (__has_include(<source_location>) || __has_include(<experimental/source_location>)))
+#if (((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))) && defined(__has_include)          \
+    && (__has_include(<source_location>) || __has_include(<experimental/source_location>)))
 namespace tools
 {
     // https://stackoverflow.com/questions/57547273/how-to-use-source-location-in-a-variadic-template-function

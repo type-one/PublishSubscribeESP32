@@ -57,8 +57,8 @@ namespace tools
         // auto-reload false: start once after period
         const bool auto_reload = (timer_type::periodic == type);
         constexpr const std::uint64_t micro_sec_coeff = 1000U;
-        auto hnd = m_timer_scheduler.add(period * micro_sec_coeff, std::move(handler),
-            auto_reload ? (period * micro_sec_coeff) : 0U);
+        auto hnd = m_timer_scheduler.add(
+            period * micro_sec_coeff, std::move(handler), auto_reload ? (period * micro_sec_coeff) : 0U);
         return hnd + 1U; // valid handle is non zero
     }
 

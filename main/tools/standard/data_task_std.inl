@@ -183,8 +183,8 @@ namespace tools
             std::size_t stack_size)
             : data_task(std::move(startup_routine), std::move(process_routine), context, data_queue_depth, task_name,
                   stack_size, base_task::run_on_all_cores, base_task::default_priority,
-                // Parenthesized max avoids Windows max macro expansion if NOMINMAX is missing in a TU.
-                (std::chrono::duration<std::uint64_t, std::micro>::max)())
+                  // Parenthesized max avoids Windows max macro expansion if NOMINMAX is missing in a TU.
+                  (std::chrono::duration<std::uint64_t, std::micro>::max)())
         {
         }
 
@@ -210,8 +210,8 @@ namespace tools
             : data_task(std::forward<UStartup>(startup_routine), std::forward<UProcess>(process_routine),
                   std::forward<UContext>(context), data_queue_depth, std::forward<UName>(task_name), stack_size,
                   base_task::run_on_all_cores, base_task::default_priority,
-                // Parenthesized max avoids Windows max macro expansion if NOMINMAX is missing in a TU.
-                (std::chrono::duration<std::uint64_t, std::micro>::max)())
+                  // Parenthesized max avoids Windows max macro expansion if NOMINMAX is missing in a TU.
+                  (std::chrono::duration<std::uint64_t, std::micro>::max)())
         {
         }
 

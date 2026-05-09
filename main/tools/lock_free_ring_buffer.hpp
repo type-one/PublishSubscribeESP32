@@ -131,9 +131,9 @@ namespace tools
             requires std::is_constructible_v<T, U>
 #endif
         [[nodiscard]] auto push(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
-    #endif
+#endif
         {
             return push_val(T(std::forward<U>(elem)));
         }
@@ -200,17 +200,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         [[nodiscard]] std::size_t push_range(TRange&& range)
         {
@@ -237,9 +233,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, const U&>
 #endif

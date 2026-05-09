@@ -131,9 +131,9 @@ namespace tools
             requires std::is_constructible_v<T, U>
 #endif
         auto push(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
-    #endif
+#endif
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push(std::forward<U>(elem));
@@ -152,9 +152,9 @@ namespace tools
             requires std::is_constructible_v<T, Args...>
 #endif
         auto emplace(Args&&... args)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
-    #endif
+#endif
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.emplace(std::forward<Args>(args)...);
@@ -320,17 +320,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         std::size_t push_range(TRange&& range)
         {
@@ -346,9 +342,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, const U&>
 #endif
@@ -386,7 +383,8 @@ namespace tools
         }
 
         /**
-         * @brief Pushes an element using perfect forwarding in a thread-safe manner, overwriting the oldest entry if full.
+         * @brief Pushes an element using perfect forwarding in a thread-safe manner, overwriting the oldest entry if
+         * full.
          *
          * @tparam U The deduced element type.
          * @param elem The element to be pushed into the ring vector.
@@ -396,9 +394,9 @@ namespace tools
             requires std::is_constructible_v<T, U>
 #endif
         auto push_overwrite(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
-    #endif
+#endif
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.push_overwrite(std::forward<U>(elem));
@@ -415,9 +413,9 @@ namespace tools
             requires std::is_constructible_v<T, Args...>
 #endif
         auto emplace_overwrite(Args&&... args)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
-    #endif
+#endif
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_ring_vector.emplace_overwrite(std::forward<Args>(args)...);
@@ -432,17 +430,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         push_range_overwrite_result push_range_overwrite(TRange&& range)
         {
@@ -451,7 +445,8 @@ namespace tools
         }
 
         /**
-         * @brief Pushes all elements from an initializer-list in a thread-safe manner, overwriting the oldest entries if full.
+         * @brief Pushes all elements from an initializer-list in a thread-safe manner, overwriting the oldest entries
+         * if full.
          *
          * @tparam U The initializer-list element type.
          * @param range The source initializer-list.
@@ -459,9 +454,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, const U&>
 #endif
@@ -556,9 +552,9 @@ namespace tools
             requires std::is_constructible_v<T, U>
 #endif
         auto isr_push(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, void>::type
-    #endif
+#endif
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_ring_vector.push(std::forward<U>(elem));
@@ -577,9 +573,9 @@ namespace tools
             requires std::is_constructible_v<T, Args...>
 #endif
         auto isr_emplace(Args&&... args)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, void>::type
-    #endif
+#endif
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             m_ring_vector.emplace(std::forward<Args>(args)...);
@@ -596,17 +592,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         std::size_t isr_push_range(TRange&& range)
         {
@@ -622,9 +614,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, const U&>
 #endif
@@ -657,7 +650,8 @@ namespace tools
         }
 
         /**
-         * @brief Pushes an element using perfect forwarding in an ISR-safe manner, overwriting the oldest entry if full.
+         * @brief Pushes an element using perfect forwarding in an ISR-safe manner, overwriting the oldest entry if
+         * full.
          *
          * @tparam U The deduced element type.
          * @param elem The element to be pushed into the ring vector.
@@ -667,9 +661,9 @@ namespace tools
             requires std::is_constructible_v<T, U>
 #endif
         auto isr_push_overwrite(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
-    #endif
+#endif
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.push_overwrite(std::forward<U>(elem));
@@ -686,9 +680,9 @@ namespace tools
             requires std::is_constructible_v<T, Args...>
 #endif
         auto isr_emplace_overwrite(Args&&... args)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
-    #endif
+#endif
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.emplace_overwrite(std::forward<Args>(args)...);
@@ -703,17 +697,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         push_range_overwrite_result isr_push_range_overwrite(TRange&& range)
         {
@@ -722,7 +712,8 @@ namespace tools
         }
 
         /**
-         * @brief Pushes all elements from an initializer-list in an ISR-safe manner, overwriting the oldest entries if full.
+         * @brief Pushes all elements from an initializer-list in an ISR-safe manner, overwriting the oldest entries if
+         * full.
          *
          * @tparam U The initializer-list element type.
          * @param range The source initializer-list.
@@ -730,9 +721,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, const U&>
 #endif
@@ -777,7 +769,7 @@ namespace tools
          */
         [[nodiscard]] std::size_t isr_capacity() const
         {
-             tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
+            tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
             return m_ring_vector.capacity();
         }
 

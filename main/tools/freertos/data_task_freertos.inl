@@ -140,10 +140,7 @@ namespace tools
          * This overload supports conversion-based arguments beyond exact-type overloads.
          * In C++20, this constructor is constrained to constructible argument types.
          */
-        template <typename UStartup,
-            typename UProcess,
-            typename UContext,
-            typename UName
+        template <typename UStartup, typename UProcess, typename UContext, typename UName
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             ,
             typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
@@ -153,14 +150,12 @@ namespace tools
 #endif
             >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<call_back, UStartup>
-                         && std::is_constructible_v<data_call_back, UProcess>
+            requires std::is_constructible_v<call_back, UStartup> && std::is_constructible_v<data_call_back, UProcess>
                          && std::is_constructible_v<std::shared_ptr<Context>, UContext>
                          && std::is_constructible_v<std::string, UName>
 #endif
-        data_task(UStartup&& startup_routine, UProcess&& process_routine,
-            UContext&& context, std::size_t data_queue_depth, UName&& task_name,
-            std::size_t stack_size, int cpu_affinity, int priority,
+        data_task(UStartup&& startup_routine, UProcess&& process_routine, UContext&& context,
+            std::size_t data_queue_depth, UName&& task_name, std::size_t stack_size, int cpu_affinity, int priority,
             const std::chrono::duration<std::uint64_t, std::micro>& data_timeout)
             : base_task(std::string(std::forward<UName>(task_name)), stack_size, cpu_affinity, priority)
             , m_startup_routine(call_back(std::forward<UStartup>(startup_routine)))
@@ -203,10 +198,7 @@ namespace tools
         /**
          * @brief Constructs a data_task object with default priority and default cpu affinity using perfect forwarding.
          */
-        template <typename UStartup,
-            typename UProcess,
-            typename UContext,
-            typename UName
+        template <typename UStartup, typename UProcess, typename UContext, typename UName
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             ,
             typename = typename std::enable_if<std::is_constructible<call_back, UStartup>::value
@@ -216,17 +208,15 @@ namespace tools
 #endif
             >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::is_constructible_v<call_back, UStartup>
-                         && std::is_constructible_v<data_call_back, UProcess>
-                         && std::is_constructible_v<std::shared_ptr<Context>, UContext>
-                         && std::is_constructible_v<std::string, UName>
+            requires std::is_constructible_v<call_back, UStartup> && std::is_constructible_v<data_call_back, UProcess>
+            && std::is_constructible_v<std::shared_ptr<Context>, UContext>
+            && std::is_constructible_v<std::string, UName>
 #endif
-        data_task(UStartup&& startup_routine, UProcess&& process_routine,
-            UContext&& context, std::size_t data_queue_depth, UName&& task_name,
-            std::size_t stack_size)
+        data_task(UStartup&& startup_routine, UProcess&& process_routine, UContext&& context,
+            std::size_t data_queue_depth, UName&& task_name, std::size_t stack_size)
             : data_task(std::forward<UStartup>(startup_routine), std::forward<UProcess>(process_routine),
-                  std::forward<UContext>(context), data_queue_depth, std::forward<UName>(task_name),
-                  stack_size, base_task::run_on_all_cores, base_task::default_priority,
+                  std::forward<UContext>(context), data_queue_depth, std::forward<UName>(task_name), stack_size,
+                  base_task::run_on_all_cores, base_task::default_priority,
                   std::chrono::duration<std::uint64_t, std::micro>::max())
         {
         }

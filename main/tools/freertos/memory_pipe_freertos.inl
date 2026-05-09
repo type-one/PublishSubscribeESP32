@@ -223,7 +223,7 @@ namespace tools
             >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<std::vector<std::uint8_t>, UData>
-                         && (!std::is_integral_v<std::decay_t<UData>>)
+            && (!std::is_integral_v<std::decay_t<UData>>)
 #endif
         [[nodiscard]] std::size_t send(UData&& data, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
@@ -238,19 +238,15 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_convertible<
-                    typename std::decay<
-                        decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                    >::type,
-                    std::uint8_t
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_convertible<
+                typename std::decay<decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::type,
+                std::uint8_t>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::ranges::input_range<TRange>
-                  && std::is_convertible_v<std::ranges::range_value_t<TRange>, std::uint8_t>
+            && std::is_convertible_v<std::ranges::range_value_t<TRange>, std::uint8_t>
 #endif
         [[nodiscard]] std::size_t send_range(
             TRange&& range, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
@@ -269,9 +265,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_convertible<const U&, std::uint8_t>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_convertible<const U&, std::uint8_t>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_convertible_v<const U&, std::uint8_t>
 #endif
@@ -338,8 +335,8 @@ namespace tools
          * @brief Receives bytes into an output iterator range.
          */
         template <typename OutputIt>
-        [[nodiscard]] std::size_t receive_range(OutputIt first, OutputIt last,
-            const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        [[nodiscard]] std::size_t receive_range(
+            OutputIt first, OutputIt last, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
             const auto destination_size = static_cast<std::size_t>(std::distance(first, last));
             std::vector<std::uint8_t> buffer(destination_size);
@@ -358,8 +355,8 @@ namespace tools
         /**
          * @brief Receives bytes into contiguous storage exposed as std::span.
          */
-        [[nodiscard]] std::size_t receive_range(std::span<std::uint8_t> destination,
-            const std::chrono::duration<std::uint64_t, std::milli>& timeout)
+        [[nodiscard]] std::size_t receive_range(
+            std::span<std::uint8_t> destination, const std::chrono::duration<std::uint64_t, std::milli>& timeout)
         {
             return receive(destination.data(), destination.size(), timeout);
         }
@@ -384,8 +381,8 @@ namespace tools
             if ((nullptr != m_message_buffer_hnd) && (nullptr != data))
             {
                 BaseType_t px_higher_priority_task_woken = pdFALSE;
-                sent = xMessageBufferSendFromISR(
-                    m_message_buffer_hnd, data, send_bytes, &px_higher_priority_task_woken);
+                sent
+                    = xMessageBufferSendFromISR(m_message_buffer_hnd, data, send_bytes, &px_higher_priority_task_woken);
                 portYIELD_FROM_ISR(px_higher_priority_task_woken);
             }
 
@@ -427,7 +424,7 @@ namespace tools
             >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<std::vector<std::uint8_t>, UData>
-                         && (!std::is_integral_v<std::decay_t<UData>>)
+            && (!std::is_integral_v<std::decay_t<UData>>)
 #endif
         [[nodiscard]] std::size_t isr_send(UData&& data)
         {
@@ -440,19 +437,15 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_convertible<
-                    typename std::decay<
-                        decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                    >::type,
-                    std::uint8_t
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_convertible<
+                typename std::decay<decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::type,
+                std::uint8_t>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::ranges::input_range<TRange>
-                  && std::is_convertible_v<std::ranges::range_value_t<TRange>, std::uint8_t>
+            && std::is_convertible_v<std::ranges::range_value_t<TRange>, std::uint8_t>
 #endif
         [[nodiscard]] std::size_t isr_send_range(TRange&& range)
         {
@@ -470,9 +463,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_convertible<const U&, std::uint8_t>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_convertible<const U&, std::uint8_t>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_convertible_v<const U&, std::uint8_t>
 #endif

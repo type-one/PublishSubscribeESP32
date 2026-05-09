@@ -26,109 +26,108 @@
 namespace tools
 {
 
-class cond_var
-{
-public:
-    cond_var()
-        : m_sem(xSemaphoreCreateCounting(static_cast<UBaseType_t>(portMAX_DELAY), 0U))
-        , m_waiters(0)
+    class cond_var
     {
-    }
-
-    ~cond_var()
-    {
-        if (m_sem != nullptr)
+    public:
+        cond_var()
+            : m_sem(xSemaphoreCreateCounting(static_cast<UBaseType_t>(portMAX_DELAY), 0U))
+            , m_waiters(0)
         {
-            vSemaphoreDelete(m_sem);
         }
-    }
 
-    cond_var(const cond_var&)            = delete;
-    cond_var& operator=(const cond_var&) = delete;
-    cond_var(cond_var&&)                 = delete;
-    cond_var& operator=(cond_var&&)      = delete;
-
-    void notify_one()
-    {
-        // Only post if at least one waiter is currently blocked/pending.
-        if (m_waiters.load(std::memory_order_acquire) > 0)
+        ~cond_var()
         {
-            xSemaphoreGive(m_sem);
-        }
-    }
-
-    void notify_all()
-    {
-        // Wake every waiter currently observed.
-        int n = m_waiters.load(std::memory_order_acquire);
-        for (int i = 0; i < n; ++i)
-        {
-            xSemaphoreGive(m_sem);
-        }
-    }
-
-    // Blocking wait with predicate (no timeout).
-    // The caller must hold 'lock' on entry; it is released during the wait
-    // and re-acquired before the predicate is re-evaluated or the function
-    // returns.
-    template <typename Lock, typename Predicate>
-    void wait(Lock& lock, Predicate pred)
-    {
-        while (!pred())
-        {
-            m_waiters.fetch_add(1, std::memory_order_acq_rel);
-            lock.unlock();
-            xSemaphoreTake(m_sem, portMAX_DELAY);
-            lock.lock();
-            m_waiters.fetch_sub(1, std::memory_order_acq_rel);
-        }
-    }
-
-    // Timed wait with relative timeout and predicate.
-    // Returns true if the predicate became true before timeout, false otherwise.
-    template <typename Lock, typename Rep, typename Period, typename Predicate>
-    bool wait_for(Lock& lock, const std::chrono::duration<Rep, Period>& rel_time, Predicate pred)
-    {
-        return wait_until(lock, std::chrono::steady_clock::now() + rel_time, pred);
-    }
-
-    // Timed wait with predicate.
-    // Returns true if the predicate became true before the timeout, false
-    // if the timeout expired before pred() returned true.
-    template <typename Lock, typename Clock, typename Duration, typename Predicate>
-    bool wait_until(Lock& lock, const std::chrono::time_point<Clock, Duration>& abs_time, Predicate pred)
-    {
-        while (!pred())
-        {
-            auto now = Clock::now();
-            if (now >= abs_time)
+            if (m_sem != nullptr)
             {
-                return pred();
-            }
-
-            auto remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(abs_time - now).count();
-            // Clamp to at least 1 tick to avoid immediate expiry.
-            TickType_t ticks = (remaining_ms > 0)
-                ? pdMS_TO_TICKS(static_cast<uint32_t>(remaining_ms))
-                : static_cast<TickType_t>(1U);
-
-            m_waiters.fetch_add(1, std::memory_order_acq_rel);
-            lock.unlock();
-            bool signaled = (xSemaphoreTake(m_sem, ticks) == pdTRUE);
-            lock.lock();
-            m_waiters.fetch_sub(1, std::memory_order_acq_rel);
-
-            if (!signaled && !pred())
-            {
-                return false;
+                vSemaphoreDelete(m_sem);
             }
         }
-        return true;
-    }
 
-private:
-    SemaphoreHandle_t      m_sem;
-    std::atomic<int>       m_waiters;
-};
+        cond_var(const cond_var&) = delete;
+        cond_var& operator=(const cond_var&) = delete;
+        cond_var(cond_var&&) = delete;
+        cond_var& operator=(cond_var&&) = delete;
+
+        void notify_one()
+        {
+            // Only post if at least one waiter is currently blocked/pending.
+            if (m_waiters.load(std::memory_order_acquire) > 0)
+            {
+                xSemaphoreGive(m_sem);
+            }
+        }
+
+        void notify_all()
+        {
+            // Wake every waiter currently observed.
+            int n = m_waiters.load(std::memory_order_acquire);
+            for (int i = 0; i < n; ++i)
+            {
+                xSemaphoreGive(m_sem);
+            }
+        }
+
+        // Blocking wait with predicate (no timeout).
+        // The caller must hold 'lock' on entry; it is released during the wait
+        // and re-acquired before the predicate is re-evaluated or the function
+        // returns.
+        template <typename Lock, typename Predicate>
+        void wait(Lock& lock, Predicate pred)
+        {
+            while (!pred())
+            {
+                m_waiters.fetch_add(1, std::memory_order_acq_rel);
+                lock.unlock();
+                xSemaphoreTake(m_sem, portMAX_DELAY);
+                lock.lock();
+                m_waiters.fetch_sub(1, std::memory_order_acq_rel);
+            }
+        }
+
+        // Timed wait with relative timeout and predicate.
+        // Returns true if the predicate became true before timeout, false otherwise.
+        template <typename Lock, typename Rep, typename Period, typename Predicate>
+        bool wait_for(Lock& lock, const std::chrono::duration<Rep, Period>& rel_time, Predicate pred)
+        {
+            return wait_until(lock, std::chrono::steady_clock::now() + rel_time, pred);
+        }
+
+        // Timed wait with predicate.
+        // Returns true if the predicate became true before the timeout, false
+        // if the timeout expired before pred() returned true.
+        template <typename Lock, typename Clock, typename Duration, typename Predicate>
+        bool wait_until(Lock& lock, const std::chrono::time_point<Clock, Duration>& abs_time, Predicate pred)
+        {
+            while (!pred())
+            {
+                auto now = Clock::now();
+                if (now >= abs_time)
+                {
+                    return pred();
+                }
+
+                auto remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(abs_time - now).count();
+                // Clamp to at least 1 tick to avoid immediate expiry.
+                TickType_t ticks = (remaining_ms > 0) ? pdMS_TO_TICKS(static_cast<uint32_t>(remaining_ms))
+                                                      : static_cast<TickType_t>(1U);
+
+                m_waiters.fetch_add(1, std::memory_order_acq_rel);
+                lock.unlock();
+                bool signaled = (xSemaphoreTake(m_sem, ticks) == pdTRUE);
+                lock.lock();
+                m_waiters.fetch_sub(1, std::memory_order_acq_rel);
+
+                if (!signaled && !pred())
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+    private:
+        SemaphoreHandle_t m_sem;
+        std::atomic<int> m_waiters;
+    };
 
 } // namespace tools

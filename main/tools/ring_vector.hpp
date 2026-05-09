@@ -202,9 +202,9 @@ namespace tools
             requires std::is_constructible_v<T, U>
 #endif
         auto push(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
-    #endif
+#endif
         {
             return write_value(std::forward<U>(elem), overflow_policy::reject) != write_status::rejected;
         }
@@ -222,9 +222,9 @@ namespace tools
             requires std::is_constructible_v<T, Args...>
 #endif
         auto emplace(Args&&... args)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
-    #endif
+#endif
         {
             return write_value(T(std::forward<Args>(args)...), overflow_policy::reject) != write_status::rejected;
         }
@@ -356,17 +356,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         std::size_t push_range(TRange&& range)
         {
@@ -393,9 +389,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, const U&>
 #endif
@@ -456,9 +453,9 @@ namespace tools
             requires std::is_constructible_v<T, U>
 #endif
         auto push_overwrite(U&& elem)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, U>::value, bool>::type
-    #endif
+#endif
         {
             return write_value(std::forward<U>(elem), overflow_policy::overwrite) == write_status::overwritten;
         }
@@ -474,9 +471,9 @@ namespace tools
             requires std::is_constructible_v<T, Args...>
 #endif
         auto emplace_overwrite(Args&&... args)
-    #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<T, Args...>::value, bool>::type
-    #endif
+#endif
         {
             return write_value(T(std::forward<Args>(args)...), overflow_policy::overwrite) == write_status::overwritten;
         }
@@ -490,17 +487,13 @@ namespace tools
          */
         template <typename TRange
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<
-                std::is_constructible<
-                    T,
-                    decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))
-                >::value
-            >::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T,
+                decltype(*std::begin(std::declval<typename std::decay<TRange>::type&>()))>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires std::ranges::input_range<TRange>
-                  && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
+            requires std::ranges::input_range<TRange> && std::is_constructible_v<T, std::ranges::range_value_t<TRange>>
 #endif
         push_range_overwrite_result push_range_overwrite(TRange&& range)
         {
@@ -523,9 +516,10 @@ namespace tools
          */
         template <typename U
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
-            , typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
+            ,
+            typename = typename std::enable_if<std::is_constructible<T, const U&>::value>::type
 #endif
-        >
+            >
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<T, const U&>
 #endif
