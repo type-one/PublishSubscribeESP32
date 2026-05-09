@@ -33,7 +33,11 @@ elif [[ -n "${1:-}" ]]; then
     exit 1
 fi
 
-mapfile -d '' files < <(find "$main_dir" -type f \( -name '*.cpp' -o -name '*.c' -o -name '*.h' -o -name '*.hpp' -o -name '*.inl' \) -print0)
+mapfile -d '' files < <(
+    find "$main_dir" \
+        \( -type d -name 'build*' -prune \) -o \
+        \( -type f \( -name '*.cpp' -o -name '*.c' -o -name '*.h' -o -name '*.hpp' -o -name '*.inl' \) -print0 \)
+)
 
 if [[ ${#files[@]} -eq 0 ]]; then
     echo "No matching files found under $main_dir"
