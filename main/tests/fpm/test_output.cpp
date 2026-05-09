@@ -9,11 +9,11 @@
 #include "common.hpp"
 #include "fpm/ios.hpp"
 
+#include <cfenv>
 #include <sstream>
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <cfenv>
 
 using ::testing::Combine;
 using ::testing::Values;
@@ -30,14 +30,30 @@ namespace
             : m_decimal_point(decimal_point)
             , m_thousands_sep(thousands_sep)
             , m_grouping(grouping)
-        {}
+        {
+        }
 
     protected:
-        char do_decimal_point() const override { return m_decimal_point; }
-        char do_thousands_sep() const override { return m_thousands_sep; }
-        std::string do_grouping() const override { return m_grouping; }
-        std::string do_truename() const override { return "unused"; }
-        std::string do_falsename() const override { return "unused"; }
+        char do_decimal_point() const override
+        {
+            return m_decimal_point;
+        }
+        char do_thousands_sep() const override
+        {
+            return m_thousands_sep;
+        }
+        std::string do_grouping() const override
+        {
+            return m_grouping;
+        }
+        std::string do_truename() const override
+        {
+            return "unused";
+        }
+        std::string do_falsename() const override
+        {
+            return "unused";
+        }
 
     private:
         char m_decimal_point;
@@ -90,12 +106,9 @@ namespace
         }
 
 #if !defined(_MSC_VER)
-        if (!is_output_test_valid(stream, 1.125)
-            || !is_output_test_valid(stream, -1.125)
-            || !is_output_test_valid(stream, 0.125)
-            || !is_output_test_valid(stream, -0.125)
-            || !is_output_test_valid(stream, 1.0 / 1024.0)
-            || !is_output_test_valid(stream, -1.0 / 1024.0))
+        if (!is_output_test_valid(stream, 1.125) || !is_output_test_valid(stream, -1.125)
+            || !is_output_test_valid(stream, 0.125) || !is_output_test_valid(stream, -0.125)
+            || !is_output_test_valid(stream, 1.0 / 1024.0) || !is_output_test_valid(stream, -1.0 / 1024.0))
         {
             return false;
         }
@@ -221,16 +234,16 @@ namespace
     {
         std::vector<Flags> params;
 
-        const auto adjust_flags_values = {fmtflags(0), std::ios::left, std::ios::right, std::ios::internal};
-        const auto floatfield_values = {fmtflags(0), std::ios::scientific, std::ios::fixed,
-            std::ios::scientific | std::ios::fixed};
-        const auto showpoint_values = {fmtflags(0), std::ios::showpoint};
-        const auto uppercase_values = {fmtflags(0), std::ios::uppercase};
-        const auto precision_values = {std::streamsize(0), std::streamsize(1), std::streamsize(5), std::streamsize(29),
-            std::streamsize(128)};
-        const auto width_values = {0, 1, 10, 2000};
-        const auto fill_values = {' ', '*', '0'};
-        const auto locale_values = {std::locale("C"), std::locale(""), s_fake_locale};
+        const auto adjust_flags_values = { fmtflags(0), std::ios::left, std::ios::right, std::ios::internal };
+        const auto floatfield_values
+            = { fmtflags(0), std::ios::scientific, std::ios::fixed, std::ios::scientific | std::ios::fixed };
+        const auto showpoint_values = { fmtflags(0), std::ios::showpoint };
+        const auto uppercase_values = { fmtflags(0), std::ios::uppercase };
+        const auto precision_values
+            = { std::streamsize(0), std::streamsize(1), std::streamsize(5), std::streamsize(29), std::streamsize(128) };
+        const auto width_values = { 0, 1, 10, 2000 };
+        const auto fill_values = { ' ', '*', '0' };
+        const auto locale_values = { std::locale("C"), std::locale(""), s_fake_locale };
 
         for (const auto adjust_flags : adjust_flags_values)
         {
@@ -260,16 +273,8 @@ namespace
                                             continue;
                                         }
 
-                                        params.emplace_back(
-                                            adjust_flags,
-                                            floatfield,
-                                            showpoint,
-                                            uppercase,
-                                            precision,
-                                            width,
-                                            fill,
-                                            locale
-                                        );
+                                        params.emplace_back(adjust_flags, floatfield, showpoint, uppercase, precision,
+                                            width, fill, locale);
                                     }
                                 }
                             }
@@ -283,9 +288,7 @@ namespace
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(output_flags, output,
-    ::testing::ValuesIn(make_output_flags_params())
-);
+INSTANTIATE_TEST_SUITE_P(output_flags, output, ::testing::ValuesIn(make_output_flags_params()));
 
 using GroupingFlags = ::testing::tuple<fmtflags, std::string>;
 
@@ -303,7 +306,8 @@ protected:
 #if defined(_MSC_VER)
         // Microsoft Visual C++ does not respect a grouping size < 0 (e.g. "\x200").
         // It it supposed to represent "infinite group" but instead it reuses the last group size
-        if (grouping.find('\200') != std::string::npos) {
+        if (grouping.find('\200') != std::string::npos)
+        {
             GTEST_SKIP();
             return;
         }
@@ -339,11 +343,8 @@ TEST_P(output_grouping, grouping)
 
 // Do not test hexfloat (fixed | scientific) due to stdlibc++ bug (see above)
 INSTANTIATE_TEST_SUITE_P(output_grouping, output_grouping,
-    Combine(
-        Values(0, std::ios::scientific, std::ios::fixed),
-        Values("\003", "\001\001", "\002\001\000", "\002\001\177", "\002\001\200")
-    )
-);
+    Combine(Values(0, std::ios::scientific, std::ios::fixed),
+        Values("\003", "\001\001", "\002\001\000", "\002\001\177", "\002\001\200")));
 
 class output_rounding : public ::testing::Test
 {

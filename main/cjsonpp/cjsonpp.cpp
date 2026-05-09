@@ -243,8 +243,8 @@ namespace cjsonpp
         constexpr const int mask = 0xff;
         if (((*obj_)->type & mask) != cJSON_Object)
         {
-            return tools::unexpected<result_error> {
-                make_error(result_code::invalid_type, (*obj_)->type & mask, "Not an object type") };
+            return tools::unexpected<result_error> { make_error(
+                result_code::invalid_type, (*obj_)->type & mask, "Not an object type") };
         }
         cJSON* detached = cJSON_DetachItemFromObject(obj_->o, name);
         if (nullptr == detached)
@@ -269,8 +269,8 @@ namespace cjsonpp
         constexpr const int mask = 0xff;
         if (((*obj_)->type & mask) != cJSON_Array)
         {
-            return tools::unexpected<result_error> {
-                make_error(result_code::invalid_type, (*obj_)->type & mask, "Not an array type") };
+            return tools::unexpected<result_error> { make_error(
+                result_code::invalid_type, (*obj_)->type & mask, "Not an array type") };
         }
         cJSON* detached = cJSON_DetachItemFromArray(obj_->o, index);
         if (nullptr == detached)

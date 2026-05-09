@@ -98,28 +98,21 @@ TYPED_TEST_SUITE(SyncDictionaryTest, MyTypes);
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 template <typename Dict, typename KeyArg, typename ValueArg>
-concept has_sync_dict_add_call = requires(Dict& dict_ref, KeyArg&& key_arg, ValueArg&& value_arg)
-{
+concept has_sync_dict_add_call = requires(Dict& dict_ref, KeyArg&& key_arg, ValueArg&& value_arg) {
     dict_ref.add(std::forward<KeyArg>(key_arg), std::forward<ValueArg>(value_arg));
 };
 
 template <typename Dict, typename Collection>
-concept has_sync_dict_add_range_call = requires(Dict& dict_ref, Collection&& collection)
-{
-    dict_ref.add_range(std::forward<Collection>(collection));
-};
+concept has_sync_dict_add_range_call
+    = requires(Dict& dict_ref, Collection&& collection) { dict_ref.add_range(std::forward<Collection>(collection)); };
 
 template <typename Dict, typename Collection>
-concept has_sync_dict_add_collection_call = requires(Dict& dict_ref, Collection&& collection)
-{
-    dict_ref.add_collection(std::forward<Collection>(collection));
-};
+concept has_sync_dict_add_collection_call = requires(
+    Dict& dict_ref, Collection&& collection) { dict_ref.add_collection(std::forward<Collection>(collection)); };
 
 template <typename Dict, typename Collection>
-concept has_sync_dict_remove_collection_call = requires(Dict& dict_ref, Collection&& collection)
-{
-    dict_ref.remove_collection(std::forward<Collection>(collection));
-};
+concept has_sync_dict_remove_collection_call = requires(
+    Dict& dict_ref, Collection&& collection) { dict_ref.remove_collection(std::forward<Collection>(collection)); };
 #endif
 
 /**
@@ -904,10 +897,7 @@ TEST(SyncDictionaryRangeTest, AddRangeFromRangeAndContains)
 {
     tools::sync_dictionary<std::string, std::string> str_dict;
 
-    const std::vector<std::pair<std::string, std::string>> entries = {
-        { "alpha", "one" },
-        { "beta", "two" }
-    };
+    const std::vector<std::pair<std::string, std::string>> entries = { { "alpha", "one" }, { "beta", "two" } };
 
     str_dict.add_range(entries);
     str_dict.add_range({ { "gamma", "three" }, { "beta", "two-updated" } });
@@ -928,10 +918,8 @@ TEST(SyncDictionaryRangeTest, AddCollectionCompatibilityCoverage)
 {
     tools::sync_dictionary<std::string, std::string> str_dict;
 
-    const std::vector<std::pair<std::string, std::string>> entries = {
-        { "legacy-alpha", "one" },
-        { "legacy-beta", "two" }
-    };
+    const std::vector<std::pair<std::string, std::string>> entries
+        = { { "legacy-alpha", "one" }, { "legacy-beta", "two" } };
 
     str_dict.add_collection(entries);
     str_dict.add_collection({ { "legacy-gamma", "three" }, { "legacy-beta", "two-updated" } });
@@ -952,11 +940,7 @@ TEST(SyncDictionaryRangeTest, RemoveCollectionFromRange)
 {
     tools::sync_dictionary<std::string, std::string> str_dict;
 
-    str_dict.add_range({
-        { "key-1", "value-1" },
-        { "key-2", "value-2" },
-        { "key-3", "value-3" }
-    });
+    str_dict.add_range({ { "key-1", "value-1" }, { "key-2", "value-2" }, { "key-3", "value-3" } });
 
     const std::vector<std::string> keys_to_remove = { "key-1", "key-3" };
     str_dict.remove_collection(keys_to_remove);
@@ -1000,14 +984,13 @@ TEST(SyncDictionaryRangeTest, Cpp20RangeConstraints)
     static_assert(has_sync_dict_remove_collection_call<dict_t, std::vector<std::string>&>);
 
     static_assert(has_sync_dict_add_range_call<dict_t, std::initializer_list<std::pair<std::string, std::string>>>);
-    static_assert(has_sync_dict_add_collection_call<dict_t, std::initializer_list<std::pair<std::string, std::string>>>);
+    static_assert(
+        has_sync_dict_add_collection_call<dict_t, std::initializer_list<std::pair<std::string, std::string>>>);
     static_assert(has_sync_dict_remove_collection_call<dict_t, std::initializer_list<std::string>>);
 
     const auto transformed = std::views::iota(0, 2)
-        | std::views::transform([](const int value)
-          {
-              return std::pair<std::string, std::string>("k" + std::to_string(value), "v");
-          });
+        | std::views::transform(
+            [](const int value) { return std::pair<std::string, std::string>("k" + std::to_string(value), "v"); });
     static_assert(has_sync_dict_add_range_call<dict_t, decltype(transformed)>);
     static_assert(has_sync_dict_add_collection_call<dict_t, decltype(transformed)>);
 

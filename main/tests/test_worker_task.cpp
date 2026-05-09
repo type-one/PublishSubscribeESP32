@@ -1,28 +1,28 @@
 /**
  * @file test_worker_task.cpp
  * @brief Unit tests for worker tasks using the Google Test framework.
- * 
+ *
  * This file contains unit tests for the WorkerTask class, verifying the correct
  * execution of startup and work delegates, and ensuring the context's computation
  * result is set as pco::expected.
- * 
+ *
  * The tests include:
  * - DestructorTest: Verifies the WorkerTask destructor calls the startup and work delegates.
  * - FreeFunctionWorkTest: Verifies the WorkerTask executes a free function correctly.
  * - ClassMethodWorkTest: Verifies the WorkerTask executes a class method correctly.
  * - LambdaWorkTest: Verifies the WorkerTask executes lambda functions correctly.
- * 
+ *
  * Each test sets up a shared context and state flags, and checks that the delegates
  * are called and the context's computation result is updated.
- * 
+ *
  * @note This file uses the Google Test framework.
- * 
+ *
  * @date February 2025
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  */
 
- //-----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025-2026 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois //
 //                                                                             //
@@ -53,10 +53,10 @@
 #include <chrono>
 #include <initializer_list>
 #include <memory>
-#include <vector>
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <vector>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 #include <ranges>
 #endif
@@ -227,15 +227,15 @@ TEST_F(WorkerTaskTest, FreeFunctionWorkTest)
 /**
  * @class WorkerClass
  * @brief A class that performs work on a given context.
- * 
+ *
  * This class contains methods to perform tasks using a shared context.
  */
 
 /**
  * @brief Performs work on the given context.
- * 
+ *
  * This method performs some operations on the provided context and sets a computation result.
- * 
+ *
  * @param ctx A shared pointer to the TestContext object.
  * @param task_name The name of the task that executes the work.
  */
@@ -364,7 +364,7 @@ TEST_F(WorkerTaskTest, PerfectForwardingConstructorAndDelegate)
             {
                 (void)delegate_task_name;
                 ctx->computation_result = 43;
-            }); // exact rvalue callback path
+            });                            // exact rvalue callback path
         task.delegate(free_function_work); // forwarding conversion path
 
         std::this_thread::sleep_for(std::chrono::milliseconds(120));
@@ -387,28 +387,25 @@ TEST_F(WorkerTaskTest, DelegateRangeSupportsInitializerAndRange)
             },
             context, "test_task", 4096);
 
-        const std::vector<tools::worker_task<TestContext>::call_back> callbacks = {
-            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
-            {
-                (void)task_name;
-                ctx->computation_result += 1;
-            },
-            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
-            {
-                (void)task_name;
-                ctx->computation_result += 2;
-            }
-        };
+        const std::vector<tools::worker_task<TestContext>::call_back> callbacks
+            = { [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+                  {
+                      (void)task_name;
+                      ctx->computation_result += 1;
+                  },
+                  [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+                  {
+                      (void)task_name;
+                      ctx->computation_result += 2;
+                  } };
 
         task.delegate_range(callbacks);
-        task.delegate_range({
-            tools::worker_task<TestContext>::call_back(
-                [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
-                {
-                    (void)task_name;
-                    ctx->computation_result += 3;
-                })
-        });
+        task.delegate_range({ tools::worker_task<TestContext>::call_back(
+            [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+            {
+                (void)task_name;
+                ctx->computation_result += 3;
+            }) });
 
         std::this_thread::sleep_for(std::chrono::milliseconds(120));
     }
@@ -423,39 +420,20 @@ TEST(WorkerTaskCompileTimeChecks, PerfectForwardingConstraints)
     using worker_task_t = tools::worker_task<TestContext>;
     using callback_t = worker_task_t::call_back;
 
-    static_assert(std::is_constructible_v<worker_task_t,
-        callback_t,
-        std::shared_ptr<TestContext>,
-        std::string,
-        std::size_t>);
+    static_assert(
+        std::is_constructible_v<worker_task_t, callback_t, std::shared_ptr<TestContext>, std::string, std::size_t>);
 
-    static_assert(std::is_constructible_v<worker_task_t,
-        callback_t,
-        std::shared_ptr<TestContext>,
-        const char*,
-        std::size_t,
-        int,
-        int>);
+    static_assert(std::is_constructible_v<worker_task_t, callback_t, std::shared_ptr<TestContext>, const char*,
+        std::size_t, int, int>);
 
-    static_assert(!std::is_constructible_v<worker_task_t,
-        int,
-        std::shared_ptr<TestContext>,
-        std::string,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<worker_task_t, int, std::shared_ptr<TestContext>, std::string, std::size_t>);
 
-    static_assert(!std::is_constructible_v<worker_task_t,
-        callback_t,
-        int,
-        std::string,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<worker_task_t, callback_t, int, std::string, std::size_t>);
 
-    static_assert(!std::is_constructible_v<worker_task_t,
-        callback_t,
-        std::shared_ptr<TestContext>,
-        int,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<worker_task_t, callback_t, std::shared_ptr<TestContext>, int, std::size_t>);
 
-    static_assert(std::is_invocable_v<decltype(&worker_task_t::template delegate<callback_t>), worker_task_t&, callback_t>);
+    static_assert(
+        std::is_invocable_v<decltype(&worker_task_t::template delegate<callback_t>), worker_task_t&, callback_t>);
 }
 
 TEST(WorkerTaskCompileTimeChecks, RangeConstraints)
@@ -463,31 +441,24 @@ TEST(WorkerTaskCompileTimeChecks, RangeConstraints)
     using worker_task_t = tools::worker_task<TestContext>;
     using callback_t = worker_task_t::call_back;
 
-    static_assert(requires(worker_task_t& task, std::vector<callback_t>& callbacks)
-    {
-        task.delegate_range(callbacks);
-    });
+    static_assert(
+        requires(worker_task_t& task, std::vector<callback_t>& callbacks) { task.delegate_range(callbacks); });
 
-    static_assert(requires(worker_task_t& task)
-    {
-        task.delegate_range(std::initializer_list<callback_t> {});
-    });
+    static_assert(requires(worker_task_t& task) { task.delegate_range(std::initializer_list<callback_t> {}); });
 
     const auto transformed = std::views::iota(0, 2)
-        | std::views::transform([](int)
-          {
-              return callback_t(
-                  [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
-                  {
-                      (void)task_name;
-                      ctx->do_something();
-                  });
-          });
+        | std::views::transform(
+            [](int)
+            {
+                return callback_t(
+                    [](const std::shared_ptr<TestContext>& ctx, const std::string& task_name)
+                    {
+                        (void)task_name;
+                        ctx->do_something();
+                    });
+            });
 
-    static_assert(requires(worker_task_t& task)
-    {
-        task.delegate_range(transformed);
-    });
+    static_assert(requires(worker_task_t& task) { task.delegate_range(transformed); });
 
     SUCCEED();
 }

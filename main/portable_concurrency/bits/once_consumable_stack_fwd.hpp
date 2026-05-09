@@ -57,7 +57,8 @@ namespace pco::detail
          */
         ~alloc_mem_guard() noexcept
         {
-            if (m_ptr != nullptr) {
+            if (m_ptr != nullptr)
+            {
                 std::allocator_traits<allocator_type>::deallocate(*m_allocator, m_ptr, 1);
             }
         }

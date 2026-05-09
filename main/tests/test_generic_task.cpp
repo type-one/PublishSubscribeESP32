@@ -3,12 +3,12 @@
 /**
  * @file test_generic_task.cpp
  * @brief Unit tests for the GenericTask functionality using Google Test framework.
- * 
- * This file contains unit tests for the GenericTask class, which is part of the 
- * Publish/Subscribe Pattern implementation. The tests verify various 
- * aspects of the GenericTask, including callback execution, handling of null 
+ *
+ * This file contains unit tests for the GenericTask class, which is part of the
+ * Publish/Subscribe Pattern implementation. The tests verify various
+ * aspects of the GenericTask, including callback execution, handling of null
  * contexts, default priority and CPU affinity, and communication between tasks.
- * 
+ *
  * @author Laurent Lardinois
  * @date February 2025
  */
@@ -82,7 +82,6 @@ protected:
     }
 
 public:
-
     /**
      * @brief Structure representing the test context.
      * This structure contains an atomic integer value used for testing purposes.
@@ -98,7 +97,6 @@ public:
     using TestTask = tools::generic_task<TestContext>;
 
 protected:
-
     /**
      * @brief Shared pointer to the first test context.
      */
@@ -198,14 +196,14 @@ TEST_F(GenericTaskTest, TaskWithDefaultPriorityAndAffinity)
 
 /**
  * @brief Test case for verifying communication between two tasks.
- * 
+ *
  * This test initializes two contexts with a value of 0 and creates two tasks.
- * Task1 sets the value of context1 to 1 after a delay, and Task2 waits for 
+ * Task1 sets the value of context1 to 1 after a delay, and Task2 waits for
  * Task1 to complete before setting the value of context2 to 2.
- * 
+ *
  * @test This test checks if Task1 and Task2 communicate correctly by verifying
  *       the final values of context1 and context2.
- * 
+ *
  * @note The tasks are explicitly reset to join the threads before assertions.
  */
 TEST_F(GenericTaskTest, TwoTasksCommunicate)
@@ -291,36 +289,16 @@ TEST(GenericTaskCompileTimeChecks, PerfectForwardingConstructorConstraints)
     using task_t = tools::generic_task<compile_context>;
     using callback_t = task_t::call_back;
 
-    static_assert(std::is_constructible_v<task_t,
-        callback_t,
-        std::shared_ptr<compile_context>,
-        std::string,
-        std::size_t>);
+    static_assert(
+        std::is_constructible_v<task_t, callback_t, std::shared_ptr<compile_context>, std::string, std::size_t>);
 
-    static_assert(std::is_constructible_v<task_t,
-        callback_t,
-        std::shared_ptr<compile_context>,
-        const char*,
-        std::size_t,
-        int,
-        int>);
+    static_assert(std::is_constructible_v<task_t, callback_t, std::shared_ptr<compile_context>, const char*,
+        std::size_t, int, int>);
 
-    static_assert(!std::is_constructible_v<task_t,
-        int,
-        std::shared_ptr<compile_context>,
-        std::string,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<task_t, int, std::shared_ptr<compile_context>, std::string, std::size_t>);
 
-    static_assert(!std::is_constructible_v<task_t,
-        callback_t,
-        int,
-        std::string,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<task_t, callback_t, int, std::string, std::size_t>);
 
-    static_assert(!std::is_constructible_v<task_t,
-        callback_t,
-        std::shared_ptr<compile_context>,
-        int,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<task_t, callback_t, std::shared_ptr<compile_context>, int, std::size_t>);
 }
 #endif

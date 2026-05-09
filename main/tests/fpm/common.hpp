@@ -9,14 +9,14 @@
 
 namespace fpm
 {
-template <typename B, typename I, unsigned int F>
-void PrintTo(const fpm::fixed<B, I, F>& val, ::std::ostream* os)
-{
-    auto f = os->flags();
-    *os << static_cast<double>(val)
-        << " (0x" << std::hex << std::setw(sizeof(B) * 2) << std::setfill('0') << val.raw_value() << ")";
-    os->flags(f);
-}
+    template <typename B, typename I, unsigned int F>
+    void PrintTo(const fpm::fixed<B, I, F>& val, ::std::ostream* os)
+    {
+        auto f = os->flags();
+        *os << static_cast<double>(val) << " (0x" << std::hex << std::setw(sizeof(B) * 2) << std::setfill('0')
+            << val.raw_value() << ")";
+        os->flags(f);
+    }
 }
 
 inline ::testing::AssertionResult HasMaximumError(double value, double reference, double max_error)

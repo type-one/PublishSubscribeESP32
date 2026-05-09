@@ -1,9 +1,9 @@
 /**
-* @file test_helper.hpp
-* @brief Helper to display messages in GTests
-* @author Laurent Lardinois
-* @date February 2025
-*/
+ * @file test_helper.hpp
+ * @brief Helper to display messages in GTests
+ * @author Laurent Lardinois
+ * @date February 2025
+ */
 
 //-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
@@ -41,16 +41,16 @@
 
 namespace test
 {
-// C++ stream interface
-class print : public std::stringstream
-{
-public:
-    print() = default;
-    ~print()
+    // C++ stream interface
+    class print : public std::stringstream
     {
-        std::cout << "\u001b[32m[          ] \u001b[33m" << str() << "\u001b[0m" << '\n';
-    }
-};
+    public:
+        print() = default;
+        ~print()
+        {
+            std::cout << "\u001b[32m[          ] \u001b[33m" << str() << "\u001b[0m" << '\n';
+        }
+    };
 }
 
 #define TEST_COUT test::print() // NOLINT macro for GTESTs

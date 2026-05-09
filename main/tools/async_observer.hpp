@@ -178,8 +178,7 @@ namespace tools
         auto inform(UTopic&& topic, UEvt&& event, UOrigin&& origin)
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
             -> typename std::enable_if<std::is_constructible<Topic, UTopic>::value
-                    && std::is_constructible<Evt, UEvt>::value
-                    && std::is_constructible<std::string, UOrigin>::value,
+                    && std::is_constructible<Evt, UEvt>::value && std::is_constructible<std::string, UOrigin>::value,
                 void>::type
 #endif
         {
@@ -309,8 +308,8 @@ namespace tools
         template <typename UTopic, typename UEvt, typename UOrigin>
         void do_inform(UTopic&& topic, UEvt&& event, UOrigin&& origin)
         {
-            m_evt_queue.push(event_entry {
-                std::forward<UTopic>(topic), std::forward<UEvt>(event), std::forward<UOrigin>(origin) });
+            m_evt_queue.push(
+                event_entry { std::forward<UTopic>(topic), std::forward<UEvt>(event), std::forward<UOrigin>(origin) });
             m_wakeable.signal();
         }
 

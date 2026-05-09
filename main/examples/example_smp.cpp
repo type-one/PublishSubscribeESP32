@@ -354,8 +354,7 @@ namespace
         auto context = std::make_shared<smp_task_context>();
 
         constexpr const auto task1_priority = 0;
-        worker_task1 task1(
-            startup, context, "worker_task1", smp_worker_stack_size, tools::base_task::run_on_all_cores,
+        worker_task1 task1(startup, context, "worker_task1", smp_worker_stack_size, tools::base_task::run_on_all_cores,
             task1_priority);
 
         auto periodic_lambda

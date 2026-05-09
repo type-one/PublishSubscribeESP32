@@ -86,22 +86,16 @@ TYPED_TEST_SUITE(HistogramTest, MyTypes);
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 template <typename Hist, typename ValueArg>
-concept has_histogram_add_call = requires(Hist& hist_ref, ValueArg&& value_arg)
-{
-    hist_ref.add(std::forward<ValueArg>(value_arg));
-};
+concept has_histogram_add_call
+    = requires(Hist& hist_ref, ValueArg&& value_arg) { hist_ref.add(std::forward<ValueArg>(value_arg)); };
 
 template <typename Hist, typename Collection>
-concept has_histogram_add_collection_call = requires(Hist& hist_ref, Collection&& collection)
-{
-    hist_ref.add_collection(std::forward<Collection>(collection));
-};
+concept has_histogram_add_collection_call = requires(
+    Hist& hist_ref, Collection&& collection) { hist_ref.add_collection(std::forward<Collection>(collection)); };
 
 template <typename Hist, typename Collection>
-concept has_histogram_add_range_call = requires(Hist& hist_ref, Collection&& collection)
-{
-    hist_ref.add_range(std::forward<Collection>(collection));
-};
+concept has_histogram_add_range_call
+    = requires(Hist& hist_ref, Collection&& collection) { hist_ref.add_range(std::forward<Collection>(collection)); };
 #endif
 
 /**
@@ -116,8 +110,8 @@ TEST(HistogramFpmTest, Fixed16_16Statistics)
     using fixed_scalar = fpm::fixed_16_16;
 
     tools::histogram<fixed_scalar> hist;
-    hist.add_range({ fixed_scalar(1.5), fixed_scalar(0.5), fixed_scalar(1.5), fixed_scalar(-0.5),
-        fixed_scalar(0.25), fixed_scalar(0.25), fixed_scalar(1.5), fixed_scalar(0.5) });
+    hist.add_range({ fixed_scalar(1.5), fixed_scalar(0.5), fixed_scalar(1.5), fixed_scalar(-0.5), fixed_scalar(0.25),
+        fixed_scalar(0.25), fixed_scalar(1.5), fixed_scalar(0.5) });
 
     EXPECT_EQ(hist.total_count(), 8);
     EXPECT_EQ(hist.top_occurence(), 3);
@@ -362,7 +356,8 @@ TYPED_TEST(HistogramTest, GaussianDensity)
     this->hist->add(static_cast<TypeParam>(7));
     const auto avg = this->hist->average();
     const auto variance = this->hist->variance(avg);
-    const auto density = this->hist->gaussian_density(static_cast<TypeParam>(5), avg, this->hist->standard_deviation(variance));
+    const auto density
+        = this->hist->gaussian_density(static_cast<TypeParam>(5), avg, this->hist->standard_deviation(variance));
     EXPECT_GT(density, 0.0);
 }
 
@@ -387,11 +382,7 @@ TYPED_TEST(HistogramTest, GaussianProbability)
     const auto avg = this->hist->average();
     const auto variance = this->hist->variance(avg);
     const auto prob = this->hist->gaussian_probability(
-        static_cast<TypeParam>(3),
-        static_cast<TypeParam>(5),
-        avg,
-        this->hist->standard_deviation(variance),
-        100);
+        static_cast<TypeParam>(3), static_cast<TypeParam>(5), avg, this->hist->standard_deviation(variance), 100);
     EXPECT_GT(prob, 0.0);
 }
 
@@ -426,9 +417,9 @@ TEST(HistogramPerfectForwardingTest, AddSupportsExactAndConversionPaths)
     tools::histogram<double> hist;
 
     double lvalue_value = 2.5;
-    hist.add(lvalue_value);       // exact-T lvalue overload path
-    hist.add(2.5);                // exact-T rvalue overload path
-    hist.add(2);                  // forwarding conversion path (int -> double)
+    hist.add(lvalue_value);             // exact-T lvalue overload path
+    hist.add(2.5);                      // exact-T rvalue overload path
+    hist.add(2);                        // forwarding conversion path (int -> double)
     hist.add(static_cast<float>(2.5F)); // forwarding conversion path (float -> double)
 
     EXPECT_EQ(hist.total_count(), 4);
@@ -504,11 +495,8 @@ TEST(HistogramRangeTest, Cpp20RangeConstraints)
     static_assert(has_histogram_add_range_call<hist_double_t, std::vector<double>&>);
     static_assert(has_histogram_add_range_call<hist_double_t, std::initializer_list<double>>);
 
-    const auto transformed = std::views::iota(0, 3)
-        | std::views::transform([](const int value)
-          {
-              return static_cast<float>(value);
-          });
+    const auto transformed
+        = std::views::iota(0, 3) | std::views::transform([](const int value) { return static_cast<float>(value); });
     static_assert(has_histogram_add_range_call<hist_double_t, decltype(transformed)>);
 
     // Backward-compatibility aliases remain available.

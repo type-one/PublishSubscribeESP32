@@ -152,7 +152,6 @@ TYPED_TEST(SyncRingVectorTest, Pop)
     EXPECT_EQ(this->vec->size(), 2);
     EXPECT_EQ(this->vec->front_pop(), static_cast<TypeParam>(2));
     EXPECT_EQ(this->vec->size(), 1);
-
 }
 
 /**
@@ -768,28 +767,20 @@ namespace
     };
 
     template <typename Vec, typename Range>
-    concept has_sync_rv_push_range_call = requires(Vec& vec, Range&& range)
-    {
-        vec.push_range(std::forward<Range>(range));
-    };
+    concept has_sync_rv_push_range_call
+        = requires(Vec& vec, Range&& range) { vec.push_range(std::forward<Range>(range)); };
 
     template <typename Vec, typename Range>
-    concept has_sync_rv_isr_push_range_call = requires(Vec& vec, Range&& range)
-    {
-        vec.isr_push_range(std::forward<Range>(range));
-    };
+    concept has_sync_rv_isr_push_range_call
+        = requires(Vec& vec, Range&& range) { vec.isr_push_range(std::forward<Range>(range)); };
 
     template <typename Vec, typename OutputIt>
-    concept has_sync_rv_pop_range_iter_call = requires(Vec& vec, OutputIt first, OutputIt last)
-    {
-        vec.pop_range(first, last);
-    };
+    concept has_sync_rv_pop_range_iter_call
+        = requires(Vec& vec, OutputIt first, OutputIt last) { vec.pop_range(first, last); };
 
     template <typename Vec>
-    concept has_sync_rv_pop_range_span_call = requires(Vec& vec, std::span<int> destination)
-    {
-        vec.pop_range(destination);
-    };
+    concept has_sync_rv_pop_range_span_call
+        = requires(Vec& vec, std::span<int> destination) { vec.pop_range(destination); };
 }
 
 /**
@@ -806,11 +797,8 @@ TEST(SyncRingVectorRangeTest, Cpp20RangeConstraints)
     static_assert(has_sync_rv_pop_range_iter_call<vector_t, int*>);
     static_assert(has_sync_rv_pop_range_span_call<vector_t>);
 
-    const auto transformed = std::views::iota(0, 3)
-        | std::views::transform([](const int value)
-          {
-              return value + 200;
-          });
+    const auto transformed
+        = std::views::iota(0, 3) | std::views::transform([](const int value) { return value + 200; });
     static_assert(has_sync_rv_push_range_call<vector_t, decltype(transformed)>);
     static_assert(has_sync_rv_isr_push_range_call<vector_t, decltype(transformed)>);
 

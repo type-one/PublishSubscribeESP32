@@ -41,8 +41,8 @@
 
 #include <gtest/gtest.h>
 
-#include <atomic>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <complex>
 #include <memory>
@@ -816,28 +816,20 @@ namespace
     };
 
     template <typename Buf, typename Range>
-    concept has_sync_rb_push_range_call = requires(Buf& buffer, Range&& range)
-    {
-        buffer.push_range(std::forward<Range>(range));
-    };
+    concept has_sync_rb_push_range_call
+        = requires(Buf& buffer, Range&& range) { buffer.push_range(std::forward<Range>(range)); };
 
     template <typename Buf, typename Range>
-    concept has_sync_rb_isr_push_range_call = requires(Buf& buffer, Range&& range)
-    {
-        buffer.isr_push_range(std::forward<Range>(range));
-    };
+    concept has_sync_rb_isr_push_range_call
+        = requires(Buf& buffer, Range&& range) { buffer.isr_push_range(std::forward<Range>(range)); };
 
     template <typename Buf, typename OutputIt>
-    concept has_sync_rb_pop_range_iter_call = requires(Buf& buffer, OutputIt first, OutputIt last)
-    {
-        buffer.pop_range(first, last);
-    };
+    concept has_sync_rb_pop_range_iter_call
+        = requires(Buf& buffer, OutputIt first, OutputIt last) { buffer.pop_range(first, last); };
 
     template <typename Buf>
-    concept has_sync_rb_pop_range_span_call = requires(Buf& buffer, std::span<int> destination)
-    {
-        buffer.pop_range(destination);
-    };
+    concept has_sync_rb_pop_range_span_call
+        = requires(Buf& buffer, std::span<int> destination) { buffer.pop_range(destination); };
 }
 
 /**
@@ -854,11 +846,8 @@ TEST(SyncRingBufferRangeTest, Cpp20RangeConstraints)
     static_assert(has_sync_rb_pop_range_iter_call<buffer_t, int*>);
     static_assert(has_sync_rb_pop_range_span_call<buffer_t>);
 
-    const auto transformed = std::views::iota(0, 3)
-        | std::views::transform([](const int value)
-          {
-              return value + 100;
-          });
+    const auto transformed
+        = std::views::iota(0, 3) | std::views::transform([](const int value) { return value + 100; });
     static_assert(has_sync_rb_push_range_call<buffer_t, decltype(transformed)>);
     static_assert(has_sync_rb_isr_push_range_call<buffer_t, decltype(transformed)>);
 

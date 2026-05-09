@@ -19,26 +19,28 @@
 
 namespace
 {
-struct scenario_worker_context {
-    std::atomic<int> loop_counter { 0 };
-};
+    struct scenario_worker_context
+    {
+        std::atomic<int> loop_counter { 0 };
+    };
 
-using scenario_worker_task = tools::worker_task<scenario_worker_context>;
+    using scenario_worker_task = tools::worker_task<scenario_worker_context>;
 
-std::unique_ptr<scenario_worker_task> make_worker_task(
-    const std::shared_ptr<scenario_worker_context>& context, const std::string& name)
-{
-    auto startup = [](const std::shared_ptr<scenario_worker_context>&, const std::string&) {};
-    constexpr std::size_t stack_size = 4096U;
-    return std::make_unique<scenario_worker_task>(std::move(startup), context, name, stack_size);
-}
+    std::unique_ptr<scenario_worker_task> make_worker_task(
+        const std::shared_ptr<scenario_worker_context>& context, const std::string& name)
+    {
+        auto startup = [](const std::shared_ptr<scenario_worker_context>&, const std::string&) {};
+        constexpr std::size_t stack_size = 4096U;
+        return std::make_unique<scenario_worker_task>(std::move(startup), context, name, stack_size);
+    }
 
-struct polling_context {
-    std::atomic<int> ready_checks { 0 };
-    std::atomic<int> not_ready_checks { 0 };
-};
+    struct polling_context
+    {
+        std::atomic<int> ready_checks { 0 };
+        std::atomic<int> not_ready_checks { 0 };
+    };
 
-using polling_periodic_task = tools::periodic_task<polling_context>;
+    using polling_periodic_task = tools::periodic_task<polling_context>;
 
 } // namespace
 
@@ -54,14 +56,8 @@ TEST(ConcurrencyScenarios, PromiseChainRecoveryAndTransform)
     promise.set_error(pco::result_error::execution_failure);
 
     auto result = std::move(source)
-                      .then_error([](pco::result_error)
-                      {
-                          return 10;
-                      })
-                      .then_value([](int value)
-                      {
-                          return value * 3;
-                      })
+                      .then_error([](pco::result_error) { return 10; })
+                      .then_value([](int value) { return value * 3; })
                       .get_result();
 
     ASSERT_TRUE(result.has_value());
@@ -87,21 +83,18 @@ TEST(ConcurrencyScenarios, WhenAllBrokenPromiseRecoveryScenario)
 
     promise1.set_value(42);
 
-    auto chained = std::move(combined)
-                       .then_value([](std::tuple<
-                                      pco::expected<int, pco::result_error>,
-                                      pco::expected<int, pco::result_error>> all)
-                       {
-                           const auto& first = std::get<0>(all);
-                           const auto& second = std::get<1>(all);
+    auto chained = std::move(combined).then_value(
+        [](std::tuple<pco::expected<int, pco::result_error>, pco::expected<int, pco::result_error>> all)
+        {
+            const auto& first = std::get<0>(all);
+            const auto& second = std::get<1>(all);
 
-                           if (first.has_value() && !second.has_value() &&
-                               second.error() == pco::result_error::broken_promise)
-                           {
-                               return first.value() + 100;
-                           }
-                           return -1;
-                       });
+            if (first.has_value() && !second.has_value() && second.error() == pco::result_error::broken_promise)
+            {
+                return first.value() + 100;
+            }
+            return -1;
+        });
 
     auto result = chained.get_result();
     ASSERT_TRUE(result.has_value());
@@ -124,17 +117,16 @@ TEST(ConcurrencyScenarios, WhenAnyBrokenPromiseWinnerFallbackScenario)
     auto future2 = std::move(pair2.second);
 
     auto chained = pco::when_any(std::move(broken_future), std::move(future2))
-                       .then_value([](pco::when_any_result<
-                                      std::tuple<pco::future_result<int>,
-                                                 pco::future_result<int>>> any)
-                       {
-                           auto winner = std::get<0>(any.futures).get_result();
-                           if (!winner.has_value() && winner.error() == pco::result_error::broken_promise)
+                       .then_value(
+                           [](pco::when_any_result<std::tuple<pco::future_result<int>, pco::future_result<int>>> any)
                            {
-                               return 77;
-                           }
-                           return -1;
-                       });
+                               auto winner = std::get<0>(any.futures).get_result();
+                               if (!winner.has_value() && winner.error() == pco::result_error::broken_promise)
+                               {
+                                   return 77;
+                               }
+                               return -1;
+                           });
 
     promise2.set_value(11);
 
@@ -159,14 +151,8 @@ TEST(ConcurrencyScenarios, ComputationChainOnWorkerTask)
                               return value * 2;
                           },
                           21)
-                      .then_value([](int value)
-                      {
-                          return value + 1;
-                      })
-                      .then_value([](int value)
-                      {
-                          return value * 2;
-                      })
+                      .then_value([](int value) { return value + 1; })
+                      .then_value([](int value) { return value * 2; })
                       .get_result();
 
     ASSERT_TRUE(result.has_value());
@@ -187,35 +173,31 @@ TEST(ConcurrencyScenarios, GatherSeveralComputationsWithWhenAll)
 
     for (int value = 1; value <= 5; ++value)
     {
-        jobs.emplace_back(
-            worker
-                ->delegate_async(
-                    [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int v)
-                    {
-                        ctx->loop_counter.fetch_add(1);
-                        return v * v;
-                    },
-                    value)
-                .then_value(worker->as_executor(),
-                    [](int previous)
-                    {
-                        return previous + 10;
-                    }));
+        jobs.emplace_back(worker
+                              ->delegate_async(
+                                  [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int v)
+                                  {
+                                      ctx->loop_counter.fetch_add(1);
+                                      return v * v;
+                                  },
+                                  value)
+                              .then_value(worker->as_executor(), [](int previous) { return previous + 10; }));
     }
 
     auto total = pco::when_all(std::move(jobs))
-                     .then_value([](std::vector<pco::expected<int, pco::result_error>> results)
-                     {
-                         int sum = 0;
-                         for (const auto& item : results)
+                     .then_value(
+                         [](std::vector<pco::expected<int, pco::result_error>> results)
                          {
-                             if (item.has_value())
+                             int sum = 0;
+                             for (const auto& item : results)
                              {
-                                 sum += item.value();
+                                 if (item.has_value())
+                                 {
+                                     sum += item.value();
+                                 }
                              }
-                         }
-                         return sum;
-                     })
+                             return sum;
+                         })
                      .get_result();
 
     ASSERT_TRUE(total.has_value());
@@ -292,21 +274,15 @@ TEST(ConcurrencyScenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
     constexpr auto period = std::chrono::duration<std::uint64_t, std::micro>(20000);
 
     {
-        polling_periodic_task poller(
-            std::move(startup), std::move(periodic), periodic_context, "future_polling_periodic", period, periodic_stack_size);
+        polling_periodic_task poller(std::move(startup), std::move(periodic), periodic_context,
+            "future_polling_periodic", period, periodic_stack_size);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(320));
     }
 
     auto result = std::move(long_future)
-                      .then_error([](pco::result_error)
-                      {
-                          return -1;
-                      })
-                      .then_value([](int value)
-                      {
-                          return value;
-                      })
+                      .then_error([](pco::result_error) { return -1; })
+                      .then_value([](int value) { return value; })
                       .get_result();
 
     ASSERT_TRUE(result.has_value());

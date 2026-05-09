@@ -554,11 +554,11 @@ TEST(SyncQueuePerfectForwardingTest, PushAndEmplaceSupportExactBraceAndConversio
     tools::sync_queue<std::string> queue;
 
     std::string exact_lvalue = "exact-lvalue";
-    queue.push(exact_lvalue);                     // exact-T lvalue overload
-    queue.push(std::string("exact-rvalue"));      // exact-T rvalue overload
-    queue.push("conversion-from-cstr");           // forwarding conversion path
-    queue.push({ "brace-init" });                 // brace-init path
-    queue.emplace(4U, 'q');                       // variadic forwarding path
+    queue.push(exact_lvalue);                // exact-T lvalue overload
+    queue.push(std::string("exact-rvalue")); // exact-T rvalue overload
+    queue.push("conversion-from-cstr");      // forwarding conversion path
+    queue.push({ "brace-init" });            // brace-init path
+    queue.emplace(4U, 'q');                  // variadic forwarding path
 
     auto pop_first = queue.front_pop();
     auto pop_second = queue.front_pop();
@@ -602,11 +602,11 @@ TEST(SyncQueuePerfectForwardingTest, IsrPushAndEmplaceSupportForwardingPaths)
     tools::sync_queue<std::string> queue;
 
     std::string exact_lvalue = "isr-lvalue";
-    queue.isr_push(exact_lvalue);                   // exact-T lvalue overload
-    queue.isr_push(std::string("isr-rvalue"));     // exact-T rvalue overload
-    queue.isr_push("isr-conversion");              // forwarding conversion path
-    queue.isr_push({ "isr-brace-init" });           // brace-init path
-    queue.isr_emplace(3U, 'i');                     // variadic forwarding path
+    queue.isr_push(exact_lvalue);              // exact-T lvalue overload
+    queue.isr_push(std::string("isr-rvalue")); // exact-T rvalue overload
+    queue.isr_push("isr-conversion");          // forwarding conversion path
+    queue.isr_push({ "isr-brace-init" });      // brace-init path
+    queue.isr_emplace(3U, 'i');                // variadic forwarding path
 
     auto pop_first = queue.front_pop();
     auto pop_second = queue.front_pop();
@@ -720,52 +720,34 @@ namespace
     };
 
     template <typename Q, typename U>
-    concept has_push_call = requires(Q& queue_ref, U&& value)
-    {
-        queue_ref.push(std::forward<U>(value));
-    };
+    concept has_push_call = requires(Q& queue_ref, U&& value) { queue_ref.push(std::forward<U>(value)); };
 
     // note: they won't be any real ISR in GTests as standard C++ implementation fallback to push()/emplace() and size()
 
     template <typename Q, typename U>
-    concept has_isr_push_call = requires(Q& queue_ref, U&& value)
-    {
-        queue_ref.isr_push(std::forward<U>(value));
-    };
+    concept has_isr_push_call = requires(Q& queue_ref, U&& value) { queue_ref.isr_push(std::forward<U>(value)); };
 
     template <typename Q, typename... Args>
-    concept has_emplace_call = requires(Q& queue_ref, Args&&... args)
-    {
-        queue_ref.emplace(std::forward<Args>(args)...);
-    };
+    concept has_emplace_call
+        = requires(Q& queue_ref, Args&&... args) { queue_ref.emplace(std::forward<Args>(args)...); };
 
     template <typename Q, typename... Args>
-    concept has_isr_emplace_call = requires(Q& queue_ref, Args&&... args)
-    {
-        queue_ref.isr_emplace(std::forward<Args>(args)...);
-    };
+    concept has_isr_emplace_call
+        = requires(Q& queue_ref, Args&&... args) { queue_ref.isr_emplace(std::forward<Args>(args)...); };
 
     template <typename Q, typename TRange>
-    concept has_push_range_call = requires(Q& queue_ref, TRange& range)
-    {
-        queue_ref.push_range(range);
-    };
+    concept has_push_range_call = requires(Q& queue_ref, TRange& range) { queue_ref.push_range(range); };
 
     template <typename Q, typename TRange>
-    concept has_isr_push_range_call = requires(Q& queue_ref, TRange& range)
-    {
-        queue_ref.isr_push_range(range);
-    };
+    concept has_isr_push_range_call = requires(Q& queue_ref, TRange& range) { queue_ref.isr_push_range(range); };
 
     template <typename Q, typename TDest>
-    concept has_pop_range_iter_call = requires(Q& queue_ref, TDest& destination)
-    {
+    concept has_pop_range_iter_call = requires(Q& queue_ref, TDest& destination) {
         { queue_ref.pop_range(destination.begin(), destination.end()) } -> std::same_as<std::size_t>;
     };
 
     template <typename Q, typename U>
-    concept has_pop_range_span_call = requires(Q& queue_ref, std::span<U> destination)
-    {
+    concept has_pop_range_span_call = requires(Q& queue_ref, std::span<U> destination) {
         { queue_ref.pop_range(destination) } -> std::same_as<std::size_t>;
     };
 
@@ -859,7 +841,8 @@ TEST(SyncQueueRangeTest, Cpp17IteratorPopRangeCompileChecks)
 
     using pop_return_t = decltype(queue.pop_range(destination.begin(), destination.end()));
 
-     static_assert(std::is_same<pop_return_t, std::size_t>::value, "pop_range iterator overload must return std::size_t");
+    static_assert(
+        std::is_same<pop_return_t, std::size_t>::value, "pop_range iterator overload must return std::size_t");
 
     SUCCEED();
 }

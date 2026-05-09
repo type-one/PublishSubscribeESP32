@@ -1,16 +1,16 @@
 /**
  * @file test_memory_pipe.cpp
  * @brief Unit tests for the memory_pipe functionality using Google Test framework.
- * 
+ *
  * This file contains a series of test cases to verify the correct behavior of the memory_pipe class.
  * The tests cover basic send/receive operations, ISR send/receive operations, timeout scenarios,
  * and single producer/consumer scenarios.
- * 
+ *
  * The tests use the Google Test framework and are organized into a test fixture class MemoryPipeTest.
  * Each test case is implemented as a member function of this class.
- * 
+ *
  * @note The tests assume a buffer size of 10 for the memory_pipe instance.
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  * @date February 2025
  */
@@ -389,8 +389,7 @@ namespace
 
     template <typename TData>
     struct can_call_isr_send<TData,
-        std::void_t<decltype(std::declval<tools::memory_pipe&>().isr_send(std::declval<TData>()))>>
-        : std::true_type
+        std::void_t<decltype(std::declval<tools::memory_pipe&>().isr_send(std::declval<TData>()))>> : std::true_type
     {
     };
 
@@ -441,10 +440,7 @@ TEST(MemoryPipeCompileTimeChecks, RangeConstraints)
     static_assert(!can_call_isr_send_range<int>::value);
 
     const auto transformed = std::views::iota(0, 3)
-        | std::views::transform([](const int value)
-          {
-              return static_cast<std::uint8_t>(value + 41);
-          });
+        | std::views::transform([](const int value) { return static_cast<std::uint8_t>(value + 41); });
 
     static_assert(can_call_send_range_with_timeout<decltype(transformed)>::value);
     static_assert(can_call_isr_send_range<decltype(transformed)>::value);

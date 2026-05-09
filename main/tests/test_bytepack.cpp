@@ -2,19 +2,19 @@
 /**
  * @file test_bytepack.cpp
  * @brief Unit tests for serialization and deserialization using bytepack::binary_stream.
- * 
- * This file contains unit tests for serializing and deserializing various structures 
+ *
+ * This file contains unit tests for serializing and deserializing various structures
  * (Address, Person, Company) and a std::map of Company objects using the bytepack::binary_stream.
- * The tests ensure that the data is correctly serialized to a binary stream and deserialized back 
+ * The tests ensure that the data is correctly serialized to a binary stream and deserialized back
  * to the original structures with the same data.
- * 
+ *
  * The tests are implemented using the Google Test framework.
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  * @date February 2025
  */
 
- //-----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025-2026 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois //
 //                                                                             //

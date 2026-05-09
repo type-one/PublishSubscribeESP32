@@ -13,7 +13,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
-volatile CEXCEPTION_FRAME_T CExceptionFrames[CEXCEPTION_NUM_ID] = { { 0 } };  // NOLINT C
+volatile CEXCEPTION_FRAME_T CExceptionFrames[CEXCEPTION_NUM_ID] = { { 0 } }; // NOLINT C
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop

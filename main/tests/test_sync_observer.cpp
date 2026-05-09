@@ -415,17 +415,15 @@ TEST(SyncObserverPerfectForwardingTest, HandlerSubscribeSupportsForwardingPaths)
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 template <typename SubjectT, typename TopicArg, typename EventArg>
-concept has_sync_publish_call = requires(SubjectT& subject_ref, TopicArg&& topic_arg, EventArg&& event_arg)
-{
+concept has_sync_publish_call = requires(SubjectT& subject_ref, TopicArg&& topic_arg, EventArg&& event_arg) {
     subject_ref.publish(std::forward<TopicArg>(topic_arg), std::forward<EventArg>(event_arg));
 };
 
 template <typename SubjectT, typename TopicArg, typename ObserverArg>
-concept has_sync_subscribe_observer_call = requires(
-    SubjectT& subject_ref, TopicArg&& topic_arg, ObserverArg&& observer_arg)
-{
-    subject_ref.subscribe(std::forward<TopicArg>(topic_arg), std::forward<ObserverArg>(observer_arg));
-};
+concept has_sync_subscribe_observer_call
+    = requires(SubjectT& subject_ref, TopicArg&& topic_arg, ObserverArg&& observer_arg) {
+          subject_ref.subscribe(std::forward<TopicArg>(topic_arg), std::forward<ObserverArg>(observer_arg));
+      };
 
 /**
  * @brief Verifies C++20 requires constraints for sync_subject forwarding APIs.

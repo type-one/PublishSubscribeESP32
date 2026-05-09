@@ -66,7 +66,7 @@ namespace tools
          * @param priority The priority of the task or use base_task::default_priority if you don't care.
          */
         base_task(std::string task_name, std::size_t stack_size, int cpu_affinity, // NOLINT keep interface
-            int priority)                                                            // NOLINT keep interface
+            int priority)                                                          // NOLINT keep interface
             : m_task_name(std::move(task_name))
             , m_stack_size(stack_size)
             , m_cpu_affinity(cpu_affinity)

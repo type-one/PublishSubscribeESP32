@@ -76,7 +76,7 @@ namespace pco::detail
      * @brief Move-only type-erased wrapper for small nothrow-movable callables.
      * @tparam R Callable return type.
      * @tparam A Callable argument types.
-        * @note Invocation is performed via `invoke(...)`.
+     * @note Invocation is performed via `invoke(...)`.
      */
     template <typename R, typename... A>
     class small_unique_function<R(A...)>

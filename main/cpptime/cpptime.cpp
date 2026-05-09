@@ -188,8 +188,7 @@ namespace CppTime
         events.at(tid).valid = false;
         events.at(tid).handler = nullptr;
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-        auto itr = std::ranges::find_if(
-            time_events, [&](const detail::Time_event& tev) { return tev.ref == tid; });
+        auto itr = std::ranges::find_if(time_events, [&](const detail::Time_event& tev) { return tev.ref == tid; });
 #else
         auto itr = std::find_if(
             time_events.begin(), time_events.end(), [&](const detail::Time_event& tev) { return tev.ref == tid; });

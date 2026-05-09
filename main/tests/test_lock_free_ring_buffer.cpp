@@ -1,15 +1,15 @@
 /**
  * @file test_lock_free_ring_buffer.cpp
  * @brief Unit tests for the LockFreeRingBuffer class.
- * 
+ *
  * This file contains a set of unit tests for the LockFreeRingBuffer class using the Google Test framework.
- * The tests cover various scenarios including capacity checks, push and pop operations, overflow and underflow conditions,
- * and producer-consumer scenarios with interleaved operations.
- * 
+ * The tests cover various scenarios including capacity checks, push and pop operations, overflow and underflow
+ * conditions, and producer-consumer scenarios with interleaved operations.
+ *
  * The tests are organized into a test fixture class template, LockFreeRingBufferTest, which
  * provides setup and teardown functionality for the lock-free ring buffer. The tests are
  * parameterized to run with different types of elements stored in the lock-free ring buffer.
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  * @date February 2025
  */
@@ -53,8 +53,8 @@
 #include <span>
 #endif
 
-#include "tools/lock_free_ring_buffer.hpp"
 #include "tools/generic_task.hpp"
+#include "tools/lock_free_ring_buffer.hpp"
 
 /**
  * @brief Test fixture for LockFreeRingBuffer tests.
@@ -361,7 +361,7 @@ TEST(LockFreeRingBufferPerfectForwardingTest, PushLvalueAndRvalueAreEquivalentFo
 
     int lval = 42;
     ASSERT_TRUE(buffer.push(lval));
-    ASSERT_TRUE(buffer.push(int(99)));  // NOLINT exact-T rvalue overload
+    ASSERT_TRUE(buffer.push(int(99))); // NOLINT exact-T rvalue overload
 
     auto first_opt = buffer.pop_opt();
     auto second_opt = buffer.pop_opt();
@@ -388,8 +388,8 @@ TEST(LockFreeRingBufferPerfectForwardingTest, PushConversionForwardingTemplate)
 {
     tools::lock_free_ring_buffer<float, 2> buffer;
 
-    ASSERT_TRUE(buffer.push(1));   // NOLINT int-to-float forwarding conversion
-    ASSERT_TRUE(buffer.push(2));   // NOLINT int-to-float forwarding conversion
+    ASSERT_TRUE(buffer.push(1)); // NOLINT int-to-float forwarding conversion
+    ASSERT_TRUE(buffer.push(2)); // NOLINT int-to-float forwarding conversion
 
     auto first_opt = buffer.pop_opt();
     auto second_opt = buffer.pop_opt();
@@ -439,10 +439,7 @@ namespace
     };
 
     template <typename Buf, typename U>
-    concept has_push_call = requires(Buf& buf, U&& value)
-    {
-        buf.push(std::forward<U>(value));
-    };
+    concept has_push_call = requires(Buf& buf, U&& value) { buf.push(std::forward<U>(value)); };
 }
 
 /**
@@ -582,16 +579,10 @@ TEST(LockFreeRingBufferRangeTest, PopRangeSpanReturnsEffectiveCount)
 namespace
 {
     template <typename Buf, typename Range>
-    concept has_push_range_call = requires(Buf& buf, Range&& range)
-    {
-        buf.push_range(std::forward<Range>(range));
-    };
+    concept has_push_range_call = requires(Buf& buf, Range&& range) { buf.push_range(std::forward<Range>(range)); };
 
     template <typename Buf, typename OutputIt>
-    concept has_pop_range_iter_call = requires(Buf& buf, OutputIt first, OutputIt last)
-    {
-        buf.pop_range(first, last);
-    };
+    concept has_pop_range_iter_call = requires(Buf& buf, OutputIt first, OutputIt last) { buf.pop_range(first, last); };
 }
 
 /**

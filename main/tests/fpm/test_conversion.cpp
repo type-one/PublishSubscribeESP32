@@ -58,8 +58,8 @@ TEST(conversion, move)
  */
 TEST(conversion, floats)
 {
-    EXPECT_EQ(1.125, static_cast<double>(P{1.125f}));
-    EXPECT_EQ(1.125, static_cast<double>(P{1.125}));
+    EXPECT_EQ(1.125, static_cast<double>(P { 1.125f }));
+    EXPECT_EQ(1.125, static_cast<double>(P { 1.125 }));
 }
 
 /**
@@ -70,10 +70,10 @@ TEST(conversion, float_rounding)
     // Small number of fraction bits to test rounding
     using Q = fpm::fixed<std::int32_t, std::int64_t, 2>;
 
-    EXPECT_EQ(1.25, static_cast<double>(Q{1.125}));
-    EXPECT_EQ(1.5, static_cast<double>(Q{1.375}));
-    EXPECT_EQ(-1.25, static_cast<double>(Q{-1.125}));
-    EXPECT_EQ(-1.5, static_cast<double>(Q{-1.375}));
+    EXPECT_EQ(1.25, static_cast<double>(Q { 1.125 }));
+    EXPECT_EQ(1.5, static_cast<double>(Q { 1.375 }));
+    EXPECT_EQ(-1.25, static_cast<double>(Q { -1.125 }));
+    EXPECT_EQ(-1.5, static_cast<double>(Q { -1.375 }));
 }
 
 /**
@@ -84,12 +84,12 @@ TEST(conversion, float_no_rounding)
     // Small number of fraction bits to test no rounding
     using Q = fpm::fixed<std::int32_t, std::int64_t, 2, false>;
 
-    EXPECT_EQ(1.0, static_cast<double>(Q{1.125}));
-    EXPECT_EQ(1.25, static_cast<double>(Q{1.375}));
-    EXPECT_EQ(1.25, static_cast<double>(Q{1.499}));
-    EXPECT_EQ(-1.0, static_cast<double>(Q{-1.125}));
-    EXPECT_EQ(-1.0, static_cast<double>(Q{-1.249}));
-    EXPECT_EQ(-1.25, static_cast<double>(Q{-1.375}));
+    EXPECT_EQ(1.0, static_cast<double>(Q { 1.125 }));
+    EXPECT_EQ(1.25, static_cast<double>(Q { 1.375 }));
+    EXPECT_EQ(1.25, static_cast<double>(Q { 1.499 }));
+    EXPECT_EQ(-1.0, static_cast<double>(Q { -1.125 }));
+    EXPECT_EQ(-1.0, static_cast<double>(Q { -1.249 }));
+    EXPECT_EQ(-1.25, static_cast<double>(Q { -1.375 }));
 }
 
 /**
@@ -97,13 +97,13 @@ TEST(conversion, float_no_rounding)
  */
 TEST(conversion, ints)
 {
-    EXPECT_EQ(-125, static_cast<int>(P{-125}));
-    EXPECT_EQ(-125l, static_cast<long>(P{-125l}));
-    EXPECT_EQ(-125ll, static_cast<long long>(P{-125ll}));
+    EXPECT_EQ(-125, static_cast<int>(P { -125 }));
+    EXPECT_EQ(-125l, static_cast<long>(P { -125l }));
+    EXPECT_EQ(-125ll, static_cast<long long>(P { -125ll }));
 
-    EXPECT_EQ(125u, static_cast<unsigned int>(P{125u}));
-    EXPECT_EQ(125lu, static_cast<unsigned long>(P{125lu}));
-    EXPECT_EQ(125llu, static_cast<unsigned long long>(P{125llu}));
+    EXPECT_EQ(125u, static_cast<unsigned int>(P { 125u }));
+    EXPECT_EQ(125lu, static_cast<unsigned long>(P { 125lu }));
+    EXPECT_EQ(125llu, static_cast<unsigned long long>(P { 125llu }));
 }
 
 /**

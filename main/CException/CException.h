@@ -81,9 +81,9 @@ extern "C"
     } CEXCEPTION_FRAME_T;
 
     // actual root frame storage (only one if single-tasking)
-    extern volatile CEXCEPTION_FRAME_T CExceptionFrames[];  // NOLINT C header
+    extern volatile CEXCEPTION_FRAME_T CExceptionFrames[]; // NOLINT C header
 
-// clang-format off
+    // clang-format off
 //Try (see C file for explanation)
 #define Try                                                         \
     {                                                               \
@@ -118,7 +118,7 @@ extern "C"
     void Throw(CEXCEPTION_T ExceptionID);
 
 // Just exit the Try block and skip the Catch.
-#define ExitTry() Throw(CEXCEPTION_NONE)  // NOLINT C header
+#define ExitTry() Throw(CEXCEPTION_NONE) // NOLINT C header
 
 #ifdef __cplusplus
 } // extern "C"

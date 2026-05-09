@@ -25,10 +25,10 @@ TYPED_TEST(customizations, swap)
     using std::swap;
 
     using P = TypeParam;
-    P x{1}, y{2};
+    P x { 1 }, y { 2 };
     swap(x, y);
-    EXPECT_EQ(P{2}, x);
-    EXPECT_EQ(P{1}, y);
+    EXPECT_EQ(P { 2 }, x);
+    EXPECT_EQ(P { 1 }, y);
 }
 
 /**
@@ -38,63 +38,146 @@ TYPED_TEST(customizations, hash)
 {
     using P = TypeParam;
 
-    const std::hash<P> hash{};
+    const std::hash<P> hash {};
     for (int y = -50; y < 50; ++y)
     {
-        EXPECT_EQ(hash(P{y}/10), hash(P{y}/10));
+        EXPECT_EQ(hash(P { y } / 10), hash(P { y } / 10));
         for (int x = -50; x < 50; ++x)
         {
             if (x != y)
             {
-                EXPECT_NE(hash(P{x}/10), hash(P{y}/10));
+                EXPECT_NE(hash(P { x } / 10), hash(P { y } / 10));
             }
         }
     }
 }
 
 template <typename T>
-struct Limits {};
+struct Limits
+{
+};
 
 template <>
 struct Limits<fpm::fixed_16_16>
 {
-    static constexpr bool is_signed() noexcept { return true; }
-    static constexpr int digits() noexcept { return 31; }
-    static constexpr int max_digits10() noexcept { return 5+5; }
-    static constexpr int min_exponent() noexcept { return -15; }
-    static constexpr int max_exponent() noexcept { return  15; }
-    static constexpr int min_exponent10() noexcept { return -4; }
-    static constexpr int max_exponent10() noexcept { return 4; }
-    static constexpr fpm::fixed_16_16 min() noexcept { return fpm::fixed_16_16::from_raw_value(-2147483647 - 1); }
-    static constexpr fpm::fixed_16_16 max() noexcept { return fpm::fixed_16_16::from_raw_value( 2147483647); }
+    static constexpr bool is_signed() noexcept
+    {
+        return true;
+    }
+    static constexpr int digits() noexcept
+    {
+        return 31;
+    }
+    static constexpr int max_digits10() noexcept
+    {
+        return 5 + 5;
+    }
+    static constexpr int min_exponent() noexcept
+    {
+        return -15;
+    }
+    static constexpr int max_exponent() noexcept
+    {
+        return 15;
+    }
+    static constexpr int min_exponent10() noexcept
+    {
+        return -4;
+    }
+    static constexpr int max_exponent10() noexcept
+    {
+        return 4;
+    }
+    static constexpr fpm::fixed_16_16 min() noexcept
+    {
+        return fpm::fixed_16_16::from_raw_value(-2147483647 - 1);
+    }
+    static constexpr fpm::fixed_16_16 max() noexcept
+    {
+        return fpm::fixed_16_16::from_raw_value(2147483647);
+    }
 };
 
 template <>
 struct Limits<fpm::fixed_24_8>
 {
-    static constexpr bool is_signed() noexcept { return true; }
-    static constexpr int digits() noexcept { return 31; }
-    static constexpr int max_digits10() noexcept { return 7+3; }
-    static constexpr int min_exponent() noexcept { return -7; }
-    static constexpr int max_exponent() noexcept { return 23; }
-    static constexpr int min_exponent10() noexcept { return -2; }
-    static constexpr int max_exponent10() noexcept { return 6; }
-    static constexpr fpm::fixed_24_8 min() noexcept { return fpm::fixed_24_8::from_raw_value(-2147483647 - 1); }
-    static constexpr fpm::fixed_24_8 max() noexcept { return fpm::fixed_24_8::from_raw_value( 2147483647); }
+    static constexpr bool is_signed() noexcept
+    {
+        return true;
+    }
+    static constexpr int digits() noexcept
+    {
+        return 31;
+    }
+    static constexpr int max_digits10() noexcept
+    {
+        return 7 + 3;
+    }
+    static constexpr int min_exponent() noexcept
+    {
+        return -7;
+    }
+    static constexpr int max_exponent() noexcept
+    {
+        return 23;
+    }
+    static constexpr int min_exponent10() noexcept
+    {
+        return -2;
+    }
+    static constexpr int max_exponent10() noexcept
+    {
+        return 6;
+    }
+    static constexpr fpm::fixed_24_8 min() noexcept
+    {
+        return fpm::fixed_24_8::from_raw_value(-2147483647 - 1);
+    }
+    static constexpr fpm::fixed_24_8 max() noexcept
+    {
+        return fpm::fixed_24_8::from_raw_value(2147483647);
+    }
 };
 
 template <>
 struct Limits<fpm::fixed_8_24>
 {
-    static constexpr bool is_signed() noexcept { return true; }
-    static constexpr int digits() noexcept { return 31; }
-    static constexpr int max_digits10() noexcept { return 3+8; }
-    static constexpr int min_exponent() noexcept { return -23; }
-    static constexpr int max_exponent() noexcept { return  7; }
-    static constexpr int min_exponent10() noexcept { return -7; }
-    static constexpr int max_exponent10() noexcept { return  2; }
-    static constexpr fpm::fixed_8_24 min() noexcept { return fpm::fixed_8_24::from_raw_value(-2147483647 - 1); }
-    static constexpr fpm::fixed_8_24 max() noexcept { return fpm::fixed_8_24::from_raw_value( 2147483647); }
+    static constexpr bool is_signed() noexcept
+    {
+        return true;
+    }
+    static constexpr int digits() noexcept
+    {
+        return 31;
+    }
+    static constexpr int max_digits10() noexcept
+    {
+        return 3 + 8;
+    }
+    static constexpr int min_exponent() noexcept
+    {
+        return -23;
+    }
+    static constexpr int max_exponent() noexcept
+    {
+        return 7;
+    }
+    static constexpr int min_exponent10() noexcept
+    {
+        return -7;
+    }
+    static constexpr int max_exponent10() noexcept
+    {
+        return 2;
+    }
+    static constexpr fpm::fixed_8_24 min() noexcept
+    {
+        return fpm::fixed_8_24::from_raw_value(-2147483647 - 1);
+    }
+    static constexpr fpm::fixed_8_24 max() noexcept
+    {
+        return fpm::fixed_8_24::from_raw_value(2147483647);
+    }
 };
 
 /**

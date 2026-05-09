@@ -15,8 +15,8 @@ TEST(arithmethic, negation)
 {
     using P = fpm::fixed_24_8;
 
-    EXPECT_EQ(P(-13.125), -P( 13.125));
-    EXPECT_EQ(P( 13.125), -P(-13.125));
+    EXPECT_EQ(P(-13.125), -P(13.125));
+    EXPECT_EQ(P(13.125), -P(-13.125));
 }
 
 /**

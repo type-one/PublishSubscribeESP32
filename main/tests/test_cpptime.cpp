@@ -304,10 +304,12 @@ TEST_F(TimerTest, TestDeleteTimerInCallback)
     std::atomic<bool> short_timer_fired { false };
 
     timer->add(milliseconds(50), [&](CppTime::timer_id) { long_timer_fired.store(true); });
-    timer->add(milliseconds(10), [&](CppTime::timer_id id) {
-        self_deleting_fired.store(true);
-        timer->remove(id);
-    });
+    timer->add(milliseconds(10),
+        [&](CppTime::timer_id id)
+        {
+            self_deleting_fired.store(true);
+            timer->remove(id);
+        });
     std::this_thread::sleep_for(milliseconds(100));
 
     EXPECT_TRUE(self_deleting_fired.load());
@@ -318,10 +320,12 @@ TEST_F(TimerTest, TestDeleteTimerInCallback)
     short_timer_fired.store(false);
 
     timer->add(milliseconds(50), [&](CppTime::timer_id) { long_timer_fired.store(true); });
-    timer->add(milliseconds(10), [&](CppTime::timer_id id) {
-        short_timer_fired.store(true);
-        timer->remove(id);
-    });
+    timer->add(milliseconds(10),
+        [&](CppTime::timer_id id)
+        {
+            short_timer_fired.store(true);
+            timer->remove(id);
+        });
     std::this_thread::sleep_for(milliseconds(100));
 
     EXPECT_TRUE(short_timer_fired.load());
@@ -378,22 +382,26 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
     CppTime::timestamp ts1 = CppTime::clock::now() - milliseconds(10);
     CppTime::timestamp ts2 = CppTime::clock::now() - milliseconds(20);
 
-    timer->add(ts1, [&](CppTime::timer_id) {
-        i.store(42);
-        const auto callback_count = past_callback_count.fetch_add(1) + 1;
-        if (callback_count == 2)
+    timer->add(ts1,
+        [&](CppTime::timer_id)
         {
-            past_done.set_value();
-        }
-    });
-    timer->add(ts2, [&](CppTime::timer_id) {
-        j.store(43);
-        const auto callback_count = past_callback_count.fetch_add(1) + 1;
-        if (callback_count == 2)
+            i.store(42);
+            const auto callback_count = past_callback_count.fetch_add(1) + 1;
+            if (callback_count == 2)
+            {
+                past_done.set_value();
+            }
+        });
+    timer->add(ts2,
+        [&](CppTime::timer_id)
         {
-            past_done.set_value();
-        }
-    });
+            j.store(43);
+            const auto callback_count = past_callback_count.fetch_add(1) + 1;
+            if (callback_count == 2)
+            {
+                past_done.set_value();
+            }
+        });
 
     // Wait for past timeouts to execute with a reasonable timeout
     EXPECT_EQ(past_done_future.wait_for(milliseconds(100)), std::future_status::ready);
@@ -408,13 +416,13 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
     CppTime::timestamp ts3 = CppTime::clock::now() + milliseconds(30);
     CppTime::timestamp ts4 = CppTime::clock::now() + milliseconds(60);
 
-    timer->add(ts3, [&](CppTime::timer_id) {
-        std::this_thread::sleep_for(milliseconds(20));
-    });
-    timer->add(ts4, [&](CppTime::timer_id) {
-        i.store(42);
-        future_done.set_value();
-    });
+    timer->add(ts3, [&](CppTime::timer_id) { std::this_thread::sleep_for(milliseconds(20)); });
+    timer->add(ts4,
+        [&](CppTime::timer_id)
+        {
+            i.store(42);
+            future_done.set_value();
+        });
 
     // Wait for future timeouts with sufficient timeout
     EXPECT_EQ(future_done_future.wait_for(milliseconds(200)), std::future_status::ready);
@@ -546,10 +554,12 @@ TEST_F(TimerTest, PassAnArgumentToAnAction)
     std::promise<void> callback_done;
     auto callback_done_future = callback_done.get_future();
 
-    timer->add(milliseconds(20), [&res, push_me, &callback_done](CppTime::timer_id) {
-        res.store(push_me->i.load() + 1);
-        callback_done.set_value();
-    });
+    timer->add(milliseconds(20),
+        [&res, push_me, &callback_done](CppTime::timer_id)
+        {
+            res.store(push_me->i.load() + 1);
+            callback_done.set_value();
+        });
 
     EXPECT_EQ(res.load(), 0);
     EXPECT_EQ(callback_done_future.wait_for(milliseconds(100)), std::future_status::ready);

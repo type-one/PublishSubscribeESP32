@@ -1,20 +1,20 @@
 /**
  * @file test_periodic_task.cpp
  * @brief Unit tests for the periodic task functionality.
- * 
+ *
  * This file contains unit tests for verifying the behavior of the periodic task
- * implemented in the periodic_task_std.inl file. The tests ensure that the 
+ * implemented in the periodic_task_std.inl file. The tests ensure that the
  * periodic task updates the context value correctly over time.
- * 
+ *
  * The tests use the Google Test framework and include setup and teardown methods
  * to initialize and clean up the test environment.
- * 
+ *
  * @date February 2025
- * 
+ *
  * @author Laurent Lardinois and Copilot GPT-4o
  */
 
- //-----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 // C++ Publish/Subscribe Pattern - Spare time development for fun              //
 // (c) 2025-2026 Laurent Lardinois https://be.linkedin.com/in/laurentlardinois //
 //                                                                             //
@@ -75,7 +75,7 @@ void startup_routine(const std::shared_ptr<TestContext>& context, const std::str
 {
     (void)context;
     (void)task_name;
-    //TEST_COUT << "Startup routine for task: " << task_name << std::endl;
+    // TEST_COUT << "Startup routine for task: " << task_name << std::endl;
     context->set_value(1);
 }
 
@@ -83,7 +83,7 @@ void periodic_routine(const std::shared_ptr<TestContext>& context, const std::st
 {
     (void)context;
     (void)task_name;
-    //TEST_COUT << "Periodic routine for task: " << task_name << std::endl;
+    // TEST_COUT << "Periodic routine for task: " << task_name << std::endl;
     context->inc_value();
 }
 
@@ -157,7 +157,7 @@ protected:
  * @brief Test case to verify that the context value increases over time.
  *
  * This test case allows some time for the periodic task to run and then checks
- * if the context value has been updated correctly. The test passes if the 
+ * if the context value has been updated correctly. The test passes if the
  * context value is greater than 1 after the sleep period.
  *
  * @test
@@ -235,8 +235,8 @@ TEST(PeriodicTaskForwardingTest, ConstructorSupportsLvalueRvalueAndConversion)
     };
 
     constexpr std::size_t stack_size = 2048U;
-    tools::periodic_task<TestContext> task(
-        startup_lvalue, std::move(periodic_rvalue), context, "periodic-forwarding", std::chrono::milliseconds(50), stack_size);
+    tools::periodic_task<TestContext> task(startup_lvalue, std::move(periodic_rvalue), context, "periodic-forwarding",
+        std::chrono::milliseconds(50), stack_size);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(180));
     EXPECT_GT(context->get_value(), 1);
@@ -248,46 +248,19 @@ TEST(PeriodicTaskCompileTimeChecks, PerfectForwardingConstructorConstraints)
     using periodic_task_t = tools::periodic_task<TestContext>;
     using callback_t = periodic_task_t::call_back;
 
-    static_assert(std::is_constructible_v<periodic_task_t,
-        callback_t,
-        callback_t,
-        std::shared_ptr<TestContext>,
-        std::string,
-        std::chrono::milliseconds,
-        std::size_t>);
+    static_assert(std::is_constructible_v<periodic_task_t, callback_t, callback_t, std::shared_ptr<TestContext>,
+        std::string, std::chrono::milliseconds, std::size_t>);
 
-    static_assert(std::is_constructible_v<periodic_task_t,
-        callback_t,
-        callback_t,
-        std::shared_ptr<TestContext>,
-        const char*,
-        std::chrono::milliseconds,
-        std::size_t,
-        int,
-        int>);
+    static_assert(std::is_constructible_v<periodic_task_t, callback_t, callback_t, std::shared_ptr<TestContext>,
+        const char*, std::chrono::milliseconds, std::size_t, int, int>);
 
-    static_assert(!std::is_constructible_v<periodic_task_t,
-        int,
-        callback_t,
-        std::shared_ptr<TestContext>,
-        std::string,
-        std::chrono::milliseconds,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<periodic_task_t, int, callback_t, std::shared_ptr<TestContext>, std::string,
+                  std::chrono::milliseconds, std::size_t>);
 
-    static_assert(!std::is_constructible_v<periodic_task_t,
-        callback_t,
-        callback_t,
-        int,
-        std::string,
-        std::chrono::milliseconds,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<periodic_task_t, callback_t, callback_t, int, std::string,
+                  std::chrono::milliseconds, std::size_t>);
 
-    static_assert(!std::is_constructible_v<periodic_task_t,
-        callback_t,
-        callback_t,
-        std::shared_ptr<TestContext>,
-        std::string,
-        const char*,
-        std::size_t>);
+    static_assert(!std::is_constructible_v<periodic_task_t, callback_t, callback_t, std::shared_ptr<TestContext>,
+                  std::string, const char*, std::size_t>);
 }
 #endif

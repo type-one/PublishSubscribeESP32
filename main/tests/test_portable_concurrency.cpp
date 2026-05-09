@@ -126,7 +126,7 @@ namespace
     }
 
     /**
-    * @brief Verifies unique_function::invoke reports empty_target on default construction.
+     * @brief Verifies unique_function::invoke reports empty_target on default construction.
      */
     TEST(PortableConcurrencyResultTest, UniqueFunctionTryInvokeReportsEmptyTarget)
     {

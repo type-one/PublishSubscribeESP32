@@ -233,7 +233,7 @@ TEST(power, pow)
     }
 
     // Negative numbers
-    for (double base = -20; base < 0; base += 1.0/8)
+    for (double base = -20; base < 0; base += 1.0 / 8)
     {
         // Whole exponents only
         for (double exp = -3; exp < 0; exp++)
@@ -265,7 +265,7 @@ TEST(power, pow_int)
     constexpr auto MAX_ERROR_PERC = 0.01;
 
     // Small numbers
-    for (double base = -1; base <= 1; base += 1.0/8)
+    for (double base = -1; base <= 1; base += 1.0 / 8)
     {
         if (base != 0)
         {
@@ -349,7 +349,6 @@ TEST(power, sqrt_24)
         auto sqrt_fixed = static_cast<double>(sqrt(P(value)));
         EXPECT_TRUE(HasMaximumError(sqrt_fixed, sqrt_real, MAX_ERROR_PERC));
     }
-
 }
 
 /**
