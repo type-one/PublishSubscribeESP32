@@ -57,58 +57,13 @@ Fallback guidance:
 - Avoid `protected:` sections unless explicitly required by the design.
 - For code changes, run formatting and static analysis on modified files before finalizing.
 
-### Processed .clang-format Rules
+### Formatting and Static Analysis Source of Truth
 
-- Base style: WebKit.
-- C++ formatting target: C++20 syntax.
-- Indentation: 4 spaces, no tabs (`UseTab: Never`).
-- Maximum line length: 120 columns.
-- Braces: Allman style.
-- Template declarations: always break.
-- Namespace indentation: All.
-- Case labels are indented.
-- Trailing comments should be aligned with one leading space.
-- Space before assignment operators is required.
-- Keep at most 2 consecutive empty lines.
-- Do not compress short constructs onto one line:
-  - short `if`
-  - short loops
-  - short functions
-
-### Processed .clang-tidy Rules
-
-- Enabled groups:
-  - `clang-diagnostic-*`
-  - `clang-analyzer-*`
-  - `modernize-*`
-  - `performance-*`
-  - `readability-*`
-  - `bugprone-*`
-  - `fuchsia-*`
-  - `cppcoreguidelines-*`
-- Treat all warnings as errors (`WarningsAsErrors: *`).
-- Header-focused analysis filter: `.hpp`.
-- Explicitly disabled checks:
-  - `modernize-use-trailing-return-type`
-  - `modernize-type-traits`
-  - `modernize-use-constraints`
-  - `modernize-use-designated-initializers`
-  - `performance-unnecessary-copy-initialization`
-  - `performance-unnecessary-value-param`
-  - `cppcoreguidelines-avoid-do-while`
-  - `cppcoreguidelines-pro-type-vararg`
-  - `cppcoreguidelines-pro-bounds-array-to-pointer-decay`
-  - `cppcoreguidelines-pro-bounds-pointer-arithmetic`
-  - `cppcoreguidelines-pro-type-reinterpret-cast`
-  - `cppcoreguidelines-init-variables`
-  - `cppcoreguidelines-pro-type-member-init`
-  - `bugprone-suspicious-include`
-  - `fuchsia-default-arguments-calls`
-  - `fuchsia-overloaded-operator`
-  - `readability-function-cognitive-complexity`
-  - `readability-use-concise-preprocessor-directives`
-  - `readability-implicit-bool-conversion`
-  - `readability-convert-member-functions-to-static`
+- Formatting rules are governed by the root `.clang-format` file.
+- Static-analysis rules are governed by the root `.clang-tidy` file.
+- Test code uses a relaxed override in `main/tests/.clang-tidy`; apply that configuration when analyzing files under `main/tests/`.
+- When agents generate, refactor, or fix code, they may run `./format_main.sh` to apply repository formatting consistently.
+- Agents should consult these configuration files directly and must not duplicate or paraphrase their detailed rule lists inside instruction documents.
 
 ## Documentation Notes
 
