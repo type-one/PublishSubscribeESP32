@@ -144,7 +144,8 @@ mapfile -d '' files < <(
     find "$main_dir" \
         \( -type d -name 'build*' -prune \) -o \
         \( -type d -path "$main_dir/tools/freertos" -prune \) -o \
-    \( -type f \( -name '*.cpp' -o -name '*.c' \) -print0 \)
+        \( -type d -path "$main_dir/tests" -prune \) -o \
+        \( -type f \( -name '*.cpp' -o -name '*.c' \) -print0 \)
 )
 
 if [[ ${#files[@]} -eq 0 ]]; then
