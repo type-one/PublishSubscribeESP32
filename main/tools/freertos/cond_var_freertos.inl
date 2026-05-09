@@ -30,16 +30,16 @@ class cond_var
 {
 public:
     cond_var()
-        : sem_(xSemaphoreCreateCounting(static_cast<UBaseType_t>(portMAX_DELAY), 0U))
-        , waiters_(0)
+        : m_sem(xSemaphoreCreateCounting(static_cast<UBaseType_t>(portMAX_DELAY), 0U))
+        , m_waiters(0)
     {
     }
 
     ~cond_var()
     {
-        if (sem_ != nullptr)
+        if (m_sem != nullptr)
         {
-            vSemaphoreDelete(sem_);
+            vSemaphoreDelete(m_sem);
         }
     }
 
@@ -51,19 +51,19 @@ public:
     void notify_one()
     {
         // Only post if at least one waiter is currently blocked/pending.
-        if (waiters_.load(std::memory_order_acquire) > 0)
+        if (m_waiters.load(std::memory_order_acquire) > 0)
         {
-            xSemaphoreGive(sem_);
+            xSemaphoreGive(m_sem);
         }
     }
 
     void notify_all()
     {
         // Wake every waiter currently observed.
-        int n = waiters_.load(std::memory_order_acquire);
+        int n = m_waiters.load(std::memory_order_acquire);
         for (int i = 0; i < n; ++i)
         {
-            xSemaphoreGive(sem_);
+            xSemaphoreGive(m_sem);
         }
     }
 
@@ -76,11 +76,11 @@ public:
     {
         while (!pred())
         {
-            waiters_.fetch_add(1, std::memory_order_acq_rel);
+            m_waiters.fetch_add(1, std::memory_order_acq_rel);
             lock.unlock();
-            xSemaphoreTake(sem_, portMAX_DELAY);
+            xSemaphoreTake(m_sem, portMAX_DELAY);
             lock.lock();
-            waiters_.fetch_sub(1, std::memory_order_acq_rel);
+            m_waiters.fetch_sub(1, std::memory_order_acq_rel);
         }
     }
 
@@ -112,11 +112,11 @@ public:
                 ? pdMS_TO_TICKS(static_cast<uint32_t>(remaining_ms))
                 : static_cast<TickType_t>(1U);
 
-            waiters_.fetch_add(1, std::memory_order_acq_rel);
+            m_waiters.fetch_add(1, std::memory_order_acq_rel);
             lock.unlock();
-            bool signaled = (xSemaphoreTake(sem_, ticks) == pdTRUE);
+            bool signaled = (xSemaphoreTake(m_sem, ticks) == pdTRUE);
             lock.lock();
-            waiters_.fetch_sub(1, std::memory_order_acq_rel);
+            m_waiters.fetch_sub(1, std::memory_order_acq_rel);
 
             if (!signaled && !pred())
             {
@@ -127,8 +127,8 @@ public:
     }
 
 private:
-    SemaphoreHandle_t      sem_;
-    std::atomic<int>       waiters_;
+    SemaphoreHandle_t      m_sem;
+    std::atomic<int>       m_waiters;
 };
 
 } // namespace tools
