@@ -91,3 +91,8 @@ void run_example_allocator_stress();
  * @brief Runs the async processing example.
  */
 void run_example_async_processing();
+
+/**
+ * @brief Runs the time_list example.
+ */
+void run_example_time_list();

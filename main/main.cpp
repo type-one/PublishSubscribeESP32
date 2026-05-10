@@ -70,6 +70,7 @@ void runner()
     run_example_smp();
     run_example_allocator_stress();
     run_example_async_processing();
+    run_example_time_list();
 
 #if defined(USE_MEM_POOL_ALLOCATOR)
     std::printf("Destroy mem pool allocator\n");

@@ -48,6 +48,7 @@ This folder provides:
 | `sync_ring_buffer.hpp` | `sync_ring_buffer<T, ...>` | Thread-safe wrapper around ring buffer semantics. | Builds on ring-buffer logic + synchronization primitives. |
 | `sync_ring_vector.hpp` | `sync_ring_vector<T, ...>` | Thread-safe wrapper around ring vector semantics. | Builds on ring-vector logic + synchronization primitives. |
 | `timer_scheduler.hpp` | `timer_scheduler` facade, timer-related enums/types | Cross-platform timer scheduling abstraction. | Includes `freertos/timer_scheduler_freertos.inl` or `standard/timer_scheduler_std.inl`; implementation parts in `timer_scheduler.cpp`. |
+| `time_list.hpp` | `time_list<TTimestamp, TValue>` | Non-thread-safe chronological list storing `<timestamp, value>` entries using `std::priority_queue` (earliest first). | Intended as a base helper; a synchronized wrapper can be layered on top (e.g., future `sync_time_list`). |
 | `variant_overload.hpp` | `overload<Ts...>` | `std::visit` helper for composing variant visitors. | Utility used by FSM/event-dispatch code. |
 | `worker_task.hpp` | `worker_task<Context>`, `worker_task_executor<Context>` facade | Worker task + executor bridge for scheduling work into worker context. | Includes `freertos/worker_task_freertos.inl` or `standard/worker_task_std.inl`; `is_executor` specialization ties into portable_concurrency. |
 
