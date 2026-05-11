@@ -124,14 +124,14 @@ usbipd list
 ```
 to get the list of USB devices.
 
-Then bind and attach the USB device by typing with the proper `BUSID`
+Then bind and attach the USB device by typing the commands below with the proper `BUSID`:
 
 ```bash
 usbipd bind --busid=<BUSID>
 usbipd attach --wsl --busid=<BUSID>
 ```
 
-Note: Under WSL2 if you got `usbipd: error: Loading vhci_hcd failed.` when launching `usbipd attach --wsl` try `sudo modprobe vhci_hcd` in you linux shell.
+Note: Under WSL2, if you get `usbipd: error: Loading vhci_hcd failed.` when launching `usbipd attach --wsl --busid=<BUSID>`, run `sudo modprobe vhci_hcd` in your Linux shell and retry.
 
 Be sure to `chmod 666 your /dev/ttyUSB0 or /dev/ttyACM0` if you got a flashing error.
 
