@@ -20,6 +20,7 @@ Goodies:
 - simple thread-safe resizeable ring buffer and iterable resizeable ring buffer on top of std::vector
 - simple single producer/single consumer lock-free ring buffer on top of std::array and scalar types/pointers
 - simple single producer/single consumer memory pipe on top of FreeRTOS memory buffer and lock-free ring buffer
+- simple chronological time list helper (thread-safe and non-thread-safe variants) on top of std::priority_queue
 - queuable commands
 - bytepack serialization in C++20 using header-only 3rd party (Faruk Eryilmaz - MIT license)
 - json serialization and deserialization using 3rd party with result-based API in this project (Dave Gamble & Dmitry Pankratov - MIT license)

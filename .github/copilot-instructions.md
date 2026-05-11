@@ -176,6 +176,7 @@ Fallback guidance:
   Use the task and synchronisation abstractions in `main/tools/` instead:
   - `tools::generic_task`, `tools::worker_task`, `tools::periodic_task`, `tools::data_task` for threaded execution.
   - `tools::critical_section` for mutual exclusion.
+  - `tools::sync_time_list` for thread-safe chronological timestamp/value storage.
   - `tools::sync_object` for signalling and waiting.
 - Methods prefixed `isr_` in `main/tools/` are interrupt-safe variants. Only call them from within an actual ISR context.
   The sole exception is Google Test mocks that simulate ISR behaviour: tests may call `isr_` methods directly to exercise interrupt paths.

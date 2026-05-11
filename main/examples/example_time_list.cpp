@@ -66,6 +66,35 @@ namespace
     constexpr const long tick_watchdog = 750L;
     constexpr const long tick_shutdown = 900L;
 
+    constexpr const std::size_t worker_stack_size = 4096U;
+
+    constexpr const int64_t worker_event_offset_sec_a = 3;
+    constexpr const int64_t worker_event_offset_sec_b = 12;
+    constexpr const int64_t worker_event_offset_sec_c = 24;
+    constexpr const int64_t worker_event_offset_sec_d = 48;
+
+    constexpr const int worker_struct_id_a = 10;
+    constexpr const int worker_struct_id_b = 11;
+    constexpr const int worker_struct_id_c = 12;
+    constexpr const int worker_struct_id_d = 13;
+
+    constexpr const float worker_struct_value_a = 12.7F;
+    constexpr const float worker_struct_value_b = 9.4F;
+    constexpr const float worker_struct_value_c = 31.6F;
+    constexpr const float worker_struct_value_d = 42.9F;
+
+    constexpr const int64_t worker_reading_offset_ms_a = 120;
+    constexpr const int64_t worker_reading_offset_ms_b = 260;
+    constexpr const int64_t worker_reading_offset_ms_c = 380;
+    constexpr const int64_t worker_reading_offset_ms_d = 640;
+
+    constexpr const long worker_tick_a = 130L;
+    constexpr const long worker_tick_b = 270L;
+    constexpr const long worker_tick_c = 610L;
+    constexpr const long worker_tick_d = 820L;
+
+    constexpr const int wait_for_worker_ms = 200;
+
     /** @brief Simple sensor reading carrying a device id and a floating-point measurement. */
     struct sensor_reading
     {
@@ -73,6 +102,27 @@ namespace
         float value;
         std::string label;
     };
+
+    struct sync_string_context
+    {
+        tools::sync_time_list<std::chrono::system_clock::time_point, std::string> shared_list;
+        std::chrono::system_clock::time_point base_time;
+    };
+
+    struct sync_struct_context
+    {
+        tools::sync_time_list<std::chrono::steady_clock::time_point, sensor_reading> shared_list;
+        std::chrono::steady_clock::time_point base_time;
+    };
+
+    struct sync_function_context
+    {
+        tools::sync_time_list<long, std::function<void()>> shared_list;
+    };
+
+    using sync_string_worker = tools::worker_task<sync_string_context>;
+    using sync_struct_worker = tools::worker_task<sync_struct_context>;
+    using sync_function_worker = tools::worker_task<sync_function_context>;
 
     /**
      * @brief Demonstrates chronological ordering, top/pop, and empty checks with
@@ -211,6 +261,129 @@ namespace
         std::printf("size after drain: %zu (expect 0)\n", timed_list.size());
     }
 
+    /**
+     * @brief Demonstrates @c sync_time_list with @c system_clock timestamps and string payloads,
+     *        using main-thread + worker-task concurrent producers.
+     */
+    void test_sync_system_clock_string_list_worker_main()
+    {
+        LOG_INFO("-- sync_time_list: system_clock / string (main + worker) --");
+        print_stats();
+
+        auto context = std::make_shared<sync_string_context>();
+        context->base_time = std::chrono::system_clock::now();
+
+        sync_string_worker worker(
+            [](const std::shared_ptr<sync_string_context>&, const std::string&) {},
+            context, "sync_string_worker", worker_stack_size);
+
+        worker.delegate([](const std::shared_ptr<sync_string_context>& local_context, const std::string&)
+        {
+            local_context->shared_list.push(
+                local_context->base_time + std::chrono::seconds(worker_event_offset_sec_b), "Worker Event B - 12s");
+            local_context->shared_list.push(
+                local_context->base_time + std::chrono::seconds(worker_event_offset_sec_d), "Worker Event D - 48s");
+        });
+
+        context->shared_list.push(context->base_time + std::chrono::seconds(worker_event_offset_sec_c),
+            "Main Event C - 24s");
+        context->shared_list.push(context->base_time + std::chrono::seconds(worker_event_offset_sec_a),
+            "Main Event A - 3s");
+
+        tools::sleep_for(wait_for_worker_ms);
+
+        std::printf("size after concurrent push: %zu\n", context->shared_list.size());
+        while (!context->shared_list.empty())
+        {
+            const auto entry = context->shared_list.top_pop();
+            if (entry.has_value())
+            {
+                std::printf("  %s\n", entry->second.c_str());
+            }
+        }
+    }
+
+    /**
+     * @brief Demonstrates @c sync_time_list with @c steady_clock timestamps and struct payloads,
+     *        using main-thread + worker-task concurrent producers.
+     */
+    void test_sync_steady_clock_struct_list_worker_main()
+    {
+        LOG_INFO("-- sync_time_list: steady_clock / struct (main + worker) --");
+        print_stats();
+
+        auto context = std::make_shared<sync_struct_context>();
+        context->base_time = std::chrono::steady_clock::now();
+
+        sync_struct_worker worker(
+            [](const std::shared_ptr<sync_struct_context>&, const std::string&) {},
+            context, "sync_struct_worker", worker_stack_size);
+
+        worker.delegate([](const std::shared_ptr<sync_struct_context>& local_context, const std::string&)
+        {
+            local_context->shared_list.push(local_context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_b),
+                sensor_reading { worker_struct_id_b, worker_struct_value_b, "worker-beta" });
+            local_context->shared_list.push(local_context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_d),
+                sensor_reading { worker_struct_id_d, worker_struct_value_d, "worker-delta" });
+        });
+
+        context->shared_list.push(context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_c),
+            sensor_reading { worker_struct_id_c, worker_struct_value_c, "main-gamma" });
+        context->shared_list.push(context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_a),
+            sensor_reading { worker_struct_id_a, worker_struct_value_a, "main-alpha" });
+
+        tools::sleep_for(wait_for_worker_ms);
+
+        std::printf("size after concurrent push: %zu\n", context->shared_list.size());
+        while (!context->shared_list.empty())
+        {
+            const auto entry = context->shared_list.top_pop();
+            if (entry.has_value())
+            {
+                const auto& reading = entry->second;
+                std::printf("  device=%d  value=%.2f  label=%s\n", reading.device_id,
+                    static_cast<double>(reading.value), reading.label.c_str());
+            }
+        }
+    }
+
+    /**
+     * @brief Demonstrates @c sync_time_list with integral timestamps and function payloads,
+     *        using main-thread + worker-task concurrent producers.
+     */
+    void test_sync_integral_function_list_worker_main()
+    {
+        LOG_INFO("-- sync_time_list: integral / function (main + worker) --");
+        print_stats();
+
+        auto context = std::make_shared<sync_function_context>();
+
+        sync_function_worker worker(
+            [](const std::shared_ptr<sync_function_context>&, const std::string&) {},
+            context, "sync_function_worker", worker_stack_size);
+
+        worker.delegate([](const std::shared_ptr<sync_function_context>& local_context, const std::string&)
+        {
+            local_context->shared_list.push(worker_tick_b, []() { std::printf("  [tick 270] worker sync job B\n"); });
+            local_context->shared_list.push(worker_tick_d, []() { std::printf("  [tick 820] worker sync job D\n"); });
+        });
+
+        context->shared_list.push(worker_tick_c, []() { std::printf("  [tick 610] main sync job C\n"); });
+        context->shared_list.push(worker_tick_a, []() { std::printf("  [tick 130] main sync job A\n"); });
+
+        tools::sleep_for(wait_for_worker_ms);
+
+        std::printf("size after concurrent push: %zu\n", context->shared_list.size());
+        while (!context->shared_list.empty())
+        {
+            const auto entry = context->shared_list.top_pop();
+            if (entry.has_value() && entry->second)
+            {
+                entry->second();
+            }
+        }
+    }
+
 } // namespace
 
 void run_example_time_list()
@@ -218,4 +391,7 @@ void run_example_time_list()
     test_system_clock_string_list();
     test_steady_clock_struct_list();
     test_integral_timestamp_function_list();
+    test_sync_system_clock_string_list_worker_main();
+    test_sync_steady_clock_struct_list_worker_main();
+    test_sync_integral_function_list_worker_main();
 }
