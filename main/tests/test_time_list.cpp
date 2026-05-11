@@ -129,13 +129,13 @@ TEST_F(TimeListIntTest, ChronologicalOrderIntTimestamp)
     tl->push(300L, "three hundred");
     tl->push(100L, "one hundred");
     tl->push(200L, "two hundred");
-    tl->push(50L,  "fifty");
+    tl->push(50L, "fifty");
     tl->push(400L, "four hundred");
 
     constexpr const std::size_t expected_count = 5U;
     ASSERT_EQ(tl->size(), expected_count);
 
-    const std::vector<long> expected_order = {50L, 100L, 200L, 300L, 400L};
+    const std::vector<long> expected_order = { 50L, 100L, 200L, 300L, 400L };
     std::vector<long> actual_order;
 
     while (!tl->empty())
@@ -287,7 +287,7 @@ TEST_F(TimeListChronoTest, ChronologicalOrderChronoTimestamp)
     constexpr const std::size_t expected_count = 5U;
     ASSERT_EQ(tl->size(), expected_count);
 
-    const std::vector<int> expected_values = {1, 2, 3, 4, 5};
+    const std::vector<int> expected_values = { 1, 2, 3, 4, 5 };
     std::vector<int> actual_values;
 
     while (!tl->empty())
@@ -373,30 +373,33 @@ TEST_F(TimeListCallableTest, CallablesInvokedInChronologicalOrder)
         entry->second();
     }
 
-    const std::vector<int> expected = {1, 2, 3, 4};
+    const std::vector<int> expected = { 1, 2, 3, 4 };
     EXPECT_EQ(invocation_order, expected);
 }
 
 /** @brief A callable at the earliest tick fires before others regardless of push order. */
 TEST_F(TimeListCallableTest, EarliestCallableFiresFirst)
 {
-    std::atomic<int> first_fired {0};
+    std::atomic<int> first_fired { 0 };
 
-    tl->push(500L, [&first_fired]()
-    {
-        int expected_zero = 0;
-        first_fired.compare_exchange_strong(expected_zero, 500);
-    });
-    tl->push(100L, [&first_fired]()
-    {
-        int expected_zero = 0;
-        first_fired.compare_exchange_strong(expected_zero, 100);
-    });
-    tl->push(300L, [&first_fired]()
-    {
-        int expected_zero = 0;
-        first_fired.compare_exchange_strong(expected_zero, 300);
-    });
+    tl->push(500L,
+        [&first_fired]()
+        {
+            int expected_zero = 0;
+            first_fired.compare_exchange_strong(expected_zero, 500);
+        });
+    tl->push(100L,
+        [&first_fired]()
+        {
+            int expected_zero = 0;
+            first_fired.compare_exchange_strong(expected_zero, 100);
+        });
+    tl->push(300L,
+        [&first_fired]()
+        {
+            int expected_zero = 0;
+            first_fired.compare_exchange_strong(expected_zero, 300);
+        });
 
     // Only fire the very first entry (earliest tick = 100).
     const auto entry = tl->top_pop();

@@ -139,15 +139,15 @@ namespace
 
         // Push several readings with mixed timestamps.
         timed_list.push(base_time + std::chrono::milliseconds(reading_offset_ms_c),
-            sensor_reading{sensor_id_humidity, value_humidity, "humidity"});
+            sensor_reading { sensor_id_humidity, value_humidity, "humidity" });
         timed_list.push(base_time + std::chrono::milliseconds(reading_offset_ms_a),
-            sensor_reading{sensor_id_temperature, value_temperature, "temperature"});
+            sensor_reading { sensor_id_temperature, value_temperature, "temperature" });
         timed_list.push(base_time + std::chrono::milliseconds(reading_offset_ms_e),
-            sensor_reading{sensor_id_pressure, value_pressure, "pressure"});
+            sensor_reading { sensor_id_pressure, value_pressure, "pressure" });
         timed_list.push(base_time + std::chrono::milliseconds(reading_offset_ms_b),
-            sensor_reading{sensor_id_voltage, value_voltage, "voltage"});
+            sensor_reading { sensor_id_voltage, value_voltage, "voltage" });
         timed_list.push(base_time + std::chrono::milliseconds(reading_offset_ms_d),
-            sensor_reading{sensor_id_current, value_current, "current"});
+            sensor_reading { sensor_id_current, value_current, "current" });
 
         std::printf("size after push: %zu (expect 5)\n", timed_list.size());
 
@@ -159,8 +159,8 @@ namespace
             if (entry.has_value())
             {
                 const auto& reading = entry->second;
-                std::printf("  device=%d  value=%.2f  label=%s\n",
-                    reading.device_id, static_cast<double>(reading.value), reading.label.c_str());
+                std::printf("  device=%d  value=%.2f  label=%s\n", reading.device_id,
+                    static_cast<double>(reading.value), reading.label.c_str());
             }
         }
 
