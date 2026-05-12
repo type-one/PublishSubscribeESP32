@@ -33,6 +33,12 @@
 #include "example_common.hpp"
 #include "examples.hpp"
 
+#include <functional>
+#include <tuple>
+
+#include "tools/async_observer.hpp"
+#include "tools/sync_priority_queue.hpp"
+
 namespace
 {
     /** @brief Demonstrates basic push/pop operations and boundary behaviour (full/empty) of @c
@@ -587,6 +593,169 @@ namespace
         str_dict.remove_collection(std::vector<std::string> { "key-range-1", "key-brace-1" });
         str_dict.remove_collection({ "key-range-2", "key-brace-2" });
     }
+
+    /** @brief Demonstrates basic sync_priority_queue operations with min-heap (default) behavior. */
+    void test_sync_priority_queue()
+    {
+        LOG_INFO("-- sync priority queue (min-heap) --");
+        print_stats();
+
+        tools::sync_priority_queue<int> min_heap;
+
+        // Push elements
+        constexpr int test_val_5 = 5;
+        constexpr int test_val_2 = 2;
+        constexpr int test_val_8 = 8;
+        constexpr int test_val_1 = 1;
+        constexpr int test_val_9 = 9;
+        min_heap.push(test_val_5);
+        min_heap.push(test_val_2);
+        min_heap.push(test_val_8);
+        min_heap.push(test_val_1);
+        min_heap.push(test_val_9);
+
+        // Pop all elements (should come out in ascending order)
+        while (!min_heap.empty())
+        {
+            auto elem = min_heap.top_pop();
+            if (elem.has_value())
+            {
+                std::printf("%d\n", elem.value());
+            }
+        }
+    }
+
+    /** @brief Demonstrates max-heap using sync_max_priority_queue convenience alias. */
+    void test_sync_max_priority_queue()
+    {
+        LOG_INFO("-- sync priority queue (max-heap) --");
+        print_stats();
+
+        tools::sync_max_priority_queue<int> max_heap;
+
+        // Push elements
+        constexpr int test_max_5 = 5;
+        constexpr int test_max_2 = 2;
+        constexpr int test_max_8 = 8;
+        constexpr int test_max_1 = 1;
+        constexpr int test_max_9 = 9;
+        max_heap.push(test_max_5);
+        max_heap.push(test_max_2);
+        max_heap.push(test_max_8);
+        max_heap.push(test_max_1);
+        max_heap.push(test_max_9);
+
+        // Pop all elements (should come out in descending order)
+        while (!max_heap.empty())
+        {
+            auto elem = max_heap.top_pop();
+            if (elem.has_value())
+            {
+                std::printf("%d\n", elem.value());
+            }
+        }
+    }
+
+    /** @brief Demonstrates sync_priority_queue with custom struct type. */
+    struct priority_task
+    {
+        int priority;
+        std::string name;
+
+        priority_task() = default;
+        priority_task(int priority_val, std::string name_val) // NOLINT(modernize-pass-by-value)
+            : priority(priority_val)
+            , name(std::move(name_val))
+        {
+        }
+
+        bool operator<(const priority_task& other) const
+        {
+            return priority < other.priority;
+        }
+
+        bool operator>(const priority_task& other) const
+        {
+            return priority > other.priority;
+        }
+    };
+
+    /** @brief Demonstrates sync_priority_queue with custom struct and custom comparator. */
+    void test_sync_priority_queue_custom_type()
+    {
+        LOG_INFO("-- sync priority queue with custom type --");
+        print_stats();
+
+        tools::sync_priority_queue<priority_task, std::less<>> task_queue; // NOLINT(modernize-use-transparent-functors)
+
+        task_queue.push(priority_task(3, "Low priority"));
+        task_queue.push(priority_task(1, "High priority"));
+        task_queue.push(priority_task(2, "Medium priority"));
+
+        while (!task_queue.empty())
+        {
+            auto task_item = task_queue.top_pop();
+            if (task_item.has_value())
+            {
+                std::printf("[%d] %s\n", task_item.value().priority, task_item.value().name.c_str());
+            }
+        }
+    }
+
+    /** @brief Event payload type for async_observer priority queue example. */
+    struct priority_event_data
+    {
+        int priority;
+        std::string message;
+
+        priority_event_data() = default;
+        priority_event_data(int priority_val, std::string msg) // NOLINT(modernize-pass-by-value)
+            : priority(priority_val)
+            , message(std::move(msg))
+        {
+        }
+
+        bool operator<(const priority_event_data& other) const
+        {
+            return priority < other.priority;
+        }
+    };
+
+    /** @brief Topic enum for priority queue async_observer example. */
+    enum class priority_event_topic : std::uint8_t
+    {
+        urgent,
+        normal,
+        low
+    };
+
+    /** @brief Wrapper template for sync_priority_queue to work with async_observer template template parameters. */
+    template <typename T>
+    using priority_queue_observer = tools::sync_priority_queue<T>;
+
+    /** @brief Demonstrates transparent integration of sync_priority_queue with async_observer. */
+    void test_sync_priority_queue_with_async_observer()
+    {
+        LOG_INFO("-- sync priority queue with async_observer --");
+        print_stats();
+
+        // Create async observer with sync_priority_queue - no API changes needed!
+        tools::async_observer<priority_event_topic, priority_event_data, priority_queue_observer> observer;
+
+        // Simulate receiving events out of order
+        observer.inform(priority_event_topic::normal, priority_event_data(2, "Process data"), "worker");
+        observer.inform(priority_event_topic::urgent, priority_event_data(0, "Critical error!"), "system");
+        observer.inform(priority_event_topic::normal, priority_event_data(1, "More data"), "worker");
+
+        // Pop all events - they come out in priority order
+        auto events = observer.pop_all_events();
+        std::printf("Total events: %zu\n", events.size());
+
+        for (const auto& evt : events)
+        {
+            std::printf("  Priority: %d, Message: %s\n", std::get<1>(evt).priority, std::get<1>(evt).message.c_str());
+        }
+    }
 } // namespace
 
 void run_example_sync_container()
@@ -606,4 +775,9 @@ void run_example_sync_container()
     test_sync_queue_perfect_forwarding();
     // Finish with synchronized dictionary CRUD and collection operations.
     test_sync_dictionary();
+    // Demonstrate priority queue variants and integration with async_observer.
+    test_sync_priority_queue();
+    test_sync_max_priority_queue();
+    test_sync_priority_queue_custom_type();
+    test_sync_priority_queue_with_async_observer();
 }

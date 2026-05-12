@@ -44,6 +44,7 @@ This folder provides:
 | `sync_dictionary.hpp` | `sync_dictionary<Key, Value, ...>` | Thread-safe dictionary/map wrapper with range helpers. | Uses `critical_section` and expected-style error/status patterns. |
 | `sync_object.hpp` | `sync_object` facade | Cross-platform signaling/wait synchronization object. | Includes `freertos/sync_object_freertos.inl` or `standard/sync_object_std.inl`; out-of-line parts in `sync_object.cpp`. |
 | `sync_observer.hpp` | `sync_observer<Topic, Evt>`, `sync_subject<Topic, Evt>` | Synchronous publish/subscribe observer pattern implementation. | Core event bus primitive used by async observer and app-level hubs. |
+| `sync_priority_queue.hpp` | `sync_priority_queue<T, Compare>`, `sync_max_priority_queue<T>` | Thread-safe priority queue with configurable comparator; transparent integration with `async_observer`. | Uses `critical_section`; default comparator is `std::less<T>` for min-heap; template alias for max-heap convenience. |
 | `sync_queue.hpp` | `sync_queue<T, ...>` | Thread-safe queue with ISR-safe variants and batch operations. | Uses `critical_section`; complements ring-based containers. |
 | `sync_ring_buffer.hpp` | `sync_ring_buffer<T, ...>` | Thread-safe wrapper around ring buffer semantics. | Builds on ring-buffer logic + synchronization primitives. |
 | `sync_ring_vector.hpp` | `sync_ring_vector<T, ...>` | Thread-safe wrapper around ring vector semantics. | Builds on ring-vector logic + synchronization primitives. |
@@ -97,7 +98,8 @@ These files are paired implementations of the same abstractions.
 4. Container layer:
    `ring_buffer` / `ring_vector` / `lock_free_ring_buffer` are storage cores.
 5. Synchronized container layer:
-   `sync_queue`, `sync_ring_buffer`, `sync_ring_vector`, `sync_dictionary`, `histogram` wrap storage with locks and ISR-safe variants.
+   `sync_queue`, `sync_priority_queue`, `sync_ring_buffer`, `sync_ring_vector`, `sync_dictionary`, `histogram` wrap storage with locks and ISR-safe variants.
+   All support transparent integration with `async_observer` and `worker_task` via template parameters.
 6. Eventing layer:
    `sync_subject` + `sync_observer` provide pub/sub; `async_observer` adds asynchronous handling.
 7. Utility layer:
