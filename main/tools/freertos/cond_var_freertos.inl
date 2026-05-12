@@ -20,13 +20,15 @@
 #include <atomic>
 #include <chrono>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
+#include "tools/non_copyable.hpp"
 
 namespace tools
 {
 
-    class cond_var
+    class cond_var : public non_copyable // NOLINT inherits from non copyable and non movable
     {
     public:
         cond_var()
@@ -43,11 +45,6 @@ namespace tools
             }
         }
 
-        cond_var(const cond_var&) = delete;
-        cond_var& operator=(const cond_var&) = delete;
-        cond_var(cond_var&&) = delete;
-        cond_var& operator=(cond_var&&) = delete;
-
         void notify_one()
         {
             // Only post if at least one waiter is currently blocked/pending.
@@ -60,8 +57,8 @@ namespace tools
         void notify_all()
         {
             // Wake every waiter currently observed.
-            int n = m_waiters.load(std::memory_order_acquire);
-            for (int i = 0; i < n; ++i)
+            const int num_waiters = m_waiters.load(std::memory_order_acquire);
+            for (int i = 0; i < num_waiters; ++i)
             {
                 xSemaphoreGive(m_sem);
             }

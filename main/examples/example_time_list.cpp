@@ -273,22 +273,22 @@ namespace
         auto context = std::make_shared<sync_string_context>();
         context->base_time = std::chrono::system_clock::now();
 
-        sync_string_worker worker(
-            [](const std::shared_ptr<sync_string_context>&, const std::string&) {},
-            context, "sync_string_worker", worker_stack_size);
+        sync_string_worker worker([](const std::shared_ptr<sync_string_context>&, const std::string&) {}, context,
+            "sync_string_worker", worker_stack_size);
 
-        worker.delegate([](const std::shared_ptr<sync_string_context>& local_context, const std::string&)
-        {
-            local_context->shared_list.push(
-                local_context->base_time + std::chrono::seconds(worker_event_offset_sec_b), "Worker Event B - 12s");
-            local_context->shared_list.push(
-                local_context->base_time + std::chrono::seconds(worker_event_offset_sec_d), "Worker Event D - 48s");
-        });
+        worker.delegate(
+            [](const std::shared_ptr<sync_string_context>& local_context, const std::string&)
+            {
+                local_context->shared_list.push(
+                    local_context->base_time + std::chrono::seconds(worker_event_offset_sec_b), "Worker Event B - 12s");
+                local_context->shared_list.push(
+                    local_context->base_time + std::chrono::seconds(worker_event_offset_sec_d), "Worker Event D - 48s");
+            });
 
-        context->shared_list.push(context->base_time + std::chrono::seconds(worker_event_offset_sec_c),
-            "Main Event C - 24s");
-        context->shared_list.push(context->base_time + std::chrono::seconds(worker_event_offset_sec_a),
-            "Main Event A - 3s");
+        context->shared_list.push(
+            context->base_time + std::chrono::seconds(worker_event_offset_sec_c), "Main Event C - 24s");
+        context->shared_list.push(
+            context->base_time + std::chrono::seconds(worker_event_offset_sec_a), "Main Event A - 3s");
 
         tools::sleep_for(wait_for_worker_ms);
 
@@ -315,17 +315,19 @@ namespace
         auto context = std::make_shared<sync_struct_context>();
         context->base_time = std::chrono::steady_clock::now();
 
-        sync_struct_worker worker(
-            [](const std::shared_ptr<sync_struct_context>&, const std::string&) {},
-            context, "sync_struct_worker", worker_stack_size);
+        sync_struct_worker worker([](const std::shared_ptr<sync_struct_context>&, const std::string&) {}, context,
+            "sync_struct_worker", worker_stack_size);
 
-        worker.delegate([](const std::shared_ptr<sync_struct_context>& local_context, const std::string&)
-        {
-            local_context->shared_list.push(local_context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_b),
-                sensor_reading { worker_struct_id_b, worker_struct_value_b, "worker-beta" });
-            local_context->shared_list.push(local_context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_d),
-                sensor_reading { worker_struct_id_d, worker_struct_value_d, "worker-delta" });
-        });
+        worker.delegate(
+            [](const std::shared_ptr<sync_struct_context>& local_context, const std::string&)
+            {
+                local_context->shared_list.push(
+                    local_context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_b),
+                    sensor_reading { worker_struct_id_b, worker_struct_value_b, "worker-beta" });
+                local_context->shared_list.push(
+                    local_context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_d),
+                    sensor_reading { worker_struct_id_d, worker_struct_value_d, "worker-delta" });
+            });
 
         context->shared_list.push(context->base_time + std::chrono::milliseconds(worker_reading_offset_ms_c),
             sensor_reading { worker_struct_id_c, worker_struct_value_c, "main-gamma" });
@@ -358,15 +360,17 @@ namespace
 
         auto context = std::make_shared<sync_function_context>();
 
-        sync_function_worker worker(
-            [](const std::shared_ptr<sync_function_context>&, const std::string&) {},
-            context, "sync_function_worker", worker_stack_size);
+        sync_function_worker worker([](const std::shared_ptr<sync_function_context>&, const std::string&) {}, context,
+            "sync_function_worker", worker_stack_size);
 
-        worker.delegate([](const std::shared_ptr<sync_function_context>& local_context, const std::string&)
-        {
-            local_context->shared_list.push(worker_tick_b, []() { std::printf("  [tick 270] worker sync job B\n"); });
-            local_context->shared_list.push(worker_tick_d, []() { std::printf("  [tick 820] worker sync job D\n"); });
-        });
+        worker.delegate(
+            [](const std::shared_ptr<sync_function_context>& local_context, const std::string&)
+            {
+                local_context->shared_list.push(
+                    worker_tick_b, []() { std::printf("  [tick 270] worker sync job B\n"); });
+                local_context->shared_list.push(
+                    worker_tick_d, []() { std::printf("  [tick 820] worker sync job D\n"); });
+            });
 
         context->shared_list.push(worker_tick_c, []() { std::printf("  [tick 610] main sync job C\n"); });
         context->shared_list.push(worker_tick_a, []() { std::printf("  [tick 130] main sync job A\n"); });
