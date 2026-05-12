@@ -30,22 +30,24 @@
  * @date 2026-05-10
  */
 
+#include <cstdint>
+
 #include "example_common.hpp"
 #include "examples.hpp"
 
 namespace
 {
-    constexpr const int64_t event_offset_sec_a = 5;
-    constexpr const int64_t event_offset_sec_b = 10;
-    constexpr const int64_t event_offset_sec_c = 20;
-    constexpr const int64_t event_offset_sec_d = 30;
-    constexpr const int64_t event_offset_sec_e = 60;
+    constexpr const std::int64_t event_offset_sec_a = 5;
+    constexpr const std::int64_t event_offset_sec_b = 10;
+    constexpr const std::int64_t event_offset_sec_c = 20;
+    constexpr const std::int64_t event_offset_sec_d = 30;
+    constexpr const std::int64_t event_offset_sec_e = 60;
 
-    constexpr const int64_t reading_offset_ms_a = 100;
-    constexpr const int64_t reading_offset_ms_b = 200;
-    constexpr const int64_t reading_offset_ms_c = 400;
-    constexpr const int64_t reading_offset_ms_d = 550;
-    constexpr const int64_t reading_offset_ms_e = 700;
+    constexpr const std::int64_t reading_offset_ms_a = 100;
+    constexpr const std::int64_t reading_offset_ms_b = 200;
+    constexpr const std::int64_t reading_offset_ms_c = 400;
+    constexpr const std::int64_t reading_offset_ms_d = 550;
+    constexpr const std::int64_t reading_offset_ms_e = 700;
 
     constexpr const int sensor_id_temperature = 1;
     constexpr const int sensor_id_voltage = 2;
@@ -83,10 +85,10 @@ namespace
     constexpr const float worker_struct_value_c = 31.6F;
     constexpr const float worker_struct_value_d = 42.9F;
 
-    constexpr const int64_t worker_reading_offset_ms_a = 120;
-    constexpr const int64_t worker_reading_offset_ms_b = 260;
-    constexpr const int64_t worker_reading_offset_ms_c = 380;
-    constexpr const int64_t worker_reading_offset_ms_d = 640;
+    constexpr const std::int64_t worker_reading_offset_ms_a = 120;
+    constexpr const std::int64_t worker_reading_offset_ms_b = 260;
+    constexpr const std::int64_t worker_reading_offset_ms_c = 380;
+    constexpr const std::int64_t worker_reading_offset_ms_d = 640;
 
     constexpr const long worker_tick_a = 130L;
     constexpr const long worker_tick_b = 270L;
