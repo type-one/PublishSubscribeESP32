@@ -8,6 +8,12 @@
 
 #include "common.hpp"
 
+#if (defined(_MSVC_LANG) && (_MSVC_LANG >= 202302L)) || (__cplusplus >= 202302L)
+#define FPM_TEST_CXX23_OR_NEWER 1
+#else
+#define FPM_TEST_CXX23_OR_NEWER 0
+#endif
+
 template <typename T>
 class customizations : public ::testing::Test
 {
@@ -195,8 +201,10 @@ TYPED_TEST(customizations, numeric_limits)
     EXPECT_EQ(L::has_infinity, false);
     EXPECT_EQ(L::has_quiet_NaN, false);
     EXPECT_EQ(L::has_signaling_NaN, false);
+#if !FPM_TEST_CXX23_OR_NEWER
     EXPECT_EQ(L::has_denorm, std::denorm_absent);
     EXPECT_EQ(L::has_denorm_loss, false);
+#endif
     EXPECT_EQ(L::round_style, std::round_to_nearest);
     EXPECT_EQ(L::is_iec559, false);
     EXPECT_EQ(L::is_bounded, true);
@@ -219,6 +227,8 @@ TYPED_TEST(customizations, numeric_limits)
     EXPECT_EQ(L::round_error(), TypeParam(0.5));
     EXPECT_EQ(L::denorm_min(), TL::min());
 }
+
+#undef FPM_TEST_CXX23_OR_NEWER
 
 // Verify that a a type with a single integral bit works correctly
 /**

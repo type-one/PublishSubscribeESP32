@@ -42,13 +42,12 @@ namespace pco
      * @return Future containing winner index and preserved handle tuple.
      */
     template <typename... Futures>
-    std::enable_if_t<detail::are_result_handles<Futures...>::value,
+    std::enable_if_t<(sizeof...(Futures) > 0) && detail::are_result_handles<Futures...>::value,
         future_result<when_any_result<std::tuple<std::decay_t<Futures>...>>,
-            typename std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>::error_type>>
+            detail::first_result_error_type_t<Futures...>>>
     when_any(Futures&&... futures)
     {
-        using first_future_t = std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>;
-        using error_t = typename first_future_t::error_type;
+        using error_t = detail::first_result_error_type_t<Futures...>;
         using futures_tuple_t = std::tuple<std::decay_t<Futures>...>;
         using any_result_t = when_any_result<futures_tuple_t>;
 

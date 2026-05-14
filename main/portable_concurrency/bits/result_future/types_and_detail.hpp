@@ -322,6 +322,59 @@ namespace pco
         };
 
         /**
+         * @brief Extracts the error type from the first result-handle type in a pack.
+         * @tparam T Pack of result-handle types.
+         */
+        /**
+         * @brief Extracts the error type from a candidate result-handle type when available.
+         * @tparam T Candidate type.
+         * @tparam Unused SFINAE hook.
+         */
+        template <typename T, typename = void>
+        struct result_error_type_of
+        {
+            using type = result_error;
+        };
+
+        /**
+         * @brief Specialization for types that expose an `error_type` member.
+         * @tparam T Candidate type.
+         */
+        template <typename T>
+        struct result_error_type_of<T, std::void_t<typename std::decay_t<T>::error_type>>
+        {
+            using type = typename std::decay_t<T>::error_type;
+        };
+
+        /**
+         * @brief Extracts the error type from the first result-handle type in a pack.
+         * @tparam T Pack of result-handle types.
+         */
+        template <typename... T>
+        struct first_result_error_type
+        {
+            using type = result_error;
+        };
+
+        /**
+         * @brief Specialization for a non-empty pack of result-handle types.
+         * @tparam T0 First result-handle type.
+         * @tparam T Remaining result-handle types.
+         */
+        template <typename T0, typename... T>
+        struct first_result_error_type<T0, T...>
+        {
+            using type = typename result_error_type_of<T0>::type;
+        };
+
+        /**
+         * @brief Convenience alias for the first error type in a pack.
+         * @tparam T Pack of result-handle types.
+         */
+        template <typename... T>
+        using first_result_error_type_t = typename first_result_error_type<T...>::type;
+
+        /**
          * @brief Maps result handle type to underlying value type.
          * @tparam R Raw or wrapped result type.
          */

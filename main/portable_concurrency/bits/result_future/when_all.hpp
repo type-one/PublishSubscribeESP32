@@ -42,13 +42,12 @@ namespace pco
      * @return Future containing a tuple of each input future result_type.
      */
     template <typename... Futures>
-    std::enable_if_t<detail::are_result_futures<Futures...>::value,
+    std::enable_if_t<(sizeof...(Futures) > 0) && detail::are_result_futures<Futures...>::value,
         future_result<std::tuple<typename std::decay_t<Futures>::result_type...>,
-            typename std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>::error_type>>
+            detail::first_result_error_type_t<Futures...>>>
     when_all(Futures&&... futures)
     {
-        using first_future_t = std::decay_t<std::tuple_element_t<0, std::tuple<Futures...>>>;
-        using error_t = typename first_future_t::error_type;
+        using error_t = detail::first_result_error_type_t<Futures...>;
 
         static_assert((std::is_same<error_t, typename std::decay_t<Futures>::error_type>::value && ...),
             "All futures passed to when_all must share the same error type");
@@ -118,13 +117,12 @@ namespace pco
      * @return Future containing a tuple with the input shared handles.
      */
     template <typename... SharedResults>
-    std::enable_if_t<detail::are_shared_results<SharedResults...>::value,
+    std::enable_if_t<(sizeof...(SharedResults) > 0) && detail::are_shared_results<SharedResults...>::value,
         future_result<std::tuple<std::decay_t<SharedResults>...>,
-            typename std::decay_t<std::tuple_element_t<0, std::tuple<SharedResults...>>>::error_type>>
+            detail::first_result_error_type_t<SharedResults...>>>
     when_all(SharedResults&&... shared_results)
     {
-        using first_shared_t = std::decay_t<std::tuple_element_t<0, std::tuple<SharedResults...>>>;
-        using error_t = typename first_shared_t::error_type;
+        using error_t = detail::first_result_error_type_t<SharedResults...>;
         using shared_tuple_t = std::tuple<std::decay_t<SharedResults>...>;
 
         static_assert((std::is_same<error_t, typename std::decay_t<SharedResults>::error_type>::value && ...),
@@ -192,14 +190,13 @@ namespace pco
      * @return Future containing a tuple with the input handles.
      */
     template <typename... Handles>
-    std::enable_if_t<detail::are_result_handles<Handles...>::value && !detail::are_result_futures<Handles...>::value
-            && !detail::are_shared_results<Handles...>::value,
+    std::enable_if_t<(sizeof...(Handles) > 0) && detail::are_result_handles<Handles...>::value
+            && !detail::are_result_futures<Handles...>::value && !detail::are_shared_results<Handles...>::value,
         future_result<std::tuple<std::decay_t<Handles>...>,
-            typename std::decay_t<std::tuple_element_t<0, std::tuple<Handles...>>>::error_type>>
+            detail::first_result_error_type_t<Handles...>>>
     when_all(Handles&&... handles)
     {
-        using first_handle_t = std::decay_t<std::tuple_element_t<0, std::tuple<Handles...>>>;
-        using error_t = typename first_handle_t::error_type;
+        using error_t = detail::first_result_error_type_t<Handles...>;
         using handles_tuple_t = std::tuple<std::decay_t<Handles>...>;
 
         static_assert((std::is_same<error_t, typename std::decay_t<Handles>::error_type>::value && ...),
