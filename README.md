@@ -2,7 +2,7 @@
 
 Agnostic, Lightweight and Portable Publish-Subscribe Helper adapted for FreeRTOS/ESP32
 
-- written in C++17/C++20 using templated classes
+- written in C++17/C++20/C++23 using templated classes
 - synchronous/asynchronous observer
 - topic subscription
 - buildable on FreeRTOS/ESP32 and Linux/Windows
@@ -64,11 +64,13 @@ Publications:
 
 ## What
 
-Test program written in C++17/C++20 to implement a simple Publish/Subscribe pattern.
+Test program written in C++17/C++20/C++23 to implement a simple Publish/Subscribe pattern.
 
 The code is portable and lightweight.
 
 C++20 is only required for the bytepack test in main.cpp
+C++20 enables the usage of coroutines in the async workers and enables concepts
+C++23 enables the usage of std::flap_map and native std::expected
 
 ## Why
 

@@ -78,7 +78,10 @@ endif()
 # The ${ANDROID_ABI} variable is the way to go in Android, where it assumes values like arm64-v8a, x86_64 and so on
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 20)
+#set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
+#set(CMAKE_CXX_STANDARD 20)
+#set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(CMAKE_C_STANDARD 11)
@@ -124,8 +127,14 @@ endif()
 # https://developer.android.com/ndk/guides/abis
 # 
 
-if(CMAKE_CXX_STANDARD GREATER_EQUAL 20)
+if(CMAKE_CXX_STANDARD GREATER_EQUAL 26)
+    message(STATUS "C++26 or newer is supported/enabled")
+elseif(CMAKE_CXX_STANDARD GREATER_EQUAL 23)
+    message(STATUS "C++23 or newer is supported/enabled")
+elseif(CMAKE_CXX_STANDARD GREATER_EQUAL 20)
     message(STATUS "C++20 or newer is supported/enabled")
+elseif(CMAKE_CXX_STANDARD GREATER_EQUAL 17)
+    message(STATUS "C++17 or newer is supported/enabled")    
 endif()
 
 if(WIN32)
