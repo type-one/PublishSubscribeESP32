@@ -52,6 +52,12 @@
 #include <utility>
 #include <vector>
 
+#if ((__cplusplus >= 202302L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202302L))) && defined(__has_include)
+#if __has_include(<flat_map>)
+#include <flat_map>
+#endif
+#endif
+
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 #include <ranges>
 #endif
@@ -459,6 +465,41 @@ TYPED_TEST(SyncDictionaryTest, AddUnorderedCollectionStringKey)
     EXPECT_TRUE(this->dict_string_key->find("two").has_value());
     EXPECT_EQ(this->dict_string_key->find("two").value(), static_cast<TypeParam>(2));
 }
+
+#if defined(__cpp_lib_flat_map) && (__cpp_lib_flat_map >= 202207L)
+/**
+ * @brief Test case for adding a flat_map collection with integer keys using add_range.
+ *
+ * @tparam TypeParam The type of the values in the dictionary.
+ */
+TYPED_TEST(SyncDictionaryTest, AddFlatMapRangeIntKey)
+{
+    std::flat_map<int, TypeParam> collection = { { 1, static_cast<TypeParam>(1) }, { 2, static_cast<TypeParam>(2) } };
+    this->dict_int_key->add_range(collection);
+
+    EXPECT_TRUE(this->dict_int_key->find(1).has_value());
+    EXPECT_EQ(this->dict_int_key->find(1).value(), static_cast<TypeParam>(1));
+    EXPECT_TRUE(this->dict_int_key->find(2).has_value());
+    EXPECT_EQ(this->dict_int_key->find(2).value(), static_cast<TypeParam>(2));
+}
+
+/**
+ * @brief Test case for adding a flat_map collection with string keys using add_collection.
+ *
+ * @tparam TypeParam The type of the values in the dictionary.
+ */
+TYPED_TEST(SyncDictionaryTest, AddFlatMapCollectionStringKey)
+{
+    std::flat_map<std::string, TypeParam> collection
+        = { { "one", static_cast<TypeParam>(1) }, { "two", static_cast<TypeParam>(2) } };
+    this->dict_string_key->add_collection(collection);
+
+    EXPECT_TRUE(this->dict_string_key->find("one").has_value());
+    EXPECT_EQ(this->dict_string_key->find("one").value(), static_cast<TypeParam>(1));
+    EXPECT_TRUE(this->dict_string_key->find("two").has_value());
+    EXPECT_EQ(this->dict_string_key->find("two").value(), static_cast<TypeParam>(2));
+}
+#endif
 
 
 /**
@@ -952,6 +993,48 @@ TEST(SyncDictionaryRangeTest, RemoveCollectionFromRange)
     EXPECT_TRUE(str_dict.empty());
 }
 
+/**
+ * @brief Verifies the internal associative container can be configured to std::unordered_map.
+ */
+TEST(SyncDictionaryContainerTypeTest, SupportsConfiguredUnorderedMap)
+{
+    using dict_t = tools::sync_dictionary<int, std::string, std::unordered_map<int, std::string>>;
+
+    dict_t dictionary;
+    dictionary.add(1, "one");
+    dictionary.add(2, "two");
+
+    auto snapshot = dictionary.snapshot();
+    static_assert(std::is_same<decltype(snapshot), std::unordered_map<int, std::string>>::value,
+        "snapshot type must follow configured dictionary container");
+
+    ASSERT_EQ(snapshot.size(), 2U);
+    ASSERT_TRUE(dictionary.contains(1));
+    ASSERT_TRUE(dictionary.contains(2));
+}
+
+#if defined(__cpp_lib_flat_map) && (__cpp_lib_flat_map >= 202207L)
+/**
+ * @brief Verifies the internal associative container can be configured to std::flat_map when available.
+ */
+TEST(SyncDictionaryContainerTypeTest, SupportsConfiguredFlatMap)
+{
+    using dict_t = tools::sync_dictionary<int, std::string, std::flat_map<int, std::string>>;
+
+    dict_t dictionary;
+    dictionary.add(3, "three");
+    dictionary.add(4, "four");
+
+    auto snapshot = dictionary.snapshot();
+    static_assert(std::is_same<decltype(snapshot), std::flat_map<int, std::string>>::value,
+        "snapshot type must follow configured dictionary container");
+
+    ASSERT_EQ(snapshot.size(), 2U);
+    ASSERT_TRUE(dictionary.contains(3));
+    ASSERT_TRUE(dictionary.contains(4));
+}
+#endif
+
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 /**
  * @brief Verifies C++20 requires constraints for sync_dictionary add forwarding API.
@@ -971,6 +1054,24 @@ TEST(SyncDictionaryPerfectForwardingTest, Cpp20RequiresConstraints)
 
     SUCCEED();
 }
+
+#if defined(__cpp_lib_flat_map) && (__cpp_lib_flat_map >= 202207L)
+template <typename Dict, typename Collection>
+concept has_sync_dict_add_flatmap_range_call
+    = requires(Dict& dict_ref, Collection&& collection) { dict_ref.add_range(std::forward<Collection>(collection)); };
+
+template <typename Dict, typename Collection>
+concept has_sync_dict_add_flatmap_collection_call = requires(
+    Dict& dict_ref, Collection&& collection) { dict_ref.add_collection(std::forward<Collection>(collection)); };
+
+TEST(SyncDictionaryPerfectForwardingTest, Cpp20FlatMapOverloadConstraints)
+{
+    using dict_t = tools::sync_dictionary<std::string, std::string>;
+    static_assert(has_sync_dict_add_flatmap_range_call<dict_t, std::flat_map<std::string, std::string>&>);
+    static_assert(has_sync_dict_add_flatmap_collection_call<dict_t, std::flat_map<std::string, std::string>&>);
+    SUCCEED();
+}
+#endif
 
 /**
  * @brief Verifies C++20 range-call constraints for add/remove APIs.

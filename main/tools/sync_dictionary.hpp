@@ -50,6 +50,11 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#if ((__cplusplus >= 202302L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202302L))) && defined(__has_include)
+#if __has_include(<flat_map>)
+#include <flat_map>
+#endif
+#endif
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
 #include <ranges>
 #endif
@@ -69,11 +74,27 @@ namespace tools
      *
      * @tparam K The type of the keys in the dictionary.
      * @tparam T The type of the values in the dictionary.
+     * @tparam TDictionary The associative container type used internally.
+     *         Defaults to std::map<K, T>. Can also be std::unordered_map<K, T>
+     *         or std::flat_map<K, T> (C++23).
      */
-    template <typename K, typename T>
+    template <typename K, typename T, typename TDictionary = std::map<K, T>>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+        requires(requires {
+            typename TDictionary::key_type;
+            typename TDictionary::mapped_type;
+        } && std::is_same_v<typename TDictionary::key_type, K> && std::is_same_v<typename TDictionary::mapped_type, T>)
+#endif
     class sync_dictionary : public non_copyable // NOLINT inherits from non copyable and non movable class
     {
     public:
+        using dictionary_type = TDictionary;
+
+        static_assert(std::is_same<typename dictionary_type::key_type, K>::value,
+            "sync_dictionary: dictionary key_type must match K");
+        static_assert(std::is_same<typename dictionary_type::mapped_type, T>::value,
+            "sync_dictionary: dictionary mapped_type must match T");
+
         sync_dictionary() = default;
         ~sync_dictionary() = default;
         struct thread_safe
@@ -178,6 +199,22 @@ namespace tools
             }
         }
 
+#if defined(__cpp_lib_flat_map) && (__cpp_lib_flat_map >= 202207L)
+        /**
+         * @brief Adds values from a flat map range.
+         *
+         * @param collection The flat map containing key-value pairs to add.
+         */
+        void add_range(const std::flat_map<K, T>& collection)
+        {
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
+            for (const auto& [key, value] : collection)
+            {
+                m_dictionary.insert_or_assign(key, value);
+            }
+        }
+#endif
+
         /**
          * @brief Adds key-value pairs from a generic range-like source.
          *
@@ -244,6 +281,16 @@ namespace tools
             add_range(collection);
         }
 
+#if defined(__cpp_lib_flat_map) && (__cpp_lib_flat_map >= 202207L)
+        /**
+         * @brief Backward-compatible alias for add_range(flat_map).
+         */
+        void add_collection(const std::flat_map<K, T>& collection)
+        {
+            add_range(collection);
+        }
+#endif
+
         /**
          * @brief Backward-compatible alias for add_range(generic range).
          */
@@ -284,7 +331,7 @@ namespace tools
          *
          * @return A copy of the current dictionary.
          */
-        [[nodiscard]] std::map<K, T> snapshot() const
+        [[nodiscard]] dictionary_type snapshot() const
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
             return m_dictionary;
@@ -415,7 +462,7 @@ namespace tools
         }
 
     private:
-        std::map<K, T> m_dictionary;
+        dictionary_type m_dictionary;
         mutable critical_section m_mutex;
     };
 }
