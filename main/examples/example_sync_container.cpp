@@ -543,7 +543,8 @@ namespace
         }
     }
 
-    /** @brief Exercises add/add_range/find/contains/remove/remove_collection operations on a @c tools::sync_dictionary.
+    /** @brief Exercises add/add_range/find/contains/remove/remove_collection operations on a @c tools::sync_dictionary
+     * (std::map).
      */
     void test_sync_dictionary()
     {
@@ -593,6 +594,114 @@ namespace
         str_dict.remove_collection(std::vector<std::string> { "key-range-1", "key-brace-1" });
         str_dict.remove_collection({ "key-range-2", "key-brace-2" });
     }
+
+    /** @brief Exercises add/add_range/find/contains/remove/remove_collection operations on a @c tools::sync_dictionary
+     * (std::unordered_map).
+     */
+    void test_sync_dictionary_unordered_map()
+    {
+        LOG_INFO("-- sync dictionary (unordered_map) --");
+        print_stats();
+
+        tools::sync_dictionary<std::string, std::string, std::unordered_map<std::string, std::string>> str_dict;
+
+        std::string key_lvalue = "key-lvalue";
+        std::string value_lvalue = "value-lvalue";
+
+        str_dict.add(key_lvalue, value_lvalue);
+        str_dict.add(std::string("key-rvalue"), std::string("value-rvalue"));
+        str_dict.add("key-conversion", "value-conversion");
+        str_dict.add("key-conversion", std::string("value-updated"));
+
+        const std::vector<std::pair<std::string, std::string>> range_values
+            = { { "key-range-1", "value-range-1" }, { "key-range-2", "value-range-2" } };
+        str_dict.add_range(range_values);
+        str_dict.add_range({ { "key-brace-1", "value-brace-1" }, { "key-brace-2", "value-brace-2" } });
+
+        auto result_lvalue = str_dict.find("key-lvalue");
+        auto result_rvalue = str_dict.find("key-rvalue");
+        auto result_conversion = str_dict.find("key-conversion");
+
+        if (result_lvalue.has_value())
+        {
+            std::printf("%s\n", (*result_lvalue).c_str());
+        }
+
+        if (result_rvalue.has_value())
+        {
+            std::printf("%s\n", (*result_rvalue).c_str());
+        }
+
+        if (result_conversion.has_value())
+        {
+            std::printf("%s\n", (*result_conversion).c_str());
+        }
+
+        std::printf("contains key-range-1: %s\n", str_dict.contains("key-range-1") ? "yes" : "no");
+        std::printf("contains missing-key: %s\n", str_dict.contains("missing-key") ? "yes" : "no");
+
+        str_dict.remove("key-lvalue");
+        str_dict.remove("key-rvalue");
+        str_dict.remove("key-conversion");
+        str_dict.remove_collection(std::vector<std::string> { "key-range-1", "key-brace-1" });
+        str_dict.remove_collection({ "key-range-2", "key-brace-2" });
+    }
+
+#if ((__cplusplus >= 202302L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202302L))) && defined(__has_include)
+#if __has_include(<flat_map>)
+    /** @brief Exercises add/add_range/find/contains/remove/remove_collection operations on a @c tools::sync_dictionary
+     * (std::flat_map, C++23+).
+     */
+    void test_sync_dictionary_flat_map()
+    {
+        LOG_INFO("-- sync dictionary (flat_map) --");
+        print_stats();
+
+        tools::sync_dictionary<std::string, std::string, std::flat_map<std::string, std::string>> str_dict;
+
+        std::string key_lvalue = "key-lvalue";
+        std::string value_lvalue = "value-lvalue";
+
+        str_dict.add(key_lvalue, value_lvalue);
+        str_dict.add(std::string("key-rvalue"), std::string("value-rvalue"));
+        str_dict.add("key-conversion", "value-conversion");
+        str_dict.add("key-conversion", std::string("value-updated"));
+
+        const std::vector<std::pair<std::string, std::string>> range_values
+            = { { "key-range-1", "value-range-1" }, { "key-range-2", "value-range-2" } };
+        str_dict.add_range(range_values);
+        str_dict.add_range({ { "key-brace-1", "value-brace-1" }, { "key-brace-2", "value-brace-2" } });
+
+        auto result_lvalue = str_dict.find("key-lvalue");
+        auto result_rvalue = str_dict.find("key-rvalue");
+        auto result_conversion = str_dict.find("key-conversion");
+
+        if (result_lvalue.has_value())
+        {
+            std::printf("%s\n", (*result_lvalue).c_str());
+        }
+
+        if (result_rvalue.has_value())
+        {
+            std::printf("%s\n", (*result_rvalue).c_str());
+        }
+
+        if (result_conversion.has_value())
+        {
+            std::printf("%s\n", (*result_conversion).c_str());
+        }
+
+        std::printf("contains key-range-1: %s\n", str_dict.contains("key-range-1") ? "yes" : "no");
+        std::printf("contains missing-key: %s\n", str_dict.contains("missing-key") ? "yes" : "no");
+
+        str_dict.remove("key-lvalue");
+        str_dict.remove("key-rvalue");
+        str_dict.remove("key-conversion");
+        str_dict.remove_collection(std::vector<std::string> { "key-range-1", "key-brace-1" });
+        str_dict.remove_collection({ "key-range-2", "key-brace-2" });
+    }
+#endif
+#endif
 
     /** @brief Demonstrates basic sync_priority_queue operations with min-heap (default) behavior. */
     void test_sync_priority_queue()
@@ -775,6 +884,12 @@ void run_example_sync_container()
     test_sync_queue_perfect_forwarding();
     // Finish with synchronized dictionary CRUD and collection operations.
     test_sync_dictionary();
+    test_sync_dictionary_unordered_map();
+#if ((__cplusplus >= 202302L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202302L))) && defined(__has_include)
+#if __has_include(<flat_map>)
+    test_sync_dictionary_flat_map();
+#endif
+#endif
     // Demonstrate priority queue variants and integration with async_observer.
     test_sync_priority_queue();
     test_sync_max_priority_queue();

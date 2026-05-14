@@ -118,8 +118,7 @@ namespace pco
      */
     template <typename... SharedResults>
     std::enable_if_t<(sizeof...(SharedResults) > 0) && detail::are_shared_results<SharedResults...>::value,
-        future_result<std::tuple<std::decay_t<SharedResults>...>,
-            detail::first_result_error_type_t<SharedResults...>>>
+        future_result<std::tuple<std::decay_t<SharedResults>...>, detail::first_result_error_type_t<SharedResults...>>>
     when_all(SharedResults&&... shared_results)
     {
         using error_t = detail::first_result_error_type_t<SharedResults...>;
@@ -192,8 +191,7 @@ namespace pco
     template <typename... Handles>
     std::enable_if_t<(sizeof...(Handles) > 0) && detail::are_result_handles<Handles...>::value
             && !detail::are_result_futures<Handles...>::value && !detail::are_shared_results<Handles...>::value,
-        future_result<std::tuple<std::decay_t<Handles>...>,
-            detail::first_result_error_type_t<Handles...>>>
+        future_result<std::tuple<std::decay_t<Handles>...>, detail::first_result_error_type_t<Handles...>>>
     when_all(Handles&&... handles)
     {
         using error_t = detail::first_result_error_type_t<Handles...>;
