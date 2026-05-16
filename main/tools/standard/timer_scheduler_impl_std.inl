@@ -51,7 +51,14 @@ namespace tools
     timer_handle timer_scheduler::add(const std::string& timer_name, std::uint64_t period,
         std::function<void(timer_handle)>&& handler, timer_type type)
     {
+        return add(timer_name, period, std::move(handler), type, timer_resolution_policy::low_resolution);
+    }
+
+    timer_handle timer_scheduler::add(const std::string& timer_name, std::uint64_t period,
+        std::function<void(timer_handle)>&& handler, timer_type type, timer_resolution_policy policy)
+    {
         (void)timer_name;
+        (void)policy;
         // inputs are in us
         // auto-reload true:  start after period and then repeat every period
         // auto-reload false: start once after period
@@ -66,7 +73,15 @@ namespace tools
         const std::chrono::duration<std::uint64_t, std::micro>& period, std::function<void(timer_handle)>&& handler,
         timer_type type)
     {
+        return add(timer_name, period, std::move(handler), type, timer_resolution_policy::low_resolution);
+    }
+
+    timer_handle timer_scheduler::add(const std::string& timer_name,
+        const std::chrono::duration<std::uint64_t, std::micro>& period, std::function<void(timer_handle)>&& handler,
+        timer_type type, timer_resolution_policy policy)
+    {
         (void)timer_name;
+        (void)policy;
         const bool auto_reload = (timer_type::periodic == type);
         auto hnd = m_timer_scheduler.add(period.count(), std::move(handler), auto_reload ? period.count() : 0U);
         return hnd + 1U; // valid handle is non zero

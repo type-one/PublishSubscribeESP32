@@ -80,6 +80,7 @@ namespace
             constexpr const int period_40ms = 40;
             constexpr const int period_25ms = 25;
             constexpr const int period_20ms = 20;
+            constexpr const int timer_timeout_us = 120250;
 
             constexpr const int test_value = 42;
             std::atomic<int> val(0);
@@ -124,10 +125,65 @@ namespace
             tools::sleep_for(period_75ms);
             std::printf("Expect count %zu is 1\n", count.load());
 
+            // One-shot timer with explicit low-resolution policy: keeps current tick-based behavior.
+            auto low_one_shot_start = std::chrono::high_resolution_clock::now();
+            std::chrono::high_resolution_clock::time_point low_one_shot_time_point;
+            timer_scheduler.add(
+                "timer6_low_one_shot", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
+                [&](tools::timer_handle) { low_one_shot_time_point = std::chrono::high_resolution_clock::now(); },
+                tools::timer_type::one_shot, tools::timer_resolution_policy::low_resolution);
+            tools::sleep_for(period_200ms);
+            const auto low_one_shot_elapsed
+                = std::chrono::duration_cast<std::chrono::microseconds>(low_one_shot_time_point - low_one_shot_start);
+            std::printf("timepoint (low resolution policy, one-shot): %" PRId64 " us\n",
+                static_cast<std::int64_t>(low_one_shot_elapsed.count()));
+
+            // Periodic timer with explicit low-resolution policy.
+            auto low_periodic_start = std::chrono::high_resolution_clock::now();
+            std::chrono::high_resolution_clock::time_point low_periodic_time_point;
+            auto low_periodic_id = timer_scheduler.add(
+                "timer6_low_periodic", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
+                [&](tools::timer_handle) { low_periodic_time_point = std::chrono::high_resolution_clock::now(); },
+                tools::timer_type::periodic, tools::timer_resolution_policy::low_resolution);
+            tools::sleep_for(period_200ms);
+            timer_scheduler.remove(low_periodic_id);
+            const auto low_periodic_elapsed
+                = std::chrono::duration_cast<std::chrono::microseconds>(low_periodic_time_point - low_periodic_start);
+            std::printf("timepoint (low resolution policy, periodic): %" PRId64 " us\n",
+                static_cast<std::int64_t>(low_periodic_elapsed.count()));
+
+            // One-shot timer with explicit high-resolution policy: routes to esp_timer on ESP32 builds.
+            // On the desktop backend it exercises the same facade so the API shape remains visible and testable.
+            auto high_one_shot_start = std::chrono::high_resolution_clock::now();
+            std::chrono::high_resolution_clock::time_point high_one_shot_time_point;
+            timer_scheduler.add(
+                "timer6_high_one_shot", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
+                [&](tools::timer_handle) { high_one_shot_time_point = std::chrono::high_resolution_clock::now(); },
+                tools::timer_type::one_shot, tools::timer_resolution_policy::high_resolution);
+            tools::sleep_for(period_200ms);
+            const auto high_one_shot_elapsed
+                = std::chrono::duration_cast<std::chrono::microseconds>(high_one_shot_time_point - high_one_shot_start);
+            std::printf("timepoint (high resolution policy, one-shot): %" PRId64 " us\n",
+                static_cast<std::int64_t>(high_one_shot_elapsed.count()));
+
+            // Periodic timer with explicit high-resolution policy.
+            auto high_periodic_start = std::chrono::high_resolution_clock::now();
+            std::chrono::high_resolution_clock::time_point high_periodic_time_point;
+            auto high_periodic_id = timer_scheduler.add(
+                "timer6_high_periodic", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
+                [&](tools::timer_handle) { high_periodic_time_point = std::chrono::high_resolution_clock::now(); },
+                tools::timer_type::periodic, tools::timer_resolution_policy::high_resolution);
+            tools::sleep_for(period_200ms);
+            timer_scheduler.remove(high_periodic_id);
+            const auto high_periodic_elapsed
+                = std::chrono::duration_cast<std::chrono::microseconds>(high_periodic_time_point - high_periodic_start);
+            std::printf("timepoint (high resolution policy, periodic): %" PRId64 " us\n",
+                static_cast<std::int64_t>(high_periodic_elapsed.count()));
+
             auto start_point = std::chrono::high_resolution_clock::now();
             std::queue<std::chrono::high_resolution_clock::time_point> time_points;
             timer_id = timer_scheduler.add(
-                "timer6", period_40ms, [&](tools::timer_handle)
+                "timer7", period_40ms, [&](tools::timer_handle)
                 { time_points.emplace(std::chrono::high_resolution_clock::now()); }, tools::timer_type::periodic);
             tools::sleep_for(period_200ms);
             timer_scheduler.remove(timer_id);
@@ -146,7 +202,7 @@ namespace
             start_point = std::chrono::high_resolution_clock::now();
             std::chrono::high_resolution_clock::time_point time_point;
             timer_scheduler.add(
-                "timer7", period_120ms, [&](tools::timer_handle)
+                "timer8", period_120ms, [&](tools::timer_handle)
                 { time_point = std::chrono::high_resolution_clock::now(); }, tools::timer_type::one_shot);
             tools::sleep_for(period_200ms);
 
@@ -154,9 +210,8 @@ namespace
             std::printf("timepoint (one shot): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
 
             start_point = std::chrono::high_resolution_clock::now();
-            constexpr const int timer_timeout_us = 120250;
             timer_scheduler.add(
-                "timer7", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us), [&](tools::timer_handle)
+                "timer9", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us), [&](tools::timer_handle)
                 { time_point = std::chrono::high_resolution_clock::now(); }, tools::timer_type::one_shot);
             tools::sleep_for(period_200ms);
 

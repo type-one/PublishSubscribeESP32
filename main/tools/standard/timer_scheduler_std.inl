@@ -52,8 +52,17 @@ namespace tools
      */
     enum class timer_type
     {
-        one_shot, ///< one shot timer
-        periodic  ///< periodic timer
+        one_shot,
+        periodic
+    };
+
+    /**
+     * @brief Timer resolution policy.
+     */
+    enum class timer_resolution_policy
+    {
+        low_resolution,
+        high_resolution
     };
 
     /**
@@ -85,6 +94,20 @@ namespace tools
         timer_handle add(const std::string& timer_name, std::uint64_t period,
             std::function<void(timer_handle)>&& handler, timer_type type);
 
+        /**
+         * @brief Add a new timer with an explicit resolution policy.
+         *
+         * @param timer_name The name of the timer.
+         * @param period The period in ms.
+         * @param handler The callable that is invoked when the timer fires.
+         * @param type If periodic, then the timer will expire repeatedly with a frequency set by the period
+         * parameter. If set to one_shot, then the timer will be a one-shot timer.
+         * @param policy The requested timer resolution policy.
+         * @return A handle to the added timer.
+         */
+        timer_handle add(const std::string& timer_name, std::uint64_t period,
+            std::function<void(timer_handle)>&& handler, timer_type type, timer_resolution_policy policy);
+
 
         /**
          * @brief Add a new timer.
@@ -98,6 +121,20 @@ namespace tools
          */
         timer_handle add(const std::string& timer_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
             std::function<void(timer_handle)>&& handler, timer_type type);
+
+        /**
+         * @brief Add a new timer with an explicit resolution policy.
+         *
+         * @param timer_name The name of the timer.
+         * @param period The period as std::chrono duration.
+         * @param handler The callable that is invoked when the timer fires.
+         * @param type If periodic, then the timer will expire repeatedly with a frequency set by the period
+         * parameter. If set to one_shot, then the timer will be a one-shot timer.
+         * @param policy The requested timer resolution policy.
+         * @return A handle to the added timer.
+         */
+        timer_handle add(const std::string& timer_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
+            std::function<void(timer_handle)>&& handler, timer_type type, timer_resolution_policy policy);
 
 
         /**

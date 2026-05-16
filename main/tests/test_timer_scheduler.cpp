@@ -106,6 +106,95 @@ TEST_F(TimerSchedulerTest, AddPeriodicTimer)
 }
 
 /**
+ * @brief Test case for adding a one-shot timer with the explicit low-resolution policy.
+ *
+ * The low-resolution mode should continue to behave like the current standard timer path,
+ * which is the compatibility baseline for existing call sites.
+ */
+TEST_F(TimerSchedulerTest, AddOneShotTimerWithLowResolutionPolicy)
+{
+    std::atomic<int> fired { 0 };
+
+    auto handler = [&fired](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired.fetch_add(1);
+    };
+    auto handle = scheduler->add("test_one_shot_low_policy", 80, std::move(handler), tools::timer_type::one_shot,
+        tools::timer_resolution_policy::low_resolution);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    ASSERT_EQ(fired.load(), 1);
+}
+
+/**
+ * @brief Test case for adding a periodic timer with the explicit low-resolution policy.
+ *
+ * Verifies that the low-resolution policy also works correctly for periodic timers,
+ * firing more than once over the observation window.
+ */
+TEST_F(TimerSchedulerTest, AddPeriodicTimerWithLowResolutionPolicy)
+{
+    std::atomic<int> fired { 0 };
+
+    auto handler = [&fired](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired.fetch_add(1);
+    };
+    auto handle = scheduler->add("test_periodic_low_policy", 80, std::move(handler), tools::timer_type::periodic,
+        tools::timer_resolution_policy::low_resolution);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    ASSERT_GT(fired.load(), 1);
+}
+
+/**
+ * @brief Test case for adding a one-shot timer with the explicit high-resolution policy.
+ *
+ * The high-resolution overload is the policy hook that will route to esp_timer on ESP32 builds.
+ * On the desktop backend it still exercises the policy plumbing and preserves the facade API.
+ */
+TEST_F(TimerSchedulerTest, AddOneShotTimerWithHighResolutionPolicy)
+{
+    std::atomic<int> fired { 0 };
+
+    auto handler = [&fired](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired.fetch_add(1);
+    };
+    auto handle = scheduler->add("test_one_shot_high_policy", std::chrono::duration<std::uint64_t, std::micro>(80000),
+        std::move(handler), tools::timer_type::one_shot, tools::timer_resolution_policy::high_resolution);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    ASSERT_EQ(fired.load(), 1);
+}
+
+/**
+ * @brief Test case for adding a periodic timer with the explicit high-resolution policy.
+ *
+ * The high-resolution overload is the policy hook that will route to esp_timer on ESP32 builds.
+ * On the desktop backend it still exercises the policy plumbing and preserves the facade API.
+ */
+TEST_F(TimerSchedulerTest, AddPeriodicTimerWithHighResolutionPolicy)
+{
+    std::atomic<int> fired { 0 };
+
+    auto handler = [&fired](tools::timer_handle hnd)
+    {
+        (void)hnd;
+        fired.fetch_add(1);
+    };
+
+    auto handle = scheduler->add("test_periodic_high_policy", std::chrono::duration<std::uint64_t, std::micro>(80000),
+        std::move(handler), tools::timer_type::periodic, tools::timer_resolution_policy::high_resolution);
+    ASSERT_NE(handle, static_cast<tools::timer_handle>(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    ASSERT_GT(fired.load(), 1);
+}
+
+/**
  * @brief Test case for adding a one-shot timer to the scheduler.
  *
  * This test verifies that a one-shot timer can be added to the scheduler and

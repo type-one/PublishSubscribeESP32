@@ -57,14 +57,32 @@ namespace tools
      */
     enum class timer_type
     {
-        one_shot, ///< one shot timer
-        periodic  ///< periodic timer
+        one_shot,
+        periodic
     };
 
     /**
-     * @brief Alias for the FreeRTOS timer handle type.
+     * @brief Timer resolution policy.
      */
-    using timer_handle = TimerHandle_t;
+    enum class timer_resolution_policy
+    {
+        low_resolution,
+        high_resolution
+    };
+
+    /**
+     * @brief Backend kind used by the FreeRTOS timer scheduler.
+     */
+    enum class timer_backend_kind
+    {
+        freertos_tick,
+        esp_timer
+    };
+
+    /**
+     * @brief Alias for the timer handle type.
+     */
+    using timer_handle = std::size_t;
 
     /**
      * @brief Class for managing FreeRTOS timers.
@@ -99,13 +117,26 @@ namespace tools
          * parameter. If set to one_shot, then the timer will be a one-shot timer.
          *
          * @param timer_name The name of the timer.
-         * @param period The period of the timer in microseconds.
+         * @param period The period of the timer in milliseconds.
          * @param handler The function to be called when the timer expires.
          * @param type The type of the timer (e.g., one-shot or periodic).
          * @return A handle to the created timer.
          */
         timer_handle add(const std::string& timer_name, std::uint64_t period,
             std::function<void(timer_handle)>&& handler, timer_type type);
+
+        /**
+         * @brief Adds a new timer to the scheduler with an explicit resolution policy.
+         *
+         * @param timer_name The name of the timer.
+         * @param period The period of the timer in milliseconds.
+         * @param handler The function to be called when the timer expires.
+         * @param type The type of the timer (e.g., one-shot or periodic).
+         * @param policy The timer resolution policy to use.
+         * @return A handle to the created timer.
+         */
+        timer_handle add(const std::string& timer_name, std::uint64_t period,
+            std::function<void(timer_handle)>&& handler, timer_type type, timer_resolution_policy policy);
 
 
         /**
@@ -127,6 +158,19 @@ namespace tools
             std::function<void(timer_handle)>&& handler, timer_type type);
 
         /**
+         * @brief Adds a new timer to the scheduler with an explicit resolution policy.
+         *
+         * @param timer_name The name of the timer.
+         * @param period The period of the timer in microseconds as std:chrono::duration.
+         * @param handler The function to be called when the timer expires.
+         * @param type The type of the timer (e.g., one-shot or periodic).
+         * @param policy The timer resolution policy to use.
+         * @return A handle to the created timer.
+         */
+        timer_handle add(const std::string& timer_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
+            std::function<void(timer_handle)>&& handler, timer_type type, timer_resolution_policy policy);
+
+        /**
          * @brief Removes a timer from the scheduler.
          *
          * This function stops the timer associated with the given handle and removes it from the internal context list.
@@ -140,7 +184,10 @@ namespace tools
         struct timer_context
         {
             std::function<void(timer_handle)> m_callback = {};
-            timer_handle m_timer_handle = nullptr;
+            timer_handle m_timer_handle = 0;
+            void* m_native_handle = nullptr;
+            timer_backend_kind m_backend = timer_backend_kind::freertos_tick;
+            timer_resolution_policy m_policy = timer_resolution_policy::low_resolution;
             bool m_auto_release = false;
             timer_scheduler* m_this = nullptr;
         };
@@ -156,6 +203,14 @@ namespace tools
         void remove_and_delete_timer(timer_handle hnd);
 
     private:
+        timer_handle add_tick(const std::string& timer_name, TickType_t period,
+            std::function<void(timer_handle)>&& handler, timer_type type);
+
+#if defined(ESP_PLATFORM)
+        timer_handle add_esp_timer(const std::string& timer_name, std::uint64_t period,
+            std::function<void(timer_handle)>&& handler, timer_type type);
+#endif
+
         /**
          * @brief Adds a tick timer to the scheduler.
          *
@@ -167,11 +222,8 @@ namespace tools
          * @param type The type of the timer (one-shot or periodic).
          * @return The handle to the created timer, or nullptr if the timer could not be created.
          */
-        timer_handle add_tick(const std::string& timer_name, const TickType_t period,
-            std::function<void(timer_handle)>&& handler, timer_type type);
-
         tools::critical_section m_mutex;
         std::list<std::unique_ptr<timer_context>> m_contexts = {};
-        std::list<timer_handle> m_active_timers = {};
+        timer_handle m_next_timer_handle = 1;
     };
 }

@@ -48,7 +48,7 @@ This folder provides:
 | `sync_queue.hpp` | `sync_queue<T, ...>` | Thread-safe queue with ISR-safe variants and batch operations. | Uses `critical_section`; complements ring-based containers. |
 | `sync_ring_buffer.hpp` | `sync_ring_buffer<T, ...>` | Thread-safe wrapper around ring buffer semantics. | Builds on ring-buffer logic + synchronization primitives. |
 | `sync_ring_vector.hpp` | `sync_ring_vector<T, ...>` | Thread-safe wrapper around ring vector semantics. | Builds on ring-vector logic + synchronization primitives. |
-| `timer_scheduler.hpp` | `timer_scheduler` facade, timer-related enums/types | Cross-platform timer scheduling abstraction. | Includes `freertos/timer_scheduler_freertos.inl` or `standard/timer_scheduler_std.inl`; implementation parts in `timer_scheduler.cpp`. |
+| `timer_scheduler.hpp` | `timer_scheduler` facade, timer-related enums/types | Cross-platform timer scheduling abstraction. | Includes `freertos/timer_scheduler_freertos.inl` or `standard/timer_scheduler_std.inl`; implementation parts in `timer_scheduler.cpp`. Supports `timer_resolution_policy::high_resolution` on ESP32 FreeRTOS builds via `esp_timer`. |
 | `time_list.hpp` | `time_list<TTimestamp, TValue>` | Non-thread-safe chronological list storing `<timestamp, value>` entries using `std::priority_queue` (earliest first). | Intended as a base helper; a synchronized wrapper can be layered on top (e.g., future `sync_time_list`). |
 | `variant_overload.hpp` | `overload<Ts...>` | `std::visit` helper for composing variant visitors. | Utility used by FSM/event-dispatch code. |
 | `worker_task.hpp` | `worker_task<Context>`, `worker_task_executor<Context>` facade | Worker task + executor bridge for scheduling work into worker context. | Includes `freertos/worker_task_freertos.inl` or `standard/worker_task_std.inl`; `is_executor` specialization ties into portable_concurrency. |
@@ -68,7 +68,7 @@ These files are paired implementations of the same abstractions.
 | `platform_helpers.hpp` | `freertos/platform_helpers_freertos.inl` | `standard/platform_helpers_std.inl` | Platform helper utilities (threads/tasks/core affinity where applicable). |
 | `sync_object.hpp` | `freertos/sync_object_freertos.inl` | `standard/sync_object_std.inl` | Synchronization object API surface. |
 | `sync_object.cpp` impl include | `freertos/sync_object_impl_freertos.inl` | `standard/sync_object_impl_std.inl` | Out-of-line sync object internals. |
-| `timer_scheduler.hpp` | `freertos/timer_scheduler_freertos.inl` | `standard/timer_scheduler_std.inl` | Timer scheduler API surface. |
+| `timer_scheduler.hpp` | `freertos/timer_scheduler_freertos.inl` | `standard/timer_scheduler_std.inl` | Timer scheduler API surface, including `timer_resolution_policy`. |
 | `timer_scheduler.cpp` impl include | `freertos/timer_scheduler_impl_freertos.inl` | `standard/timer_scheduler_impl_std.inl` | Out-of-line timer scheduler internals. |
 | `worker_task.hpp` | `freertos/worker_task_freertos.inl` | `standard/worker_task_std.inl` | Worker task and executor integration. |
 
