@@ -34,6 +34,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <future>
@@ -443,11 +444,41 @@ TEST_F(TimerTest, TestTimeoutsFromThePast)
 TEST_F(TimerTest, TestOrderOfMultipleTimeouts)
 {
     std::atomic<int> i { 0 };
-    timer->add(10000, [&](CppTime::timer_id) { i.store(42); });
-    timer->add(20000, [&](CppTime::timer_id) { i.store(43); });
-    timer->add(30000, [&](CppTime::timer_id) { i.store(44); });
-    timer->add(40000, [&](CppTime::timer_id) { i.store(45); });
-    std::this_thread::sleep_for(milliseconds(50));
+    std::promise<void> done;
+    auto done_future = done.get_future();
+
+    constexpr std::size_t expected_callbacks = 4U;
+    std::array<int, expected_callbacks> callback_values = { 0, 0, 0, 0 };
+    std::atomic<std::size_t> callback_count { 0U };
+
+    auto make_handler = [&](const int value)
+    {
+        return [&, value](CppTime::timer_id)
+        {
+            i.store(value);
+            const auto idx = callback_count.fetch_add(1U);
+            if (idx < expected_callbacks)
+            {
+                callback_values[idx] = value;
+            }
+            if ((idx + 1U) == expected_callbacks)
+            {
+                done.set_value();
+            }
+        };
+    };
+
+    timer->add(10000, make_handler(42));
+    timer->add(20000, make_handler(43));
+    timer->add(30000, make_handler(44));
+    timer->add(40000, make_handler(45));
+
+    EXPECT_EQ(done_future.wait_for(milliseconds(250)), std::future_status::ready);
+    EXPECT_EQ(callback_count.load(), expected_callbacks);
+    EXPECT_EQ(callback_values[0], 42);
+    EXPECT_EQ(callback_values[1], 43);
+    EXPECT_EQ(callback_values[2], 44);
+    EXPECT_EQ(callback_values[3], 45);
     EXPECT_EQ(i.load(), 45);
 }
 
