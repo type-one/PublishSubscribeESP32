@@ -64,8 +64,10 @@ namespace tools
         // auto-reload false: start once after period
         const bool auto_reload = (timer_type::periodic == type);
         constexpr const std::uint64_t micro_sec_coeff = 1000U;
+        auto user_handler = std::move(handler);
         auto hnd = m_timer_scheduler.add(
-            period * micro_sec_coeff, std::move(handler), auto_reload ? (period * micro_sec_coeff) : 0U);
+            period * micro_sec_coeff, [user_handler = std::move(user_handler)](CppTime::timer_id internal_id) mutable
+            { user_handler(internal_id + 1U); }, auto_reload ? (period * micro_sec_coeff) : 0U);
         return hnd + 1U; // valid handle is non zero
     }
 
@@ -83,7 +85,10 @@ namespace tools
         (void)timer_name;
         (void)policy;
         const bool auto_reload = (timer_type::periodic == type);
-        auto hnd = m_timer_scheduler.add(period.count(), std::move(handler), auto_reload ? period.count() : 0U);
+        auto user_handler = std::move(handler);
+        auto hnd = m_timer_scheduler.add(
+            period.count(), [user_handler = std::move(user_handler)](CppTime::timer_id internal_id) mutable
+            { user_handler(internal_id + 1U); }, auto_reload ? period.count() : 0U);
         return hnd + 1U; // valid handle is non zero
     }
 

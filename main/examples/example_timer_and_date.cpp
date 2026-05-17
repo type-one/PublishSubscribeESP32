@@ -33,6 +33,8 @@
 #include "example_common.hpp"
 #include "examples.hpp"
 
+#include <mutex>
+
 namespace
 {
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
@@ -126,97 +128,141 @@ namespace
             std::printf("Expect count %zu is 1\n", count.load());
 
             // One-shot timer with explicit low-resolution policy: keeps current tick-based behavior.
-            auto low_one_shot_start = std::chrono::high_resolution_clock::now();
-            std::chrono::high_resolution_clock::time_point low_one_shot_time_point;
+            auto low_one_shot_start = std::chrono::steady_clock::now();
+            std::atomic<std::int64_t> low_one_shot_elapsed(-1);
             timer_scheduler.add(
                 "timer6_low_one_shot", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
-                [&](tools::timer_handle) { low_one_shot_time_point = std::chrono::high_resolution_clock::now(); },
+                [&](tools::timer_handle)
+                {
+                    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now() - low_one_shot_start);
+                    low_one_shot_elapsed.store(static_cast<std::int64_t>(elapsed.count()));
+                },
                 tools::timer_type::one_shot, tools::timer_resolution_policy::low_resolution);
             tools::sleep_for(period_200ms);
-            const auto low_one_shot_elapsed
-                = std::chrono::duration_cast<std::chrono::microseconds>(low_one_shot_time_point - low_one_shot_start);
             std::printf("timepoint (low resolution policy, one-shot): %" PRId64 " us\n",
-                static_cast<std::int64_t>(low_one_shot_elapsed.count()));
+                static_cast<std::int64_t>(low_one_shot_elapsed.load()));
 
             // Periodic timer with explicit low-resolution policy.
-            auto low_periodic_start = std::chrono::high_resolution_clock::now();
-            std::chrono::high_resolution_clock::time_point low_periodic_time_point;
+            auto low_periodic_start = std::chrono::steady_clock::now();
+            std::atomic<std::int64_t> low_periodic_elapsed(-1);
+            std::atomic<bool> low_periodic_reported(false);
             auto low_periodic_id = timer_scheduler.add(
                 "timer6_low_periodic", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
-                [&](tools::timer_handle) { low_periodic_time_point = std::chrono::high_resolution_clock::now(); },
+                [&](tools::timer_handle)
+                {
+                    if (!low_periodic_reported.exchange(true))
+                    {
+                        const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::steady_clock::now() - low_periodic_start);
+                        low_periodic_elapsed.store(static_cast<std::int64_t>(elapsed.count()));
+                    }
+                },
                 tools::timer_type::periodic, tools::timer_resolution_policy::low_resolution);
             tools::sleep_for(period_200ms);
             timer_scheduler.remove(low_periodic_id);
-            const auto low_periodic_elapsed
-                = std::chrono::duration_cast<std::chrono::microseconds>(low_periodic_time_point - low_periodic_start);
             std::printf("timepoint (low resolution policy, periodic): %" PRId64 " us\n",
-                static_cast<std::int64_t>(low_periodic_elapsed.count()));
+                static_cast<std::int64_t>(low_periodic_elapsed.load()));
 
             // One-shot timer with explicit high-resolution policy: routes to esp_timer on ESP32 builds.
             // On the desktop backend it exercises the same facade so the API shape remains visible and testable.
-            auto high_one_shot_start = std::chrono::high_resolution_clock::now();
-            std::chrono::high_resolution_clock::time_point high_one_shot_time_point;
+            auto high_one_shot_start = std::chrono::steady_clock::now();
+            std::atomic<std::int64_t> high_one_shot_elapsed(-1);
             timer_scheduler.add(
                 "timer6_high_one_shot", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
-                [&](tools::timer_handle) { high_one_shot_time_point = std::chrono::high_resolution_clock::now(); },
+                [&](tools::timer_handle)
+                {
+                    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now() - high_one_shot_start);
+                    high_one_shot_elapsed.store(static_cast<std::int64_t>(elapsed.count()));
+                },
                 tools::timer_type::one_shot, tools::timer_resolution_policy::high_resolution);
             tools::sleep_for(period_200ms);
-            const auto high_one_shot_elapsed
-                = std::chrono::duration_cast<std::chrono::microseconds>(high_one_shot_time_point - high_one_shot_start);
             std::printf("timepoint (high resolution policy, one-shot): %" PRId64 " us\n",
-                static_cast<std::int64_t>(high_one_shot_elapsed.count()));
+                static_cast<std::int64_t>(high_one_shot_elapsed.load()));
 
             // Periodic timer with explicit high-resolution policy.
-            auto high_periodic_start = std::chrono::high_resolution_clock::now();
-            std::chrono::high_resolution_clock::time_point high_periodic_time_point;
+            auto high_periodic_start = std::chrono::steady_clock::now();
+            std::atomic<std::int64_t> high_periodic_elapsed(-1);
+            std::atomic<bool> high_periodic_reported(false);
             auto high_periodic_id = timer_scheduler.add(
                 "timer6_high_periodic", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
-                [&](tools::timer_handle) { high_periodic_time_point = std::chrono::high_resolution_clock::now(); },
+                [&](tools::timer_handle)
+                {
+                    if (!high_periodic_reported.exchange(true))
+                    {
+                        const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::steady_clock::now() - high_periodic_start);
+                        high_periodic_elapsed.store(static_cast<std::int64_t>(elapsed.count()));
+                    }
+                },
                 tools::timer_type::periodic, tools::timer_resolution_policy::high_resolution);
             tools::sleep_for(period_200ms);
             timer_scheduler.remove(high_periodic_id);
-            const auto high_periodic_elapsed
-                = std::chrono::duration_cast<std::chrono::microseconds>(high_periodic_time_point - high_periodic_start);
             std::printf("timepoint (high resolution policy, periodic): %" PRId64 " us\n",
-                static_cast<std::int64_t>(high_periodic_elapsed.count()));
+                static_cast<std::int64_t>(high_periodic_elapsed.load()));
 
-            auto start_point = std::chrono::high_resolution_clock::now();
-            std::queue<std::chrono::high_resolution_clock::time_point> time_points;
+            auto start_point = std::chrono::steady_clock::now();
+            std::queue<std::chrono::steady_clock::time_point> time_points;
+            std::mutex time_points_mutex;
             timer_id = timer_scheduler.add(
-                "timer7", period_40ms, [&](tools::timer_handle)
-                { time_points.emplace(std::chrono::high_resolution_clock::now()); }, tools::timer_type::periodic);
+                "timer7", period_40ms,
+                [&](tools::timer_handle)
+                {
+                    std::lock_guard<std::mutex> guard(time_points_mutex);
+                    time_points.emplace(std::chrono::steady_clock::now());
+                },
+                tools::timer_type::periodic);
             tools::sleep_for(period_200ms);
             timer_scheduler.remove(timer_id);
 
             auto prev_point = start_point;
             // Log interval jitter between periodic callbacks.
-            while (!time_points.empty())
             {
-                const auto cur_point = time_points.front();
-                time_points.pop();
-                const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(cur_point - prev_point);
-                std::printf("timepoint (periodic): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
-                prev_point = cur_point;
+                std::queue<std::chrono::steady_clock::time_point> local_time_points;
+                {
+                    std::lock_guard<std::mutex> guard(time_points_mutex);
+                    local_time_points.swap(time_points);
+                }
+                while (!local_time_points.empty())
+                {
+                    const auto cur_point = local_time_points.front();
+                    local_time_points.pop();
+                    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(cur_point - prev_point);
+                    std::printf("timepoint (periodic): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
+                    prev_point = cur_point;
+                }
             }
 
-            start_point = std::chrono::high_resolution_clock::now();
-            std::chrono::high_resolution_clock::time_point time_point;
+            const auto one_shot_period_start = std::chrono::steady_clock::now();
+            std::atomic<std::int64_t> one_shot_period_elapsed(-1);
             timer_scheduler.add(
-                "timer8", period_120ms, [&](tools::timer_handle)
-                { time_point = std::chrono::high_resolution_clock::now(); }, tools::timer_type::one_shot);
+                "timer8", period_120ms,
+                [&](tools::timer_handle)
+                {
+                    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now() - one_shot_period_start);
+                    one_shot_period_elapsed.store(static_cast<std::int64_t>(elapsed.count()));
+                },
+                tools::timer_type::one_shot);
             tools::sleep_for(period_200ms);
 
-            auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
-            std::printf("timepoint (one shot): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
+            std::printf("timepoint (one shot): %" PRId64 " us\n", one_shot_period_elapsed.load());
 
-            start_point = std::chrono::high_resolution_clock::now();
+            const auto one_shot_duration_start = std::chrono::steady_clock::now();
+            std::atomic<std::int64_t> one_shot_duration_elapsed(-1);
             timer_scheduler.add(
-                "timer9", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us), [&](tools::timer_handle)
-                { time_point = std::chrono::high_resolution_clock::now(); }, tools::timer_type::one_shot);
+                "timer9", std::chrono::duration<std::uint64_t, std::micro>(timer_timeout_us),
+                [&](tools::timer_handle)
+                {
+                    const auto one_shot_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now() - one_shot_duration_start);
+                    one_shot_duration_elapsed.store(static_cast<std::int64_t>(one_shot_elapsed.count()));
+                },
+                tools::timer_type::one_shot);
             tools::sleep_for(period_200ms);
 
-            elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_point - start_point);
-            std::printf("timepoint (one shot): %" PRId64 " us\n", static_cast<std::int64_t>(elapsed.count()));
+            std::printf("timepoint (one shot): %" PRId64 " us\n", one_shot_duration_elapsed.load());
         }
     }
 } // namespace
