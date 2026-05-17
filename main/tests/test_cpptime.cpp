@@ -343,7 +343,9 @@ TEST_F(TimerTest, TestDeleteTimerInCallback)
  * @details
  * - The first timeout sets the variable `i` to 42.
  * - The second timeout sets the variable `j` to 43.
- * - The test waits for 50 milliseconds to ensure both timeouts have a chance to execute.
+ * - Promises are used for deterministic synchronisation so the test does not
+ *   rely on a fixed sleep whose duration may be shorter than expected on
+ *   platforms with coarse timer resolution (e.g. Windows default 15 ms tick).
  * - Finally, it checks that `i` is 42 and `j` is 43.
  *
  * @note This test uses the Google Test framework.
@@ -352,10 +354,29 @@ TEST_F(TimerTest, TestTwoIdenticalTimeouts)
 {
     std::atomic<int> i { 0 };
     std::atomic<int> j { 0 };
+
+    std::promise<void> done_i;
+    std::promise<void> done_j;
+    auto future_i = done_i.get_future();
+    auto future_j = done_j.get_future();
+
     CppTime::timestamp ts = CppTime::clock::now() + milliseconds(40);
-    timer->add(ts, [&](CppTime::timer_id) { i.store(42); });
-    timer->add(ts, [&](CppTime::timer_id) { j.store(43); });
-    std::this_thread::sleep_for(milliseconds(50));
+    timer->add(ts,
+        [&](CppTime::timer_id)
+        {
+            i.store(42);
+            done_i.set_value();
+        });
+    timer->add(ts,
+        [&](CppTime::timer_id)
+        {
+            j.store(43);
+            done_j.set_value();
+        });
+
+    constexpr const int timeout_ms = 500;
+    ASSERT_EQ(future_i.wait_for(milliseconds(timeout_ms)), std::future_status::ready);
+    ASSERT_EQ(future_j.wait_for(milliseconds(timeout_ms)), std::future_status::ready);
     EXPECT_EQ(i.load(), 42);
     EXPECT_EQ(j.load(), 43);
 }

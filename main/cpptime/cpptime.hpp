@@ -161,7 +161,17 @@ namespace CppTime
 
         inline bool operator<(const Time_event& left, const Time_event& right)
         {
-            return left.next < right.next;
+            if (left.next < right.next)
+            {
+                return true;
+            }
+
+            if (right.next < left.next)
+            {
+                return false;
+            }
+
+            return left.ref < right.ref;
         }
 
     } // end namespace detail

@@ -225,10 +225,16 @@ namespace CppTime
                     time_events.erase(time_events.begin());
 
                     // Invoke the handler
-                    lock.unlock();
-                    if (events.at(tev.ref).handler)
+                    handler_t handler = nullptr;
+                    if (events.at(tev.ref).valid)
                     {
-                        events.at(tev.ref).handler(tev.ref);
+                        handler = events.at(tev.ref).handler;
+                    }
+
+                    lock.unlock();
+                    if (handler)
+                    {
+                        handler(tev.ref);
                     }
                     lock.lock();
 
