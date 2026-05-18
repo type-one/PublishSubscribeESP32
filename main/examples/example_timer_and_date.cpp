@@ -209,7 +209,7 @@ namespace
                 "timer7", period_40ms,
                 [&](tools::timer_handle)
                 {
-                    std::lock_guard<std::mutex> guard(time_points_mutex);
+                    std::scoped_lock guard(time_points_mutex);
                     time_points.emplace(std::chrono::steady_clock::now());
                 },
                 tools::timer_type::periodic);
@@ -221,7 +221,7 @@ namespace
             {
                 std::queue<std::chrono::steady_clock::time_point> local_time_points;
                 {
-                    std::lock_guard<std::mutex> guard(time_points_mutex);
+                    std::scoped_lock guard(time_points_mutex);
                     local_time_points.swap(time_points);
                 }
                 while (!local_time_points.empty())
