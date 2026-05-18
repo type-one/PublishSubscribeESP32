@@ -32,6 +32,7 @@
 
 #include "example_common.hpp"
 #include "examples.hpp"
+#include "tools/critical_section.hpp"
 
 #include <mutex>
 
@@ -204,7 +205,7 @@ namespace
 
             auto start_point = std::chrono::steady_clock::now();
             std::queue<std::chrono::steady_clock::time_point> time_points;
-            std::mutex time_points_mutex;
+            tools::critical_section time_points_mutex;
             timer_id = timer_scheduler.add(
                 "timer7", period_40ms,
                 [&](tools::timer_handle)
