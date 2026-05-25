@@ -324,7 +324,21 @@ namespace tools
          */
         virtual void publish(const Topic& topic, const Evt& event)
         {
-            do_publish(topic, event);
+            do_publish(topic, event, m_name);
+        }
+
+        /**
+         * @brief Publishes an event with an explicit origin.
+         *
+         * This overload forwards the provided origin as-is to all observers and handlers.
+         *
+         * @param topic The topic to publish the event to.
+         * @param event The event to be published.
+         * @param origin The explicit origin to propagate to subscribers.
+         */
+        void publish(const Topic& topic, const Evt& event, const std::string& origin)
+        {
+            do_publish(topic, event, origin);
         }
 
         /**
@@ -350,11 +364,42 @@ namespace tools
         {
             Topic converted_topic(std::forward<UTopic>(topic));
             Evt converted_event(std::forward<UEvt>(event));
-            do_publish(converted_topic, converted_event);
+            do_publish(converted_topic, converted_event, m_name);
+        }
+
+        /**
+         * @brief Publishes an event with an explicit origin using perfect forwarding.
+         *
+         * This template supports conversion-based topic/event/origin arguments beyond exact-type overloads.
+         * In C++20, this method is constrained to constructible types.
+         *
+         * @tparam UTopic The deduced topic type.
+         * @tparam UEvt The deduced event type.
+         * @tparam UOrigin The deduced origin type.
+         * @param topic The topic to publish the event to.
+         * @param event The event to be published.
+         * @param origin The explicit origin to propagate to subscribers.
+         */
+        template <typename UTopic, typename UEvt, typename UOrigin>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires std::is_constructible_v<Topic, UTopic> && std::is_constructible_v<Evt, UEvt>
+                         && std::is_constructible_v<std::string, UOrigin>
+#endif
+        auto publish(UTopic&& topic, UEvt&& event, UOrigin&& origin)
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+            -> typename std::enable_if<std::is_constructible<Topic, UTopic>::value
+                    && std::is_constructible<Evt, UEvt>::value && std::is_constructible<std::string, UOrigin>::value,
+                void>::type
+#endif
+        {
+            Topic converted_topic(std::forward<UTopic>(topic));
+            Evt converted_event(std::forward<UEvt>(event));
+            std::string converted_origin(std::forward<UOrigin>(origin));
+            do_publish(converted_topic, converted_event, converted_origin);
         }
 
     private:
-        void do_publish(const Topic& topic, const Evt& event)
+        void do_publish(const Topic& topic, const Evt& event, const std::string& origin)
         {
             std::vector<sync_observer_shared_ptr> to_inform;
             std::vector<handler> to_invoke;
@@ -375,12 +420,12 @@ namespace tools
 
             for (auto& observer : to_inform)
             {
-                observer->inform(topic, event, m_name);
+                observer->inform(topic, event, origin);
             }
 
             for (auto& handler : to_invoke)
             {
-                handler(topic, event, m_name);
+                handler(topic, event, origin);
             }
         }
 

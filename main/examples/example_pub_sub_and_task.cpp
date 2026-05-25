@@ -153,6 +153,8 @@ namespace
     class my_subject : public base_subject
     {
     public:
+        using base_subject::publish;
+
         my_subject() = delete;
 
         /**
@@ -173,6 +175,19 @@ namespace
         {
             std::printf("publish: event (%s) to %s\n", event.description.c_str(), name().c_str());
             base_subject::publish(topic, event);
+        }
+
+        /**
+         * @brief Logs the outgoing event and delegates to base-class publish with an explicit origin.
+         * @param topic Topic under which the event is dispatched to subscribers.
+         * @param event The event payload to deliver.
+         * @param origin Explicit origin propagated to subscribers.
+         */
+        void publish(const my_topic& topic, const my_event& event, const std::string& origin)
+        {
+            std::printf(
+                "publish: event (%s) origin (%s) to %s\n", event.description.c_str(), origin.c_str(), name().c_str());
+            base_subject::publish(topic, event, origin);
         }
     };
 
@@ -225,6 +240,10 @@ namespace
 
         subject1->publish(my_topic::generic, my_event { my_event::type::notification, "tintin" });
 
+        // Demonstrate overriding the origin explicitly when relaying an external event.
+        subject1->publish(
+            my_topic::external, my_event { my_event::type::notification, "external-notification" }, "ext-relay");
+
         subject2->publish(my_topic::generic, my_event { my_event::type::notification, "tonton" });
         subject2->publish(my_topic::system, my_event { my_event::type::notification, "tantine" });
     }
@@ -249,6 +268,8 @@ namespace
         subject.publish(topic_lvalue, payload_lvalue);
         subject.publish(std::string("demo-topic"), std::string("payload-rvalue"));
         subject.publish("demo-topic", "payload-conversion");
+        // Explicit origin bypasses fallback to subject name.
+        subject.publish("demo-topic", "payload-explicit-origin", "external-source");
     }
 
     /** @brief Exercises perfect-forwarding @c inform overloads of @c tools::async_observer with lvalue, rvalue, and

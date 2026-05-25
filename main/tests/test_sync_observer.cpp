@@ -156,6 +156,26 @@ TEST_F(SyncObserverTest, SubscribeAndPublish)
 }
 
 /**
+ * @brief Test case for publishing with an explicit origin.
+ *
+ * This test case verifies that an explicit publish origin is propagated as-is,
+ * without falling back to the subject name.
+ */
+TEST_F(SyncObserverTest, SubscribeAndPublishWithExplicitOrigin)
+{
+    subject->subscribe("TestTopic", observer);
+
+    subject->publish("TestTopic", 42, "ExternalSource");
+
+    ASSERT_EQ(observer->last_topic, "TestTopic");
+    ASSERT_EQ(observer->last_event, 42);
+    ASSERT_EQ(observer->last_origin, "ExternalSource");
+
+    subject->publish("TestTopic", 84, "");
+    ASSERT_EQ(observer->last_origin, "");
+}
+
+/**
  * @brief Test case for unsubscribing from a topic.
  *
  * This test case verifies that an observer can successfully unsubscribe from a topic
@@ -411,6 +431,29 @@ TEST(SyncObserverPerfectForwardingTest, HandlerSubscribeSupportsForwardingPaths)
 
     EXPECT_EQ(handler_call_count, 1);
     EXPECT_EQ(captured_event, "handler-event");
+}
+
+/**
+ * @brief Verifies explicit-origin publish overload forwards origin to handlers.
+ */
+TEST(SyncObserverPerfectForwardingTest, HandlerPublishSupportsExplicitOrigin)
+{
+    tools::sync_subject<std::string, std::string> subject("ForwardingSubject");
+
+    int handler_call_count = 0;
+    std::string captured_origin;
+
+    subject.subscribe("handler-topic", "handler-name",
+        [&](const std::string&, const std::string&, const std::string& origin)
+        {
+            ++handler_call_count;
+            captured_origin = origin;
+        });
+
+    subject.publish("handler-topic", "handler-event", "handler-origin");
+
+    EXPECT_EQ(handler_call_count, 1);
+    EXPECT_EQ(captured_origin, "handler-origin");
 }
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
