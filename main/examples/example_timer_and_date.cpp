@@ -45,9 +45,9 @@ namespace
     {
         LOG_INFO("calendar time and day");
 
-        constexpr const int moon_landing_year = 1969;
-        constexpr const unsigned moon_landing_month = 7U;
-        constexpr const unsigned moon_landing_day = 21U;
+        static constexpr int moon_landing_year = 1969;
+        static constexpr unsigned moon_landing_month = 7U;
+        static constexpr unsigned moon_landing_day = 21U;
 
         auto now = std::chrono::system_clock::now();
         auto current_date = std::chrono::year_month_day(std::chrono::floor<std::chrono::days>(now));
@@ -75,17 +75,17 @@ namespace
         {
             tools::timer_scheduler timer_scheduler;
 
-            constexpr const int period_200ms = 200;
-            constexpr const int period_120ms = 120;
-            constexpr const int period_100ms = 100;
-            constexpr const int period_75ms = 75;
-            constexpr const int period_50ms = 50;
-            constexpr const int period_40ms = 40;
-            constexpr const int period_25ms = 25;
-            constexpr const int period_20ms = 20;
-            constexpr const int timer_timeout_us = 120250;
+            static constexpr int period_200ms = 200;
+            static constexpr int period_120ms = 120;
+            static constexpr int period_100ms = 100;
+            static constexpr int period_75ms = 75;
+            static constexpr int period_50ms = 50;
+            static constexpr int period_40ms = 40;
+            static constexpr int period_25ms = 25;
+            static constexpr int period_20ms = 20;
+            static constexpr int timer_timeout_us = 120250;
 
-            constexpr const int test_value = 42;
+            static constexpr int test_value = 42;
             std::atomic<int> val(0);
             // One-shot timer: value should flip exactly once after timeout.
             timer_scheduler.add(

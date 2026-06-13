@@ -35,9 +35,9 @@
 
 namespace
 {
-    constexpr const int meaning_of_life_answer = 42;
-    constexpr const double sample_object_value = 42.99;
-    constexpr const double indoor_temperature_c = 19.47;
+    constexpr int meaning_of_life_answer = 42;
+    constexpr double sample_object_value = 42.99;
+    constexpr double indoor_temperature_c = 19.47;
 
     void test_json()
     {
@@ -51,9 +51,9 @@ namespace
             cjsonpp::JSONObject obj4 = {};
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            constexpr const double number_pi = std::numbers::pi;
+            static constexpr double number_pi = std::numbers::pi;
 #else
-            constexpr const double number_pi = 3.141592;
+            static constexpr double number_pi = 3.141592;
 #endif
             obj.set("pi", number_pi);
             obj.set("happy", true);
@@ -102,7 +102,7 @@ namespace
         LOG_INFO("-- queued json data --");
         print_stats();
 
-        constexpr const std::size_t queue_depth = 128U;
+        static constexpr std::size_t queue_depth = 128U;
         auto data_queue = std::make_unique<tools::sync_ring_buffer<std::string, queue_depth>>();
 
         {

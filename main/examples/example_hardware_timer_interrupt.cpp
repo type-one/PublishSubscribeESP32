@@ -133,15 +133,15 @@ namespace
 
             timer_config.clk_src = GPTIMER_CLK_SRC_DEFAULT;
             timer_config.direction = GPTIMER_COUNT_UP;
-            constexpr const int one_mhz_clock = 1 * 1000 * 1000;
+            static constexpr int one_mhz_clock = 1 * 1000 * 1000;
             timer_config.resolution_hz = one_mhz_clock;
 
             ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
             gptimer_alarm_config_t alarm_config = {};
 
-            constexpr const int counter_reload_val = 0;
-            constexpr const int period_1ms = 1000;
+            static constexpr int counter_reload_val = 0;
+            static constexpr int period_1ms = 1000;
             alarm_config.reload_count = counter_reload_val;
             alarm_config.alarm_count = period_1ms;
             alarm_config.flags.auto_reload_on_alarm = true;

@@ -45,16 +45,16 @@ namespace
         aggregat = 4
     };
 
-    constexpr const double sensor1_cpu_temperature_c = 45.2;
-    constexpr const double sensor1_gpu_temperature_c = 51.72;
-    constexpr const double sensor1_room_temperature_c = 21.5;
-    constexpr const double sensor2_cpu_temperature_c = 17.2;
-    constexpr const double sensor2_gpu_temperature_c = 34.7;
-    constexpr const double sensor2_room_temperature_c = 18.3;
-    constexpr const double aggregate_value_1 = 0.7;
-    constexpr const double aggregate_value_2 = 1.5;
-    constexpr const double aggregate_value_3 = 2.1;
-    constexpr const double aggregate_value_4 = -0.5;
+    constexpr double sensor1_cpu_temperature_c = 45.2;
+    constexpr double sensor1_gpu_temperature_c = 51.72;
+    constexpr double sensor1_room_temperature_c = 21.5;
+    constexpr double sensor2_cpu_temperature_c = 17.2;
+    constexpr double sensor2_gpu_temperature_c = 34.7;
+    constexpr double sensor2_room_temperature_c = 18.3;
+    constexpr double aggregate_value_1 = 0.7;
+    constexpr double aggregate_value_2 = 1.5;
+    constexpr double aggregate_value_3 = 2.1;
+    constexpr double aggregate_value_4 = -0.5;
     /** @brief Sensor payload carrying CPU, GPU, and room temperature readings with bytepack serialization support. */
     struct temperature_sensor
     {
@@ -118,7 +118,7 @@ namespace
         LOG_INFO("-- queued bytepack data --");
         print_stats();
 
-        constexpr const std::size_t queue_depth = 128U;
+        static constexpr std::size_t queue_depth = 128U;
         tools::sync_ring_vector<std::vector<std::uint8_t>> data_queue(queue_depth);
 
         free_text message1 = { "jojo rabbit" };
@@ -126,7 +126,7 @@ namespace
         temperature_sensor message3
             = { sensor1_cpu_temperature_c, sensor1_gpu_temperature_c, sensor1_room_temperature_c };
 
-        constexpr const std::size_t buffer_size = 1024U;
+        static constexpr std::size_t buffer_size = 1024U;
         std::vector<std::uint8_t> buffer(buffer_size);
         bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer.data(), buffer.size()) };
 
@@ -289,7 +289,7 @@ namespace
             aggr.m_list[1].vendor_name.c_str());
         std::printf("%f %f %f\n", aggr.m_values[0], aggr.m_values[1], aggr.m_values[2]);
 
-        constexpr const std::size_t buffer_size = 1024U;
+        static constexpr std::size_t buffer_size = 1024U;
         std::vector<std::uint8_t> buffer(buffer_size);
         bytepack::binary_stream<> binary_stream { bytepack::buffer_view(buffer.data(), buffer.size()) };
 
@@ -325,7 +325,7 @@ namespace
     {
     };
 
-    constexpr const std::size_t binary_msg_size = 128U;
+    constexpr std::size_t binary_msg_size = 128U; // NOLINT(readability-magic-numbers,readability-static-definition-in-anonymous-namespace)
     using binary_msg = std::array<std::uint8_t, binary_msg_size>;
 
     using my_data_task = tools::data_task<data_task_context, binary_msg>;
@@ -334,7 +334,7 @@ namespace
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
     namespace
     {
-        constexpr const auto task_startup
+        constexpr auto task_startup
             = [](const std::shared_ptr<data_task_context>& context, const std::string& task_name)
         {
             (void)context;
@@ -399,8 +399,8 @@ namespace
 
         auto context = std::make_shared<data_task_context>();
 
-        constexpr const std::size_t queue_depth = 128U;
-        constexpr const std::size_t stack_size = 4096U;
+        static constexpr std::size_t queue_depth = 128U;
+        static constexpr std::size_t stack_size = 4096U;
 
         auto task_1 = std::make_unique<my_data_task>(
             std::move(task_startup), std::move(task_1_processing), context, queue_depth, "task 1", stack_size);
@@ -437,11 +437,11 @@ namespace
             task_1->submit(buffer);
         };
 
-        constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(500);
+        static constexpr auto period = std::chrono::duration<std::uint64_t, std::milli>(500);
         auto task_2 = std::make_unique<my_data_periodic_task>(
             std::move(task_startup), std::move(task_2_periodic), context, "task 2", period, stack_size);
 
-        constexpr const std::size_t wait_task_ms = 2500;
+        static constexpr std::size_t wait_task_ms = 2500;
         tools::sleep_for(wait_task_ms);
     }
 #endif
@@ -455,12 +455,12 @@ namespace
 
         auto context = std::make_shared<data_task_context>();
 
-        constexpr const std::size_t queue_depth = 4U;
-        constexpr const std::size_t stack_size = 4096U;
-        constexpr const int first_value = 1;
-        constexpr const int second_value = 2;
-        constexpr const int function_pointer_value = 42;
-        constexpr const int wait_processing_ms = 100;
+        static constexpr std::size_t queue_depth = 4U;
+        static constexpr std::size_t stack_size = 4096U;
+        static constexpr int first_value = 1;
+        static constexpr int second_value = 2;
+        static constexpr int function_pointer_value = 42;
+        static constexpr int wait_processing_ms = 100;
 
         using simple_data_task = tools::data_task<data_task_context, int>;
 

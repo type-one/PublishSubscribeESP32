@@ -306,9 +306,9 @@ TYPED_TEST(SyncQueueTest, MultipleOperations)
  */
 TYPED_TEST(SyncQueueTest, MultipleProducersMultipleConsumers)
 {
-    constexpr const int num_producers = 4;
-    constexpr const int num_consumers = 4;
-    constexpr const int num_elements = 100;
+    static constexpr int num_producers = 4;
+    static constexpr int num_consumers = 4;
+    static constexpr int num_elements = 100;
 
     auto producer = [this]()
     {
@@ -373,8 +373,8 @@ TYPED_TEST(SyncQueueTest, MultipleProducersMultipleConsumers)
  */
 TYPED_TEST(SyncQueueTest, SingleProducerMultipleConsumers)
 {
-    constexpr const int num_consumers = 4;
-    constexpr const int num_elements = 100;
+    static constexpr int num_consumers = 4;
+    static constexpr int num_elements = 100;
 
     auto producer = [this]()
     {
@@ -430,8 +430,8 @@ TYPED_TEST(SyncQueueTest, SingleProducerMultipleConsumers)
  */
 TYPED_TEST(SyncQueueTest, MultipleProducersSingleConsumer)
 {
-    constexpr const int num_producers = 4;
-    constexpr const int num_elements = 100;
+    static constexpr int num_producers = 4;
+    static constexpr int num_elements = 100;
 
     auto producer = [this]()
     {

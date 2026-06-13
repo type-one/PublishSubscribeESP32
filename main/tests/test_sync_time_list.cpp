@@ -122,16 +122,16 @@ TEST_F(SyncTimeListTest, ClearRemovesAllEntries)
 
 TEST_F(SyncTimeListTest, ConcurrentProducersMaintainTotalCountAndOrder)
 {
-    constexpr const long producer_a_start = 1000L;
-    constexpr const long producer_b_start = 2000L;
-    constexpr const long timestamp_step = 1L;
-    constexpr const int inserts_per_producer = 128;
+    static constexpr long producer_a_start = 1000L;
+    static constexpr long producer_b_start = 2000L;
+    static constexpr long timestamp_step = 1L;
+    static constexpr int inserts_per_producer = 128;
 
     std::thread producer_a(
         [this]()
         {
-            constexpr const long producer_start = 1000L;
-            constexpr const int count_limit = 128;
+            static constexpr long producer_start = 1000L;
+            static constexpr int count_limit = 128;
             for (int index = 0; index < count_limit; ++index)
             {
                 const long timestamp_value = producer_start + static_cast<long>(index);
@@ -142,8 +142,8 @@ TEST_F(SyncTimeListTest, ConcurrentProducersMaintainTotalCountAndOrder)
     std::thread producer_b(
         [this]()
         {
-            constexpr const long producer_start = 2000L;
-            constexpr const int count_limit = 128;
+            static constexpr long producer_start = 2000L;
+            static constexpr int count_limit = 128;
             for (int index = 0; index < count_limit; ++index)
             {
                 const long timestamp_value = producer_start + static_cast<long>(index);
@@ -154,7 +154,7 @@ TEST_F(SyncTimeListTest, ConcurrentProducersMaintainTotalCountAndOrder)
     producer_a.join();
     producer_b.join();
 
-    constexpr const std::size_t expected_total = static_cast<std::size_t>(inserts_per_producer * 2);
+    static constexpr std::size_t expected_total = static_cast<std::size_t>(inserts_per_producer * 2);
     EXPECT_EQ(sync_list->size(), expected_total);
 
     const auto snapshot_values = sync_list->snapshot_sorted();

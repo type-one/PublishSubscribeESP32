@@ -98,7 +98,7 @@ namespace tools
             // create other buffer with gzip header + footer
             const std::size_t packed_size = comp.out.outlen;
             const std::size_t gzip_buffer_sz = packed_size + 10U + 8U;
-            constexpr const std::size_t gzip_header_sz = 10U;
+            static constexpr std::size_t gzip_header_sz = 10U;
 
             gzip_packed.resize(gzip_buffer_sz);
 
@@ -117,7 +117,7 @@ namespace tools
             // free packed buffer
             std::free(comp.out.outbuf); // NOLINT allocated by malloc in uzib lib
 
-            constexpr const std::uint32_t lo_byte_mask = 0xff;
+            static constexpr std::uint32_t lo_byte_mask = 0xffU;
 
             // little endian CRC32
             gzip_packed.at(gzip_header_sz + packed_size + 0U) // NOLINT gzip footer little endian transformation
@@ -152,7 +152,7 @@ namespace tools
         std::vector<std::uint8_t> gzip_unpacked;
 
         // The smallest file that can be compressed by gzip is 24 bytes of zeros down to 23 bytes.
-        constexpr const std::size_t minimal_gzip_packed_size = 23U;
+        static constexpr std::size_t minimal_gzip_packed_size = 23U;
 
         if (packed_input.size() >= minimal_gzip_packed_size)
         {
@@ -197,7 +197,7 @@ namespace tools
 
             // produce decompressed output in chunks of this size
             // default is to decompress byte by byte; can be any other length
-            constexpr const unsigned int out_chunk_size = 1U;
+            static constexpr unsigned int out_chunk_size = 1U;
 
             while (dlen > 0U)
             {

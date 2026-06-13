@@ -219,8 +219,8 @@ namespace tools
             //     |<----------- Deadline ----------->|
             //     |<-------------- Period ------------------->|
 
-            constexpr const std::uint64_t nano_sec_coeff = 1000ULL;
-            constexpr const std::uint64_t floor_value = 0ULL;
+            constexpr std::uint64_t nano_sec_coeff = 1000ULL;
+            constexpr std::uint64_t floor_value = 0ULL;
             attr.sched_runtime = static_cast<std::uint64_t>(
                 std::max(floor_value, static_cast<std::uint64_t>(remaining_time.count()) * nano_sec_coeff));
             attr.sched_deadline = static_cast<std::uint64_t>(period.count()) * nano_sec_coeff;

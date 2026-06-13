@@ -35,12 +35,12 @@
 
 namespace
 {
-    constexpr const double sample_value_1 = 5.6;
-    constexpr const double sample_value_2 = 7.2;
-    constexpr const double sample_value_3 = 1.2;
-    constexpr const double sample_value_4 = 9.1;
-    constexpr const double sample_value_5 = 10.1;
-    constexpr const double sample_value_6 = 7.5;
+    constexpr double sample_value_1 = 5.6;
+    constexpr double sample_value_2 = 7.2;
+    constexpr double sample_value_3 = 1.2;
+    constexpr double sample_value_4 = 9.1;
+    constexpr double sample_value_5 = 10.1;
+    constexpr double sample_value_6 = 7.5;
 
     /** @brief Demonstrates push_range, pop_range, front, and pop operations on a @c tools::ring_buffer. */
     void test_ring_buffer()
@@ -48,16 +48,16 @@ namespace
         LOG_INFO("-- ring buffer --");
         print_stats();
 
-        constexpr const std::size_t queue_size = 64U;
+        static constexpr std::size_t queue_size = 64U;
         auto str_queue = std::make_unique<tools::ring_buffer<std::string, queue_size>>();
 
         str_queue->push_range({ "toto1", "toto2", "toto3" });
 
-        constexpr const std::array<std::string_view, 2U> extra_values = { "toto4", "toto5" };
+        static constexpr std::array<std::string_view, 2U> extra_values = { "toto4", "toto5" };
         str_queue->push_range(extra_values);
 
         // Batch-pop demonstrates efficient draining when consumers can process in chunks.
-        constexpr const std::size_t pop_batch_size = 2U;
+        static constexpr std::size_t pop_batch_size = 2U;
         std::array<std::string, pop_batch_size> popped_batch = { "", "" };
         const std::size_t popped_count = str_queue->pop_range(popped_batch.begin(), popped_batch.end());
         auto* popped_it = popped_batch.data();
@@ -88,8 +88,8 @@ namespace
         print_stats();
 
         {
-            constexpr const std::size_t queue_size = 8U;
-            constexpr const std::size_t repeated_char_count = 4U;
+            static constexpr std::size_t queue_size = 8U;
+            static constexpr std::size_t repeated_char_count = 4U;
             tools::ring_buffer<std::string, queue_size> str_queue;
 
             std::string lvalue = "lvalue-string";
@@ -105,7 +105,7 @@ namespace
         }
 
         {
-            constexpr const std::size_t queue_size = 4U;
+            static constexpr std::size_t queue_size = 4U;
             // Move-only payloads verify ownership transfer APIs for non-copyable objects.
             tools::ring_buffer<std::unique_ptr<std::string>, queue_size> ptr_queue;
 
@@ -130,7 +130,7 @@ namespace
         LOG_INFO("-- ring vector --");
         print_stats();
 
-        constexpr const std::size_t queue_size = 64U;
+        static constexpr std::size_t queue_size = 64U;
         auto str_queue = std::make_unique<tools::ring_vector<std::string>>(queue_size);
 
         str_queue->emplace("toto1");
@@ -158,8 +158,8 @@ namespace
         print_stats();
 
         {
-            constexpr const std::size_t queue_size = 8U;
-            constexpr const std::size_t repeated_char_count = 4U;
+            static constexpr std::size_t queue_size = 8U;
+            static constexpr std::size_t repeated_char_count = 4U;
             tools::ring_vector<std::string> str_queue(queue_size);
 
             std::string lvalue = "ring-vector-lvalue";
@@ -167,12 +167,12 @@ namespace
             str_queue.push(std::string("ring-vector-rvalue"));
             str_queue.emplace(repeated_char_count, 'v');
 
-            constexpr const std::array<std::string_view, 2U> range_values
+            static constexpr std::array<std::string_view, 2U> range_values
                 = { "ring-vector-range-1", "ring-vector-range-2" };
             str_queue.push_range(range_values);
             str_queue.push_range({ "ring-vector-brace-range-1", "ring-vector-brace-range-2" });
 
-            constexpr const std::size_t pop_batch_size = 2U;
+            static constexpr std::size_t pop_batch_size = 2U;
             std::array<std::string, pop_batch_size> popped_batch = { "", "" };
             const std::size_t popped_count = str_queue.pop_range(popped_batch.begin(), popped_batch.end());
             auto* popped_it = popped_batch.data();
@@ -190,7 +190,7 @@ namespace
         }
 
         {
-            constexpr const std::size_t queue_size = 4U;
+            static constexpr std::size_t queue_size = 4U;
             tools::ring_vector<std::unique_ptr<std::string>> ptr_queue(queue_size);
 
             auto val = std::make_unique<std::string>("ring-vector-move-only-push");
@@ -215,13 +215,13 @@ namespace
         LOG_INFO("-- ring vector resize --");
         print_stats();
 
-        constexpr const std::size_t queue_size = 3U;
+        static constexpr std::size_t queue_size = 3U;
         auto str_queue = std::make_unique<tools::ring_vector<std::string>>(queue_size);
 
         str_queue->emplace("toto1");
         str_queue->emplace("toto2");
         str_queue->emplace("toto3");
-        constexpr const std::size_t new_queue_size = 5U;
+        static constexpr std::size_t new_queue_size = 5U;
         str_queue->resize(new_queue_size);
 
         str_queue->emplace("toto4");
@@ -279,7 +279,7 @@ namespace
         print_stats();
 
         {
-            constexpr const std::size_t queue_size = 64U;
+            static constexpr std::size_t queue_size = 64U;
             auto str_queue = std::make_unique<tools::ring_buffer<std::string, queue_size>>();
 
             str_queue->emplace("toto1");
@@ -351,7 +351,7 @@ namespace
                 std::printf("%s\n", (*str_queue)[i].c_str());
             }
 
-            constexpr const std::size_t nb_of_items_to_keep = 5U;
+            static constexpr std::size_t nb_of_items_to_keep = 5U;
             const std::size_t remove_count = str_queue->size() - nb_of_items_to_keep;
             for (std::size_t i = 0U; i < remove_count; ++i)
             {
@@ -373,7 +373,7 @@ namespace
         }
 
         {
-            constexpr const std::size_t queue_size = 64U;
+            static constexpr std::size_t queue_size = 64U;
             auto val_queue = std::make_unique<tools::ring_buffer<double, queue_size>>();
 
             val_queue->emplace(sample_value_1);
@@ -445,7 +445,7 @@ namespace
         print_stats();
 
         {
-            constexpr const std::size_t array_size = 64U;
+            static constexpr std::size_t array_size = 64U;
             auto str_queue = std::make_unique<tools::ring_vector<std::string>>(array_size);
 
             str_queue->emplace("toto1");
@@ -537,7 +537,7 @@ namespace
         }
 
         {
-            constexpr const std::size_t array_size = 64U;
+            static constexpr std::size_t array_size = 64U;
             auto val_queue = std::make_unique<tools::ring_vector<double>>(array_size);
 
             val_queue->emplace(sample_value_1);

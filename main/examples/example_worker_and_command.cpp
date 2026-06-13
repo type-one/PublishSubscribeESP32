@@ -64,7 +64,7 @@ namespace
         LOG_INFO("-- ring buffer commands --");
         print_stats();
 
-        constexpr const std::size_t commands_queue_depth = 128U;
+        static constexpr std::size_t commands_queue_depth = 128U;
         tools::sync_ring_buffer<std::function<void()>, commands_queue_depth> commands_queue;
 
         commands_queue.emplace([]() { std::printf("hello\n"); });
@@ -112,7 +112,7 @@ namespace
 
         auto context = std::make_shared<my_worker_task_context>();
 
-        constexpr const std::size_t stack_size = 4096U;
+        static constexpr std::size_t stack_size = 4096U;
         auto task1 = std::make_unique<my_worker_task>(std::move(startup1), context, "worker_1", stack_size);
         auto task2 = std::make_unique<my_worker_task>(std::move(startup2), context, "worker_2", stack_size);
 
@@ -120,11 +120,11 @@ namespace
         std::uniform_int_distribution<int> distribution(0, 1);
         std::array<std::unique_ptr<my_worker_task>, 2> tasks = { std::move(task1), std::move(task2) };
 
-        constexpr const int wait_tasks_ms = 100;
+        static constexpr int wait_tasks_ms = 100;
         tools::sleep_for(wait_tasks_ms);
 
         const auto start_timepoint = std::chrono::high_resolution_clock::now();
-        constexpr const int nb_loops = 20;
+        static constexpr int nb_loops = 20;
 
         for (int i = 0; i < nb_loops; ++i)
         {
@@ -153,7 +153,7 @@ namespace
             std::this_thread::yield();
         }
 
-        constexpr const int wait_loops_ms = 2000;
+        static constexpr int wait_loops_ms = 2000;
         tools::sleep_for(wait_loops_ms);
 
         std::printf("nb of loops = %d\n", context->loop_counter.load());
@@ -190,7 +190,7 @@ namespace
         };
 
         std::string task_name_lvalue = "worker_forwarding";
-        constexpr const std::size_t stack_size = 4096U;
+        static constexpr std::size_t stack_size = 4096U;
         my_worker_task worker(startup_lvalue, context, task_name_lvalue, stack_size);
 
         my_worker_task::call_back delegate_lvalue
@@ -233,7 +233,7 @@ namespace
                 ctx->loop_counter.fetch_add(1);
             }) });
 
-        constexpr const int wait_time_ms = 200;
+        static constexpr int wait_time_ms = 200;
         tools::sleep_for(wait_time_ms);
         std::printf("worker forwarding loop counter = %d\n", context->loop_counter.load());
     }

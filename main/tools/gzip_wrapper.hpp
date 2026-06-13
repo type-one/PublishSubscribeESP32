@@ -49,10 +49,10 @@
 #include "uzlib/uzlib.h"
 namespace tools
 {
-    constexpr const unsigned int gzip_dict_size = 32768U;
-    constexpr const unsigned int gzip_hash_bits = 12U;
-    constexpr const std::size_t gzip_hash_nb_entries = (1U << gzip_hash_bits);
-    constexpr const std::size_t gzip_hash_size = sizeof(uzlib_hash_entry_t) * gzip_hash_nb_entries;
+    inline constexpr unsigned int gzip_dict_size = 32768U;
+    inline constexpr unsigned int gzip_hash_bits = 12U;
+    inline constexpr std::size_t gzip_hash_nb_entries = (1U << gzip_hash_bits);
+    inline constexpr std::size_t gzip_hash_size = sizeof(uzlib_hash_entry_t) * gzip_hash_nb_entries;
 
     /**
      * @brief A wrapper class for gzip compression and decompression.

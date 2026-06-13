@@ -310,8 +310,8 @@ namespace tools
         }
 
     private:
-        static constexpr const std::size_t ring_buffer_size = (1U << Pow2);
-        static constexpr const std::size_t ring_buffer_mask = (ring_buffer_size - 1U);
+        static constexpr std::size_t ring_buffer_size = (1U << Pow2);
+        static constexpr std::size_t ring_buffer_mask = (ring_buffer_size - 1U);
 
         /**
          * @brief Shared push implementation used by all public push overloads.

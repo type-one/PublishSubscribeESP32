@@ -83,7 +83,7 @@ namespace
 
     using base_async_observer = tools::async_observer<my_topic, my_event, tools::sync_ring_vector>;
 
-    constexpr const std::size_t base_async_observer_queue_depth = 256U;
+    constexpr std::size_t base_async_observer_queue_depth = 256U;
     class my_async_observer : public base_async_observer
     {
     public:
@@ -235,7 +235,7 @@ namespace
 
         subject1->unsubscribe(my_topic::generic, "loose_coupled_handler_1");
 
-        constexpr const int wait_time_500ms = 500;
+        static constexpr int wait_time_500ms = 500;
         tools::sleep_for(wait_time_500ms);
 
         subject1->publish(my_topic::generic, my_event { my_event::type::notification, "tintin" });
@@ -309,7 +309,7 @@ namespace
     {
         std::printf("starting generic task %s\n", task_name.c_str());
 
-        constexpr const int sleeping_time_ms = 250;
+        static constexpr int sleeping_time_ms = 250;
 
         while (!context->stop_tasks.load())
         {
@@ -332,7 +332,7 @@ namespace
         {
             std::printf("starting generic task %s\n", task_name.c_str());
 
-            constexpr const int sleeping_time_ms = 500;
+            static constexpr int sleeping_time_ms = 500;
 
             while (!context->stop_tasks.load())
             {
@@ -346,17 +346,17 @@ namespace
         auto context = std::make_shared<my_generic_task_context>();
         context->stop_tasks.store(false);
 
-        constexpr const std::size_t stack_size = 2048U;
+        static constexpr std::size_t stack_size = 2048U;
 
         my_generic_task task1(std::move(lambda), context, "my_generic_task1", stack_size);
         my_generic_task task2(std::move(generic_function), context, "my_generic_task2", stack_size);
 
-        constexpr const int wait_tasks_time_ms = 2000;
+        static constexpr int wait_tasks_time_ms = 2000;
         tools::sleep_for(wait_tasks_time_ms);
 
         context->stop_tasks.store(true);
 
-        constexpr const int wait_join_ms = 1000;
+        static constexpr int wait_join_ms = 1000;
         tools::sleep_for(wait_join_ms);
 
         std::printf("join tasks\n");
@@ -379,7 +379,7 @@ namespace
             ctx->stop_tasks.store(true);
         };
 
-        constexpr const std::size_t stack_size = 2048U;
+        static constexpr std::size_t stack_size = 2048U;
 
         my_generic_task task_lvalue(callback_lvalue, context, std::string("generic_forward_lvalue"), stack_size);
 
@@ -387,7 +387,7 @@ namespace
         context_conversion->stop_tasks.store(false);
         my_generic_task task_conversion(generic_function, context_conversion, "generic_forward_conversion", stack_size);
 
-        constexpr const int wait_join_ms = 200;
+        static constexpr int wait_join_ms = 200;
         tools::sleep_for(wait_join_ms);
         context_conversion->stop_tasks.store(true);
         tools::sleep_for(wait_join_ms);
@@ -424,14 +424,14 @@ namespace
 
         auto context = std::make_shared<my_periodic_task_context>();
 
-        constexpr const int period_20ms = 20000;
-        constexpr const auto period = std::chrono::duration<std::uint64_t, std::micro>(period_20ms);
+        static constexpr int period_20ms = 20000;
+        static constexpr auto period = std::chrono::duration<std::uint64_t, std::micro>(period_20ms);
         const auto start_timepoint = std::chrono::high_resolution_clock::now();
 
-        constexpr const std::size_t stack_size = 2048U;
+        static constexpr std::size_t stack_size = 2048U;
         my_periodic_task task1(startup, lambda, context, "my_periodic_task", period, stack_size);
 
-        constexpr const int wait_task_startup_ms = 2000;
+        static constexpr int wait_task_startup_ms = 2000;
         tools::sleep_for(wait_task_startup_ms);
 
         std::printf("nb of periodic loops = %d\n", context->loop_counter.load());
@@ -474,11 +474,11 @@ namespace
         };
 
         constexpr std::size_t stack_size = 2048U;
-        constexpr const int period_ms = 20;
+        static constexpr int period_ms = 20;
         tools::periodic_task<my_periodic_task_context> task(startup_lvalue, std::move(periodic_rvalue), context,
             "my_periodic_forwarding_task", std::chrono::milliseconds(period_ms), stack_size);
 
-        constexpr const int wait_time_ms = 200;
+        static constexpr int wait_time_ms = 200;
         tools::sleep_for(wait_time_ms);
         std::printf("periodic forwarding loop counter = %d\n", context->loop_counter.load());
     }
@@ -492,10 +492,10 @@ namespace
 
         tools::histogram<double> hist;
 
-        constexpr const double value_exact = 2.5;
-        constexpr const int value_int_conversion = 2;
-        constexpr const float value_float_conversion = 2.5F;
-        constexpr const std::array<double, 2U> repeated_values = { 3.0, 3.0 };
+        static constexpr double value_exact = 2.5;
+        static constexpr int value_int_conversion = 2;
+        static constexpr float value_float_conversion = 2.5F;
+        static constexpr std::array<double, 2U> repeated_values = { 3.0, 3.0 };
 
         double lvalue_value = value_exact;
         hist.add(lvalue_value);
@@ -567,8 +567,8 @@ namespace
          * metrics. */
         void display_stats()
         {
-            constexpr const double gaussian_lower_bound_ratio = 0.5;
-            constexpr const int gaussian_steps = 100;
+            static constexpr double gaussian_lower_bound_ratio = 0.5;
+            static constexpr int gaussian_steps = 100;
 
             auto top = m_histogram.top();
             std::printf("\nvalue %f appears %d times\n", top, m_histogram.top_occurence());
@@ -623,12 +623,12 @@ namespace
         data_source->subscribe(my_topic::external, histogram_feeder);
 
         auto context = std::make_shared<my_periodic_task_context>();
-        constexpr const std::size_t stack_size = 4096U;
+        static constexpr std::size_t stack_size = 4096U;
         const auto period = std::chrono::duration<std::uint64_t, std::milli>(100);
         {
             my_periodic_task periodic_task(startup, sampler, context, "sampler_task", period, stack_size);
 
-            constexpr const std::size_t wait_task = 2000;
+            static constexpr std::size_t wait_task = 2000;
             tools::sleep_for(wait_task);
         }
 

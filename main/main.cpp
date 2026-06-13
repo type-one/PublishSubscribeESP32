@@ -81,7 +81,7 @@ void runner()
 }
 
 #if defined(FREERTOS_PLATFORM)
-constexpr const std::size_t stack_size = 8192;
+static constexpr std::size_t stack_size = 8192U;
 
 StaticTask_t x_task_buffer = {};
 std::array<StackType_t, stack_size> x_stack = {};

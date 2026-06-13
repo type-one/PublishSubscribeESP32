@@ -281,7 +281,7 @@ TYPED_TEST(LockFreeRingBufferTest, ProducerConsumerInterleavedTest)
 
 TEST(LockFreeRingBufferStressTest, PortableTaskHelpersProducerConsumer)
 {
-    constexpr const std::size_t stress_buffer_pow2 = 10U;
+    static constexpr std::size_t stress_buffer_pow2 = 10U;
 
     struct stress_context
     {
@@ -295,8 +295,8 @@ TEST(LockFreeRingBufferStressTest, PortableTaskHelpersProducerConsumer)
 
     auto context = std::make_shared<stress_context>();
 
-    constexpr const std::uint32_t item_count = 200000U;
-    constexpr const std::size_t task_stack = 4096U;
+    static constexpr std::uint32_t item_count = 200000U;
+    static constexpr std::size_t task_stack = 4096U;
 
     {
         stress_task producer_task(

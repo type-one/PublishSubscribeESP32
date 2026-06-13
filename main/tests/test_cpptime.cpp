@@ -374,7 +374,7 @@ TEST_F(TimerTest, TestTwoIdenticalTimeouts)
             done_j.set_value();
         });
 
-    constexpr const int timeout_ms = 500;
+    static constexpr int timeout_ms = 500;
     ASSERT_EQ(future_i.wait_for(milliseconds(timeout_ms)), std::future_status::ready);
     ASSERT_EQ(future_j.wait_for(milliseconds(timeout_ms)), std::future_status::ready);
     EXPECT_EQ(i.load(), 42);

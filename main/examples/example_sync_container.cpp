@@ -48,11 +48,11 @@ namespace
         LOG_INFO("-- lock free ring buffer --");
         print_stats();
 
-        constexpr const std::size_t queue_size_pow2 = 3U;
-        constexpr const std::uint8_t val_overflow_probe_1 = 5U;
-        constexpr const std::uint8_t val_overflow_probe_2 = 6U;
-        constexpr const std::uint8_t val_overflow_probe_3 = 7U;
-        constexpr const std::uint8_t val_overflow_probe_4 = 8U;
+        static constexpr std::size_t queue_size_pow2 = 3U;
+        static constexpr std::uint8_t val_overflow_probe_1 = 5U;
+        static constexpr std::uint8_t val_overflow_probe_2 = 6U;
+        static constexpr std::uint8_t val_overflow_probe_3 = 7U;
+        static constexpr std::uint8_t val_overflow_probe_4 = 8U;
 
         auto str_queue = std::make_unique<tools::lock_free_ring_buffer<std::uint8_t, queue_size_pow2>>();
         bool result = false;
@@ -128,10 +128,10 @@ namespace
         print_stats();
 
         {
-            constexpr const std::size_t queue_size_pow2 = 2U;
-            constexpr const std::uint16_t val_first = 10U;
-            constexpr const std::uint16_t val_second = 20U;
-            constexpr const std::uint16_t val_third = 30U;
+            static constexpr std::size_t queue_size_pow2 = 2U;
+            static constexpr std::uint16_t val_first = 10U;
+            static constexpr std::uint16_t val_second = 20U;
+            static constexpr std::uint16_t val_third = 30U;
             tools::lock_free_ring_buffer<std::uint16_t, queue_size_pow2> buf;
 
             std::uint16_t lvalue = val_first;
@@ -151,7 +151,7 @@ namespace
         }
 
         {
-            constexpr const std::size_t queue_size_pow2 = 2U;
+            static constexpr std::size_t queue_size_pow2 = 2U;
             tools::lock_free_ring_buffer<float, queue_size_pow2> float_buf;
 
             (void)float_buf.push(1);
@@ -177,7 +177,7 @@ namespace
         LOG_INFO("-- lock free ring buffer range --");
         print_stats();
 
-        constexpr const std::size_t queue_size_pow2 = 3U;
+        static constexpr std::size_t queue_size_pow2 = 3U;
         tools::lock_free_ring_buffer<int, queue_size_pow2> buffer;
 
         const std::size_t pushed_init = buffer.push_range({ 10, 20, 30 });
@@ -187,7 +187,7 @@ namespace
         const std::size_t pushed_vec = buffer.push_range(extra_values);
         std::printf("push_range vector pushed: %zu\n", pushed_vec);
 
-        constexpr const std::size_t batch_size = 3U;
+        static constexpr std::size_t batch_size = 3U;
         std::array<int, batch_size> batch = {};
         const std::size_t popped_count = buffer.pop_range(batch.begin(), batch.end());
         std::printf("pop_range iterator popped: %zu\n", popped_count);
@@ -216,7 +216,7 @@ namespace
         LOG_INFO("-- lock free ring buffer task stress --");
         print_stats();
 
-        constexpr const std::size_t stress_buffer_pow2 = 10U;
+        static constexpr std::size_t stress_buffer_pow2 = 10U;
 
         /** @brief Shared producer/consumer state used for the lock-free ring-buffer stress benchmark. */
         struct stress_context
@@ -230,8 +230,8 @@ namespace
         using stress_task = tools::generic_task<stress_context>;
         auto context = std::make_shared<stress_context>();
 
-        constexpr const std::uint32_t item_count = 200000U;
-        constexpr const std::size_t task_stack = 4096U;
+        static constexpr std::uint32_t item_count = 200000U;
+        static constexpr std::size_t task_stack = 4096U;
 
         const auto begin = std::chrono::steady_clock::now();
 
@@ -301,8 +301,8 @@ namespace
         print_stats();
 
         {
-            constexpr const std::size_t queue_size = 64U;
-            constexpr const std::size_t repeated_char_count = 5U;
+            static constexpr std::size_t queue_size = 64U;
+            static constexpr std::size_t repeated_char_count = 5U;
             tools::sync_ring_buffer<std::string, queue_size> str_queue;
 
             std::string lvalue = "sync-lvalue";
@@ -311,10 +311,10 @@ namespace
             str_queue.emplace(repeated_char_count, 'z');
             str_queue.push_range({ "sync-range-1", "sync-range-2" });
 
-            constexpr const std::array<std::string_view, 2U> ar_values = { "sync-ar-range-1", "sync-ar-range-2" };
+            static constexpr std::array<std::string_view, 2U> ar_values = { "sync-ar-range-1", "sync-ar-range-2" };
             str_queue.push_range(ar_values);
 
-            constexpr const std::size_t pop_batch_size = 2U;
+            static constexpr std::size_t pop_batch_size = 2U;
             std::array<std::string, pop_batch_size> popped_batch = { "", "" };
             const std::size_t popped_count = str_queue.pop_range(popped_batch.begin(), popped_batch.end());
             auto* popped_it = popped_batch.data();
@@ -335,7 +335,7 @@ namespace
         }
 
         {
-            constexpr const std::size_t queue_size = 8U;
+            static constexpr std::size_t queue_size = 8U;
             tools::sync_ring_buffer<std::unique_ptr<std::string>, queue_size> ptr_queue;
 
             auto ptr = std::make_unique<std::string>("sync-move-only-push");
@@ -359,17 +359,17 @@ namespace
         LOG_INFO("-- sync ring vector --");
         print_stats();
 
-        constexpr const std::size_t queue_size = 64U;
+        static constexpr std::size_t queue_size = 64U;
         tools::sync_ring_vector<std::string> str_queue(queue_size);
 
         str_queue.emplace("toto");
         str_queue.push_range({ "sync-ring-vector-basic-range-1", "sync-ring-vector-basic-range-2" });
 
-        constexpr const std::array<std::string_view, 2U> ar_values
+        static constexpr std::array<std::string_view, 2U> ar_values
             = { "sync-ring-vector-basic-ar-1", "sync-ring-vector-basic-ar-2" };
         str_queue.push_range(ar_values);
 
-        constexpr const std::size_t pop_batch_size = 2U;
+        static constexpr std::size_t pop_batch_size = 2U;
         std::array<std::string, pop_batch_size> popped_batch = { "", "" };
         const std::size_t popped_count = str_queue.pop_range(popped_batch.begin(), popped_batch.end());
         auto* popped_it = popped_batch.data();
@@ -395,8 +395,8 @@ namespace
         print_stats();
 
         {
-            constexpr const std::size_t queue_size = 64U;
-            constexpr const std::size_t repeated_char_count = 5U;
+            static constexpr std::size_t queue_size = 64U;
+            static constexpr std::size_t repeated_char_count = 5U;
             tools::sync_ring_vector<std::string> str_queue(queue_size);
 
             std::string lvalue = "sync-ring-vector-lvalue";
@@ -405,11 +405,11 @@ namespace
             str_queue.emplace(repeated_char_count, 's');
             str_queue.push_range({ "sync-ring-vector-range-1", "sync-ring-vector-range-2" });
 
-            constexpr const std::array<std::string_view, 2U> ar_values
+            static constexpr std::array<std::string_view, 2U> ar_values
                 = { "sync-ring-vector-ar-range-1", "sync-ring-vector-ar-range-2" };
             str_queue.push_range(ar_values);
 
-            constexpr const std::size_t pop_batch_size = 2U;
+            static constexpr std::size_t pop_batch_size = 2U;
             std::array<std::string, pop_batch_size> popped_batch = { "", "" };
             const std::size_t popped_count = str_queue.pop_range(popped_batch.begin(), popped_batch.end());
             auto* popped_it = popped_batch.data();
@@ -430,7 +430,7 @@ namespace
         }
 
         {
-            constexpr const std::size_t queue_size = 8U;
+            static constexpr std::size_t queue_size = 8U;
             tools::sync_ring_vector<std::unique_ptr<std::string>> ptr_queue(queue_size);
 
             auto ptr = std::make_unique<std::string>("sync-ring-vector-move-only-push");
@@ -483,9 +483,9 @@ namespace
             str_queue.push({ "sync-queue-brace-init" });
             str_queue.emplace(4U, 'q');
 
-            constexpr const std::array<std::string_view, 2U> range_lvalue
+            static constexpr std::array<std::string_view, 2U> range_lvalue
                 = { "sync-queue-range-lvalue-1", "sync-queue-range-lvalue-2" };
-            constexpr const std::array<std::string_view, 2U> range_ar
+            static constexpr std::array<std::string_view, 2U> range_ar
                 = { "sync-queue-range-ar-1", "sync-queue-range-ar-2" };
 
             str_queue.push_range(range_lvalue);
@@ -493,7 +493,7 @@ namespace
             str_queue.push_range({ "sync-queue-brace-range-1", "sync-queue-brace-range-2" });
 
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            constexpr const std::array<std::size_t, 2U> suffixes = { 1U, 2U };
+            static constexpr std::array<std::size_t, 2U> suffixes = { 1U, 2U };
             // C++20 ranges path: demonstrate direct view pipeline submission into queue APIs.
             const auto transformed = suffixes
                 | std::views::transform([](const std::size_t suffix)
@@ -505,7 +505,7 @@ namespace
             str_queue.push_range(transformed);
 #endif
 
-            constexpr const std::size_t pop_batch_size = 2U;
+            static constexpr std::size_t pop_batch_size = 2U;
             std::array<std::string, pop_batch_size> popped_batch = { "", "" };
             const std::size_t popped_count = str_queue.pop_range(popped_batch.begin(), popped_batch.end());
             auto* popped_it = popped_batch.data();

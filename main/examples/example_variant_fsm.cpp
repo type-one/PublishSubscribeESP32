@@ -275,7 +275,7 @@ namespace
             m_state);
     }
 
-    constexpr const int traffic_light_wait_ms = 1000;
+    constexpr int traffic_light_wait_ms = 1000;
 
     traffic_light_state_v traffic_light_fsm::on_event(
         const traffic_light_state::off& state, const traffic_light_event::power_on& event)
@@ -306,8 +306,8 @@ namespace
         tools::sleep_for(traffic_light_wait_ms);
 
         traffic_light_state_v next_state;
-        constexpr const int max_cycles = 2;
-        constexpr const int nb_light_states = 3;
+        static constexpr int max_cycles = 2;
+        static constexpr int nb_light_states = 3;
         if (state.count < max_cycles * nb_light_states)
         {
             std::printf("traffic light RED --> ORANGE\n");

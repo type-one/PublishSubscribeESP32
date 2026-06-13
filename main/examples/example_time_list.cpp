@@ -37,65 +37,65 @@
 
 namespace
 {
-    constexpr const std::int64_t event_offset_sec_a = 5;
-    constexpr const std::int64_t event_offset_sec_b = 10;
-    constexpr const std::int64_t event_offset_sec_c = 20;
-    constexpr const std::int64_t event_offset_sec_d = 30;
-    constexpr const std::int64_t event_offset_sec_e = 60;
+    constexpr std::int64_t event_offset_sec_a = 5;
+    constexpr std::int64_t event_offset_sec_b = 10;
+    constexpr std::int64_t event_offset_sec_c = 20;
+    constexpr std::int64_t event_offset_sec_d = 30;
+    constexpr std::int64_t event_offset_sec_e = 60;
 
-    constexpr const std::int64_t reading_offset_ms_a = 100;
-    constexpr const std::int64_t reading_offset_ms_b = 200;
-    constexpr const std::int64_t reading_offset_ms_c = 400;
-    constexpr const std::int64_t reading_offset_ms_d = 550;
-    constexpr const std::int64_t reading_offset_ms_e = 700;
+    constexpr std::int64_t reading_offset_ms_a = 100;
+    constexpr std::int64_t reading_offset_ms_b = 200;
+    constexpr std::int64_t reading_offset_ms_c = 400;
+    constexpr std::int64_t reading_offset_ms_d = 550;
+    constexpr std::int64_t reading_offset_ms_e = 700;
 
-    constexpr const int sensor_id_temperature = 1;
-    constexpr const int sensor_id_voltage = 2;
-    constexpr const int sensor_id_humidity = 3;
-    constexpr const int sensor_id_current = 4;
-    constexpr const int sensor_id_pressure = 5;
+    constexpr int sensor_id_temperature = 1;
+    constexpr int sensor_id_voltage = 2;
+    constexpr int sensor_id_humidity = 3;
+    constexpr int sensor_id_current = 4;
+    constexpr int sensor_id_pressure = 5;
 
-    constexpr const float value_temperature = 23.1F;
-    constexpr const float value_voltage = 45.0F;
-    constexpr const float value_humidity = 18.5F;
-    constexpr const float value_current = 3.3F;
-    constexpr const float value_pressure = 1013.2F;
+    constexpr float value_temperature = 23.1F;
+    constexpr float value_voltage = 45.0F;
+    constexpr float value_humidity = 18.5F;
+    constexpr float value_current = 3.3F;
+    constexpr float value_pressure = 1013.2F;
 
-    constexpr const long tick_boot = 50L;
-    constexpr const long tick_init = 100L;
-    constexpr const long tick_poll = 250L;
-    constexpr const long tick_flush = 500L;
-    constexpr const long tick_watchdog = 750L;
-    constexpr const long tick_shutdown = 900L;
+    constexpr long tick_boot = 50L;
+    constexpr long tick_init = 100L;
+    constexpr long tick_poll = 250L;
+    constexpr long tick_flush = 500L;
+    constexpr long tick_watchdog = 750L;
+    constexpr long tick_shutdown = 900L;
 
-    constexpr const std::size_t worker_stack_size = 4096U;
+    constexpr std::size_t worker_stack_size = 4096U;
 
-    constexpr const int64_t worker_event_offset_sec_a = 3;
-    constexpr const int64_t worker_event_offset_sec_b = 12;
-    constexpr const int64_t worker_event_offset_sec_c = 24;
-    constexpr const int64_t worker_event_offset_sec_d = 48;
+    constexpr int64_t worker_event_offset_sec_a = 3;
+    constexpr int64_t worker_event_offset_sec_b = 12;
+    constexpr int64_t worker_event_offset_sec_c = 24;
+    constexpr int64_t worker_event_offset_sec_d = 48;
 
-    constexpr const int worker_struct_id_a = 10;
-    constexpr const int worker_struct_id_b = 11;
-    constexpr const int worker_struct_id_c = 12;
-    constexpr const int worker_struct_id_d = 13;
+    constexpr int worker_struct_id_a = 10;
+    constexpr int worker_struct_id_b = 11;
+    constexpr int worker_struct_id_c = 12;
+    constexpr int worker_struct_id_d = 13;
 
-    constexpr const float worker_struct_value_a = 12.7F;
-    constexpr const float worker_struct_value_b = 9.4F;
-    constexpr const float worker_struct_value_c = 31.6F;
-    constexpr const float worker_struct_value_d = 42.9F;
+    constexpr float worker_struct_value_a = 12.7F;
+    constexpr float worker_struct_value_b = 9.4F;
+    constexpr float worker_struct_value_c = 31.6F;
+    constexpr float worker_struct_value_d = 42.9F;
 
-    constexpr const std::int64_t worker_reading_offset_ms_a = 120;
-    constexpr const std::int64_t worker_reading_offset_ms_b = 260;
-    constexpr const std::int64_t worker_reading_offset_ms_c = 380;
-    constexpr const std::int64_t worker_reading_offset_ms_d = 640;
+    constexpr std::int64_t worker_reading_offset_ms_a = 120;
+    constexpr std::int64_t worker_reading_offset_ms_b = 260;
+    constexpr std::int64_t worker_reading_offset_ms_c = 380;
+    constexpr std::int64_t worker_reading_offset_ms_d = 640;
 
-    constexpr const long worker_tick_a = 130L;
-    constexpr const long worker_tick_b = 270L;
-    constexpr const long worker_tick_c = 610L;
-    constexpr const long worker_tick_d = 820L;
+    constexpr long worker_tick_a = 130L;
+    constexpr long worker_tick_b = 270L;
+    constexpr long worker_tick_c = 610L;
+    constexpr long worker_tick_d = 820L;
 
-    constexpr const int wait_for_worker_ms = 200;
+    constexpr int wait_for_worker_ms = 200;
 
     /** @brief Simple sensor reading carrying a device id and a floating-point measurement. */
     struct sensor_reading

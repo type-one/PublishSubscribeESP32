@@ -37,7 +37,7 @@
 
 namespace
 {
-    constexpr const std::size_t smp_worker_stack_size = 4096U;
+    constexpr std::size_t smp_worker_stack_size = 4096U;
 
     /** @brief Empty shared context used by basic SMP affinity and priority task demos. */
     struct smp_task_context
@@ -82,18 +82,18 @@ namespace
                 });
         };
 
-        constexpr const auto period_100ms = std::chrono::duration<std::uint64_t, std::milli>(100);
-        constexpr const std::size_t task0_stack_size = 4096U;
-        constexpr const int core0 = 0;
+        static constexpr auto period_100ms = std::chrono::duration<std::uint64_t, std::milli>(100);
+        static constexpr std::size_t task0_stack_size = 4096U;
+        static constexpr int core0 = 0;
 
         periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period_100ms, task0_stack_size, core0,
             tools::base_task::default_priority);
 
-        constexpr const int wait_task_ms = 2000;
+        static constexpr int wait_task_ms = 2000;
         tools::sleep_for(wait_task_ms);
     }
 
-    constexpr const std::size_t worker_pipe_depth = 5U;
+    constexpr std::size_t worker_pipe_depth = 5U;
     /** @brief Shared context for lock-free ring-buffer communication between periodic and worker SMP tasks. */
     struct smp_ring_task_context
     {
@@ -130,7 +130,7 @@ namespace
             std::printf("%s (core 0): count %d\n", task_name.c_str(), count);
             ++count;
 
-            constexpr const int mask = 0xff;
+            static constexpr int mask = 0xff;
             // Send one byte to core 1 and read back its processed response.
             (void)local_context->m_to_worker_pipe.push(static_cast<std::uint8_t>(count & mask));
 
@@ -152,17 +152,17 @@ namespace
                 });
         };
 
-        constexpr const auto period_100ms = std::chrono::duration<std::uint64_t, std::milli>(100);
-        constexpr const std::size_t task0_stack_size = 4096U;
-        constexpr const int core0 = 0;
+        static constexpr auto period_100ms = std::chrono::duration<std::uint64_t, std::milli>(100);
+        static constexpr std::size_t task0_stack_size = 4096U;
+        static constexpr int core0 = 0;
         periodic_ring_task0 task0(startup, periodic_lambda, context, "periodic_task0", period_100ms, task0_stack_size,
             core0, tools::base_task::default_priority);
 
-        constexpr const int wait_tasks_ms = 2000;
+        static constexpr int wait_tasks_ms = 2000;
         tools::sleep_for(wait_tasks_ms);
     }
 
-    constexpr const std::size_t static_storage_size = 1000U;
+    constexpr std::size_t static_storage_size = 1000U;
 
     tools::memory_pipe::static_buffer_holder& get_static_buf_holder()
     {
@@ -230,7 +230,7 @@ namespace
                     // Worker side: continuously consume chunks until producer signals shutdown.
                     while (!stop.load())
                     {
-                        constexpr const std::size_t bytes_to_receive = 128U;
+                        static constexpr std::size_t bytes_to_receive = 128U;
                         std::array<std::uint8_t, bytes_to_receive> received = {};
                         const auto received_bytes = delegate_context->m_to_worker_pipe.receive_range(
                             received.begin(), received.end(), timeout);
@@ -255,7 +255,7 @@ namespace
 
                 static const std::string label_local
                     = "this\nis\na\ntest\nto\ntransmit\nseveral\nmessages\nbetween\ntwo\ncores\n";
-                constexpr const std::size_t chunk_size = 16U;
+                static constexpr std::size_t chunk_size = 16U;
                 std::size_t to_send = (std::min)(chunk_size, label_local.size() - offset);
 
                 if (offset < label_local.size())
@@ -268,14 +268,14 @@ namespace
                 }
             };
 
-            constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(50);
-            constexpr const std::size_t task0_stack_size = 4096U;
-            constexpr const int core0 = 0;
+            static constexpr auto period = std::chrono::duration<std::uint64_t, std::milli>(50);
+            static constexpr std::size_t task0_stack_size = 4096U;
+            static constexpr int core0 = 0;
             periodic_mem_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, task0_stack_size,
                 core0, tools::base_task::default_priority);
 
-            constexpr const int wait_processing_ms = 2000;
-            constexpr const int wait_join_ms = 250;
+            static constexpr int wait_processing_ms = 2000;
+            static constexpr int wait_join_ms = 250;
             tools::sleep_for(wait_processing_ms);
             stop.store(true);
             tools::sleep_for(wait_join_ms);
@@ -289,12 +289,12 @@ namespace
         LOG_INFO("-- memory pipe perfect forwarding --");
         print_stats();
 
-        constexpr const std::size_t capacity = 64U;
+        static constexpr std::size_t capacity = 64U;
         tools::memory_pipe pipe(capacity);
-        constexpr const auto timeout = std::chrono::duration<std::uint64_t, std::milli>(100);
-        constexpr const std::array<std::uint8_t, 4> lvalue_payload = { 1U, 2U, 3U, 4U };
-        constexpr const std::array<std::uint8_t, 3> rvalue_payload = { 5U, 6U, 7U };
-        constexpr const std::array<std::uint8_t, 4> conversion_payload = { 9U, 8U, 7U, 6U };
+        static constexpr auto timeout = std::chrono::duration<std::uint64_t, std::milli>(100);
+        static constexpr std::array<std::uint8_t, 4> lvalue_payload = { 1U, 2U, 3U, 4U };
+        static constexpr std::array<std::uint8_t, 3> rvalue_payload = { 5U, 6U, 7U };
+        static constexpr std::array<std::uint8_t, 4> conversion_payload = { 9U, 8U, 7U, 6U };
 
         std::vector<std::uint8_t> lvalue_data(lvalue_payload.begin(), lvalue_payload.end());
         std::vector<std::uint8_t> received;
@@ -310,7 +310,7 @@ namespace
 
         const std::vector<std::uint8_t> range_values = { 10U, 11U, 12U, 13U };
         const auto range_sent = pipe.send_range(range_values, timeout);
-        constexpr const std::size_t range_batch_size = 4U;
+        static constexpr std::size_t range_batch_size = 4U;
         std::array<std::uint8_t, range_batch_size> range_received = { 0U, 0U, 0U, 0U };
         const auto range_received_count = pipe.receive_range(range_received.begin(), range_received.end(), timeout);
         std::printf("range bytes: sent=%zu received=%zu\n", range_sent, range_received_count);
@@ -353,7 +353,7 @@ namespace
 
         auto context = std::make_shared<smp_task_context>();
 
-        constexpr const auto task1_priority = 0;
+        static constexpr auto task1_priority = 0;
         worker_task1 task1(startup, context, "worker_task1", smp_worker_stack_size, tools::base_task::run_on_all_cores,
             task1_priority);
 
@@ -373,13 +373,13 @@ namespace
                 });
         };
 
-        constexpr const auto period_ms = 100;
-        constexpr const auto task0_stack_size = 4096U;
-        constexpr const auto period = std::chrono::duration<std::uint64_t, std::milli>(period_ms);
+        static constexpr auto period_ms = 100;
+        static constexpr auto task0_stack_size = 4096U;
+        static constexpr auto period = std::chrono::duration<std::uint64_t, std::milli>(period_ms);
         periodic_task0 task0(startup, periodic_lambda, context, "periodic_task0", period, task0_stack_size,
             tools::base_task::run_on_all_cores, 3);
 
-        constexpr const auto sleep_time_ms = 2000;
+        static constexpr auto sleep_time_ms = 2000;
         tools::sleep_for(sleep_time_ms);
     }
 } // namespace

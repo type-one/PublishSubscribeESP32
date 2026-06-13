@@ -89,7 +89,7 @@ namespace
 
         auto context = std::make_shared<smp_task_context>();
 
-        constexpr const std::size_t task_stack_size = 4096U;
+        static constexpr std::size_t task_stack_size = 4096U;
         const int core1 = tools::get_nb_of_cpu_cores() - 1;
 
         worker_task1 task1(

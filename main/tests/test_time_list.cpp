@@ -132,7 +132,7 @@ TEST_F(TimeListIntTest, ChronologicalOrderIntTimestamp)
     tl->push(50L, "fifty");
     tl->push(400L, "four hundred");
 
-    constexpr const std::size_t expected_count = 5U;
+    static constexpr std::size_t expected_count = 5U;
     ASSERT_EQ(tl->size(), expected_count);
 
     const std::vector<long> expected_order = { 50L, 100L, 200L, 300L, 400L };
@@ -284,7 +284,7 @@ TEST_F(TimeListChronoTest, ChronologicalOrderChronoTimestamp)
     tl->push(base + std::chrono::milliseconds(200), 2);
     tl->push(base + std::chrono::milliseconds(400), 4);
 
-    constexpr const std::size_t expected_count = 5U;
+    static constexpr std::size_t expected_count = 5U;
     ASSERT_EQ(tl->size(), expected_count);
 
     const std::vector<int> expected_values = { 1, 2, 3, 4, 5 };
