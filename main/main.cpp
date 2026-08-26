@@ -65,6 +65,7 @@ void runner()
     run_example_worker_and_command();
     run_example_bytepack_and_data_task();
     run_example_json_and_fpm();
+    run_example_json_stress();
     run_example_variant_fsm();
     run_example_timer_and_date();
     run_example_smp();

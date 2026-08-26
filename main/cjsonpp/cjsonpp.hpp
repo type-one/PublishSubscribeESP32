@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -111,6 +112,20 @@ namespace cjsonpp
         ObjectSetPtr refs_;
 
         static constexpr const int byte_mask = 0xff;
+
+        /**
+         * @brief Guards against a null underlying cJSON node (e.g. after an allocation failure).
+         *
+         * @return An internal_error result payload if the underlying node is null, otherwise an empty optional.
+         */
+        [[nodiscard]] std::optional<result_error> null_node_error() const
+        {
+            if (nullptr == obj_->o)
+            {
+                return make_error(result_code::internal_error, 0, "Null cJSON node (allocation failure)");
+            }
+            return std::nullopt;
+        }
 
     public:
         /**
@@ -324,6 +339,10 @@ namespace cjsonpp
         [[nodiscard]]
         cjsonpp_result<T> as() const
         {
+            if (const auto error_value = null_node_error(); error_value.has_value())
+            {
+                return tools::unexpected<result_error> { *error_value };
+            }
             return as_result<T>(obj_->o);
         }
 
@@ -333,6 +352,11 @@ namespace cjsonpp
         template <typename T = JSONObject>
         [[nodiscard]] cjsonpp_result<T> get(const char* name) const
         {
+            if (const auto error_value = null_node_error(); error_value.has_value())
+            {
+                return tools::unexpected<result_error> { *error_value };
+            }
+
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
                 return tools::unexpected<result_error> { make_error(
@@ -380,6 +404,11 @@ namespace cjsonpp
         [[nodiscard]]
         cjsonpp_result<T> get(int index) const
         {
+            if (const auto error_value = null_node_error(); error_value.has_value())
+            {
+                return tools::unexpected<result_error> { *error_value };
+            }
+
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
                 return tools::unexpected<result_error> { make_error(
@@ -401,12 +430,22 @@ namespace cjsonpp
         template <typename T>
         cjsonpp_status add(const T& value)
         {
+            if (const auto error_value = null_node_error(); error_value.has_value())
+            {
+                return tools::unexpected<result_error> { *error_value };
+            }
+
             if (((*obj_)->type & byte_mask) != cJSON_Array)
             {
                 return tools::unexpected<result_error> { make_error(
                     result_code::invalid_type, (*obj_)->type & byte_mask, "Not an array type") };
             }
             JSONObject output(value);
+            if (nullptr == output.obj_->o)
+            {
+                return tools::unexpected<result_error> { make_error(
+                    result_code::internal_error, 0, "Null cJSON node (allocation failure)") };
+            }
             cJSON_AddItemReferenceToArray(obj_->o, output.obj_->o);
             refs_->insert(output);
             return cjsonpp_status {};
@@ -418,6 +457,11 @@ namespace cjsonpp
         template <typename T>
         cjsonpp_status set(const char* name, const T& value)
         {
+            if (const auto error_value = null_node_error(); error_value.has_value())
+            {
+                return tools::unexpected<result_error> { *error_value };
+            }
+
             if (((*obj_)->type & byte_mask) != cJSON_Object)
             {
                 return tools::unexpected<result_error> { make_error(
@@ -425,6 +469,11 @@ namespace cjsonpp
             }
 
             JSONObject output(value);
+            if (nullptr == output.obj_->o)
+            {
+                return tools::unexpected<result_error> { make_error(
+                    result_code::internal_error, 0, "Null cJSON node (allocation failure)") };
+            }
             cJSON_AddItemReferenceToObject(obj_->o, name, output.obj_->o);
             refs_->insert(output);
             return cjsonpp_status {};

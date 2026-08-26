@@ -334,6 +334,7 @@ set(TEST_SOURCES
     tests/test_bytepack.cpp
     tests/test_cexception.cpp
     tests/test_cjsonpp.cpp
+    tests/test_cjsonpp_stress.cpp
     tests/test_cond_var.cpp
     tests/test_cpptime.cpp
     tests/test_critical_section.cpp

@@ -63,6 +63,11 @@ void run_example_bytepack_and_data_task();
 void run_example_json_and_fpm();
 
 /**
+ * @brief Runs the synthetic Wi-Fi scan / telemetry JSON build stress scenarios via cjsonpp.
+ */
+void run_example_json_stress();
+
+/**
  * @brief Runs the variant-based finite state machine example.
  */
 void run_example_variant_fsm();

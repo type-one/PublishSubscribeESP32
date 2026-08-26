@@ -32,6 +32,9 @@
 
 namespace cjsonpp
 {
+    // returned by print() instead of an empty string when the underlying cJSON node is null or printing failed
+    static constexpr const char* const k_print_error_marker = "<error>";
+
     JSONObject::Holder::Holder(cJSON* obj, bool own)
         : o(obj)
         , own_(own)
@@ -83,7 +86,16 @@ namespace cjsonpp
 
     std::string JSONObject::print(bool formatted) const
     {
+        if (nullptr == obj_->o)
+        {
+            return k_print_error_marker;
+        }
+
         char* json = formatted ? cJSON_Print(obj_->o) : cJSON_PrintUnformatted(obj_->o);
+        if (nullptr == json)
+        {
+            return k_print_error_marker;
+        }
         std::string retval(json);
         std::free(json); // NOLINT allocated from C with malloc
         return retval;
@@ -182,6 +194,11 @@ namespace cjsonpp
     // get object type
     JSONType JSONObject::type() const
     {
+        if (nullptr == obj_->o)
+        {
+            return JSONType::Invalid;
+        }
+
         constexpr const int mask = 0xff;
         const auto idx = (*obj_)->type & mask;
 
@@ -240,6 +257,12 @@ namespace cjsonpp
     // remove item from object without throwing
     cjsonpp_status JSONObject::remove(const char* name)
     {
+        if (nullptr == obj_->o)
+        {
+            return tools::unexpected<result_error> { make_error(
+                result_code::internal_error, 0, "Null cJSON node (allocation failure)") };
+        }
+
         constexpr const int mask = 0xff;
         if (((*obj_)->type & mask) != cJSON_Object)
         {
@@ -266,6 +289,12 @@ namespace cjsonpp
     // remove item from array without throwing
     cjsonpp_status JSONObject::remove(int index)
     {
+        if (nullptr == obj_->o)
+        {
+            return tools::unexpected<result_error> { make_error(
+                result_code::internal_error, 0, "Null cJSON node (allocation failure)") };
+        }
+
         constexpr const int mask = 0xff;
         if (((*obj_)->type & mask) != cJSON_Array)
         {
