@@ -89,11 +89,11 @@ namespace tools
          * @param cpu_affinity The CPU affinity for the task.
          * @param priority The priority of the task.
          */
-        generic_task(call_back&& routine, const std::shared_ptr<Context>& context, const std::string& task_name,
+        generic_task(call_back&& routine, std::shared_ptr<Context> context, const std::string& task_name,
             std::size_t stack_size, int cpu_affinity, int priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_routine(std::move(routine))
-            , m_context(context)
+            , m_context(std::move(context))
         {
             m_task = std::make_unique<std::thread>(
                 [this]()
@@ -149,9 +149,9 @@ namespace tools
          * @param task_name The name of the task.
          * @param stack_size The stack size for the task.
          */
-        generic_task(call_back&& routine, const std::shared_ptr<Context>& context, const std::string& task_name,
-            std::size_t stack_size)
-            : generic_task(std::move(routine), context, task_name, stack_size, base_task::run_on_all_cores,
+        generic_task(
+            call_back&& routine, std::shared_ptr<Context> context, const std::string& task_name, std::size_t stack_size)
+            : generic_task(std::move(routine), std::move(context), task_name, stack_size, base_task::run_on_all_cores,
                   base_task::default_priority)
         {
         }

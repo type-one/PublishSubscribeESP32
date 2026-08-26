@@ -125,11 +125,11 @@ namespace tools
          * @param cpu_affinity CPU affinity for the task.
          * @param priority Priority of the task.
          */
-        worker_task(call_back&& startup_routine, const std::shared_ptr<Context>& context, const std::string& task_name,
+        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name,
             std::size_t stack_size, int cpu_affinity, int priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
-            , m_context(context)
+            , m_context(std::move(context))
         {
             // FreeRTOS platform
 
@@ -179,10 +179,10 @@ namespace tools
          * @param task_name Name of the task.
          * @param stack_size Size of the stack allocated for the task.
          */
-        worker_task(call_back&& startup_routine, const std::shared_ptr<Context>& context, const std::string& task_name,
+        worker_task(call_back&& startup_routine, std::shared_ptr<Context> context, const std::string& task_name,
             std::size_t stack_size)
-            : worker_task(std::move(startup_routine), context, task_name, stack_size, base_task::run_on_all_cores,
-                  base_task::default_priority)
+            : worker_task(std::move(startup_routine), std::move(context), task_name, stack_size,
+                  base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 
@@ -340,10 +340,9 @@ namespace tools
         }
 
         template <typename Callable, typename... Args>
-        auto delegate_async(
-            Callable&& work, Args&&... args) -> decltype(pco::async_result(std::declval<executor_type>(),
-                                                 std::forward<Callable>(work), std::declval<std::shared_ptr<Context>>(),
-                                                 std::declval<std::string>(), std::forward<Args>(args)...))
+        auto delegate_async(Callable&& work, Args&&... args)
+            -> decltype(pco::async_result(std::declval<executor_type>(), std::forward<Callable>(work),
+                std::declval<std::shared_ptr<Context>>(), std::declval<std::string>(), std::forward<Args>(args)...))
         {
             return pco::async_result(
                 as_executor(), std::forward<Callable>(work), m_context, this->task_name(), std::forward<Args>(args)...);

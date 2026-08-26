@@ -108,15 +108,14 @@ namespace tools
          * @param priority The priority of the task.
          * @param data_timeout The timeout duration for data waiting in us.
          */
-        data_task(call_back&& startup_routine, data_call_back&& process_routine,
-            const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
-            std::size_t stack_size, int cpu_affinity, int priority,
-            const std::chrono::duration<std::uint64_t, std::micro>& data_timeout)
+        data_task(call_back&& startup_routine, data_call_back&& process_routine, std::shared_ptr<Context> context,
+            std::size_t data_queue_depth, const std::string& task_name, std::size_t stack_size, int cpu_affinity,
+            int priority, const std::chrono::duration<std::uint64_t, std::micro>& data_timeout)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_process_routine(std::move(process_routine))
             , m_data_queue(data_queue_depth)
-            , m_context(context)
+            , m_context(std::move(context))
             , m_data_timeout(data_timeout)
         {
             m_task = std::make_unique<std::thread>(
@@ -178,11 +177,10 @@ namespace tools
          * @param task_name The name of the task.
          * @param stack_size The size of the stack for the task.
          */
-        data_task(call_back&& startup_routine, data_call_back&& process_routine,
-            const std::shared_ptr<Context>& context, std::size_t data_queue_depth, const std::string& task_name,
-            std::size_t stack_size)
-            : data_task(std::move(startup_routine), std::move(process_routine), context, data_queue_depth, task_name,
-                  stack_size, base_task::run_on_all_cores, base_task::default_priority,
+        data_task(call_back&& startup_routine, data_call_back&& process_routine, std::shared_ptr<Context> context,
+            std::size_t data_queue_depth, const std::string& task_name, std::size_t stack_size)
+            : data_task(std::move(startup_routine), std::move(process_routine), std::move(context), data_queue_depth,
+                  task_name, stack_size, base_task::run_on_all_cores, base_task::default_priority,
                   // Parenthesized max avoids Windows max macro expansion if NOMINMAX is missing in a TU.
                   (std::chrono::duration<std::uint64_t, std::micro>::max)())
         {

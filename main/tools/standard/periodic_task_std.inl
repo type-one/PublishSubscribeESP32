@@ -91,14 +91,13 @@ namespace tools
          * @param cpu_affinity The CPU affinity for the task.
          * @param priority The priority of the task.
          */
-        periodic_task(call_back&& startup_routine, call_back&& periodic_routine,
-            const std::shared_ptr<Context>& context, const std::string& task_name,
-            const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size, int cpu_affinity,
-            int priority)
+        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
+            const std::string& task_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
+            std::size_t stack_size, int cpu_affinity, int priority)
             : base_task(task_name, stack_size, cpu_affinity, priority)
             , m_startup_routine(std::move(startup_routine))
             , m_periodic_routine(std::move(periodic_routine))
-            , m_context(context)
+            , m_context(std::move(context))
             , m_period(period)
         {
             m_task = std::make_unique<std::thread>(
@@ -165,11 +164,11 @@ namespace tools
          * @param period The period of the task in microseconds.
          * @param stack_size The stack size for the task.
          */
-        periodic_task(call_back&& startup_routine, call_back&& periodic_routine,
-            const std::shared_ptr<Context>& context, const std::string& task_name,
-            const std::chrono::duration<std::uint64_t, std::micro>& period, std::size_t stack_size)
-            : periodic_task(std::move(startup_routine), std::move(periodic_routine), context, task_name, period,
-                  stack_size, base_task::run_on_all_cores, base_task::default_priority)
+        periodic_task(call_back&& startup_routine, call_back&& periodic_routine, std::shared_ptr<Context> context,
+            const std::string& task_name, const std::chrono::duration<std::uint64_t, std::micro>& period,
+            std::size_t stack_size)
+            : periodic_task(std::move(startup_routine), std::move(periodic_routine), std::move(context), task_name,
+                  period, stack_size, base_task::run_on_all_cores, base_task::default_priority)
         {
         }
 
