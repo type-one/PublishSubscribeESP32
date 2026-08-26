@@ -35,11 +35,20 @@
 
 namespace
 {
+    // The 100/500-AP and 1000-iteration cases allocate several hundred KB of transient cJSON nodes.
+    // On ESP32/ESP32-S3/ESP32-C5 without external PSRAM, the internal SRAM heap cannot sustain that
+    // peak and the custom pool allocator throws std::bad_alloc, aborting the firmware. Once SPIRAM is
+    // enabled and wired as an allocation backend, lift this cap to exercise the full stress range again.
+#if defined(ESP_PLATFORM) && !defined(CONFIG_SPIRAM)
+    constexpr int synthetic_ap_count = 30;
+    constexpr int telemetry_iterations = 100;
+#else
     constexpr int synthetic_ap_count = 500;
+    constexpr int telemetry_iterations = 1000;
+#endif
     constexpr int synthetic_rssi_base = -90;
     constexpr int synthetic_rssi_span = 60;
     constexpr int synthetic_channel_span = 13;
-    constexpr int telemetry_iterations = 1000;
 
     /**
      * @brief Builds one synthetic (non real-world) Wi-Fi access point entry as a JSON object.
@@ -168,7 +177,12 @@ namespace
         LOG_INFO("-- synthetic wi-fi scan json stress --");
         print_stats();
 
+#if defined(ESP_PLATFORM) && !defined(CONFIG_SPIRAM)
+        // Skip the 100/500-AP cases until SPIRAM is available; see synthetic_ap_count comment above.
+        for (const int ap_count : { 1, synthetic_ap_count })
+#else
         for (const int ap_count : { 1, 30, 100, synthetic_ap_count })
+#endif
         {
             const auto start = std::chrono::high_resolution_clock::now();
             auto scan_result = build_synthetic_scan_json(ap_count);
