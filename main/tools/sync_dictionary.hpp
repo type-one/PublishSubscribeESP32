@@ -211,12 +211,13 @@ namespace tools
          */
         template <typename KeyArg>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires (!std::is_same_v<std::decay_t<KeyArg>, K>)
+            requires(!std::is_same_v<std::decay_t<KeyArg>, K>)
             && (std::is_constructible_v<K, KeyArg> || detail::has_transparent_erase_v<TDictionary, KeyArg>)
 #endif
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
         typename std::enable_if<!std::is_same<typename std::decay<KeyArg>::type, K>::value
-            && (std::is_constructible<K, KeyArg>::value || detail::has_transparent_erase_v<TDictionary, KeyArg>::value),
+                && (std::is_constructible<K, KeyArg>::value
+                    || detail::has_transparent_erase_v<TDictionary, KeyArg>::value),
             void>::type
 #else
         void
@@ -432,13 +433,14 @@ namespace tools
          */
         template <typename KeyArg>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires (!std::is_same_v<std::decay_t<KeyArg>, K>)
+            requires(!std::is_same_v<std::decay_t<KeyArg>, K>)
             && (std::is_constructible_v<K, KeyArg> || detail::has_transparent_find_v<TDictionary, KeyArg>)
 #endif
         [[nodiscard]]
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
         typename std::enable_if<!std::is_same<typename std::decay<KeyArg>::type, K>::value
-            && (std::is_constructible<K, KeyArg>::value || detail::has_transparent_find_v<TDictionary, KeyArg>::value),
+                && (std::is_constructible<K, KeyArg>::value
+                    || detail::has_transparent_find_v<TDictionary, KeyArg>::value),
             std::optional<T>>::type
 #else
         std::optional<T>
@@ -493,13 +495,14 @@ namespace tools
          */
         template <typename KeyArg>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
-            requires (!std::is_same_v<std::decay_t<KeyArg>, K>)
+            requires(!std::is_same_v<std::decay_t<KeyArg>, K>)
             && (std::is_constructible_v<K, KeyArg> || detail::has_transparent_find_v<TDictionary, KeyArg>)
 #endif
         [[nodiscard]]
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
         typename std::enable_if<!std::is_same<typename std::decay<KeyArg>::type, K>::value
-            && (std::is_constructible<K, KeyArg>::value || detail::has_transparent_find_v<TDictionary, KeyArg>::value),
+                && (std::is_constructible<K, KeyArg>::value
+                    || detail::has_transparent_find_v<TDictionary, KeyArg>::value),
             bool>::type
 #else
         bool

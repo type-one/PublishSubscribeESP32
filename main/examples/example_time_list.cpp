@@ -275,7 +275,7 @@ namespace
         auto context = std::make_shared<sync_string_context>();
         context->base_time = std::chrono::system_clock::now();
 
-        sync_string_worker worker([](const std::shared_ptr<sync_string_context>&, const std::string&) {}, context,
+        sync_string_worker worker([](const std::shared_ptr<sync_string_context>&, const std::string&) { }, context,
             "sync_string_worker", worker_stack_size);
 
         worker.delegate(
@@ -317,7 +317,7 @@ namespace
         auto context = std::make_shared<sync_struct_context>();
         context->base_time = std::chrono::steady_clock::now();
 
-        sync_struct_worker worker([](const std::shared_ptr<sync_struct_context>&, const std::string&) {}, context,
+        sync_struct_worker worker([](const std::shared_ptr<sync_struct_context>&, const std::string&) { }, context,
             "sync_struct_worker", worker_stack_size);
 
         worker.delegate(
@@ -362,7 +362,7 @@ namespace
 
         auto context = std::make_shared<sync_function_context>();
 
-        sync_function_worker worker([](const std::shared_ptr<sync_function_context>&, const std::string&) {}, context,
+        sync_function_worker worker([](const std::shared_ptr<sync_function_context>&, const std::string&) { }, context,
             "sync_function_worker", worker_stack_size);
 
         worker.delegate(

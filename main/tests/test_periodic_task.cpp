@@ -255,12 +255,12 @@ TEST(PeriodicTaskCompileTimeChecks, PerfectForwardingConstructorConstraints)
         const char*, std::chrono::milliseconds, std::size_t, int, int>);
 
     static_assert(!std::is_constructible_v<periodic_task_t, int, callback_t, std::shared_ptr<TestContext>, std::string,
-                  std::chrono::milliseconds, std::size_t>);
+        std::chrono::milliseconds, std::size_t>);
 
     static_assert(!std::is_constructible_v<periodic_task_t, callback_t, callback_t, int, std::string,
-                  std::chrono::milliseconds, std::size_t>);
+        std::chrono::milliseconds, std::size_t>);
 
     static_assert(!std::is_constructible_v<periodic_task_t, callback_t, callback_t, std::shared_ptr<TestContext>,
-                  std::string, const char*, std::size_t>);
+        std::string, const char*, std::size_t>);
 }
 #endif

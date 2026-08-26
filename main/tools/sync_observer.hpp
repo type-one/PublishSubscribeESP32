@@ -252,7 +252,7 @@ namespace tools
         template <typename UTopic, typename UName, typename UHandler>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<Topic, UTopic> && std::is_constructible_v<std::string, UName>
-                         && std::is_constructible_v<handler, UHandler>
+            && std::is_constructible_v<handler, UHandler>
 #endif
         auto subscribe(UTopic&& topic, UName&& handler_name, UHandler&& handler_fn)
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
@@ -383,7 +383,7 @@ namespace tools
         template <typename UTopic, typename UEvt, typename UOrigin>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<Topic, UTopic> && std::is_constructible_v<Evt, UEvt>
-                         && std::is_constructible_v<std::string, UOrigin>
+            && std::is_constructible_v<std::string, UOrigin>
 #endif
         auto publish(UTopic&& topic, UEvt&& event, UOrigin&& origin)
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))

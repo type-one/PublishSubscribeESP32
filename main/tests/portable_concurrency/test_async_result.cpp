@@ -81,7 +81,7 @@ namespace
      */
     TEST(AsyncResultTest, void_async_result_then_result_transitions_to_value)
     {
-        auto future = pco::async_result(pco::inplace_executor, [] {});
+        auto future = pco::async_result(pco::inplace_executor, [] { });
 
         auto chained = std::move(future).then_result(
             [](pco::expected<void, pco::result_error> result)

@@ -165,8 +165,8 @@ namespace
          * @tparam Event Concrete event type.
          */
         template <typename State, typename Event>
-        auto dispatch_event_impl(
-            const State& state, const Event& event, int priority) -> decltype(this->on_event(state, event))
+        auto dispatch_event_impl(const State& state, const Event& event, int priority)
+            -> decltype(this->on_event(state, event))
         {
             (void)priority;
             return this->on_event(state, event);

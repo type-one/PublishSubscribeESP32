@@ -29,7 +29,7 @@ namespace
     std::unique_ptr<scenario_worker_task> make_worker_task(
         const std::shared_ptr<scenario_worker_context>& context, const std::string& name)
     {
-        auto startup = [](const std::shared_ptr<scenario_worker_context>&, const std::string&) {};
+        auto startup = [](const std::shared_ptr<scenario_worker_context>&, const std::string&) { };
         constexpr std::size_t stack_size = 4096U;
         return std::make_unique<scenario_worker_task>(std::move(startup), context, name, stack_size);
     }
@@ -174,14 +174,14 @@ TEST(ConcurrencyScenarios, GatherSeveralComputationsWithWhenAll)
     for (int value = 1; value <= 5; ++value)
     {
         jobs.emplace_back(worker
-                              ->delegate_async(
-                                  [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int v)
-                                  {
-                                      ctx->loop_counter.fetch_add(1);
-                                      return v * v;
-                                  },
-                                  value)
-                              .then_value(worker->as_executor(), [](int previous) { return previous + 10; }));
+                ->delegate_async(
+                    [](const std::shared_ptr<scenario_worker_context>& ctx, const std::string&, int v)
+                    {
+                        ctx->loop_counter.fetch_add(1);
+                        return v * v;
+                    },
+                    value)
+                .then_value(worker->as_executor(), [](int previous) { return previous + 10; }));
     }
 
     auto total = pco::when_all(std::move(jobs))
@@ -257,7 +257,7 @@ TEST(ConcurrencyScenarios, PeriodicTaskPollsLongWorkerComputationReadiness)
 
     auto periodic_context = std::make_shared<polling_context>();
 
-    auto startup = [](const std::shared_ptr<polling_context>&, const std::string&) {};
+    auto startup = [](const std::shared_ptr<polling_context>&, const std::string&) { };
     auto periodic = [&long_future](const std::shared_ptr<polling_context>& ctx, const std::string&)
     {
         if (long_future.is_ready())

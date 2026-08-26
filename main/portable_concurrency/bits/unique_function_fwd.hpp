@@ -128,7 +128,7 @@ namespace pco
         /**
          * @brief Converts this object to rvalue small-buffer callable wrapper.
          */
-        operator detail::small_unique_function<R(A...)>&&() && noexcept;
+        operator detail::small_unique_function<R(A...)> && () && noexcept;
 
         /**
          * @brief Invokes the stored callable without throwing.

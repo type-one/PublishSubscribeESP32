@@ -325,7 +325,8 @@ namespace
     {
     };
 
-    constexpr std::size_t binary_msg_size = 128U; // NOLINT(readability-magic-numbers,readability-static-definition-in-anonymous-namespace)
+    constexpr std::size_t binary_msg_size
+        = 128U; // NOLINT(readability-magic-numbers,readability-static-definition-in-anonymous-namespace)
     using binary_msg = std::array<std::uint8_t, binary_msg_size>;
 
     using my_data_task = tools::data_task<data_task_context, binary_msg>;

@@ -199,7 +199,7 @@ namespace
     std::unique_ptr<worker_result_task> make_worker_result_task(
         const std::shared_ptr<worker_result_context>& context, const std::string& name)
     {
-        auto startup = [](const std::shared_ptr<worker_result_context>&, const std::string&) {};
+        auto startup = [](const std::shared_ptr<worker_result_context>&, const std::string&) { };
         constexpr std::size_t stack_size = 4096U;
         return std::make_unique<worker_result_task>(std::move(startup), context, name, stack_size);
     }
@@ -378,7 +378,7 @@ TEST(PortableConcurrencyWorkerTaskResultTest, PeriodicTaskFeedsWorkerStressWitho
     auto processor = std::make_shared<stress_worker_processor>();
     stress_context->scheduled_results.reserve(static_cast<std::size_t>(target_job_count));
 
-    auto startup = [](const std::shared_ptr<periodic_stress_context>&, const std::string&) {};
+    auto startup = [](const std::shared_ptr<periodic_stress_context>&, const std::string&) { };
     auto* worker_ptr = worker.get();
 
     auto periodic = [worker_ptr, worker_context, processor](
@@ -673,7 +673,7 @@ TEST(PortableConcurrencyWorkerTaskResultTest, PeriodicTaskFeedsWorkerStressWithC
     auto processor = std::make_shared<stress_worker_processor>();
     stress_context->scheduled_results.reserve(static_cast<std::size_t>(target_job_count));
 
-    auto startup = [](const std::shared_ptr<periodic_stress_context>&, const std::string&) {};
+    auto startup = [](const std::shared_ptr<periodic_stress_context>&, const std::string&) { };
     auto* worker_ptr = worker.get();
 
     auto periodic = [worker_ptr, worker_context, processor](

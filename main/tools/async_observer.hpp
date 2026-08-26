@@ -173,7 +173,7 @@ namespace tools
         template <typename UTopic, typename UEvt, typename UOrigin>
 #if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
             requires std::is_constructible_v<Topic, UTopic> && std::is_constructible_v<Evt, UEvt>
-                         && std::is_constructible_v<std::string, UOrigin>
+            && std::is_constructible_v<std::string, UOrigin>
 #endif
         auto inform(UTopic&& topic, UEvt&& event, UOrigin&& origin)
 #if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))

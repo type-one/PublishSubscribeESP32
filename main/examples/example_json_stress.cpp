@@ -190,7 +190,8 @@ namespace
 
             if (!scan_result)
             {
-                LOG_ERROR("synthetic scan build (ap_count=%d) failed: %s", ap_count, scan_result.error().message.c_str());
+                LOG_ERROR(
+                    "synthetic scan build (ap_count=%d) failed: %s", ap_count, scan_result.error().message.c_str());
                 continue;
             }
 
@@ -213,8 +214,8 @@ namespace
             auto telemetry_result = build_synthetic_telemetry_json(iteration);
             if (!telemetry_result)
             {
-                LOG_ERROR(
-                    "synthetic telemetry build (iteration=%d) failed: %s", iteration, telemetry_result.error().message.c_str());
+                LOG_ERROR("synthetic telemetry build (iteration=%d) failed: %s", iteration,
+                    telemetry_result.error().message.c_str());
                 break;
             }
             last_json_len = telemetry_result.value().print(false).size();

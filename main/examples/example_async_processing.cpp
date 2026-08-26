@@ -188,7 +188,7 @@ namespace
         const std::shared_ptr<async_context>& context, const std::string& name)
     {
         constexpr std::size_t stack_size = 4096U;
-        auto startup = [](const std::shared_ptr<async_context>&, const std::string&) {};
+        auto startup = [](const std::shared_ptr<async_context>&, const std::string&) { };
         return std::make_unique<async_worker>(std::move(startup), context, name, stack_size);
     }
 
@@ -1067,7 +1067,7 @@ namespace
         auto feed_context = std::make_shared<periodic_feed_context>();
         feed_context->pending_results.reserve(static_cast<std::size_t>(target_sample_count));
 
-        auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) {};
+        auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) { };
         auto* worker_ptr = worker.get();
 
         auto periodic = [worker_ptr, async_worker_context](
@@ -1214,7 +1214,7 @@ namespace
         auto feed_context = std::make_shared<periodic_feed_context>();
         feed_context->pending_results.reserve(static_cast<std::size_t>(target_sample_count));
 
-        auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) {};
+        auto startup = [](const std::shared_ptr<periodic_feed_context>&, const std::string&) { };
         auto* worker_ptr = worker.get();
 
         auto periodic = [worker_ptr, async_worker_context](

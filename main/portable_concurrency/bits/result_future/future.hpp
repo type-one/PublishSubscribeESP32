@@ -713,7 +713,7 @@ namespace pco
          */
         template <typename Exec, typename F>
         auto next(Exec&& exec, F&& function_arg) && -> decltype(std::move(*this).then_value(
-                                                        std::forward<Exec>(exec), std::forward<F>(function_arg)))
+            std::forward<Exec>(exec), std::forward<F>(function_arg)))
         {
             return std::move(*this).then_value(std::forward<Exec>(exec), std::forward<F>(function_arg));
         }
@@ -1051,7 +1051,7 @@ namespace pco
                 std::unique_lock<tools::critical_section> lock(state_->mutex_);
                 if (!state_->ready_)
                 {
-                    state_->on_ready_cbs_.push_back([keep_alive]() mutable {});
+                    state_->on_ready_cbs_.push_back([keep_alive]() mutable { });
                 }
             }
             return std::move(*this);

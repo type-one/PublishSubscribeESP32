@@ -44,7 +44,7 @@ namespace
 
     TEST(AbandonResultAsyncTest, dropped_async_task_yields_broken_promise)
     {
-        auto future = pco::async_result(null_executor, [] {});
+        auto future = pco::async_result(null_executor, [] { });
 
         auto result = future.get_result();
         ASSERT_FALSE(result.has_value());

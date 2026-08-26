@@ -564,7 +564,7 @@ TEST_F(TimerTest, TestWithMultipleTimers)
  */
 TEST_F(TimerTest, TestRemoveTimerId)
 {
-    auto id = timer->add(milliseconds(20), [](CppTime::timer_id) {});
+    auto id = timer->add(milliseconds(20), [](CppTime::timer_id) { });
     std::this_thread::sleep_for(microseconds(10));
     auto res = timer->remove(id + 1);
     EXPECT_FALSE(res);

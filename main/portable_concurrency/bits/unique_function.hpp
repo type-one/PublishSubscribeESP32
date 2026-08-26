@@ -102,7 +102,7 @@ namespace pco
     }
 
     template <typename R, typename... A>
-    unique_function<R(A...)>::operator detail::small_unique_function<R(A...)>&&() && noexcept
+        unique_function<R(A...)>::operator detail::small_unique_function<R(A...)> && () && noexcept
     {
         return std::move(func_);
     }

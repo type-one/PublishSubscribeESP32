@@ -446,7 +446,7 @@ TEST_F(DataTaskForwardingTest, PerfectForwardingConstructorSupportsLvalueRvalueA
     context = std::make_shared<TestContext>();
 
     // lvalue call_back + lvalue data_call_back + lvalue context + lvalue std::string task name
-    TestTask::call_back startup_lvalue = [](const std::shared_ptr<TestContext>&, const std::string&) {};
+    TestTask::call_back startup_lvalue = [](const std::shared_ptr<TestContext>&, const std::string&) { };
     TestTask::data_call_back process_lvalue
         = [](const std::shared_ptr<TestContext>& ctx, const int& data, const std::string&) { ctx->store.store(data); };
 
@@ -473,7 +473,7 @@ TEST_F(DataTaskForwardingTest, PerfectForwardingConstructorSupportsLvalueRvalueA
     context->store.store(0);
     {
         void (*startup_fp)(const std::shared_ptr<TestContext>&, const std::string&)
-            = [](const std::shared_ptr<TestContext>&, const std::string&) {};
+            = [](const std::shared_ptr<TestContext>&, const std::string&) { };
         void (*process_fp)(const std::shared_ptr<TestContext>&, const int&, const std::string&)
             = [](const std::shared_ptr<TestContext>& ctx, const int& data, const std::string&)
         { ctx->store.store(data); };
@@ -501,15 +501,15 @@ TEST(DataTaskCompileTimeChecks, PerfectForwardingConstructorConstraints)
 
     // non-callable startup should be rejected
     static_assert(!std::is_constructible_v<task_t, int, process_cb_t, std::shared_ptr<MockContext>, std::size_t,
-                  std::string, std::size_t>);
+        std::string, std::size_t>);
 
     // non-callable process should be rejected
     static_assert(!std::is_constructible_v<task_t, startup_cb_t, int, std::shared_ptr<MockContext>, std::size_t,
-                  std::string, std::size_t>);
+        std::string, std::size_t>);
 
     // non-string task_name should be rejected
     static_assert(!std::is_constructible_v<task_t, startup_cb_t, process_cb_t, std::shared_ptr<MockContext>,
-                  std::size_t, int, std::size_t>);
+        std::size_t, int, std::size_t>);
 
     SUCCEED();
 }

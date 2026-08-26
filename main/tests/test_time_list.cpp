@@ -413,9 +413,9 @@ TEST_F(TimeListCallableTest, EarliestCallableFiresFirst)
 /** @brief snapshot_sorted() on a callable time_list returns entries ordered by tick. */
 TEST_F(TimeListCallableTest, SnapshotSortedCallableList)
 {
-    tl->push(20L, []() {});
-    tl->push(10L, []() {});
-    tl->push(30L, []() {});
+    tl->push(20L, []() { });
+    tl->push(10L, []() { });
+    tl->push(30L, []() { });
 
     const auto snap = tl->snapshot_sorted();
 
