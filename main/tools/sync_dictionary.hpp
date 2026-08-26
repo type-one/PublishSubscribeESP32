@@ -46,6 +46,7 @@
 #include <map>
 #include <mutex>
 #include <optional>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
@@ -64,6 +65,37 @@
 
 namespace tools
 {
+    namespace detail
+    {
+        template <typename Container, typename Key, typename = void>
+        struct has_transparent_find : std::false_type
+        {
+        };
+
+        template <typename Container, typename Key>
+        struct has_transparent_find<Container, Key,
+            std::void_t<decltype(std::declval<const Container&>().find(std::declval<const Key&>()))>> : std::true_type
+        {
+        };
+
+        template <typename Container, typename Key>
+        inline constexpr bool has_transparent_find_v = has_transparent_find<Container, Key>::value;
+
+        template <typename Container, typename Key, typename = void>
+        struct has_transparent_erase : std::false_type
+        {
+        };
+
+        template <typename Container, typename Key>
+        struct has_transparent_erase<Container, Key,
+            std::void_t<decltype(std::declval<Container&>().erase(std::declval<const Key&>()))>> : std::true_type
+        {
+        };
+
+        template <typename Container, typename Key>
+        inline constexpr bool has_transparent_erase_v = has_transparent_erase<Container, Key>::value;
+    } // namespace detail
+
     /**
      * @brief A thread-safe dictionary class.
      *
@@ -154,7 +186,7 @@ namespace tools
 #endif
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
-            m_dictionary.insert_or_assign(std::forward<KU>(key), std::forward<TU>(value));
+            m_dictionary.insert_or_assign(K(std::forward<KU>(key)), T(std::forward<TU>(value)));
         }
 
         /**
@@ -169,6 +201,37 @@ namespace tools
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
             m_dictionary.erase(key);
+        }
+
+        /**
+         * @brief Removes the element associated with a key-like argument (e.g., std::string_view).
+         *
+         * @tparam KeyArg The key-like type.
+         * @param key The key of the element to be removed.
+         */
+        template <typename KeyArg>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires (!std::is_same_v<std::decay_t<KeyArg>, K>)
+            && (std::is_constructible_v<K, KeyArg> || detail::has_transparent_erase_v<TDictionary, KeyArg>)
+#endif
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+        typename std::enable_if<!std::is_same<typename std::decay<KeyArg>::type, K>::value
+            && (std::is_constructible<K, KeyArg>::value || detail::has_transparent_erase_v<TDictionary, KeyArg>::value),
+            void>::type
+#else
+        void
+#endif
+        remove(const KeyArg& key)
+        {
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
+            if constexpr (detail::has_transparent_erase_v<TDictionary, KeyArg>)
+            {
+                m_dictionary.erase(key);
+            }
+            else
+            {
+                m_dictionary.erase(K(key));
+            }
         }
 
         /**
@@ -352,10 +415,53 @@ namespace tools
         {
             std::optional<T> result;
             std::scoped_lock<tools::critical_section> guard(m_mutex);
-            const auto& itr = m_dictionary.find(key);
+            const auto itr = m_dictionary.find(key);
             if (m_dictionary.cend() != itr)
             {
                 result = itr->second;
+            }
+            return result;
+        }
+
+        /**
+         * @brief Finds the value associated with a key-like argument (e.g., std::string_view).
+         *
+         * @tparam KeyArg The key-like type.
+         * @param key The key to search for in the dictionary.
+         * @return std::optional<T> The value if found, empty optional otherwise.
+         */
+        template <typename KeyArg>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires (!std::is_same_v<std::decay_t<KeyArg>, K>)
+            && (std::is_constructible_v<K, KeyArg> || detail::has_transparent_find_v<TDictionary, KeyArg>)
+#endif
+        [[nodiscard]]
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+        typename std::enable_if<!std::is_same<typename std::decay<KeyArg>::type, K>::value
+            && (std::is_constructible<K, KeyArg>::value || detail::has_transparent_find_v<TDictionary, KeyArg>::value),
+            std::optional<T>>::type
+#else
+        std::optional<T>
+#endif
+        find(const KeyArg& key) const
+        {
+            std::optional<T> result;
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
+            if constexpr (detail::has_transparent_find_v<TDictionary, KeyArg>)
+            {
+                const auto itr = m_dictionary.find(key);
+                if (m_dictionary.cend() != itr)
+                {
+                    result = itr->second;
+                }
+            }
+            else
+            {
+                const auto itr = m_dictionary.find(K(key));
+                if (m_dictionary.cend() != itr)
+                {
+                    result = itr->second;
+                }
             }
             return result;
         }
@@ -376,6 +482,39 @@ namespace tools
 #else
             return m_dictionary.find(key) != m_dictionary.cend();
 #endif
+        }
+
+        /**
+         * @brief Checks whether a key-like argument (e.g., std::string_view) exists in the dictionary.
+         *
+         * @tparam KeyArg The key-like type.
+         * @param key The key to check.
+         * @return true when the key exists, otherwise false.
+         */
+        template <typename KeyArg>
+#if (__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+            requires (!std::is_same_v<std::decay_t<KeyArg>, K>)
+            && (std::is_constructible_v<K, KeyArg> || detail::has_transparent_find_v<TDictionary, KeyArg>)
+#endif
+        [[nodiscard]]
+#if !((__cplusplus >= 202002L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)))
+        typename std::enable_if<!std::is_same<typename std::decay<KeyArg>::type, K>::value
+            && (std::is_constructible<K, KeyArg>::value || detail::has_transparent_find_v<TDictionary, KeyArg>::value),
+            bool>::type
+#else
+        bool
+#endif
+        contains(const KeyArg& key) const
+        {
+            std::scoped_lock<tools::critical_section> guard(m_mutex);
+            if constexpr (detail::has_transparent_find_v<TDictionary, KeyArg>)
+            {
+                return m_dictionary.find(key) != m_dictionary.cend();
+            }
+            else
+            {
+                return m_dictionary.find(K(key)) != m_dictionary.cend();
+            }
         }
 
         /**

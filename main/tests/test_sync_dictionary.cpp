@@ -46,6 +46,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
@@ -1098,3 +1099,108 @@ TEST(SyncDictionaryRangeTest, Cpp20RangeConstraints)
     SUCCEED();
 }
 #endif
+
+/**
+ * @brief Tests std::string_view key arguments for add, find, contains, and remove operations.
+ */
+TEST(SyncDictionaryStringViewTest, AddFindContainsRemoveWithStringViewKeys)
+{
+    tools::sync_dictionary<std::string, std::string> str_dict;
+
+    const std::string_view key_sv_1 = "key_one";
+    const std::string_view val_sv_1 = "val_one";
+    const std::string_view key_sv_2 = "key_two";
+    const std::string_view val_sv_2 = "val_two";
+
+    str_dict.add(key_sv_1, val_sv_1);
+    str_dict.add(key_sv_2, val_sv_2);
+
+    EXPECT_TRUE(str_dict.contains(key_sv_1));
+    EXPECT_TRUE(str_dict.contains(key_sv_2));
+    EXPECT_FALSE(str_dict.contains(std::string_view("key_three")));
+
+    const auto found_val_1 = str_dict.find(key_sv_1);
+    const auto found_val_2 = str_dict.find(key_sv_2);
+
+    ASSERT_TRUE(found_val_1.has_value());
+    ASSERT_TRUE(found_val_2.has_value());
+    EXPECT_EQ(found_val_1.value(), "val_one");
+    EXPECT_EQ(found_val_2.value(), "val_two");
+
+    str_dict.remove(key_sv_1);
+    EXPECT_FALSE(str_dict.contains(key_sv_1));
+    EXPECT_TRUE(str_dict.contains(key_sv_2));
+}
+
+/**
+ * @brief Tests std::string_view key operations with transparent comparator std::less<>.
+ */
+TEST(SyncDictionaryStringViewTest, TransparentLookupWithLess)
+{
+    using transparent_dict_t = tools::sync_dictionary<std::string, int, std::map<std::string, int, std::less<>>>;
+    transparent_dict_t dict;
+
+    const std::string_view alpha_key = "alpha";
+    const std::string_view beta_key = "beta";
+
+    dict.add(alpha_key, 100);
+    dict.add(beta_key, 200);
+
+    EXPECT_TRUE(dict.contains(alpha_key));
+    EXPECT_TRUE(dict.contains(beta_key));
+
+    const auto alpha_val = dict.find(alpha_key);
+    ASSERT_TRUE(alpha_val.has_value());
+    EXPECT_EQ(alpha_val.value(), 100);
+
+    dict.remove(alpha_key);
+    EXPECT_FALSE(dict.contains(alpha_key));
+    EXPECT_TRUE(dict.contains(beta_key));
+}
+
+/**
+ * @brief Tests std::string_view key operations with std::unordered_map container.
+ */
+TEST(SyncDictionaryStringViewTest, UnorderedMapWithStringViewKeys)
+{
+    using dict_t = tools::sync_dictionary<std::string, std::string, std::unordered_map<std::string, std::string>>;
+    dict_t dict;
+
+    const std::string_view key_sv = "unordered_key";
+    const std::string_view val_sv = "unordered_val";
+
+    dict.add(key_sv, val_sv);
+
+    EXPECT_TRUE(dict.contains(key_sv));
+    const auto found = dict.find(key_sv);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found.value(), "unordered_val");
+
+    dict.remove(key_sv);
+    EXPECT_FALSE(dict.contains(key_sv));
+}
+
+/**
+ * @brief Tests sync_dictionary when std::string_view is used as the native key type K.
+ */
+TEST(SyncDictionaryStringViewTest, StringViewAsNativeKey)
+{
+    tools::sync_dictionary<std::string_view, int> dict;
+
+    const std::string_view key_1 = "item_1";
+    const std::string_view key_2 = "item_2";
+
+    dict.add(key_1, 10);
+    dict.add(key_2, 20);
+
+    EXPECT_TRUE(dict.contains(key_1));
+    EXPECT_TRUE(dict.contains(std::string("item_2")));
+    EXPECT_TRUE(dict.contains("item_1"));
+
+    const auto val_1 = dict.find(key_1);
+    ASSERT_TRUE(val_1.has_value());
+    EXPECT_EQ(val_1.value(), 10);
+
+    dict.remove("item_1");
+    EXPECT_FALSE(dict.contains(key_1));
+}
