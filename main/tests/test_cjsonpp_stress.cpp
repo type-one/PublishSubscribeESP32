@@ -238,7 +238,7 @@ TEST_F(pd_json_stress_fixture, WifiScanOutputAtLeast4Kb)
 
 TEST_F(pd_json_stress_fixture, WifiScanRoundTripContent)
 {
-    auto scan_result = build_synthetic_scan_json(3);
+    auto scan_result = build_synthetic_scan_json(3, static_cast<int>(std::string("ap_0").size()));
     ASSERT_TRUE(scan_result.has_value());
 
     const auto json_str = scan_result.value().print(false);
