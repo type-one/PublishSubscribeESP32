@@ -49,6 +49,7 @@
 
 #include "tools/async_observer.hpp"
 #include "tools/sync_queue.hpp"
+#include "tools/sync_ring_buffer.hpp"
 #include "tools/sync_ring_vector.hpp"
 
 /**
@@ -146,6 +147,15 @@ namespace
             std::declval<UTopic>(), std::declval<UEvt>(), std::declval<UOrigin>()))>> : std::true_type
     {
     };
+
+    // Fixed-capacity aliases so tools::sync_ring_buffer<T, Capacity> fits the single-parameter
+    // Sync_Container template slot expected by async_observer (capacity is baked in, not passed at
+    // construction, since sync_ring_buffer is only default-constructible).
+    template <typename T>
+    using fixed_capacity_ring_buffer_1 = tools::sync_ring_buffer<T, 1U>;
+
+    template <typename T>
+    using fixed_capacity_ring_buffer_2 = tools::sync_ring_buffer<T, 2U>;
 }
 
 TEST_F(AsyncObserverTest, PerfectForwardingInformSupportsLvalueRvalueAndConversion)
@@ -1175,4 +1185,149 @@ TEST_F(AsyncObserverTest, DifferentSubjectsConcurrentEventsWithTimeout)
     observer_thread1.join();
     observer_thread2.join();
     publisher_thread.join();
+}
+
+/**
+ * @brief Test case verifying that a bounded async observer queue reports drops when full.
+ *
+ * This test fills a two-slot @c tools::sync_ring_vector -backed async observer to capacity, then
+ * pushes one more entry. The extra entry must be dropped (not just silently accepted) and reported
+ * through has_queue_overflow()/queue_overflow_count().
+ *
+ * @test Verifies that:
+ * - No overflow is reported while the queue has spare capacity.
+ * - The queue reports exactly one dropped entry once its capacity is exceeded.
+ * - The dropped entry is not present among the events actually delivered.
+ */
+TEST(AsyncObserverQueueOverflowTest, BoundedContainerReportsDroppedEntryWhenFull)
+{
+    static constexpr std::size_t queue_depth = 2U;
+    tools::async_observer<std::string, std::string, tools::sync_ring_vector> observer(queue_depth);
+
+    observer.inform("topic", "event-1", "producer");
+    EXPECT_FALSE(observer.has_queue_overflow());
+
+    observer.inform("topic", "event-2", "producer");
+    EXPECT_FALSE(observer.has_queue_overflow());
+
+    observer.inform("topic", "event-3-dropped", "producer");
+    EXPECT_TRUE(observer.has_queue_overflow());
+    EXPECT_EQ(observer.queue_overflow_count(), 1U);
+
+    auto events = observer.pop_all_events();
+    ASSERT_EQ(events.size(), 2U);
+    EXPECT_EQ(std::get<1>(events[0]), "event-1");
+    EXPECT_EQ(std::get<1>(events[1]), "event-2");
+}
+
+/**
+ * @brief Test case verifying consume_queue_overflow_count() reads and resets the drop counter.
+ *
+ * @test Verifies that:
+ * - consume_queue_overflow_count() returns the accumulated drop count.
+ * - Subsequent calls return zero until further drops occur.
+ * - New drops after a reset are counted again from zero.
+ */
+TEST(AsyncObserverQueueOverflowTest, ConsumeQueueOverflowCountResetsCounter)
+{
+    static constexpr std::size_t queue_depth = 1U;
+    tools::async_observer<std::string, std::string, tools::sync_ring_vector> observer(queue_depth);
+
+    observer.inform("topic", "event-1", "producer");
+    observer.inform("topic", "event-2-dropped", "producer");
+    observer.inform("topic", "event-3-dropped", "producer");
+
+    EXPECT_EQ(observer.consume_queue_overflow_count(), 2U);
+    EXPECT_FALSE(observer.has_queue_overflow());
+    EXPECT_EQ(observer.consume_queue_overflow_count(), 0U);
+
+    // draining the queue frees capacity; a subsequent drop is counted again from zero
+    auto drained = observer.pop_all_events();
+    ASSERT_EQ(drained.size(), 1U);
+
+    observer.inform("topic", "event-4", "producer");
+    observer.inform("topic", "event-5-dropped", "producer");
+    EXPECT_EQ(observer.consume_queue_overflow_count(), 1U);
+}
+
+/**
+ * @brief Test case verifying that an unbounded async observer queue never reports overflow.
+ *
+ * @c tools::sync_queue has no capacity limit and its push() returns void, so async_observer must
+ * not track drops for it; has_queue_overflow() must stay false regardless of how many entries are
+ * informed without being drained.
+ */
+TEST(AsyncObserverQueueOverflowTest, UnboundedContainerNeverReportsOverflow)
+{
+    tools::async_observer<std::string, std::string, tools::sync_queue> observer;
+
+    static constexpr int informed_event_count = 100;
+    for (int index = 0; index < informed_event_count; ++index)
+    {
+        observer.inform("topic", "event", "producer");
+    }
+
+    EXPECT_FALSE(observer.has_queue_overflow());
+    EXPECT_EQ(observer.queue_overflow_count(), 0U);
+    EXPECT_EQ(observer.number_of_events(), static_cast<std::size_t>(informed_event_count));
+}
+
+/**
+ * @brief Test case verifying that a fixed-capacity @c tools::sync_ring_buffer -backed async observer
+ * reports drops when full, mirroring BoundedContainerReportsDroppedEntryWhenFull for the other bounded
+ * container kind (capacity is compile-time here, via the fixed_capacity_ring_buffer_2 alias).
+ *
+ * @test Verifies that:
+ * - No overflow is reported while the queue has spare capacity.
+ * - The queue reports exactly one dropped entry once its capacity is exceeded.
+ * - The dropped entry is not present among the events actually delivered.
+ */
+TEST(AsyncObserverQueueOverflowTest, FixedCapacityRingBufferReportsDroppedEntryWhenFull)
+{
+    tools::async_observer<std::string, std::string, fixed_capacity_ring_buffer_2> observer;
+
+    observer.inform("topic", "event-1", "producer");
+    EXPECT_FALSE(observer.has_queue_overflow());
+
+    observer.inform("topic", "event-2", "producer");
+    EXPECT_FALSE(observer.has_queue_overflow());
+
+    observer.inform("topic", "event-3-dropped", "producer");
+    EXPECT_TRUE(observer.has_queue_overflow());
+    EXPECT_EQ(observer.queue_overflow_count(), 1U);
+
+    auto events = observer.pop_all_events();
+    ASSERT_EQ(events.size(), 2U);
+    EXPECT_EQ(std::get<1>(events[0]), "event-1");
+    EXPECT_EQ(std::get<1>(events[1]), "event-2");
+}
+
+/**
+ * @brief Test case verifying consume_queue_overflow_count() reads and resets the drop counter for a
+ * fixed-capacity @c tools::sync_ring_buffer -backed async observer.
+ *
+ * @test Verifies that:
+ * - consume_queue_overflow_count() returns the accumulated drop count.
+ * - Subsequent calls return zero until further drops occur.
+ * - New drops after a reset are counted again from zero.
+ */
+TEST(AsyncObserverQueueOverflowTest, FixedCapacityRingBufferConsumeResetsCounter)
+{
+    tools::async_observer<std::string, std::string, fixed_capacity_ring_buffer_1> observer;
+
+    observer.inform("topic", "event-1", "producer");
+    observer.inform("topic", "event-2-dropped", "producer");
+    observer.inform("topic", "event-3-dropped", "producer");
+
+    EXPECT_EQ(observer.consume_queue_overflow_count(), 2U);
+    EXPECT_FALSE(observer.has_queue_overflow());
+    EXPECT_EQ(observer.consume_queue_overflow_count(), 0U);
+
+    // draining the queue frees capacity; a subsequent drop is counted again from zero
+    auto drained = observer.pop_all_events();
+    ASSERT_EQ(drained.size(), 1U);
+
+    observer.inform("topic", "event-4", "producer");
+    observer.inform("topic", "event-5-dropped", "producer");
+    EXPECT_EQ(observer.consume_queue_overflow_count(), 1U);
 }

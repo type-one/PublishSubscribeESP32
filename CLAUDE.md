@@ -236,6 +236,13 @@ Fallback guidance:
 - Any task component can be a `tools::sync_observer` or `tools::async_observer` on any hub.
 - The shared context may also carry a `tools::sync_dictionary` of `std::variant` values for keyed telemetry or configuration that any component can read and write.
 - Components react to incoming variants via `std::visit`, invoking focused private methods per alternative — never a monolithic handler.
+- `tools::async_observer` queues incoming topic/event/origin entries into a bounded `Sync_Container` (e.g. `tools::sync_ring_buffer`, `tools::sync_ring_vector`, `tools::sync_queue`); once that queue is full, further `inform()` calls drop the entry. `async_observer` tracks these drops internally and exposes `has_queue_overflow()`, `queue_overflow_count()`, and `consume_queue_overflow_count()` to detect this at runtime.
+- In each component's handler loop, alongside the usual `has_events()`/pending-data/pending-command checks, also poll `consume_queue_overflow_count()` on every async observer the component owns (its data, command, and event queues). When it returns a non-zero count, publish a queue-overflow notification on `events_hub` that identifies:
+  - which queue kind overflowed (data / command / event),
+  - which component/observer instance it belongs to (component name, matching the `origin` used elsewhere),
+  - the dropped-entry count, so bursts can be distinguished from single misses.
+- Define this as a dedicated alternative in the events variant (e.g. a `queue_overflow` struct with `queue_kind` and `component` fields) rather than reusing a generic failure/notification event, so consumers can react to it via `std::visit` like any other event.
+- This check is important for debugging real-time flow: a silently full queue otherwise looks like a component that simply stopped reacting, with no observable signal of *why*.
 
 ## Header and Documentation Conventions
 

@@ -35,12 +35,14 @@
 #if !defined(ASYNC_OBSERVER_HPP_)
 #define ASYNC_OBSERVER_HPP_
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "tools/sync_object.hpp"
@@ -79,6 +81,29 @@ namespace tools
         static std::int8_t SFINAE(...);
 
         static const bool value = sizeof(SFINAE<T>(nullptr)) == sizeof(std::int32_t);
+    };
+
+    /**
+     * @brief Detects whether Container::push(Entry) reports success/failure as a bool.
+     *
+     * Some Sync_Container backends (e.g. sync_queue) are unbounded and return void from push(),
+     * while bounded ones (e.g. sync_ring_buffer, sync_ring_vector) return false when the container
+     * is full. This trait lets async_observer only track drops for containers that can report them.
+     *
+     * @tparam Container The synchronized container type.
+     * @tparam Entry The type pushed into the container.
+     */
+    template <typename Container, typename Entry, typename = void>
+    struct queue_push_reports_success : std::false_type
+    {
+    };
+
+    template <typename Container, typename Entry>
+    struct queue_push_reports_success<Container, Entry,
+        typename std::enable_if<
+            std::is_same<decltype(std::declval<Container&>().push(std::declval<Entry>())), bool>::value>::type>
+        : std::true_type
+    {
     };
 
     /**
@@ -284,6 +309,45 @@ namespace tools
         }
 
         /**
+         * @brief Checks if events were dropped because the underlying queue was full.
+         *
+         * A dropped event means the queue capacity was reached and the incoming
+         * topic/event/origin entry could not be enqueued. Components should poll this
+         * alongside has_events() and publish a queue-overflow notification (identifying
+         * the queue kind and the component) so the overflow is observable at runtime.
+         *
+         * @return true if at least one event was dropped since construction or the last
+         * consume_queue_overflow_count() call, false otherwise.
+         */
+        [[nodiscard]] bool has_queue_overflow() const noexcept
+        {
+            return queue_overflow_count() != 0U;
+        }
+
+        /**
+         * @brief Returns the number of events dropped so far because the queue was full.
+         *
+         * @return The current dropped-event count.
+         */
+        [[nodiscard]] std::size_t queue_overflow_count() const noexcept
+        {
+            return m_overflow_count.load(std::memory_order_relaxed);
+        }
+
+        /**
+         * @brief Returns and resets the number of events dropped because the queue was full.
+         *
+         * Intended to be polled once per handler cycle so overflow reporting (e.g. an
+         * events_hub notification) reflects new drops rather than re-reporting the same ones.
+         *
+         * @return The dropped-event count since construction or the previous call.
+         */
+        std::size_t consume_queue_overflow_count() noexcept
+        {
+            return m_overflow_count.exchange(0U, std::memory_order_relaxed);
+        }
+
+        /**
          * @brief Waits for events by blocking until a signal is received.
          */
         void wait_for_events()
@@ -308,9 +372,27 @@ namespace tools
         template <typename UTopic, typename UEvt, typename UOrigin>
         void do_inform(UTopic&& topic, UEvt&& event, UOrigin&& origin)
         {
-            m_evt_queue.push(
-                event_entry { std::forward<UTopic>(topic), std::forward<UEvt>(event), std::forward<UOrigin>(origin) });
-            m_wakeable.signal();
+            event_entry entry { std::forward<UTopic>(topic), std::forward<UEvt>(event), std::forward<UOrigin>(origin) };
+
+            // Only bounded containers (sync_ring_buffer/sync_ring_vector) report push failures via
+            // a bool return; unbounded ones (sync_queue) return void and never drop entries.
+            if constexpr (queue_push_reports_success<Sync_Container<std::tuple<Topic, Evt, std::string>>,
+                              event_entry>::value)
+            {
+                if (m_evt_queue.push(std::move(entry)))
+                {
+                    m_wakeable.signal();
+                }
+                else
+                {
+                    m_overflow_count.fetch_add(1U, std::memory_order_relaxed);
+                }
+            }
+            else
+            {
+                m_evt_queue.push(std::move(entry));
+                m_wakeable.signal();
+            }
         }
 
         /**
@@ -322,6 +404,11 @@ namespace tools
          * @brief A synchronized queue that holds tuples of Topic, Evt, and std::string.
          */
         Sync_Container<std::tuple<Topic, Evt, std::string>> m_evt_queue;
+
+        /**
+         * @brief Count of events dropped because the queue was full when inform() was called.
+         */
+        std::atomic<std::size_t> m_overflow_count { 0U };
     };
 
 }

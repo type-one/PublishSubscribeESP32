@@ -23,7 +23,7 @@ This folder provides:
 
 | File | Key classes/types | Role / Purpose | Relationships |
 |---|---|---|---|
-| `async_observer.hpp` | `async_observer<Topic, Evt>` | Async observer built on synchronous subject/observer with decoupled handling. | Inherits from `sync_observer`; integrates with event/pub-sub flow. |
+| `async_observer.hpp` | `async_observer<Topic, Evt>` | Async observer built on synchronous subject/observer with decoupled handling. Tracks dropped-on-full-queue entries via `has_queue_overflow()` / `queue_overflow_count()` / `consume_queue_overflow_count()`. | Inherits from `sync_observer`; integrates with event/pub-sub flow; queues into a `Sync_Container` (`sync_ring_buffer`/`sync_ring_vector`/`sync_queue`). |
 | `base_task.hpp` | `base_task` | Common non-copyable task base abstraction. | Base class for `generic_task`, `data_task`, `periodic_task`, `worker_task`. |
 | `cond_var.hpp` | `cond_var` facade | Cross-platform condition variable abstraction. | Includes `freertos/cond_var_freertos.inl` or `standard/cond_var_std.inl`. |
 | `critical_section.hpp` | `critical_section`, `isr_lock_guard` facade | Cross-platform mutual exclusion abstraction and ISR-safe lock helper contract. | Includes `freertos/critical_section_freertos.inl` or `standard/critical_section_std.inl`. |

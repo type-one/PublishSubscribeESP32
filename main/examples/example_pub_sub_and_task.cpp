@@ -297,6 +297,40 @@ namespace
         }
     }
 
+    /** @brief Demonstrates detecting a full async observer queue (bounded @c tools::sync_ring_vector) so a
+     * component can report a queue-overflow event instead of silently losing entries. */
+    void test_async_observer_queue_overflow()
+    {
+        LOG_INFO("-- async observer queue overflow detection --");
+        print_stats();
+
+        static constexpr std::size_t queue_depth = 2U;
+        tools::async_observer<std::string, std::string, tools::sync_ring_vector> observer(queue_depth);
+
+        // Fill the bounded queue to capacity, then push one entry too many to force a drop.
+        observer.inform("topic", "event-1", "producer");
+        observer.inform("topic", "event-2", "producer");
+        observer.inform("topic", "event-3-dropped", "producer");
+
+        if (observer.has_queue_overflow())
+        {
+            // In a real component, this is where a "queue_overflow" event would be published on
+            // events_hub, identifying the queue kind (data/command/event) and the component name.
+            std::printf("async-observer queue overflow detected: %zu dropped event(s) from producer\n",
+                observer.consume_queue_overflow_count());
+        }
+
+        // Overflow accounting resets once consumed; further calls report no overflow until it happens again.
+        std::printf(
+            "async-observer queue overflow after consume: %s\n", observer.has_queue_overflow() ? "true" : "false");
+
+        auto events = observer.pop_all_events();
+        for (const auto& [topic, event, origin] : events)
+        {
+            std::printf("async-overflow [topic %s] event (%s) from %s\n", topic.c_str(), event.c_str(), origin.c_str());
+        }
+    }
+
     /** @brief Shared cancellation state for generic-task examples. */
     struct my_generic_task_context
     {
@@ -646,6 +680,8 @@ void run_example_pub_sub_and_task()
     test_sync_observer_perfect_forwarding();
     // Then validate async observer forwarding and queued event draining.
     test_async_observer_perfect_forwarding();
+    // Show how a bounded async observer queue reports dropped entries when it overflows.
+    test_async_observer_queue_overflow();
     // Study full pub/sub wiring: topics, subscriptions, loose handlers, and unsubscriptions.
     test_publish_subscribe();
     // Move to generic task orchestration patterns (function object and function pointer callbacks).
