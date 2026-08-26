@@ -12,6 +12,18 @@ if(CMAKE_CXX_STANDARD GREATER_EQUAL 20)
     message(STATUS "C++20 or newer is supported/enabled")
 endif()
 
+# The ESP-IDF toolchain's bundled libstdc++ does not define _GLIBCXX_HAVE_ATOMIC_LOCK_POLICY
+# in its c++config.h, so std::shared_ptr falls back to mutex-based (_S_mutex) refcounting even
+# though ESP32/ESP32-S3/ESP32-C5 all support lock-free atomic CAS (__GCC_ATOMIC_INT_LOCK_FREE == 2).
+# _S_mutex means every shared_ptr control block calls pthread_mutex_init() -> xQueueCreateMutex(),
+# allocating heap memory per shared_ptr; under heap pressure this allocation can silently fail,
+# leaving a garbage mutex handle that crashes on destruction. Force _S_atomic to avoid this.
+# idf_build_set_property is only defined when this file is processed by the real ESP-IDF build
+# system (idf.py); guard against tooling that parses this component CMakeLists.txt standalone.
+if(COMMAND idf_build_set_property AND NOT IDF_TARGET STREQUAL "linux")
+    idf_build_set_property(COMPILE_OPTIONS "-D_GLIBCXX_HAVE_ATOMIC_LOCK_POLICY" APPEND)
+endif()
+
 # mem pool allocator to prevent memory fragmentation for small and frequently dynamically allocated events/messages
 # note: it can introduce some slow-down but memory allocation pattern is more predictive and stable
 option(ENABLE_MEM_POOL_ALLOCATOR "Enable custom mem pool allocator" ON)
