@@ -77,6 +77,7 @@ Fallback guidance:
 - Prefer modern C++ standard-library facilities over C-style techniques whenever they fit the platform constraints.
 - Prefer STL containers (`std::vector`, `std::array`, `std::map`, `std::unordered_map`, `std::string`, …) and the facilities in `main/tools/` over custom data structures.
 - Prefer `std::string` / `std::string_view` over raw C strings when ownership and lifetime are clear.
+- Prefer `std::span<T>` (C++20) over raw pointer+length pairs or `T*`/array parameters for non-owning views over contiguous binary/typed data; guard with a C++17 fallback (e.g. `const T*` + `size_t`, or an existing helper) per the C++ Version Policy feature-check convention.
 - Use `<algorithm>` functions (`std::find`, `std::transform`, `std::accumulate`, `std::sort`, …) instead of hand-written loops whenever the intent becomes clearer.
 - Prefer range-based `for` loops over index-based loops when indexing is not part of the logic.
 - Prefer `auto` where it removes noisy type spellings without obscuring meaning.
@@ -89,6 +90,9 @@ Fallback guidance:
 - Do not re-implement what the STL already provides correctly and portably.
 - Avoid raw `new` / `delete`, C-style arrays, and similar manual resource-management patterns when RAII types or standard containers are suitable.
 - When the STL is unavailable or insufficient on a target platform, reach for the helpers in `main/tools/` before writing new infrastructure.
+- Prefer `std::format` (C++20) over `printf`/`snprintf`-style formatting in new code for type-safe, composable text formatting.
+  - `main/tools/logger.hpp` intentionally keeps a `printf`-style API for existing call sites; do not convert it without an explicit request.
+  - When only C++17 is available, fall back to `snprintf` or an equivalent existing helper, guarded per the C++ Version Policy feature-check convention.
 
 ## Template API Design
 
@@ -108,9 +112,24 @@ Fallback guidance:
 - Function/method parameter policy:
   - use pass-by-value for simple/scalar types,
   - use pass-by-value for movable types when a local owning copy is intended,
-  - use `const T&` for heavier types when copy is not required.
+  - use `const T&` for heavier types when copy is not required,
+  - use pass-by-value for `std::string_view` (it is a small, cheap-to-copy non-owning view; passing it by `const&` only adds an unnecessary indirection).
+  - use pass-by-value for `std::span<T>` for the same reason: it is a small, cheap-to-copy non-owning view over contiguous data (the binary/typed-buffer counterpart to `std::string_view`); do not use it to extend or transfer ownership of the underlying storage.
 - Constructor policy:
   - if a constructor takes a movable type by value, move it into members using `std::move(...)`.
+  - when a constructor stores a `std::shared_ptr<T>` as a member expressing shared ownership between the caller and the object being constructed, take the `std::shared_ptr<T>` by value and move it into the member. This lets callers pass rvalues efficiently while still supporting lvalues via a copy at the call site, and it signals participation in shared ownership more clearly than `const std::shared_ptr<T>&`.
+  - `const std::shared_ptr<T>&` remains appropriate when the callee only observes the pointee for the duration of the call and does not store or extend ownership of the pointer itself (e.g., callback parameters in `main/tools/*_task_*.inl`).
+  - document the by-value-plus-move choice with a short comment at the constructor when the ownership intent is not already obvious from context, for example:
+    ```cpp
+    // The constructor takes std::shared_ptr by value to express shared ownership
+    // between the caller and this device. Moving it into m_controller transfers
+    // the smart pointer wrapper without changing the underlying shared ownership;
+    // we are not moving or destroying the controller object itself.
+    // Passing by value (rather than const&) matches the intent that this class
+    // participates in shared ownership, and allows callers to pass rvalues that
+    // can be moved efficiently.
+    explicit my_device(std::shared_ptr<controller> controller_ptr) : m_controller(std::move(controller_ptr)) {}
+    ```
 
 ### Good vs Bad (Ownership and API Design)
 
@@ -118,11 +137,15 @@ Fallback guidance:
   - model ownership with `std::unique_ptr` or `std::shared_ptr`.
   - pass scalar/simple values by value.
   - pass heavy read-only objects by `const T&`.
+  - pass `std::string_view` by value.
+  - pass `std::span<T>` by value for non-owning views over contiguous data.
+  - take constructor `std::shared_ptr<T>` parameters by value and `std::move` them into members when the class shares ownership.
   - enforce Rule of Five or use `tools::non_copyable`.
   - move by-value constructor inputs into members.
 - Bad:
   - owning raw pointers without explicit ownership semantics.
   - unnecessary copies of heavy objects in API boundaries.
+  - passing `std::string_view` or `std::span<T>` by `const&`.
   - public/protected inheritance exposing internal state by default.
   - non-templated implementation bodies left inline in headers.
 
