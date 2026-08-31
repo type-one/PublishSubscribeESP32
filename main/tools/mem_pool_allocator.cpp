@@ -52,8 +52,34 @@
 #include "tools/lock_free_ring_buffer.hpp"
 #include "tools/platform_detection.hpp"
 
+#if defined(ESP_PLATFORM)
+#include <esp_heap_caps.h>
+#include <sdkconfig.h>
+#endif
+
 namespace
 {
+    // Low-level allocation and deallocation functions supporting ESP32 capability-based allocation.
+    void* allocate_raw_memory(std::size_t size_in_bytes)
+    {
+#if defined(ESP_PLATFORM) && defined(CONFIG_SPIRAM)
+        // Prefer external SPIRAM/PSRAM if available, fallback to internal SRAM
+        return heap_caps_malloc_prefer(
+            size_in_bytes, 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+#else
+        return std::malloc(size_in_bytes); // NOLINT we want to use libc malloc as we overload new operator
+#endif
+    }
+
+    void free_raw_memory(void* ptr_block) noexcept
+    {
+#if defined(ESP_PLATFORM)
+        heap_caps_free(ptr_block);
+#else
+        std::free(ptr_block); // NOLINT we want to use libc free as we overload delete operator
+#endif
+    }
+
     // Private structure in .bss segment (no heap allocation at all !)
 
     // https://www.rastergrid.com/blog/sw-eng/2021/03/custom-memory-allocators/
@@ -185,7 +211,7 @@ namespace
         }
 
         // fallback - allocate a new block on the heap
-        if (void* ptr = std::malloc(size)) // NOLINT we want to use libc malloc as we overload new operator
+        if (void* ptr = allocate_raw_memory(size))
         {
             // std::printf("[alloc] %d bytes\n", static_cast<int>(size));
             return ptr;
@@ -218,7 +244,7 @@ namespace
         }
 
         // std::printf("[free] sized: %d bytes\n", static_cast<int>(size));
-        std::free(ptr); // NOLINT we want to use libc free as we overload delete operator
+        free_raw_memory(ptr);
     }
 }
 
@@ -237,7 +263,7 @@ void init_mem_pool_allocator()
 
         for (int i = 0; i < (1 << MAX_CACHED_BLOCKS_POW2) - 1; ++i)
         {
-            if (void* ptr = std::malloc(block_size)) // NOLINT we want to use libc malloc as we overload new operator
+            if (void* ptr = allocate_raw_memory(block_size))
             {
                 // std::printf("[pre-alloc] %d bytes", static_cast<int>(block_size));
 
@@ -246,7 +272,7 @@ void init_mem_pool_allocator()
                 if (!entry.m_pool.push(ptr))
                 {
                     // std::fprintf(stderr, "[pre-alloc] %d bytes failed !\n", block_size);
-                    std::free(ptr); // NOLINT avoid warmup leak if pool push fails
+                    free_raw_memory(ptr); // avoid warmup leak if pool push fails
                 }
             }
             else
@@ -273,7 +299,7 @@ void destroy_mem_pool_allocator()
         void* block = nullptr;
         while (entry.m_pool.pop(block))
         {
-            std::free(block); // NOLINT we want to use libc free as we overload delete operator
+            free_raw_memory(block);
         }
     }
 }
@@ -301,7 +327,7 @@ void operator delete(void* ptr) noexcept
     // Intentionally bypass cache for unsized delete: we rely on modern toolchains
     // emitting sized delete for most deallocations.
     // std::printf("[delete] unsized\n");
-    std::free(ptr); // NOLINT we want to use libc free as we overload delete operator
+    free_raw_memory(ptr);
 }
 
 // ------------------------------------------------------------
@@ -334,7 +360,7 @@ void operator delete[](void* ptr) noexcept
     // Intentionally bypass cache for unsized delete[]: we rely on modern toolchains
     // emitting sized delete[] for most deallocations.
     // std::printf("[delete[]] unsized\n");
-    std::free(ptr); // NOLINT we want to use libc free as we overload delete operator
+    free_raw_memory(ptr);
 }
 
 void operator delete[](void* ptr, std::size_t size) noexcept
