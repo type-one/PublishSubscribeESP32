@@ -39,6 +39,7 @@ Goodies:
 AI/Agent guidance files:
 
 - [CLAUDE.md](CLAUDE.md)
+- [AGENTS.md](AGENTS.md)
 - [.github/copilot-instructions.md](.github/copilot-instructions.md)
 
 Third Parties used in the examples:
