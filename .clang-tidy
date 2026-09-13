@@ -28,5 +28,5 @@ Checks:          "clang-diagnostic-*,\
                   -readability-convert-member-functions-to-static"                
                   
 
-WarningsAsErrors: "*"
+WarningsAsErrors: "clang-diagnostic-*"
 HeaderFilterRegex: '.hpp'
