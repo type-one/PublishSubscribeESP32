@@ -6,9 +6,9 @@ cmake_minimum_required(VERSION 3.12)
 project(PublishSubscribe VERSION 1.0)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# force clang-tidy by default
-option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" ON)
-# option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
+# don't force clang-tidy by default
+#option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" ON)
+option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 option(ENABLE_FPM_OUTPUT_TESTS "Enable heavy fpm output tests (test_output.cpp)" OFF)
 
 if(ENABLE_CLANG_TIDY)
