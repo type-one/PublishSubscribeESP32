@@ -282,7 +282,7 @@ static int tinf_decode_symbol(TINF_DATA* d, TINF_TREE* t)
     do
     {
 
-        cur = 2 * cur + tinf_getbit(d);
+        cur = (2 * cur) + tinf_getbit(d);
 
         if (++len == TINF_ARRAY_SIZE(t->table))
         {

@@ -436,7 +436,7 @@ void zlib_literal(struct Outbuf* out, unsigned char c)
     else
     {
         /* 144 through 255 are 9 bits long starting at 110010000. */
-        outbits(out, 1 + 2 * mirrorbytes[0x90 - 144 + c], 9);
+        outbits(out, 1 + (2 * mirrorbytes[0x90 - 144 + c]), 9);
     }
 }
 
