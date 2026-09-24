@@ -817,3 +817,99 @@ TEST(SyncRingVectorPerfectForwardingTest, Cpp20RequiresConstraints)
     SUCCEED();
 }
 #endif
+
+/**
+ * @brief Test that resize to current occupancy changes capacity and preserves the record.
+ *
+ * @tparam TypeParam The type of elements stored in the ring vector.
+ *
+ * @test
+ * - Shrinks a ring with one queued record from 1024 slots to one slot.
+ * - Expects capacity and size to be one, and the ring to be full.
+ * - Verifies the record is preserved and can be removed.
+ */
+TYPED_TEST(SyncRingVectorTest, ResizeToOccupancyPreservesRecord)
+{
+    constexpr std::size_t initial_capacity = 1024U;
+    constexpr std::size_t target_capacity = 1U;
+    const auto record = static_cast<TypeParam>(42);
+    tools::sync_ring_vector<TypeParam> ring(initial_capacity);
+    ring.push(record);
+
+    ring.resize(target_capacity);
+
+    EXPECT_EQ(ring.capacity(), target_capacity);
+    ASSERT_EQ(ring.size(), target_capacity);
+    EXPECT_TRUE(ring.full());
+    EXPECT_EQ(ring.front(), record);
+    ring.pop();
+    EXPECT_TRUE(ring.empty());
+}
+
+/**
+ * @brief Test that resize of an empty ring to zero releases its addressable slots.
+ *
+ * @tparam TypeParam The type of elements stored in the ring vector.
+ *
+ * @test
+ * - Resizes an empty ring from 1024 slots to zero slots.
+ * - Expects zero capacity and an empty ring.
+ */
+TYPED_TEST(SyncRingVectorTest, ResizeEmptyRingToZero)
+{
+    constexpr std::size_t initial_capacity = 1024U;
+    tools::sync_ring_vector<TypeParam> ring(initial_capacity);
+
+    ring.resize(0U);
+
+    EXPECT_EQ(ring.capacity(), 0U);
+    EXPECT_TRUE(ring.empty());
+}
+
+/**
+ * @brief Test that ISR resize to current occupancy changes capacity and preserves the record.
+ *
+ * @tparam TypeParam The type of elements stored in the ring vector.
+ *
+ * @test
+ * - Shrinks a ring with one queued record from 1024 slots to one slot.
+ * - Expects capacity and size to be one, and the ring to be full.
+ * - Verifies the record is preserved and can be removed.
+ */
+TYPED_TEST(SyncRingVectorTest, IsrResizeToOccupancyPreservesRecord)
+{
+    constexpr std::size_t initial_capacity = 1024U;
+    constexpr std::size_t target_capacity = 1U;
+    const auto record = static_cast<TypeParam>(42);
+    tools::sync_ring_vector<TypeParam> ring(initial_capacity);
+    ring.isr_push(record);
+
+    ring.isr_resize(target_capacity);
+
+    EXPECT_EQ(ring.isr_capacity(), target_capacity);
+    ASSERT_EQ(ring.isr_size(), target_capacity);
+    EXPECT_TRUE(ring.isr_full());
+    EXPECT_EQ(ring.front(), record);
+    ring.pop();
+    EXPECT_TRUE(ring.empty());
+}
+
+/**
+ * @brief Test that ISR resize of an empty ring to zero releases its addressable slots.
+ *
+ * @tparam TypeParam The type of elements stored in the ring vector.
+ *
+ * @test
+ * - Resizes an empty ring from 1024 slots to zero slots.
+ * - Expects zero capacity and an empty ring.
+ */
+TYPED_TEST(SyncRingVectorTest, IsrResizeEmptyRingToZero)
+{
+    constexpr std::size_t initial_capacity = 1024U;
+    tools::sync_ring_vector<TypeParam> ring(initial_capacity);
+
+    ring.isr_resize(0U);
+
+    EXPECT_EQ(ring.isr_capacity(), 0U);
+    EXPECT_TRUE(ring.empty());
+}

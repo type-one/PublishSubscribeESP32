@@ -594,7 +594,7 @@ namespace tools
          */
         void resize(std::size_t new_capacity)
         {
-            if (m_size == new_capacity)
+            if (m_capacity == new_capacity)
             {
                 return;
             }

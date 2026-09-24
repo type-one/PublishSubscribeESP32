@@ -33,6 +33,12 @@
 #include "example_common.hpp"
 #include "examples.hpp"
 
+#include <cstddef>
+#include <cstdio>
+#include <string>
+
+#include "tools/sync_ring_vector.hpp"
+
 #include <functional>
 #include <string_view>
 #include <tuple>
@@ -878,6 +884,37 @@ namespace
             std::printf("  Priority: %d, Message: %s\n", std::get<1>(evt).priority, std::get<1>(evt).message.c_str());
         }
     }
+    /**
+     * @brief Demonstrates the distinction between queued records and addressable slots in @c tools::sync_ring_vector.
+     *
+     * Shrinks capacity to match one pending record, drains it, resizes the empty ring to zero, and grows it again.
+     */
+    void test_sync_ring_vector_resize_to_occupancy()
+    {
+        LOG_INFO("-- sync ring vector resize to occupancy --");
+        constexpr std::size_t initial_capacity = 1024U;
+        constexpr std::size_t single_record_capacity = 1U;
+        tools::sync_ring_vector<std::string> str_queue(initial_capacity);
+        str_queue.emplace("pending-record");
+
+        std::printf("before resize: size=%zu, capacity=%zu\n", str_queue.size(), str_queue.capacity());
+        // resize() configures slots; matching occupancy must still change capacity.
+        str_queue.resize(single_record_capacity);
+        std::printf("after resize: size=%zu, capacity=%zu, full=%s\n", str_queue.size(), str_queue.capacity(),
+            str_queue.full() ? "yes" : "no");
+        const auto record = str_queue.front_pop();
+        if (record.has_value())
+        {
+            std::printf("preserved record: %s\n", record->c_str());
+        }
+
+        str_queue.resize(0U);
+        std::printf("empty ring: size=%zu, capacity=%zu\n", str_queue.size(), str_queue.capacity());
+        str_queue.resize(initial_capacity);
+        str_queue.emplace("record-after-regrowth");
+        std::printf("regrown ring: size=%zu, capacity=%zu\n", str_queue.size(), str_queue.capacity());
+    }
+
 } // namespace
 
 void run_example_sync_container()
@@ -891,6 +928,7 @@ void run_example_sync_container()
     // Continue with synchronized container variants for multi-thread-safe usage patterns.
     test_sync_ring_buffer();
     test_sync_ring_vector();
+    test_sync_ring_vector_resize_to_occupancy();
     test_sync_ring_vector_perfect_forwarding();
     // Compare queue semantics and forwarding/range APIs.
     test_sync_queue();

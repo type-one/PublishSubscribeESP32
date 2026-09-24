@@ -506,7 +506,7 @@ namespace tools
         void resize(std::size_t new_size)
         {
             std::scoped_lock<tools::critical_section> guard(m_mutex);
-            if (new_size != m_ring_vector.size())
+            if (new_size != m_ring_vector.capacity())
             {
                 m_ring_vector.resize(new_size);
             }
@@ -784,7 +784,7 @@ namespace tools
         void isr_resize(std::size_t new_size)
         {
             tools::isr_lock_guard<tools::critical_section> guard(m_mutex); // NOLINT(modernize-use-scoped-lock)
-            if (new_size != m_ring_vector.size())
+            if (new_size != m_ring_vector.capacity())
             {
                 m_ring_vector.resize(new_size);
             }

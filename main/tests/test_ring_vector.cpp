@@ -486,3 +486,51 @@ TEST(RingVectorPerfectForwardingTest, Cpp20RequiresConstraints)
     SUCCEED();
 }
 #endif
+
+/**
+ * @brief Test that resize to current occupancy changes capacity and preserves the record.
+ *
+ * @tparam TypeParam The type of elements stored in the ring vector.
+ *
+ * @test
+ * - Shrinks a ring with one queued record from 1024 slots to one slot.
+ * - Expects capacity and size to be one, and the ring to be full.
+ * - Verifies the record is preserved and can be removed.
+ */
+TYPED_TEST(RingVectorTest, ResizeToOccupancyPreservesRecord)
+{
+    constexpr std::size_t initial_capacity = 1024U;
+    constexpr std::size_t target_capacity = 1U;
+    const auto record = static_cast<TypeParam>(42);
+    tools::ring_vector<TypeParam> ring(initial_capacity);
+    ring.push(record);
+
+    ring.resize(target_capacity);
+
+    EXPECT_EQ(ring.capacity(), target_capacity);
+    ASSERT_EQ(ring.size(), target_capacity);
+    EXPECT_TRUE(ring.full());
+    EXPECT_EQ(ring.front(), record);
+    ring.pop();
+    EXPECT_TRUE(ring.empty());
+}
+
+/**
+ * @brief Test that resize of an empty ring to zero releases its addressable slots.
+ *
+ * @tparam TypeParam The type of elements stored in the ring vector.
+ *
+ * @test
+ * - Resizes an empty ring from 1024 slots to zero slots.
+ * - Expects zero capacity and an empty ring.
+ */
+TYPED_TEST(RingVectorTest, ResizeEmptyRingToZero)
+{
+    constexpr std::size_t initial_capacity = 1024U;
+    tools::ring_vector<TypeParam> ring(initial_capacity);
+
+    ring.resize(0U);
+
+    EXPECT_EQ(ring.capacity(), 0U);
+    EXPECT_TRUE(ring.empty());
+}
