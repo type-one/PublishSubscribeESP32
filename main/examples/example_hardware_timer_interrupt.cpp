@@ -124,7 +124,7 @@ namespace
                 task_isr_startup, task_isr_processing, my_isr_context, isr_queue_depth, "isr_task", 4096);
             my_isr_context->data_task = my_isr_task;
 
-            std::printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
+            print_stats();
 
             tools::sleep_for(1000);
 

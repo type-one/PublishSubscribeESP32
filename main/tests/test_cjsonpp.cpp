@@ -42,6 +42,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cstddef>
+#include <cstdlib>
+#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -565,3 +568,77 @@ TEST_F(JSONObjectTest, SetInvalidTypeInArray)
     ASSERT_FALSE(add_status.has_value());
     EXPECT_EQ(add_status.error().code, cjsonpp::result_code::invalid_type);
 }
+
+#if GTEST_HAS_DEATH_TEST
+/**
+ * @brief Verify that parsing, printing, and destruction use matching cJSON allocator hooks.
+ * @test Run in a child process to isolate global hooks from the other JSON tests.
+ */
+TEST(JSONObjectAllocatorDeathTest, PrintReleasesThroughConfiguredHook)
+{
+    EXPECT_EXIT(
+        (
+            []
+            {
+                static std::size_t outstanding_allocations = 0U;
+                cJSON_Hooks hooks {};
+                hooks.malloc_fn = [](std::size_t bytes) -> void*
+                {
+                    auto* memory = std::malloc(bytes);
+                    if (memory != nullptr)
+                    {
+                        ++outstanding_allocations;
+                    }
+                    return memory;
+                };
+                hooks.free_fn = [](void* memory)
+                {
+                    if (memory != nullptr)
+                    {
+                        --outstanding_allocations;
+                    }
+                    std::free(memory);
+                };
+                cJSON_InitHooks(&hooks);
+                {
+                    auto parsed = cjsonpp::parse_result("{\"record\":42}");
+                    if (!parsed.has_value())
+                    {
+                        std::_Exit(EXIT_FAILURE);
+                    }
+                    const auto tree_allocations = outstanding_allocations;
+                    for (const bool formatted : { false, true })
+                    {
+                        const auto printed = parsed.value().print(formatted);
+                        if (printed.find("42") == std::string::npos || outstanding_allocations != tree_allocations)
+                        {
+                            std::_Exit(EXIT_FAILURE);
+                        }
+                    }
+                }
+                std::_Exit(outstanding_allocations == 0U ? EXIT_SUCCESS : EXIT_FAILURE);
+            }()),
+        ::testing::ExitedWithCode(EXIT_SUCCESS), "");
+}
+
+/**
+ * @brief Verify that allocator exhaustion returns the existing structured parse error.
+ * @test Reject cJSON allocations in a child process and check the error payload.
+ */
+TEST(JSONObjectAllocatorDeathTest, AllocationFailureReturnsParseError)
+{
+    EXPECT_EXIT((
+                    []
+                    {
+                        cJSON_Hooks hooks {};
+                        hooks.malloc_fn = [](std::size_t) -> void* { return nullptr; };
+                        hooks.free_fn = std::free;
+                        cJSON_InitHooks(&hooks);
+                        const auto parsed = cjsonpp::parse_result("{}");
+                        const bool expected_error = !parsed.has_value()
+                            && parsed.error().code == cjsonpp::result_code::parse_error && parsed.error().detail == 0;
+                        std::_Exit(expected_error ? EXIT_SUCCESS : EXIT_FAILURE);
+                    }()),
+        ::testing::ExitedWithCode(EXIT_SUCCESS), "");
+}
+#endif

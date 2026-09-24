@@ -35,6 +35,16 @@
 namespace cjsonpp
 {
 
+    /**
+     * @brief Configure cJSON to prefer PSRAM on ESP32 builds with CONFIG_SPIRAM enabled.
+     *
+     * Call once at application startup, after ESP-IDF heap initialization and before any cJSON or
+     * JSONObject use, including use from other threads. Hooks are global to cJSON and must not
+     * be changed while JSON objects or printed buffers exist. Other platforms leave hooks unchanged.
+     * PSRAM allocation falls back to internal byte-addressable SRAM when necessary.
+     */
+    void initialize_allocators() noexcept;
+
     // JSON type wrapper enum
     enum class JSONType : std::uint8_t
     {

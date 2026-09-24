@@ -231,6 +231,43 @@ The `main/` folder combines first-party framework code and bundled third-party d
 - `examples/`: runnable sample scenarios that demonstrate framework usage patterns and integrations.
 - `tests/`: unit tests and validation coverage for framework modules and adapters.
 
+
+### Example heap diagnostics on ESP32
+
+Examples using `print_stats()` report internal byte-addressable SRAM and PSRAM
+separately: allocated bytes and percentage, free bytes, minimum free bytes,
+largest allocatable block, and free-block count. Disabled or unavailable PSRAM
+is identified explicitly. These are ESP-IDF heap metrics, not total physical RAM
+usage; memory retained by the C++ pool allocator remains allocated in this view.
+
+The fragmentation estimate is `100 * (1 - largest_free_block / free_bytes)`.
+Separate physical heap regions also raise this estimate, so it is not a pure
+measure of fragmentation caused by allocations. Exhausted heaps show `n/a`
+for fragmentation and a critical diagnostic.
+
+Diagnostics are illustrative heuristics, using the worst matching condition:
+
+| Diagnostic | Free heap percentage | Fragmentation estimate |
+| --- | --- | --- |
+| critical | below 10% | at least 75% |
+| warning | below 20% | at least 50% |
+| good | at least 20% | below 50% |
+
+The largest block determines whether a particular contiguous allocation can fit;
+a good diagnostic does not guarantee that an arbitrary allocation will succeed.
+Minimum free bytes are aggregated low-water marks for matching heap regions,
+which need not have reached their minimum simultaneously. Snapshots can change
+as other tasks allocate or free memory.
+
+### PSRAM JSON stress example
+
+On ESP32 with `CONFIG_SPIRAM`, the JSON stress example adds 1,000-, 2,000-, and
+4,000-entry build/serialize/parse round-trips. Each keeps the original JSON tree,
+serialized text, and parsed tree alive together, validates record counts, and
+reports timing plus heap snapshots before, during, and after the workload.
+Cases require at least 4 MiB of free PSRAM before starting; this headroom check
+is a heuristic, not an allocation guarantee. Failures stop the remaining cases.
+
 ## Author
 
 Laurent Lardinois / Type One (TFL-TDV)

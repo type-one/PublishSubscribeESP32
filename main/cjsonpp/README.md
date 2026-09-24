@@ -134,3 +134,21 @@ if (arr_result)
 ## API Note
 
 Older `try_*` names (`try_get`, `try_as`, `try_set`, `try_add`, `try_remove`) are not the current public API names in this repository.
+
+## ESP32 PSRAM allocation
+
+Call `cjsonpp::initialize_allocators()` once at startup, after ESP-IDF initializes the
+heap and before creating any JSON objects or starting tasks that use cJSON. The
+project entry point already does this. Applications embedding the wrapper must
+make this call themselves; do not create JSON objects in global constructors.
+
+With `ESP_PLATFORM` and `CONFIG_SPIRAM` defined, cJSON allocations prefer
+`MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT` and fall back to
+`MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT`. Deallocation uses `heap_caps_free`.
+Otherwise initialization leaves the existing cJSON hooks unchanged.
+
+These hooks apply globally to cJSON nodes, strings, and printing buffers. They do
+not control the caller's input buffer or C++ allocations such as `std::string`.
+Do not replace hooks while objects or printed buffers exist or while cJSON is in
+use by another thread. `JSONObject::print()` releases its cJSON buffer through
+`cJSON_free()` to respect the active hooks.

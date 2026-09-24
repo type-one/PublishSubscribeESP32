@@ -119,4 +119,6 @@ void run_example_allocator_stress()
 {
     // Use this stress scenario to validate allocator stability before deploying higher-level task pipelines.
     test_allocator_stress();
+    LOG_INFO("Heap after allocator stress worker cleanup (pool may retain memory):");
+    print_stats();
 }

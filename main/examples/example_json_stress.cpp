@@ -33,12 +33,21 @@
 #include "example_common.hpp"
 #include "examples.hpp"
 
+#include <array>
+#include <chrono>
+#include <cstddef>
+
+#include "cJSON/cJSON.h"
+#include "cjsonpp/cjsonpp.hpp"
+
+#if defined(ESP_PLATFORM)
+#include <esp_heap_caps.h>
+#include <sdkconfig.h>
+#endif
+
 namespace
 {
-    // The 100/500-AP and 1000-iteration cases allocate several hundred KB of transient cJSON nodes.
-    // On ESP32/ESP32-S3/ESP32-C5 without external PSRAM, the internal SRAM heap cannot sustain that
-    // peak and the custom pool allocator throws std::bad_alloc, aborting the firmware. Once SPIRAM is
-    // enabled and wired as an allocation backend, lift this cap to exercise the full stress range again.
+    // Keep the default workload small on devices without external RAM.
 #if defined(ESP_PLATFORM) && !defined(CONFIG_SPIRAM)
     constexpr int synthetic_ap_count = 30;
     constexpr int telemetry_iterations = 100;
@@ -225,6 +234,76 @@ namespace
         print_stats();
     }
 
+#if defined(ESP_PLATFORM) && defined(CONFIG_SPIRAM)
+    /**
+     * @brief Hold a large source tree, serialized buffer, and parsed tree concurrently in PSRAM-enabled builds.
+     * @param ap_count Number of synthetic access points to round-trip.
+     * @return True when serialization, parsing, and record-count validation succeed.
+     */
+    bool stress_psram_round_trip(int ap_count)
+    {
+        const auto start = std::chrono::steady_clock::now();
+        auto source = build_synthetic_scan_json(ap_count);
+        if (!source)
+        {
+            LOG_ERROR("PSRAM stress build failed: %s", source.error().message.c_str());
+            return false;
+        }
+        const auto text = source.value().print(false);
+        if (text == "<error>")
+        {
+            LOG_ERROR("PSRAM stress serialization failed");
+            return false;
+        }
+        auto parsed = cjsonpp::parse_result(text);
+        if (!parsed)
+        {
+            LOG_ERROR("PSRAM stress parse failed: %s", parsed.error().message.c_str());
+            return false;
+        }
+        const auto count = parsed.value().get<int>("ap_count");
+        const auto entries = parsed.value().get<cjsonpp::JSONObject>("access_points");
+        if (!count || count.value() != ap_count || !entries || cJSON_GetArraySize(entries.value().obj()) != ap_count)
+        {
+            LOG_ERROR("PSRAM stress round-trip record count mismatch");
+            return false;
+        }
+        const auto elapsed
+            = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+        LOG_INFO("PSRAM stress: entries=%d, serialized=%zu bytes, build/print/parse=%lld ms", ap_count, text.size(),
+            static_cast<long long>(elapsed));
+        LOG_INFO("Heap with source tree, text, and parsed tree alive:");
+        print_stats();
+        return true;
+    }
+
+    /** @brief Exercise larger JSON round-trips when a usable PSRAM heap is present. */
+    void test_psram_json_stress()
+    {
+        constexpr std::size_t minimum_free_psram = std::size_t { 4U } * 1024U * 1024U;
+        constexpr std::array<int, 3U> record_counts { 1000, 2000, 4000 };
+        LOG_INFO("-- PSRAM JSON round-trip stress --");
+        for (const auto record_count : record_counts)
+        {
+            // Leave headroom for concurrent trees, temporary copies, and other tasks.
+            if (heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) < minimum_free_psram)
+            {
+                LOG_INFO("Skipping remaining PSRAM stress cases: less than 4 MiB free PSRAM");
+                break;
+            }
+            LOG_INFO("Heap before %d-entry round-trip:", record_count);
+            print_stats();
+            const auto succeeded = stress_psram_round_trip(record_count);
+            LOG_INFO("Heap after releasing round-trip objects (pool allocator may retain memory):");
+            print_stats();
+            if (!succeeded)
+            {
+                break;
+            }
+        }
+    }
+#endif
+
     /** @brief Regression check: set()/add() on a JSONObject whose underlying node is null must fail cleanly. */
     void test_null_node_guard()
     {
@@ -250,4 +329,7 @@ void run_example_json_stress()
     test_synthetic_scan_stress();
     test_synthetic_telemetry_stress();
     test_null_node_guard();
+#if defined(ESP_PLATFORM) && defined(CONFIG_SPIRAM)
+    test_psram_json_stress();
+#endif
 }

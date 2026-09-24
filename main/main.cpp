@@ -36,6 +36,7 @@
 #include <cstdio>
 #include <exception>
 
+#include "cjsonpp/cjsonpp.hpp"
 #include "examples/examples.hpp"
 
 #include "tools/logger.hpp"
@@ -134,6 +135,7 @@ extern "C" void app_main() noexcept
 int main() noexcept
 #endif
 {
+    cjsonpp::initialize_allocators();
 #if defined(FREERTOS_PLATFORM)
     launch_runner();
 #elif defined(CPP_EXCEPTIONS_ENABLED)

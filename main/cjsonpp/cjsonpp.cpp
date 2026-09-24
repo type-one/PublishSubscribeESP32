@@ -14,9 +14,9 @@
  */
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <set>
 #include <string>
 #include <utility>
@@ -28,10 +28,38 @@
 #include "cJSON/cJSON.h"
 #include "cjsonpp/cjsonpp.hpp"
 
-// modified for clang-tidy checks
+#if defined(ESP_PLATFORM)
+#include <esp_heap_caps.h>
+#include <sdkconfig.h>
+#endif
+
+#if defined(ESP_PLATFORM) && defined(CONFIG_SPIRAM)
+namespace
+{
+    void* CJSON_CDECL allocate_json_memory(std::size_t size_in_bytes)
+    {
+        constexpr std::size_t preference_count = 2U;
+        return heap_caps_malloc_prefer(size_in_bytes, preference_count, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT,
+            MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    }
+
+    void CJSON_CDECL free_json_memory(void* memory)
+    {
+        heap_caps_free(memory);
+    }
+}
+#endif
 
 namespace cjsonpp
 {
+    void initialize_allocators() noexcept
+    {
+#if defined(ESP_PLATFORM) && defined(CONFIG_SPIRAM)
+        cJSON_Hooks hooks { allocate_json_memory, free_json_memory };
+        cJSON_InitHooks(&hooks);
+#endif
+    }
+
     // returned by print() instead of an empty string when the underlying cJSON node is null or printing failed
     static constexpr const char* const k_print_error_marker = "<error>";
 
@@ -97,7 +125,7 @@ namespace cjsonpp
             return k_print_error_marker;
         }
         std::string retval(json);
-        std::free(json); // NOLINT allocated from C with malloc
+        cJSON_free(json);
         return retval;
     }
 

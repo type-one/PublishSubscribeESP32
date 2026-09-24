@@ -44,6 +44,7 @@ namespace
     void test_calendar_day()
     {
         LOG_INFO("calendar time and day");
+        print_stats();
 
         static constexpr int moon_landing_year = 1969;
         static constexpr unsigned moon_landing_month = 7U;
@@ -71,6 +72,7 @@ namespace
     void test_timer()
     {
         LOG_INFO("timer");
+        print_stats();
 
         {
             tools::timer_scheduler timer_scheduler;
@@ -277,4 +279,6 @@ void run_example_timer_and_date()
 #endif
     // Continue with timer scheduling patterns (periodic and one-shot) that tasks can reuse in production code.
     test_timer();
+    LOG_INFO("Heap after timer/date example cleanup:");
+    print_stats();
 }

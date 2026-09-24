@@ -892,16 +892,19 @@ namespace
     void test_sync_ring_vector_resize_to_occupancy()
     {
         LOG_INFO("-- sync ring vector resize to occupancy --");
+        print_stats();
         constexpr std::size_t initial_capacity = 1024U;
         constexpr std::size_t single_record_capacity = 1U;
         tools::sync_ring_vector<std::string> str_queue(initial_capacity);
         str_queue.emplace("pending-record");
 
         std::printf("before resize: size=%zu, capacity=%zu\n", str_queue.size(), str_queue.capacity());
+        print_stats();
         // resize() configures slots; matching occupancy must still change capacity.
         str_queue.resize(single_record_capacity);
         std::printf("after resize: size=%zu, capacity=%zu, full=%s\n", str_queue.size(), str_queue.capacity(),
             str_queue.full() ? "yes" : "no");
+        print_stats();
         const auto record = str_queue.front_pop();
         if (record.has_value())
         {
@@ -910,9 +913,11 @@ namespace
 
         str_queue.resize(0U);
         std::printf("empty ring: size=%zu, capacity=%zu\n", str_queue.size(), str_queue.capacity());
+        print_stats();
         str_queue.resize(initial_capacity);
         str_queue.emplace("record-after-regrowth");
         std::printf("regrown ring: size=%zu, capacity=%zu\n", str_queue.size(), str_queue.capacity());
+        print_stats();
     }
 
 } // namespace
@@ -929,6 +934,8 @@ void run_example_sync_container()
     test_sync_ring_buffer();
     test_sync_ring_vector();
     test_sync_ring_vector_resize_to_occupancy();
+    LOG_INFO("Heap after ring resize example cleanup (pool may retain memory):");
+    print_stats();
     test_sync_ring_vector_perfect_forwarding();
     // Compare queue semantics and forwarding/range APIs.
     test_sync_queue();
